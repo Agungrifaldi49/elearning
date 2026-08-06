@@ -1,0 +1,34 @@
+[
+    {
+        "id": 1,
+        "title": "Ujian Tengah Semester (UTS) Ganjil",
+        "tanggal": "2026-08-15",
+        "tanggal_akhir": "2026-08-20",
+        "type": "ujian",
+        "deskripsi": "Pelaksanaan UTS Ganjil Berbasis Komputer CBT"
+    },
+    {
+        "id": 2,
+        "title": "Uji Kompetensi Keahlian (UKK) SMK",
+        "tanggal": "2026-08-25",
+        "tanggal_akhir": "2026-08-28",
+        "type": "ujian",
+        "deskripsi": "Ujian Praktik Kejuruan Produktif SMK"
+    },
+    {
+        "id": 3,
+        "title": "Libur Hari Raya & Nasional",
+        "tanggal": "2026-08-10",
+        "tanggal_akhir": "2026-08-12",
+        "type": "libur",
+        "deskripsi": "Libur Nasional Kegiatan Pembelajaran"
+    },
+    {
+        "id": 4,
+        "title": "Classmeeting dan Lomba Antar Kelas",
+        "tanggal": "2026-08-01",
+        "tanggal_akhir": "2026-08-03",
+        "type": "kegiatan",
+        "deskripsi": "Kegiatan Seni dan Olahraga Siswa Bersama Guru"
+    }
+]
