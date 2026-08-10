@@ -10,7 +10,7 @@
                             <i class="bi bi-mortarboard-fill fs-2"></i>
                         </div>
                         <h4 class="fw-bold mb-1">Masuk E-Learning</h4>
-                        <p class="small text-muted mb-0">SMK Muthia Harapan Cicalengka</p>
+                        <p class="small text-muted mb-0">SMK Muthia Harapan Cicalengka Mandiri</p>
                     </div>
 
                     <form action="<?= BASE_URL ?>login.php" method="POST">
@@ -56,23 +56,7 @@
                         </button>
                     </form>
 
-                    <!-- Quick Demo Credentials Box -->
-                    <div class="mt-4 pt-3 border-top">
-                        <small class="fw-bold text-muted d-block mb-2 text-center">Akun Demo Pengujian (Quick Login):</small>
-                        <div class="table-responsive">
-                            <table class="table table-sm text-center small mb-0">
-                                <thead class="table-light">
-                                    <tr><th>Role</th><th>Username</th><th>Password</th></tr>
-                                </thead>
-                                <tbody>
-                                    <tr><td><span class="badge bg-danger">Admin</span></td><td><code>admin</code></td><td><code>admin123</code></td></tr>
-                                    <tr><td><span class="badge bg-primary">Guru</span></td><td><code>guru</code></td><td><code>guru123</code></td></tr>
-                                    <tr><td><span class="badge bg-success">Siswa</span></td><td><code>siswa</code></td><td><code>siswa123</code></td></tr>
-                                    <tr><td><span class="badge bg-warning text-dark">Kepsek</span></td><td><code>kepsek</code></td><td><code>kepsek123</code></td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    
                 </div>
             </div>
         </div>
