@@ -116,11 +116,28 @@ $formTargetUrl = in_array($userRole, ['administrator', 'admin']) ? 'admin/inputN
                         <?php else: ?>
                             <?php foreach ($siswaList as $i => $s): 
                                 $nData = $existingNilai[$s['id']] ?? [];
-                                $nTugas = $nData['nilai_tugas'] ?? 0;
-                                $nQuiz  = $nData['nilai_quiz'] ?? 0;
-                                $nUts   = $nData['nilai_uts'] ?? 0;
-                                $nUas   = $nData['nilai_uas'] ?? 0;
-                                $nAkhir = $nData['nilai_akhir'] ?? (($nTugas*0.2) + ($nQuiz*0.2) + ($nUts*0.3) + ($nUas*0.3));
+                                $nTugas = min(100.0, max(0.0, (float)($nData['nilai_tugas'] ?? 0)));
+                                $nQuiz  = min(100.0, max(0.0, (float)($nData['nilai_quiz'] ?? 0)));
+                                $nUts   = min(100.0, max(0.0, (float)($nData['nilai_uts'] ?? 0)));
+                                $nUas   = min(100.0, max(0.0, (float)($nData['nilai_uas'] ?? 0)));
+
+                                $weightsRow = [];
+                                if ($nTugas > 0) $weightsRow[] = ['val' => $nTugas, 'w' => 0.20];
+                                if ($nQuiz > 0)  $weightsRow[] = ['val' => $nQuiz,  'w' => 0.20];
+                                if ($nUts > 0)   $weightsRow[] = ['val' => $nUts,   'w' => 0.30];
+                                if ($nUas > 0)   $weightsRow[] = ['val' => $nUas,   'w' => 0.30];
+
+                                if (!empty($weightsRow)) {
+                                    $sumValR = 0; $sumWR = 0;
+                                    foreach ($weightsRow as $wr) {
+                                        $sumValR += ($wr['val'] * $wr['w']);
+                                        $sumWR += $wr['w'];
+                                    }
+                                    $nAkhir = ($sumWR > 0) ? round($sumValR / $sumWR, 2) : 0.00;
+                                } else {
+                                    $nAkhir = ($nTugas*0.2) + ($nQuiz*0.2) + ($nUts*0.3) + ($nUas*0.3);
+                                }
+                                $nAkhir = min(100.0, max(0.0, (float)$nAkhir));
 
                                 $predikat = NilaiModel::getPredikat((float)$nAkhir);
                             ?>
@@ -314,12 +331,25 @@ function calcRow(siswaId) {
     const inputs = document.querySelectorAll(`input[data-siswa="${siswaId}"]`);
     if (inputs.length < 4) return;
 
-    const t = parseFloat(inputs[0].value) || 0;
-    const q = parseFloat(inputs[1].value) || 0;
-    const uts = parseFloat(inputs[2].value) || 0;
-    const uas = parseFloat(inputs[3].value) || 0;
+    let t = parseFloat(inputs[0].value) || 0;
+    let q = parseFloat(inputs[1].value) || 0;
+    let uts = parseFloat(inputs[2].value) || 0;
+    let uas = parseFloat(inputs[3].value) || 0;
 
-    const akhir = (t * 0.2) + (q * 0.2) + (uts * 0.3) + (uas * 0.3);
+    if (t > 100) { t = 100; inputs[0].value = 100; }
+    if (q > 100) { q = 100; inputs[1].value = 100; }
+    if (uts > 100) { uts = 100; inputs[2].value = 100; }
+    if (uas > 100) { uas = 100; inputs[3].value = 100; }
+
+    let sumVal = 0, sumW = 0;
+    if (t > 0)   { sumVal += (t * 0.20);   sumW += 0.20; }
+    if (q > 0)   { sumVal += (q * 0.20);   sumW += 0.20; }
+    if (uts > 0) { sumVal += (uts * 0.30); sumW += 0.30; }
+    if (uas > 0) { sumVal += (uas * 0.30); sumW += 0.30; }
+
+    let akhir = sumW > 0 ? (sumVal / sumW) : ((t * 0.2) + (q * 0.2) + (uts * 0.3) + (uas * 0.3));
+    if (akhir > 100) akhir = 100;
+
     const valElem = document.getElementById('valAkhir' + siswaId);
     const badgeElem = document.getElementById('badgePredikat' + siswaId);
 

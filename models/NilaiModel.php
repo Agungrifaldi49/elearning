@@ -9,6 +9,7 @@ class NilaiModel {
     public function __construct() {
         $this->db = Database::getConnection();
         $this->ensureTableExists();
+        $this->sanitizeAndCapAllRaporNilai();
     }
 
     private function ensureTableExists() {
@@ -70,13 +71,30 @@ class NilaiModel {
      * Simpan / update nilai siswa untuk satu mapel
      */
     public function simpanNilai(int $siswaId, int $mapelId, array $komponen): bool {
-        $tugas = (float)($komponen['nilai_tugas'] ?? 0);
-        $quiz  = (float)($komponen['nilai_quiz'] ?? 0);
-        $uts   = (float)($komponen['nilai_uts'] ?? 0);
-        $uas   = (float)($komponen['nilai_uas'] ?? 0);
+        $tugas = min(100.0, max(0.0, (float)($komponen['nilai_tugas'] ?? 0)));
+        $quiz  = min(100.0, max(0.0, (float)($komponen['nilai_quiz'] ?? 0)));
+        $uts   = min(100.0, max(0.0, (float)($komponen['nilai_uts'] ?? 0)));
+        $uas   = min(100.0, max(0.0, (float)($komponen['nilai_uas'] ?? 0)));
 
-        // Formula: 20% tugas + 20% quiz + 30% UTS + 30% UAS
-        $akhir = ($tugas * 0.20) + ($quiz * 0.20) + ($uts * 0.30) + ($uas * 0.30);
+        // Calculate Proportional Weighted Average for Active Evaluation Components
+        $weights = [];
+        if ($tugas > 0) $weights[] = ['val' => $tugas, 'w' => 0.20];
+        if ($quiz > 0)  $weights[] = ['val' => $quiz,  'w' => 0.20];
+        if ($uts > 0)   $weights[] = ['val' => $uts,   'w' => 0.30];
+        if ($uas > 0)   $weights[] = ['val' => $uas,   'w' => 0.30];
+
+        if (!empty($weights)) {
+            $sumVal = 0;
+            $sumW = 0;
+            foreach ($weights as $wItem) {
+                $sumVal += ($wItem['val'] * $wItem['w']);
+                $sumW += $wItem['w'];
+            }
+            $akhir = ($sumW > 0) ? round($sumVal / $sumW, 2) : 0.00;
+        } else {
+            $akhir = ($tugas * 0.20) + ($quiz * 0.20) + ($uts * 0.30) + ($uas * 0.30);
+        }
+        $akhir = min(100.0, max(0.0, (float)$akhir));
 
         // Cek apakah sudah ada data nilai untuk siswa + mapel ini
         $check = $this->db->prepare("SELECT id FROM nilai_rapor WHERE siswa_id = ? AND mapel_id = ?");
@@ -351,5 +369,25 @@ class NilaiModel {
             FROM nilai_rapor
         ");
         return $stmt->fetch() ?: [];
+    }
+
+    /**
+     * Sanitasi & Rekalibrasi Otomatis Data Nilai Rapor > 100
+     */
+    public function sanitizeAndCapAllRaporNilai(): int {
+        try {
+            $stmt = $this->db->query("
+                UPDATE nilai_rapor 
+                SET nilai_tugas = LEAST(100.00, GREATEST(0.00, nilai_tugas)),
+                    nilai_quiz  = LEAST(100.00, GREATEST(0.00, nilai_quiz)),
+                    nilai_uts   = LEAST(100.00, GREATEST(0.00, nilai_uts)),
+                    nilai_uas   = LEAST(100.00, GREATEST(0.00, nilai_uas)),
+                    nilai_akhir = LEAST(100.00, GREATEST(0.00, nilai_akhir))
+                WHERE nilai_tugas > 100 OR nilai_quiz > 100 OR nilai_uts > 100 OR nilai_uas > 100 OR nilai_akhir > 100
+            ");
+            return $stmt->rowCount();
+        } catch (Exception $e) {
+            return 0;
+        }
     }
 }

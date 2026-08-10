@@ -783,10 +783,10 @@ class GuruController {
                 $nilais = $_POST['nilai'] ?? [];
                 $countSaved = 0;
                 foreach ($nilais as $siswaId => $data) {
-                    $tugas = (float)($data['tugas'] ?? 0);
-                    $quiz = (float)($data['quiz'] ?? 0);
-                    $uts = (float)($data['uts'] ?? 0);
-                    $uas = (float)($data['uas'] ?? 0);
+                    $tugas = min(100.0, max(0.0, (float)($data['tugas'] ?? 0)));
+                    $quiz  = min(100.0, max(0.0, (float)($data['quiz'] ?? 0)));
+                    $uts   = min(100.0, max(0.0, (float)($data['uts'] ?? 0)));
+                    $uas   = min(100.0, max(0.0, (float)($data['uas'] ?? 0)));
                     $nilaiModel->saveNilai($siswaId, $selectedMapelId, 1, 1, $tugas, $quiz, $uts, $uas);
                     $countSaved++;
                 }
@@ -795,10 +795,10 @@ class GuruController {
             } else {
                 $siswa_id = (int)$_POST['siswa_id'];
                 $mapel_id = (int)$_POST['mapel_id'];
-                $tugas = (float)$_POST['nilai_tugas'];
-                $quiz = (float)$_POST['nilai_quiz'];
-                $uts = (float)$_POST['nilai_uts'];
-                $uas = (float)$_POST['nilai_uas'];
+                $tugas = min(100.0, max(0.0, (float)$_POST['nilai_tugas']));
+                $quiz  = min(100.0, max(0.0, (float)$_POST['nilai_quiz']));
+                $uts   = min(100.0, max(0.0, (float)$_POST['nilai_uts']));
+                $uas   = min(100.0, max(0.0, (float)$_POST['nilai_uas']));
 
                 $nilaiModel->saveNilai($siswa_id, $mapel_id, 1, 1, $tugas, $quiz, $uts, $uas);
                 FlashHelper::setSuccess('Nilai E-Rapor Siswa berhasil dihitung & disimpan.');

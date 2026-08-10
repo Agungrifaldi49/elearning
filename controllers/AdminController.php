@@ -1084,10 +1084,10 @@ class AdminController {
                 $selKelasId = (int)($_GET['kelas_id'] ?? 0);
                 $selMapelId = (int)($_GET['mapel_id'] ?? 0);
                 foreach ($nilais as $siswaId => $data) {
-                    $tugas = (float)($data['tugas'] ?? 0);
-                    $quiz = (float)($data['quiz'] ?? 0);
-                    $uts = (float)($data['uts'] ?? 0);
-                    $uas = (float)($data['uas'] ?? 0);
+                    $tugas = min(100.0, max(0.0, (float)($data['tugas'] ?? 0)));
+                    $quiz  = min(100.0, max(0.0, (float)($data['quiz'] ?? 0)));
+                    $uts   = min(100.0, max(0.0, (float)($data['uts'] ?? 0)));
+                    $uas   = min(100.0, max(0.0, (float)($data['uas'] ?? 0)));
                     $nilaiModel->saveNilai((int)$siswaId, $selMapelId, 1, 1, $tugas, $quiz, $uts, $uas);
                     $countSaved++;
                 }
@@ -1097,10 +1097,10 @@ class AdminController {
             } elseif ($action === 'single_save') {
                 $siswaId = (int)$_POST['siswa_id'];
                 $mapelId = (int)$_POST['mapel_id'];
-                $tugas = (float)$_POST['nilai_tugas'];
-                $quiz = (float)$_POST['nilai_quiz'];
-                $uts = (float)$_POST['nilai_uts'];
-                $uas = (float)$_POST['nilai_uas'];
+                $tugas = min(100.0, max(0.0, (float)$_POST['nilai_tugas']));
+                $quiz  = min(100.0, max(0.0, (float)$_POST['nilai_quiz']));
+                $uts   = min(100.0, max(0.0, (float)$_POST['nilai_uts']));
+                $uas   = min(100.0, max(0.0, (float)$_POST['nilai_uas']));
 
                 $nilaiModel->saveNilai($siswaId, $mapelId, 1, 1, $tugas, $quiz, $uts, $uas);
                 FlashHelper::setSuccess("Nilai E-Rapor siswa berhasil diperbarui.");
