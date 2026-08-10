@@ -22,22 +22,22 @@
             </div>
         </div>
 
-        <!-- Filter & Search Toolbar -->
+        <!-- Filter & Search Toolbar (Auto Filter / Instant Typing Search) -->
         <div class="card card-custom p-3 p-md-4 mb-4 shadow-sm border-0 rounded-4">
-            <form action="<?= BASE_URL ?>index.php" method="GET" class="row g-3 align-items-end">
+            <form action="<?= BASE_URL ?>index.php" method="GET" id="autoFilterForm" class="row g-3 align-items-end">
                 <input type="hidden" name="url" value="admin/siswa">
 
-                <div class="col-md-4 col-12">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search text-primary me-1"></i> Cari NISN / NIS / Nama</label>
+                <div class="col-md-5 col-12">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search text-primary me-1"></i> Cari NISN / NIS / Nama (Otomatis)</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Masukkan NISN, NIS, atau Nama...">
+                        <input type="text" name="q" id="autoSearchInput" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Ketik NISN, NIS, atau Nama..." autocomplete="off">
                     </div>
                 </div>
 
                 <div class="col-md-3 col-6">
                     <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-door-open-fill text-info me-1"></i> Filter Kelas</label>
-                    <select name="kelas_id" class="form-select rounded-3">
+                    <select name="kelas_id" class="form-select rounded-3" onchange="this.form.submit()">
                         <option value="">-- Semua Kelas --</option>
                         <?php foreach ($kelasList as $kls): ?>
                             <option value="<?= $kls['id'] ?>" <?= (isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] === (int)$kls['id']) ? 'selected' : '' ?>>
@@ -49,7 +49,7 @@
 
                 <div class="col-md-3 col-6">
                     <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-journal-bookmark-fill text-warning me-1"></i> Filter Jurusan</label>
-                    <select name="jurusan_id" class="form-select rounded-3">
+                    <select name="jurusan_id" class="form-select rounded-3" onchange="this.form.submit()">
                         <option value="">-- Semua Jurusan --</option>
                         <?php foreach ($jurusanList as $jur): ?>
                             <option value="<?= $jur['id'] ?>" <?= (isset($_GET['jurusan_id']) && (int)$_GET['jurusan_id'] === (int)$jur['id']) ? 'selected' : '' ?>>
@@ -59,18 +59,48 @@
                     </select>
                 </div>
 
-                <div class="col-md-2 col-12 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary w-100 rounded-3 shadow-sm fw-semibold">
-                        <i class="bi bi-funnel-fill me-1"></i> Cari
-                    </button>
+                <div class="col-md-1 col-12">
                     <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id'])): ?>
-                        <a href="<?= BASE_URL ?>index.php?url=admin/siswa" class="btn btn-outline-secondary rounded-3" title="Reset Filter">
-                            <i class="bi bi-arrow-counterclockwise"></i>
+                        <a href="<?= BASE_URL ?>index.php?url=admin/siswa" class="btn btn-outline-secondary w-100 rounded-3" title="Reset Filter">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                         </a>
+                    <?php else: ?>
+                        <button type="submit" class="btn btn-primary w-100 rounded-3 shadow-sm fw-semibold" title="Filter Data">
+                            <i class="bi bi-funnel-fill"></i>
+                        </button>
                     <?php endif; ?>
                 </div>
             </form>
         </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('autoSearchInput');
+            const form = document.getElementById('autoFilterForm');
+            if (!searchInput || !form) return;
+
+            let debounceTimer;
+            searchInput.addEventListener('input', function() {
+                // Instant client-side DataTables filter if available
+                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable) {
+                    window.jQuery('.datatable').DataTable().search(this.value).draw();
+                }
+
+                // Debounced auto-submit for server-side query persistence
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    form.submit();
+                }, 450);
+            });
+
+            // Maintain cursor position at end of text after reload
+            if (searchInput.value) {
+                searchInput.focus();
+                const len = searchInput.value.length;
+                searchInput.setSelectionRange(len, len);
+            }
+        });
+        </script>
 
         <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id']) || !empty($selectedKelas)): ?>
             <div class="alert alert-primary border-0 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
