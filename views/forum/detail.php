@@ -2,8 +2,12 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<script src="<?= BASE_URL ?>assets/js/forum.js?v=<?= time() ?>"></script>
+
 <main class="main-content px-3 px-md-4">
     <div class="container-fluid">
+        <input type="hidden" id="activeTopicId" value="<?= $topic['id'] ?>">
+        
         <a href="<?= BASE_URL ?>index.php?url=forum" class="btn btn-outline-secondary mb-3">
             <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar Forum
         </a>
@@ -89,23 +93,27 @@
 
         <!-- Comments Section -->
         <div class="card card-custom p-4 mb-4">
-            <h5 class="fw-bold mb-4"><i class="bi bi-chat-left-dots text-primary me-2"></i> Tanggapan Diskusi (<?= count($comments) ?>)</h5>
+            <h5 class="fw-bold mb-4"><i class="bi bi-chat-left-dots text-primary me-2"></i> Tanggapan Diskusi (<span id="commentCountBadge"><?= count($comments) ?></span>)</h5>
 
-            <div class="d-flex flex-column gap-3 mb-4">
-                <?php foreach ($comments as $c): ?>
-                    <div class="p-3 bg-light rounded-4">
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="fw-bold small"><?= htmlspecialchars($c['full_name']) ?></span>
-                            <span class="badge bg-primary" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
-                            <small class="text-muted ms-auto"><?= date('d/m/Y H:i', strtotime($c['created_at'])) ?></small>
+            <div class="d-flex flex-column gap-3 mb-4" id="commentsListContainer">
+                <?php if (empty($comments)): ?>
+                    <div class="p-3 text-center text-muted small">Belum ada tanggapan balasan pada topik ini.</div>
+                <?php else: ?>
+                    <?php foreach ($comments as $c): ?>
+                        <div class="p-3 bg-light rounded-4 border-start border-3 border-primary shadow-sm" data-comment-id="<?= $c['id'] ?>">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="fw-bold small text-dark"><?= htmlspecialchars($c['full_name']) ?></span>
+                                <span class="badge bg-primary" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
+                                <small class="text-muted ms-auto"><?= date('d/m/Y H:i', strtotime($c['created_at'])) ?></small>
+                            </div>
+                            <p class="mb-0 text-muted small" style="white-space: pre-line;"><?= htmlspecialchars($c['komentar']) ?></p>
                         </div>
-                        <p class="mb-0 text-muted small"><?= nl2br(htmlspecialchars($c['komentar'])) ?></p>
-                    </div>
-                <?php endforeach; ?>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
 
             <!-- Comment Form -->
-            <form action="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $topic['id'] ?>" method="POST">
+            <form id="commentReplyForm" action="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $topic['id'] ?>" method="POST">
                 <?= Security::csrfField() ?>
                 <div class="mb-3 position-relative">
                     <div class="d-flex justify-content-between align-items-center mb-1">

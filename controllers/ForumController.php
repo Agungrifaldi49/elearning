@@ -66,8 +66,14 @@ class ForumController {
             }
 
             $commModel->createForumTopic($user['id'], $mapelId, $judul, $konten, $gambar, $visibility, $targetRole, $targetKelasId);
-            FlashHelper::setSuccess('Topik diskusi baru berhasil dibuat.');
+            
+            if (isset($_POST['is_ajax']) || isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'success', 'message' => 'Topik diskusi baru berhasil dibuat.']);
+                exit();
+            }
 
+            FlashHelper::setSuccess('Topik diskusi baru berhasil dibuat.');
             header('Location: ' . BASE_URL . 'index.php?url=forum');
             exit();
         }
@@ -79,6 +85,79 @@ class ForumController {
         require_once ROOT_PATH . 'views/forum/index.php';
     }
 
+    public function fetchUpdates() {
+        AuthHelper::requireLogin();
+        header('Content-Type: application/json');
+
+        $user = AuthHelper::user();
+        $commModel = new CommunicationModel();
+
+        $roleName = $user['role_name'] ?? '';
+        $userKelasId = ($roleName === 'Siswa') ? $this->getUserKelasId($user['id']) : null;
+
+        $topics = $commModel->getForumTopics($user['id'], $roleName, $userKelasId);
+        $formattedTopics = [];
+
+        foreach ($topics as $t) {
+            $isAuthor = ((int)($t['user_id'] ?? 0) === (int)($user['id'] ?? 0));
+            $isAdmin = (strtolower($roleName) === 'administrator');
+            $canDelete = ($isAuthor || $isAdmin);
+
+            $formattedTopics[] = [
+                'id' => (int)$t['id'],
+                'user_id' => (int)$t['user_id'],
+                'full_name' => htmlspecialchars($t['full_name']),
+                'role_name' => htmlspecialchars($t['role_name']),
+                'created_at' => date('d F Y, H:i', strtotime($t['created_at'])),
+                'posted_time' => date('H:i', strtotime($t['created_at'])),
+                'nama_mapel' => $t['nama_mapel'] ? htmlspecialchars($t['nama_mapel']) : '',
+                'visibility' => $t['visibility'] ?? 'public',
+                'target_role' => $t['target_role'] ? htmlspecialchars($t['target_role']) : '',
+                'target_nama_kelas' => $t['target_nama_kelas'] ? htmlspecialchars($t['target_nama_kelas']) : '',
+                'judul' => htmlspecialchars($t['judul']),
+                'konten_preview' => htmlspecialchars(substr($t['konten'], 0, 220)),
+                'total_replies' => (int)$t['total_replies'],
+                'can_delete' => $canDelete,
+                'is_me' => $isAuthor
+            ];
+        }
+
+        echo json_encode(['status' => 'success', 'topics' => $formattedTopics]);
+        exit();
+    }
+
+    public function fetchComments() {
+        AuthHelper::requireLogin();
+        header('Content-Type: application/json');
+
+        $user = AuthHelper::user();
+        $commModel = new CommunicationModel();
+
+        $id = (int)($_GET['id'] ?? 0);
+        $topic = $commModel->getForumDetail($id);
+
+        if (!$topic) {
+            echo json_encode(['status' => 'error', 'message' => 'Topik tidak ditemukan']);
+            exit();
+        }
+
+        $comments = $commModel->getKomentar($id);
+        $formattedComments = [];
+
+        foreach ($comments as $c) {
+            $formattedComments[] = [
+                'id' => (int)$c['id'],
+                'full_name' => htmlspecialchars($c['full_name']),
+                'role_name' => htmlspecialchars($c['role_name']),
+                'created_at' => date('d/m/Y H:i', strtotime($c['created_at'])),
+                'komentar' => nl2br(htmlspecialchars($c['komentar']))
+            ];
+        }
+
+        echo json_encode(['status' => 'success', 'comments' => $formattedComments]);
+        exit();
+    }
+
     public function delete() {
         AuthHelper::requireLogin();
         $user = AuthHelper::user();
@@ -86,6 +165,11 @@ class ForumController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
+                if (isset($_POST['is_ajax']) || isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['status' => 'error', 'message' => 'CSRF Token Invalid']);
+                    exit();
+                }
                 FlashHelper::setError('CSRF Token Invalid');
                 header('Location: ' . BASE_URL . 'index.php?url=forum');
                 exit();
@@ -93,6 +177,17 @@ class ForumController {
 
             $topicId = (int)($_POST['topic_id'] ?? 0);
             $res = $commModel->deleteForumTopic($topicId, $user['id'], $user['role_name'] ?? '');
+            
+            if (isset($_POST['is_ajax']) || isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+                header('Content-Type: application/json');
+                if ($res) {
+                    echo json_encode(['status' => 'success', 'message' => 'Topik diskusi berhasil dihapus.']);
+                } else {
+                    echo json_encode(['status' => 'error', 'message' => 'Gagal menghapus topik. Anda tidak memiliki hak akses.']);
+                }
+                exit();
+            }
+
             if ($res) {
                 FlashHelper::setSuccess('Topik diskusi berhasil dihapus.');
             } else {
@@ -135,6 +230,11 @@ class ForumController {
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
+                if (isset($_POST['is_ajax']) || isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['status' => 'error', 'message' => 'CSRF Token Invalid']);
+                    exit();
+                }
                 FlashHelper::setError('CSRF Token Invalid');
                 header('Location: ' . BASE_URL . "index.php?url=forum/detail&id={$id}");
                 exit();
@@ -145,8 +245,14 @@ class ForumController {
             $parentId = (int)($_POST['parent_id'] ?? 0);
 
             $commModel->addKomentar($id, $user['id'], $komentar, $parentId);
-            FlashHelper::setSuccess('Komentar berhasil ditambahkan.');
 
+            if (isset($_POST['is_ajax']) || isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['status' => 'success', 'message' => 'Komentar berhasil ditambahkan.']);
+                exit();
+            }
+
+            FlashHelper::setSuccess('Komentar berhasil ditambahkan.');
             header('Location: ' . BASE_URL . "index.php?url=forum/detail&id={$id}");
             exit();
         }
