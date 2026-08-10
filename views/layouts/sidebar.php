@@ -86,6 +86,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'admin/tugas') ?>" href="<?= BASE_URL ?>index.php?url=admin/tugas">
                 <i class="bi bi-card-checklist"></i> Tugas & Evaluasi
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'game') ?>" href="<?= BASE_URL ?>index.php?url=game">
+                <i class="bi bi-controller text-danger me-1"></i> Game Edukasi
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'admin/quiz') ?>" href="<?= BASE_URL ?>index.php?url=admin/quiz">
                 <i class="bi bi-patch-question-fill"></i> Quiz & CBT Ujian
             </a></li>
@@ -171,6 +174,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'guru/tugas') ?>" href="<?= BASE_URL ?>index.php?url=guru/tugas">
                 <i class="bi bi-card-checklist"></i> Kelola Tugas & Rubrik
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'game') ?>" href="<?= BASE_URL ?>index.php?url=game">
+                <i class="bi bi-controller text-danger me-1"></i> Game Edukasi
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'guru/quiz') ?>" href="<?= BASE_URL ?>index.php?url=guru/quiz">
                 <i class="bi bi-patch-question-fill"></i> Quiz & Ujian CBT
             </a></li>
@@ -236,6 +242,9 @@ if (!empty($sidebarRawLogo)) {
             <li class="nav-section-title">Tugas & Evaluasi</li>
             <li><a class="nav-link <?= isActive($currentUrl,'siswa/tugas') ?>" href="<?= BASE_URL ?>index.php?url=siswa/tugas">
                 <i class="bi bi-pencil-square"></i> Kerjakan Tugas
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'game') ?>" href="<?= BASE_URL ?>index.php?url=game">
+                <i class="bi bi-controller text-danger me-1"></i> Game Edukasi
             </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'siswa/quiz') ?>" href="<?= BASE_URL ?>index.php?url=siswa/quiz">
                 <i class="bi bi-stopwatch-fill"></i> Kuis & Ujian CBT

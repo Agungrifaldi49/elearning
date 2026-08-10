@@ -87,6 +87,16 @@ switch ($routeGroup) {
         }
         break;
 
+    case 'game':
+        require_once ROOT_PATH . 'controllers/GameController.php';
+        $controller = new GameController();
+        if (method_exists($controller, $action)) {
+            $controller->$action();
+        } else {
+            $controller->index();
+        }
+        break;
+
     case 'forum':
         require_once ROOT_PATH . 'controllers/ForumController.php';
         $controller = new ForumController();
