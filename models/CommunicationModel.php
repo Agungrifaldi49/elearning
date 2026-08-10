@@ -11,6 +11,15 @@ class CommunicationModel extends BaseModel {
         $this->ensureChatColumnsExist();
         $this->ensureNotifikasiTable();
         $this->ensureLastSeenColumn();
+        $this->ensureForumColumnsExist();
+    }
+
+    private function ensureForumColumnsExist() {
+        try {
+            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS visibility ENUM('public', 'private') DEFAULT 'public'");
+            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS target_role VARCHAR(50) NULL");
+            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS target_kelas_id INT NULL");
+        } catch (Exception $e) {}
     }
 
     private function ensureLastSeenColumn() {
@@ -99,34 +108,86 @@ class CommunicationModel extends BaseModel {
     }
 
     // --- FORUM DISKUSI ---
-    public function getForumTopics() {
-        return $this->db->query("
-            SELECT f.*, u.full_name, u.avatar, r.name as role_name, m.nama_mapel,
-            (SELECT COUNT(*) FROM komentar k WHERE k.forum_id = f.id) as total_replies
+    public function getForumTopics($currentUserId = null, $userRole = null, $userKelasId = null) {
+        $uid = (int)$currentUserId;
+        $userRoleLower = strtolower($userRole ?? '');
+
+        $sql = "
+            SELECT f.*, u.full_name, u.avatar, r.name as role_name, m.nama_mapel, k.nama_kelas as target_nama_kelas,
+            (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_replies
             FROM forum f
             JOIN users u ON f.user_id = u.id
             JOIN roles r ON u.role_id = r.id
             LEFT JOIN mata_pelajaran m ON f.mapel_id = m.id
-            ORDER BY f.id DESC
-        ")->fetchAll();
+            LEFT JOIN kelas k ON f.target_kelas_id = k.id
+        ";
+
+        if ($userRoleLower !== 'administrator' && $uid > 0) {
+            $kelasIdInt = (int)$userKelasId;
+            $sql .= " WHERE (
+                f.visibility = 'public' 
+                OR f.visibility IS NULL 
+                OR f.user_id = {$uid}
+                OR (
+                    f.visibility = 'private' 
+                    AND (f.target_role IS NULL OR f.target_role = '' OR f.target_role = 'all' OR LOWER(f.target_role) = '{$userRoleLower}')
+                    AND (f.target_kelas_id IS NULL OR f.target_kelas_id = 0 OR f.target_kelas_id = {$kelasIdInt})
+                )
+            )";
+        }
+
+        $sql .= " ORDER BY f.id DESC";
+        return $this->db->query($sql)->fetchAll();
     }
 
     public function getForumDetail($id) {
         $stmt = $this->db->prepare("
-            SELECT f.*, u.full_name, u.avatar, r.name as role_name, m.nama_mapel
+            SELECT f.*, u.full_name, u.avatar, r.name as role_name, m.nama_mapel, k.nama_kelas as target_nama_kelas
             FROM forum f
             JOIN users u ON f.user_id = u.id
             JOIN roles r ON u.role_id = r.id
             LEFT JOIN mata_pelajaran m ON f.mapel_id = m.id
+            LEFT JOIN kelas k ON f.target_kelas_id = k.id
             WHERE f.id = ?
         ");
         $stmt->execute([$id]);
         return $stmt->fetch();
     }
 
-    public function createForumTopic($userId, $mapelId, $judul, $konten, $gambar) {
-        $stmt = $this->db->prepare("INSERT INTO forum (user_id, mapel_id, judul, konten, gambar) VALUES (?, ?, ?, ?, ?)");
-        return $stmt->execute([$userId, $mapelId ?: null, $judul, $konten, $gambar]);
+    public function createForumTopic($userId, $mapelId, $judul, $konten, $gambar, $visibility = 'public', $targetRole = null, $targetKelasId = null) {
+        $stmt = $this->db->prepare("INSERT INTO forum (user_id, mapel_id, judul, konten, gambar, visibility, target_role, target_kelas_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        return $stmt->execute([
+            $userId, 
+            $mapelId ?: null, 
+            $judul, 
+            $konten, 
+            $gambar, 
+            $visibility === 'private' ? 'private' : 'public', 
+            $targetRole ?: null, 
+            $targetKelasId ?: null
+        ]);
+    }
+
+    public function deleteForumTopic($topicId, $userId, $userRole) {
+        $topicId = (int)$topicId;
+        $userId = (int)$userId;
+        $userRoleLower = strtolower($userRole ?? '');
+
+        $topic = $this->getForumDetail($topicId);
+        if (!$topic) return false;
+
+        // Authorization: Only original topic author or Administrator can delete
+        if ((int)$topic['user_id'] !== $userId && $userRoleLower !== 'administrator') {
+            return false;
+        }
+
+        // Delete associated comments first
+        $stmtK = $this->db->prepare("DELETE FROM komentar WHERE forum_id = ?");
+        $stmtK->execute([$topicId]);
+
+        // Delete topic
+        $stmt = $this->db->prepare("DELETE FROM forum WHERE id = ?");
+        return $stmt->execute([$topicId]);
     }
 
     public function getKomentar($forum_id) {
