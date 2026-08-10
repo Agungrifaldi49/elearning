@@ -38,13 +38,20 @@ class AuthHelper {
         if (isset($_SESSION['user_id'])) {
             try {
                 $db = Database::getConnection();
-                $stmtSync = $db->prepare("SELECT full_name, email, avatar FROM users WHERE id = ?");
+                $stmtSync = $db->prepare("
+                    SELECT u.full_name, u.email, u.avatar, u.role_id, r.name as role_name 
+                    FROM users u 
+                    LEFT JOIN roles r ON u.role_id = r.id 
+                    WHERE u.id = ?
+                ");
                 $stmtSync->execute([$_SESSION['user_id']]);
                 $uRow = $stmtSync->fetch();
                 if ($uRow) {
                     $_SESSION['full_name'] = $uRow['full_name'];
                     $_SESSION['email'] = $uRow['email'];
                     $_SESSION['avatar'] = $uRow['avatar'] ?? 'default_avatar.png';
+                    $_SESSION['role_id'] = $uRow['role_id'];
+                    $_SESSION['role_name'] = $uRow['role_name'];
                 }
             } catch (Exception $e) {}
         }

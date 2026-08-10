@@ -77,6 +77,7 @@
                             ?>
                                 <a href="<?= BASE_URL ?>index.php?url=chat&with=<?= $c['id'] ?>" 
                                    class="list-group-item list-group-item-action p-3 contact-item <?= $isSel ? 'bg-primary bg-opacity-10 border-start border-4 border-primary' : '' ?>"
+                                   data-contact-id="<?= $c['id'] ?>"
                                    data-name="<?= strtolower(htmlspecialchars($c['full_name'])) ?>"
                                    data-role="<?= $roleLower ?>"
                                    data-kelas="<?= strtolower($kelasName) ?>"

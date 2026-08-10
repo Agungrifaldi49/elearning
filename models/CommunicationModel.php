@@ -204,26 +204,37 @@ class CommunicationModel extends BaseModel {
     public function getChatContacts($currentUserId) {
         $uid = (int)$currentUserId;
         $stmt = $this->db->prepare("
-            SELECT u.id, u.full_name, u.avatar, u.role_id, r.name as role_name,
-            COALESCE(
-                (SELECT k.nama_kelas FROM siswa s JOIN kelas k ON s.kelas_id = k.id WHERE s.user_id = u.id LIMIT 1),
-                ''
-            ) as nama_kelas,
-            COALESCE(
-                (SELECT GROUP_CONCAT(DISTINCT mp.nama_mapel SEPARATOR ', ') 
-                 FROM guru g 
-                 JOIN jadwal j ON j.guru_id = g.id 
-                 JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
-                 WHERE g.user_id = u.id),
-                ''
-            ) as mata_pelajaran,
+            SELECT u.id, 
+            COALESCE(s.nama_lengkap, g.nama_lengkap, u.full_name) as full_name,
+            u.avatar, 
+            u.role_id, 
+            r.name as role_name,
+            s.nis,
+            g.nip,
+            CASE 
+                WHEN r.name = 'Siswa' THEN COALESCE(k.nama_kelas, '')
+                ELSE ''
+            END as nama_kelas,
+            CASE 
+                WHEN r.name = 'Guru' THEN COALESCE(
+                    (SELECT GROUP_CONCAT(DISTINCT mp.nama_mapel SEPARATOR ', ') 
+                     FROM jadwal j 
+                     JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
+                     WHERE j.guru_id = g.id),
+                    ''
+                )
+                ELSE ''
+            END as mata_pelajaran,
             (SELECT message FROM chat WHERE (sender_id = u.id AND receiver_id = ?) OR (sender_id = ? AND receiver_id = u.id) ORDER BY created_at DESC LIMIT 1) as last_message,
             (SELECT created_at FROM chat WHERE (sender_id = u.id AND receiver_id = ?) OR (sender_id = ? AND receiver_id = u.id) ORDER BY created_at DESC LIMIT 1) as last_time,
             (SELECT COUNT(*) FROM chat WHERE sender_id = u.id AND receiver_id = ? AND is_read = 0) as unread_count
             FROM users u
             JOIN roles r ON u.role_id = r.id
+            LEFT JOIN siswa s ON s.user_id = u.id
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            LEFT JOIN guru g ON g.user_id = u.id
             WHERE u.id != ? AND u.status = 'active'
-            ORDER BY unread_count DESC, last_time DESC, u.full_name ASC
+            ORDER BY unread_count DESC, last_time DESC, full_name ASC
         ");
         $stmt->execute([$uid, $uid, $uid, $uid, $uid, $uid]);
         return $stmt->fetchAll();
