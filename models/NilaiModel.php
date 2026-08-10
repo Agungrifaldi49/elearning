@@ -169,8 +169,43 @@ class NilaiModel {
         $uts   = ($avgUtsVal   !== false && $avgUtsVal   !== null) ? (float)$avgUtsVal   : (float)($existing['nilai_uts']   ?? 0);
         $uas   = ($avgUasVal   !== false && $avgUasVal   !== null) ? (float)$avgUasVal   : (float)($existing['nilai_uas']   ?? 0);
 
-        // Formula: 20% Tugas + 20% Quiz + 30% UTS + 30% UAS
-        $akhir = ($tugas * 0.20) + ($quiz * 0.20) + ($uts * 0.30) + ($uas * 0.30);
+        // Calculate Proportional Weighted Average for Available Evaluation Components
+        $weights = [];
+        if ($avgTugasVal !== false && $avgTugasVal !== null) {
+            $weights[] = ['val' => (float)$avgTugasVal, 'w' => 0.20];
+        } elseif (!empty($existing['nilai_tugas']) && (float)$existing['nilai_tugas'] > 0) {
+            $weights[] = ['val' => (float)$existing['nilai_tugas'], 'w' => 0.20];
+        }
+
+        if ($avgQuizVal !== false && $avgQuizVal !== null) {
+            $weights[] = ['val' => (float)$avgQuizVal, 'w' => 0.20];
+        } elseif (!empty($existing['nilai_quiz']) && (float)$existing['nilai_quiz'] > 0) {
+            $weights[] = ['val' => (float)$existing['nilai_quiz'], 'w' => 0.20];
+        }
+
+        if ($avgUtsVal !== false && $avgUtsVal !== null) {
+            $weights[] = ['val' => (float)$avgUtsVal, 'w' => 0.30];
+        } elseif (!empty($existing['nilai_uts']) && (float)$existing['nilai_uts'] > 0) {
+            $weights[] = ['val' => (float)$existing['nilai_uts'], 'w' => 0.30];
+        }
+
+        if ($avgUasVal !== false && $avgUasVal !== null) {
+            $weights[] = ['val' => (float)$avgUasVal, 'w' => 0.30];
+        } elseif (!empty($existing['nilai_uas']) && (float)$existing['nilai_uas'] > 0) {
+            $weights[] = ['val' => (float)$existing['nilai_uas'], 'w' => 0.30];
+        }
+
+        if (!empty($weights)) {
+            $sumVal = 0;
+            $sumW = 0;
+            foreach ($weights as $wItem) {
+                $sumVal += ($wItem['val'] * $wItem['w']);
+                $sumW += $wItem['w'];
+            }
+            $akhir = ($sumW > 0) ? round($sumVal / $sumW, 2) : 0.00;
+        } else {
+            $akhir = ($tugas * 0.20) + ($quiz * 0.20) + ($uts * 0.30) + ($uas * 0.30);
+        }
 
         if ($existing) {
             $stmt = $this->db->prepare("

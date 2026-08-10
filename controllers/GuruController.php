@@ -613,10 +613,27 @@ class GuruController {
                 $essayScores = $_POST['nilai_essay'] ?? [];
 
                 $db = Database::getConnection();
+                $stmtGetSoal = $db->prepare("SELECT s.bobot FROM jawaban_siswa js JOIN soal s ON js.soal_id = s.id WHERE js.id = ?");
                 $stmtUpdate = $db->prepare("UPDATE jawaban_siswa SET nilai = ?, is_benar = IF(? > 0, 1, 0) WHERE id = ?");
 
                 foreach ($essayScores as $jawabanId => $scoreVal) {
                     $scoreNum = (float)$scoreVal;
+                    
+                    // Fetch max bobot for this question to validate
+                    $stmtGetSoal->execute([(int)$jawabanId]);
+                    $soalRow = $stmtGetSoal->fetch();
+                    $maxBobot = (float)($soalRow['bobot'] ?? 10);
+
+                    // If teacher entered score > maxBobot (e.g., entered 80 out of 100 for a question of bobot 10)
+                    if ($scoreNum > $maxBobot) {
+                        if ($scoreNum <= 100 && $maxBobot > 0) {
+                            $scoreNum = round(($scoreNum / 100) * $maxBobot, 2);
+                        } else {
+                            $scoreNum = $maxBobot;
+                        }
+                    }
+                    if ($scoreNum < 0) $scoreNum = 0;
+
                     $stmtUpdate->execute([$scoreNum, $scoreNum, (int)$jawabanId]);
                 }
 
