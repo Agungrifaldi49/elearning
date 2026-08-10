@@ -20,22 +20,89 @@
                     <i class="bi bi-plus-circle me-1"></i> Tambah Siswa Baru
                 </button>
             </div>
-        <?php if (!empty($selectedKelas)): ?>
-            <div class="alert alert-info border-0 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="card card-custom p-3 p-md-4 mb-4 shadow-sm border-0 rounded-4">
+            <form action="<?= BASE_URL ?>index.php" method="GET" class="row g-3 align-items-end">
+                <input type="hidden" name="url" value="admin/siswa">
+
+                <div class="col-md-4 col-12">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search text-primary me-1"></i> Cari NISN / NIS / Nama</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Masukkan NISN, NIS, atau Nama...">
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-6">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-door-open-fill text-info me-1"></i> Filter Kelas</label>
+                    <select name="kelas_id" class="form-select rounded-3">
+                        <option value="">-- Semua Kelas --</option>
+                        <?php foreach ($kelasList as $kls): ?>
+                            <option value="<?= $kls['id'] ?>" <?= (isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] === (int)$kls['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($kls['nama_kelas']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="col-md-3 col-6">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-journal-bookmark-fill text-warning me-1"></i> Filter Jurusan</label>
+                    <select name="jurusan_id" class="form-select rounded-3">
+                        <option value="">-- Semua Jurusan --</option>
+                        <?php foreach ($jurusanList as $jur): ?>
+                            <option value="<?= $jur['id'] ?>" <?= (isset($_GET['jurusan_id']) && (int)$_GET['jurusan_id'] === (int)$jur['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($jur['nama_jurusan']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="col-md-2 col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3 shadow-sm fw-semibold">
+                        <i class="bi bi-funnel-fill me-1"></i> Cari
+                    </button>
+                    <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id'])): ?>
+                        <a href="<?= BASE_URL ?>index.php?url=admin/siswa" class="btn btn-outline-secondary rounded-3" title="Reset Filter">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </form>
+        </div>
+
+        <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id']) || !empty($selectedKelas)): ?>
+            <div class="alert alert-primary border-0 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:38px; height:38px;">
                         <i class="bi bi-funnel-fill fs-5"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">Filter Anggota Rombel: <?= htmlspecialchars($selectedKelas['nama_kelas']) ?> (<?= htmlspecialchars($selectedKelas['nama_jurusan'] ?? 'Umum') ?>)</h6>
+                        <h6 class="fw-bold mb-0 text-dark">Hasil Penyaringan Data Siswa: <strong><?= count($siswaList) ?> Siswa Ditemukan</strong></h6>
                         <small class="text-muted">
-                            Wali Kelas: <strong><?= htmlspecialchars($selectedKelas['nama_walikelas'] ?? 'Belum Ditentukan') ?></strong> |
-                            Total Anggota: <strong><?= count($siswaList) ?> Siswa</strong>
+                            <?php if (!empty($_GET['q'])): ?>
+                                Kata Kunci: <strong>"<?= htmlspecialchars($_GET['q']) ?>"</strong> |
+                            <?php endif; ?>
+                            <?php if (!empty($_GET['kelas_id'])): ?>
+                                <?php 
+                                    $klsName = 'Kelas #' . $_GET['kelas_id'];
+                                    foreach ($kelasList as $k) { if ((int)$k['id'] === (int)$_GET['kelas_id']) { $klsName = $k['nama_kelas']; break; } }
+                                ?>
+                                Kelas: <strong><?= htmlspecialchars($klsName) ?></strong> |
+                            <?php endif; ?>
+                            <?php if (!empty($_GET['jurusan_id'])): ?>
+                                <?php 
+                                    $jurName = 'Jurusan #' . $_GET['jurusan_id'];
+                                    foreach ($jurusanList as $j) { if ((int)$j['id'] === (int)$_GET['jurusan_id']) { $jurName = $j['nama_jurusan']; break; } }
+                                ?>
+                                Jurusan: <strong><?= htmlspecialchars($jurName) ?></strong> |
+                            <?php endif; ?>
                         </small>
                     </div>
                 </div>
-                <a href="<?= BASE_URL ?>index.php?url=admin/siswa" class="btn btn-sm btn-outline-dark fw-semibold">
-                    <i class="bi bi-x-circle me-1"></i> Tampilkan Semua Rombel Siswa
+                <a href="<?= BASE_URL ?>index.php?url=admin/siswa" class="btn btn-sm btn-outline-dark fw-semibold rounded-pill">
+                    <i class="bi bi-x-circle me-1"></i> Tampilkan Semua Siswa
                 </a>
             </div>
         <?php endif; ?>

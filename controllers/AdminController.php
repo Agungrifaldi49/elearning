@@ -189,10 +189,14 @@ class AdminController {
             exit();
         }
 
-        $selectedKelasId = isset($_GET['kelas_id']) ? (int)$_GET['kelas_id'] : null;
-        $siswaList = $siswaModel->getAll($selectedKelasId);
+        $selectedKelasId = isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] > 0 ? (int)$_GET['kelas_id'] : null;
+        $selectedJurusanId = isset($_GET['jurusan_id']) && (int)$_GET['jurusan_id'] > 0 ? (int)$_GET['jurusan_id'] : null;
+        $searchKeyword = isset($_GET['q']) ? Security::sanitize($_GET['q']) : null;
+
+        $siswaList = $siswaModel->getAll($selectedKelasId, $selectedJurusanId, $searchKeyword);
         $kelasList = $academicModel->getKelas();
         $jurusanList = $academicModel->getJurusan();
+
         $selectedKelas = null;
         if ($selectedKelasId > 0) {
             $db = Database::getConnection();

@@ -6,19 +6,41 @@ require_once ROOT_PATH . 'models/BaseModel.php';
 
 class SiswaModel extends BaseModel {
 
-    public function getAll($kelasId = null) {
+    public function getAll($kelasId = null, $jurusanId = null, $keyword = null) {
         $sql = "
             SELECT s.*, k.nama_kelas, j.nama_jurusan, u.username, u.email, u.avatar 
             FROM siswa s 
             JOIN users u ON s.user_id = u.id 
             JOIN kelas k ON s.kelas_id = k.id 
             JOIN jurusan j ON s.jurusan_id = j.id 
+            WHERE 1=1
         ";
+        $params = [];
+
         if ($kelasId && (int)$kelasId > 0) {
-            $sql .= " WHERE s.kelas_id = " . (int)$kelasId;
+            $sql .= " AND s.kelas_id = ?";
+            $params[] = (int)$kelasId;
         }
+
+        if ($jurusanId && (int)$jurusanId > 0) {
+            $sql .= " AND s.jurusan_id = ?";
+            $params[] = (int)$jurusanId;
+        }
+
+        if ($keyword && trim($keyword) !== '') {
+            $sql .= " AND (s.nisn LIKE ? OR s.nis LIKE ? OR s.nama_lengkap LIKE ? OR u.username LIKE ? OR u.email LIKE ?)";
+            $term = '%' . trim($keyword) . '%';
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+        }
+
         $sql .= " ORDER BY s.nama_lengkap ASC";
-        return $this->db->query($sql)->fetchAll();
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     }
 
     public function getByUserId($userId) {
