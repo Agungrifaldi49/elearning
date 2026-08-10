@@ -229,9 +229,21 @@ class CommunicationModel extends BaseModel {
                 )
                 ELSE ''
             END as mata_pelajaran,
-            (SELECT message FROM chat WHERE (sender_id = u.id AND receiver_id = ?) OR (sender_id = ? AND receiver_id = u.id) ORDER BY created_at DESC LIMIT 1) as last_message,
-            (SELECT created_at FROM chat WHERE (sender_id = u.id AND receiver_id = ?) OR (sender_id = ? AND receiver_id = u.id) ORDER BY created_at DESC LIMIT 1) as last_time,
-            (SELECT COUNT(*) FROM chat WHERE sender_id = u.id AND receiver_id = ? AND is_read = 0) as unread_count
+            (SELECT 
+                CASE 
+                    WHEN is_deleted_everyone = 1 THEN '🚫 Pesan telah dihapus'
+                    ELSE message 
+                END
+             FROM chat 
+             WHERE ((sender_id = u.id AND receiver_id = ? AND deleted_by_receiver = 0) OR (sender_id = ? AND receiver_id = u.id AND deleted_by_sender = 0)) 
+             ORDER BY created_at DESC LIMIT 1
+            ) as last_message,
+            (SELECT created_at 
+             FROM chat 
+             WHERE ((sender_id = u.id AND receiver_id = ? AND deleted_by_receiver = 0) OR (sender_id = ? AND receiver_id = u.id AND deleted_by_sender = 0)) 
+             ORDER BY created_at DESC LIMIT 1
+            ) as last_time,
+            (SELECT COUNT(*) FROM chat WHERE sender_id = u.id AND receiver_id = ? AND is_read = 0 AND deleted_by_receiver = 0 AND is_deleted_everyone = 0) as unread_count
             FROM users u
             JOIN roles r ON u.role_id = r.id
             LEFT JOIN siswa s ON s.user_id = u.id

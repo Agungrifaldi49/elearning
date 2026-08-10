@@ -66,7 +66,7 @@ const ChatApp = {
 
     startPolling: function() {
         this.fetchState(true);
-        setInterval(() => this.fetchState(false), 2500);
+        setInterval(() => this.fetchState(false), 1500);
     },
 
     normalizeMessagesList: function(rawList) {
@@ -75,6 +75,8 @@ const ChatApp = {
             sender_id: parseInt(msg.sender_id, 10),
             receiver_id: parseInt(msg.receiver_id, 10),
             message: String(msg.message || ''),
+            is_deleted_everyone: parseInt(msg.is_deleted_everyone || 0, 10),
+            is_edited: parseInt(msg.is_edited || 0, 10),
             created_at: msg.created_at,
             sender_name: String(msg.sender_name || ''),
             sender_avatar: String(msg.sender_avatar || ''),
@@ -137,20 +139,28 @@ const ChatApp = {
             const isMe = msg.is_me;
             const bubbleClass = isMe ? 'sent' : 'received';
             const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const isDeletedEveryone = (msg.is_deleted_everyone === 1);
 
             let existingNode = existingMap.get(msgId);
 
             if (existingNode) {
-                const msgContent = existingNode.querySelector('.msg-content');
-                if (msgContent && msgContent.textContent !== msg.message) {
-                    msgContent.textContent = msg.message;
+                if (isDeletedEveryone && !existingNode.classList.contains('is-deleted-node')) {
+                    existingNode.className = `chat-bubble ${bubbleClass} bg-light text-muted border border-dashed shadow-none is-deleted-node`;
+                    existingNode.innerHTML = `
+                        <div class="fst-italic small text-muted"><i class="bi bi-slash-circle me-1 text-danger"></i> Pesan ini telah dihapus</div>
+                        <div style="font-size: 0.68rem; opacity: 0.6; text-align: right; margin-top: 4px;">${time}</div>
+                    `;
+                } else if (!isDeletedEveryone) {
+                    const msgContent = existingNode.querySelector('.msg-content');
+                    if (msgContent && msgContent.textContent !== msg.message) {
+                        msgContent.textContent = msg.message;
+                    }
                 }
             } else {
                 const newNode = document.createElement('div');
-                const isDeletedEveryone = (msg.is_deleted_everyone === 1);
 
                 if (isDeletedEveryone) {
-                    newNode.className = `chat-bubble ${bubbleClass} bg-light text-muted border border-dashed shadow-none`;
+                    newNode.className = `chat-bubble ${bubbleClass} bg-light text-muted border border-dashed shadow-none is-deleted-node`;
                     newNode.setAttribute('data-msg-id', msgId);
                     newNode.innerHTML = `
                         <div class="fst-italic small text-muted"><i class="bi bi-slash-circle me-1 text-danger"></i> Pesan ini telah dihapus</div>
