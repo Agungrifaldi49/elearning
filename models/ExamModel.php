@@ -717,7 +717,9 @@ class ExamModel extends BaseModel {
     public function getHasilQuizListByGuru($guruId = null) {
         $sql = "
             SELECT hq.*, q.judul as nama_quiz, map.nama_mapel, k.nama_kelas, s.nama_lengkap as nama_siswa, s.nis,
-            (SELECT COUNT(*) FROM soal s2 LEFT JOIN jawaban_siswa js2 ON js2.soal_id = s2.id AND js2.siswa_id = hq.siswa_id AND js2.quiz_id = hq.quiz_id WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay' AND (js2.nilai IS NULL OR js2.id IS NULL)) as ungraded_essay_count
+            (SELECT COUNT(*) FROM soal s2 WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay') as total_essay_count,
+            (SELECT COUNT(*) FROM soal s2 LEFT JOIN jawaban_siswa js2 ON js2.soal_id = s2.id AND js2.siswa_id = hq.siswa_id AND js2.quiz_id = hq.quiz_id WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay' AND (js2.nilai IS NULL OR js2.id IS NULL)) as ungraded_essay_count,
+            (SELECT COUNT(*) FROM soal s2 JOIN jawaban_siswa js2 ON js2.soal_id = s2.id AND js2.siswa_id = hq.siswa_id AND js2.quiz_id = hq.quiz_id WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay' AND js2.nilai IS NOT NULL) as graded_essay_count
             FROM hasil_quiz hq
             JOIN quiz q ON hq.quiz_id = q.id
             JOIN mata_pelajaran map ON q.mapel_id = map.id

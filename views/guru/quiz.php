@@ -396,20 +396,67 @@ $susulanRequests = $susulanRequests ?? [];
             <div class="tab-pane fade" id="tab-koreksi" role="tabpanel">
                 <div class="table-card-custom p-4 border-top border-4 border-warning">
                     
-                    <!-- Search & Filter Controls -->
+                    <?php
+                    $totalSubmissions = count($hasilQuizSubmissions ?? []);
+                    $totalPendingEssay = 0;
+                    $totalGradedEssay = 0;
+                    $totalAutoPg = 0;
+
+                    if (!empty($hasilQuizSubmissions)) {
+                        foreach ($hasilQuizSubmissions as $hqItem) {
+                            $tCount = (int)($hqItem['total_essay_count'] ?? 0);
+                            $uCount = (int)($hqItem['ungraded_essay_count'] ?? 0);
+                            if ($tCount > 0) {
+                                if ($uCount > 0) {
+                                    $totalPendingEssay++;
+                                } else {
+                                    $totalGradedEssay++;
+                                }
+                            } else {
+                                $totalAutoPg++;
+                            }
+                        }
+                    }
+                    ?>
+
+                    <!-- Filter Pills / Quick Buttons -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-3 border-bottom">
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <button type="button" class="btn btn-sm btn-dark rounded-pill fw-bold px-3 py-1.5 essay-filter-pill active" onclick="setGuruEssayFilter('', this)">
+                                <i class="bi bi-collection-fill me-1"></i> Semua (<?= $totalSubmissions ?>)
+                            </button>
+                            <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill fw-bold px-3 py-1.5 essay-filter-pill position-relative shadow-xs" onclick="setGuruEssayFilter('pending', this)">
+                                <i class="bi bi-exclamation-circle-fill me-1 text-danger"></i> ⏳ Belum Dinilai (<?= $totalPendingEssay ?>)
+                                <?php if ($totalPendingEssay > 0): ?>
+                                    <span class="position-absolute top-0 start-100 translate-middle p-1.5 bg-danger border border-light rounded-circle"></span>
+                                <?php endif; ?>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-bold px-3 py-1.5 essay-filter-pill" onclick="setGuruEssayFilter('graded', this)">
+                                <i class="bi bi-check-circle-fill me-1"></i> ✓ Selesai Dinilai (<?= $totalGradedEssay ?>)
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 py-1.5 essay-filter-pill" onclick="setGuruEssayFilter('pg_auto', this)">
+                                <i class="bi bi-robot me-1"></i> 🤖 Kuis PG (<?= $totalAutoPg ?>)
+                            </button>
+                        </div>
+
+                        <select id="filterEssayStatus" class="form-select form-select-sm d-inline-block w-auto rounded-pill fw-semibold" onchange="filterGuruEssaySubmissions()">
+                            <option value="">Semua Status Koreksi</option>
+                            <option value="pending">⏳ Belum Dinilai Guru (<?= $totalPendingEssay ?>)</option>
+                            <option value="graded">✓ Koreksi Selesai (<?= $totalGradedEssay ?>)</option>
+                            <option value="pg_auto">🤖 Kuis PG Otomatis (<?= $totalAutoPg ?>)</option>
+                        </select>
+                    </div>
+
+                    <!-- Search Controls -->
                     <div class="row g-3 mb-4 align-items-center">
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-8">
                             <div class="input-group">
                                 <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                <input type="text" id="searchEssayInput" class="form-control border-start-0 ps-0" placeholder="Cari nama siswa atau judul kuis..." onkeyup="filterGuruEssaySubmissions()">
+                                <input type="text" id="searchEssayInput" class="form-control border-start-0 ps-0" placeholder="Cari nama siswa, kelas, atau judul kuis..." onkeyup="filterGuruEssaySubmissions()">
                             </div>
                         </div>
-                        <div class="col-12 col-md-6 text-md-end">
-                            <select id="filterEssayStatus" class="form-select d-inline-block w-auto" onchange="filterGuruEssaySubmissions()">
-                                <option value="">Semua Status Koreksi</option>
-                                <option value="pending">⏳ Belum Dinilai Guru</option>
-                                <option value="graded">✓ Koreksi Selesai</option>
-                            </select>
+                        <div class="col-12 col-md-4 text-md-end text-muted small fw-medium">
+                            Menampilkan data pengerjaan kuis real-time.
                         </div>
                     </div>
 
@@ -423,7 +470,7 @@ $susulanRequests = $susulanRequests ?? [];
                                     <th>Mata Pelajaran</th>
                                     <th>Waktu Selesai</th>
                                     <th>Nilai Akhir</th>
-                                    <th>Status Essay</th>
+                                    <th>Status Koreksi Essay</th>
                                     <th class="text-center">Aksi Koreksi</th>
                                 </tr>
                             </thead>
@@ -437,10 +484,26 @@ $susulanRequests = $susulanRequests ?? [];
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($hasilQuizSubmissions as $hq): 
-                                        $isPendingEssay = ($hq['ungraded_essay_count'] ?? 0) > 0;
-                                        $statusKey = $isPendingEssay ? 'pending' : 'graded';
+                                        $tEssay = (int)($hq['total_essay_count'] ?? 0);
+                                        $uEssay = (int)($hq['ungraded_essay_count'] ?? 0);
+                                        
+                                        if ($tEssay > 0) {
+                                            if ($uEssay > 0) {
+                                                $statusKey = 'pending';
+                                                $rowStyle = 'style="background-color: #fffbeb !important;"';
+                                                $borderStyle = 'border-start border-4 border-warning';
+                                            } else {
+                                                $statusKey = 'graded';
+                                                $rowStyle = '';
+                                                $borderStyle = 'border-start border-4 border-success';
+                                            }
+                                        } else {
+                                            $statusKey = 'pg_auto';
+                                            $rowStyle = '';
+                                            $borderStyle = 'border-start border-4 border-info';
+                                        }
                                     ?>
-                                        <tr class="guru-essay-row" data-text="<?= htmlspecialchars($hq['nama_siswa'] . ' ' . $hq['nama_quiz']) ?>" data-status="<?= $statusKey ?>">
+                                        <tr class="guru-essay-row <?= $borderStyle ?>" <?= $rowStyle ?> data-text="<?= htmlspecialchars($hq['nama_siswa'] . ' ' . $hq['nama_kelas'] . ' ' . $hq['nama_quiz']) ?>" data-status="<?= $statusKey ?>">
                                             <td class="fw-bold text-dark">
                                                 <i class="bi bi-person-circle text-primary me-1.5"></i><?= htmlspecialchars($hq['nama_siswa']) ?>
                                             </td>
@@ -454,20 +517,32 @@ $susulanRequests = $susulanRequests ?? [];
                                                 </span>
                                             </td>
                                             <td>
-                                                <?php if ($isPendingEssay): ?>
-                                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5 fw-bold"><i class="bi bi-hourglass-split me-1"></i>Belum Dinilai (<?= $hq['ungraded_essay_count'] ?> Essay)</span>
+                                                <?php if ($statusKey === 'pending'): ?>
+                                                    <span class="badge bg-warning text-dark border border-warning-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs">
+                                                        <i class="bi bi-exclamation-circle-fill text-danger me-1"></i>Belum Dinilai (<?= $uEssay ?>/<?= $tEssay ?> Essay Pending)
+                                                    </span>
+                                                <?php elseif ($statusKey === 'graded'): ?>
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold">
+                                                        <i class="bi bi-check-circle-fill me-1"></i>Koreksi Selesai (<?= $tEssay ?> Essay)
+                                                    </span>
                                                 <?php else: ?>
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold"><i class="bi bi-check-circle-fill me-1"></i>Koreksi Selesai</span>
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold">
+                                                        <i class="bi bi-robot me-1"></i>Kuis PG (Terpenuhi Otomatis)
+                                                    </span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center">
-                                                <?php if ($isPendingEssay): ?>
+                                                <?php if ($statusKey === 'pending'): ?>
                                                     <button class="btn btn-sm btn-warning text-dark px-3 rounded-pill fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
-                                                        <i class="bi bi-pencil-square me-1"></i> Koreksi Essay (<?= $hq['ungraded_essay_count'] ?>)
+                                                        <i class="bi bi-pencil-square me-1"></i> Koreksi Sekarang (<?= $uEssay ?>)
+                                                    </button>
+                                                <?php elseif ($statusKey === 'graded'): ?>
+                                                    <button class="btn btn-sm btn-outline-success px-3 rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
+                                                        <i class="bi bi-check2-all me-1"></i> Edit Nilai Essay
                                                     </button>
                                                 <?php else: ?>
                                                     <button class="btn btn-sm btn-outline-primary px-3 rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
-                                                        <i class="bi bi-eye me-1"></i> Lihat / Edit Nilai
+                                                        <i class="bi bi-eye me-1"></i> Lihat Hasil Kuis
                                                     </button>
                                                 <?php endif; ?>
                                             </td>
@@ -1258,22 +1333,44 @@ $susulanRequests = $susulanRequests ?? [];
                             </div>
                         <?php else: ?>
                             <h6 class="fw-bold text-dark mb-3"><i class="bi bi-file-earmark-text text-primary me-1"></i>Lembar Jawaban Essay Siswa:</h6>
-                            <?php foreach ($essayAnswers as $eIdx => $ea): ?>
-                                <div class="p-3 border rounded-3 bg-white mb-3 shadow-xs">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="badge bg-dark rounded-pill px-3 py-1 fw-bold">Soal Essay #<?= $eIdx + 1 ?></span>
-                                        <span class="badge bg-secondary rounded-pill">Maksimal Bobot: <?= $ea['bobot'] ?? 10 ?> Poin</span>
+                            <?php foreach ($essayAnswers as $eIdx => $ea): 
+                                $isGraded = !is_null($ea['nilai']);
+                                $boxStyle = $isGraded ? 'background-color: #f8fafc; border: 1px solid #cbd5e1 !important;' : 'background-color: #fffbeb; border: 2px solid #f59e0b !important;';
+                            ?>
+                                <div class="p-3.5 rounded-3 mb-3 shadow-xs" style="<?= $boxStyle ?>">
+                                    <div class="d-flex justify-content-between align-items-center mb-2.5 flex-wrap gap-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-dark rounded-pill px-3 py-1 fw-bold">Soal Essay #<?= $eIdx + 1 ?></span>
+                                            <?php if ($isGraded): ?>
+                                                <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold shadow-xs">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>SUDAH DINILAI (Skor: <?= number_format((float)$ea['nilai'], 1) ?> Poin)
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold shadow-xs">
+                                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>BELUM DINILAI GURU
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <span class="badge bg-secondary rounded-pill fw-semibold">Maksimal Bobot: <?= $ea['bobot'] ?? 10 ?> Poin</span>
                                     </div>
                                     <p class="fw-bold text-dark mb-2"><?= htmlspecialchars($ea['pertanyaan']) ?></p>
-                                    <div class="p-3 bg-slate-50 border rounded-3 mb-3" style="background-color: #f8fafc;">
+                                    <div class="p-3 bg-white border rounded-3 mb-3">
                                         <small class="text-muted fw-bold d-block mb-1">Teks Jawaban Siswa:</small>
                                         <div class="font-monospace text-slate-800" style="font-size:0.9rem;"><?= nl2br(htmlspecialchars($ea['teks_jawaban_essay'] ?? 'Siswa Tidak Mengisi Jawaban Essay')) ?></div>
                                     </div>
 
                                     <div class="row g-2 align-items-center">
-                                        <div class="col-md-6">
-                                            <label class="form-label small fw-bold text-primary mb-1">Input Skor Nilai Essay (0 - <?= $ea['bobot'] ?? 10 ?>):</label>
-                                            <input type="number" step="0.5" min="0" max="<?= $ea['bobot'] ?? 10 ?>" name="nilai_essay[<?= $ea['jawaban_id'] ?>]" class="form-control fw-bold" value="<?= !is_null($ea['nilai']) ? (float)$ea['nilai'] : '' ?>" placeholder="Masukkan skor..." required>
+                                        <div class="col-md-7">
+                                            <?php if ($isGraded): ?>
+                                                <label class="form-label small fw-bold text-success mb-1">
+                                                    <i class="bi bi-check2-all me-1"></i>Edit Nilai Essay (Saat Ini: <?= (float)$ea['nilai'] ?> / Max <?= $ea['bobot'] ?? 10 ?>):
+                                                </label>
+                                            <?php else: ?>
+                                                <label class="form-label small fw-bold text-danger mb-1">
+                                                    <i class="bi bi-pencil-fill me-1"></i>Input Nilai Essay (Belum Diisi, Maksimal Bobot <?= $ea['bobot'] ?? 10 ?>):
+                                                </label>
+                                            <?php endif; ?>
+                                            <input type="number" step="0.5" min="0" max="<?= $ea['bobot'] ?? 10 ?>" name="nilai_essay[<?= $ea['jawaban_id'] ?>]" class="form-control fw-bold <?= $isGraded ? 'border-success' : 'border-danger bg-white' ?>" value="<?= $isGraded ? (float)$ea['nilai'] : '' ?>" placeholder="Masukkan skor (0 - <?= $ea['bobot'] ?? 10 ?>)..." required>
                                         </div>
                                     </div>
                                 </div>
@@ -1441,9 +1538,30 @@ function filterGuruQuizTable() {
     });
 }
 
+function setGuruEssayFilter(statusKey, btnElem) {
+    const selectElem = document.getElementById('filterEssayStatus');
+    if (selectElem) selectElem.value = statusKey;
+    
+    document.querySelectorAll('.essay-filter-pill').forEach(btn => {
+        btn.classList.remove('active', 'btn-dark', 'btn-warning', 'btn-outline-success', 'btn-outline-primary', 'btn-outline-secondary');
+        btn.classList.add('btn-outline-secondary');
+    });
+
+    if (btnElem) {
+        btnElem.classList.remove('btn-outline-secondary');
+        btnElem.classList.add('active');
+        if (statusKey === 'pending') btnElem.classList.add('btn-warning', 'text-dark');
+        else if (statusKey === 'graded') btnElem.classList.add('btn-outline-success');
+        else if (statusKey === 'pg_auto') btnElem.classList.add('btn-outline-primary');
+        else btnElem.classList.add('btn-dark');
+    }
+
+    filterGuruEssaySubmissions();
+}
+
 function filterGuruEssaySubmissions() {
-    const searchVal = document.getElementById('searchEssayInput').value.toLowerCase();
-    const filterStatus = document.getElementById('filterEssayStatus').value;
+    const searchVal = (document.getElementById('searchEssayInput')?.value || '').toLowerCase();
+    const filterStatus = document.getElementById('filterEssayStatus')?.value || '';
 
     const rows = document.querySelectorAll('.guru-essay-row');
     rows.forEach(row => {
