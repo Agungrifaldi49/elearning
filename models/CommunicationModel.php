@@ -10,6 +10,22 @@ class CommunicationModel extends BaseModel {
         parent::__construct();
         $this->ensureChatColumnsExist();
         $this->ensureNotifikasiTable();
+        $this->ensureLastSeenColumn();
+    }
+
+    private function ensureLastSeenColumn() {
+        try {
+            $this->db->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen DATETIME NULL");
+        } catch (Exception $e) {}
+    }
+
+    public function updateLastSeen($userId) {
+        $userId = (int)$userId;
+        if ($userId <= 0) return;
+        try {
+            $stmt = $this->db->prepare("UPDATE users SET last_seen = NOW() WHERE id = ?");
+            $stmt->execute([$userId]);
+        } catch (Exception $e) {}
     }
 
     private function ensureChatColumnsExist() {
@@ -228,6 +244,11 @@ class CommunicationModel extends BaseModel {
             r.name as role_name,
             s.nis,
             g.nip,
+            u.last_seen,
+            CASE 
+                WHEN u.last_seen IS NOT NULL AND u.last_seen >= NOW() - INTERVAL 3 MINUTE THEN 1 
+                ELSE 0 
+            END as is_online,
             CASE 
                 WHEN r.name = 'Siswa' THEN COALESCE(k.nama_kelas, '')
                 ELSE ''

@@ -317,6 +317,24 @@ const ChatApp = {
                 } else if (unreadBadgeElem) {
                     unreadBadgeElem.style.display = 'none';
                 }
+
+                const statusDot = itemElem.querySelector('.status-dot');
+                if (statusDot) {
+                    const isOnline = (parseInt(c.is_online, 10) === 1);
+                    statusDot.className = `position-absolute bottom-0 end-0 p-1 border border-2 border-white rounded-circle status-dot ${isOnline ? 'bg-success' : 'bg-danger'}`;
+                }
+
+                const statusBadge = itemElem.querySelector('.status-badge');
+                if (statusBadge) {
+                    const isOnline = (parseInt(c.is_online, 10) === 1);
+                    if (isOnline) {
+                        statusBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2 py-0 status-badge';
+                        statusBadge.innerHTML = '<i class="bi bi-circle-fill text-success me-1" style="font-size:0.45rem;"></i>Online';
+                    } else {
+                        statusBadge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0 status-badge';
+                        statusBadge.innerHTML = '<i class="bi bi-circle-fill text-danger me-1" style="font-size:0.45rem;"></i>Off';
+                    }
+                }
             }
         });
     },

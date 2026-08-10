@@ -91,15 +91,20 @@
                                                     <?= strtoupper(substr($c['full_name'], 0, 1)) ?>
                                                 </div>
                                             <?php endif; ?>
-                                            <?php if (($c['unread_count'] ?? 0) > 0): ?>
-                                                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
-                                            <?php endif; ?>
+                                            <span class="position-absolute bottom-0 end-0 p-1 border border-2 border-white rounded-circle status-dot <?= ($c['is_online'] ?? 0) == 1 ? 'bg-success' : 'bg-danger' ?>" style="width:12px; height:12px;"></span>
                                         </div>
 
                                         <div class="w-100 overflow-hidden">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
                                                 <h6 class="fw-bold mb-0 text-truncate text-dark small"><?= htmlspecialchars($c['full_name']) ?></h6>
-                                                <span class="badge bg-secondary opacity-75" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
+                                                <div class="d-flex align-items-center gap-1">
+                                                     <?php if (($c['is_online'] ?? 0) == 1): ?>
+                                                         <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0 status-badge" style="font-size:0.65rem;"><i class="bi bi-circle-fill text-success me-1" style="font-size:0.45rem;"></i>Online</span>
+                                                     <?php else: ?>
+                                                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0 status-badge" style="font-size:0.65rem;"><i class="bi bi-circle-fill text-danger me-1" style="font-size:0.45rem;"></i>Off</span>
+                                                     <?php endif; ?>
+                                                     <span class="badge bg-secondary opacity-75" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
+                                                 </div>
                                             </div>
 
                                             <!-- Contextual Subtitle: Kelas for Siswa, Mapel for Guru -->
@@ -131,17 +136,21 @@
                         $actAvUrl = $activeContactInfo['avatar_url'] ?? '';
                         $actHasAvatar = !empty($actAvUrl);
                         $actAvatarSrc = $actAvUrl;
+                        $actIsOnline = ($activeContactInfo['is_online'] ?? 0) == 1;
                     ?>
                         <!-- Active Chat Top Header -->
                         <div class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-3">
-                                <?php if ($actHasAvatar): ?>
-                                    <img src="<?= $actAvatarSrc ?>" alt="Avatar" class="rounded-circle object-fit-cover shadow-sm" style="width:42px; height:42px;">
-                                <?php else: ?>
-                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width:42px; height:42px;">
-                                        <?= strtoupper(substr($activeContactInfo['full_name'], 0, 1)) ?>
-                                    </div>
-                                <?php endif; ?>
+                                <div class="position-relative flex-shrink-0">
+                                    <?php if ($actHasAvatar): ?>
+                                        <img src="<?= $actAvatarSrc ?>" alt="Avatar" class="rounded-circle object-fit-cover shadow-sm" style="width:42px; height:42px;">
+                                    <?php else: ?>
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width:42px; height:42px;">
+                                            <?= strtoupper(substr($activeContactInfo['full_name'], 0, 1)) ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <span class="position-absolute bottom-0 end-0 p-1 border border-2 border-white rounded-circle active-status-dot <?= $actIsOnline ? 'bg-success' : 'bg-danger' ?>" style="width:12px; height:12px;"></span>
+                                </div>
                                 <div>
                                     <h6 class="fw-bold mb-0 text-dark"><?= htmlspecialchars($activeContactInfo['full_name']) ?></h6>
                                     <div class="d-flex align-items-center gap-2 small">
@@ -155,7 +164,11 @@
                                 </div>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-success-subtle text-success small border border-success-subtle"><i class="bi bi-record-fill me-1 text-success"></i> Terhubung</span>
+                                <?php if ($actIsOnline): ?>
+                                    <span class="badge bg-success-subtle text-success small border border-success-subtle active-status-badge"><i class="bi bi-record-fill me-1 text-success"></i> Terhubung (Online)</span>
+                                <?php else: ?>
+                                    <span class="badge bg-danger-subtle text-danger small border border-danger-subtle active-status-badge"><i class="bi bi-record-fill me-1 text-danger"></i> Tidak Aktif (Off)</span>
+                                <?php endif; ?>
                                 <div class="dropdown">
                                     <button class="btn btn-light btn-sm rounded-circle p-2 shadow-sm text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Opsi Obrolan">
                                         <i class="bi bi-three-dots-vertical"></i>

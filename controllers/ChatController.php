@@ -12,6 +12,7 @@ class ChatController {
         AuthHelper::requireLogin();
         $user = AuthHelper::user();
         $commModel = new CommunicationModel();
+        $commModel->updateLastSeen($user['id']);
         $db = Database::getConnection();
 
         $contacts = $commModel->getChatContacts($user['id']);
@@ -88,6 +89,7 @@ class ChatController {
 
         if ($contactId > 0) {
             $commModel = new CommunicationModel();
+            $commModel->updateLastSeen($user['id']);
             $messages = $commModel->getChatMessages($user['id'], $contactId);
             $contacts = $commModel->getChatContacts($user['id']);
 
