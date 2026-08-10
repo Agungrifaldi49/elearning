@@ -180,7 +180,10 @@ const ChatApp = {
         if (!container || !this.state.contacts) return;
 
         this.state.contacts.forEach(c => {
-            const itemElem = container.querySelector(`.contact-item[data-contact-id="${c.id}"]`);
+            let itemElem = container.querySelector(`.contact-item[data-contact-id="${c.id}"]`);
+            if (!itemElem) {
+                itemElem = container.querySelector(`.contact-item[href$="with=${c.id}"]`);
+            }
             if (itemElem) {
                 const nameElem = itemElem.querySelector('.fw-bold.mb-0.text-truncate');
                 if (nameElem && c.full_name && nameElem.textContent !== c.full_name) {

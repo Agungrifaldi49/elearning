@@ -2,7 +2,7 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
-<script src="<?= BASE_URL ?>assets/js/chat.js"></script>
+<script src="<?= BASE_URL ?>assets/js/chat.js?v=<?= time() ?>"></script>
 
 <main class="main-content px-3 px-md-4">
     <div class="container-fluid">
