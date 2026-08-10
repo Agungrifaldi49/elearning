@@ -63,6 +63,37 @@
                     <img src="<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>" class="img-fluid rounded-4 shadow-sm" style="max-height: 400px; object-fit: cover;">
                 </div>
             <?php endif; ?>
+
+            <!-- Multi-Emoji Reaction Bar -->
+            <?php 
+                $reactionMap = [
+                    ['type' => 'love', 'emoji' => '❤️', 'label' => 'Love'],
+                    ['type' => 'like', 'emoji' => '👍', 'label' => 'Jempol'],
+                    ['type' => 'laugh', 'emoji' => '😂', 'label' => 'Ketawa'],
+                    ['type' => 'sad', 'emoji' => '😢', 'label' => 'Sedih'],
+                    ['type' => 'wow', 'emoji' => '😮', 'label' => 'Kaget'],
+                    ['type' => 'fire', 'emoji' => '🔥', 'label' => 'Menyala']
+                ];
+                $rc = $reactions ?? ['love'=>0,'like'=>0,'laugh'=>0,'sad'=>0,'wow'=>0,'fire'=>0,'my_reaction'=>null];
+            ?>
+            <div class="pt-3 border-top">
+                <div class="fw-bold small text-muted mb-2"><i class="bi bi-heart-fill text-danger me-1"></i> Reaksi Diskusi:</div>
+                <div class="reaction-bar d-flex flex-wrap align-items-center" data-forum-id="<?= $topic['id'] ?>">
+                    <?php foreach ($reactionMap as $r): ?>
+                        <?php 
+                            $count = $rc[$r['type']] ?? 0;
+                            $isActive = (($rc['my_reaction'] ?? '') === $r['type']);
+                            $btnClass = $isActive ? 'btn-primary-subtle border-primary text-primary fw-bold shadow-sm' : 'btn-light border-0 text-secondary';
+                        ?>
+                        <button type="button" class="btn btn-sm <?= $btnClass ?> rounded-pill px-2 py-1 me-1 mb-1 btn-emoji-react" 
+                                onclick="ForumApp.toggleReaction(<?= $topic['id'] ?>, '<?= $r['type'] ?>')" 
+                                title="<?= $r['label'] ?>">
+                            <span class="fs-6 me-1"><?= $r['emoji'] ?></span>
+                            <span class="small"><?= $count > 0 ? $count : '' ?></span>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
+            </div>
         </div>
 
         <?php if ($canDelete): ?>

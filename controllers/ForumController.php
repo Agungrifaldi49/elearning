@@ -102,6 +102,7 @@ class ForumController {
             $isAuthor = ((int)($t['user_id'] ?? 0) === (int)($user['id'] ?? 0));
             $isAdmin = (strtolower($roleName) === 'administrator');
             $canDelete = ($isAuthor || $isAdmin);
+            $reactions = $commModel->getForumReactionSummary($t['id'], $user['id']);
 
             $formattedTopics[] = [
                 'id' => (int)$t['id'],
@@ -117,12 +118,41 @@ class ForumController {
                 'judul' => htmlspecialchars($t['judul']),
                 'konten_preview' => htmlspecialchars(substr($t['konten'], 0, 220)),
                 'total_replies' => (int)$t['total_replies'],
+                'reactions' => $reactions,
                 'can_delete' => $canDelete,
                 'is_me' => $isAuthor
             ];
         }
 
         echo json_encode(['status' => 'success', 'topics' => $formattedTopics]);
+        exit();
+    }
+
+    public function react() {
+        AuthHelper::requireLogin();
+        header('Content-Type: application/json');
+
+        $user = AuthHelper::user();
+        $commModel = new CommunicationModel();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                echo json_encode(['status' => 'error', 'message' => 'CSRF Token Invalid']);
+                exit();
+            }
+
+            $forumId = (int)($_POST['forum_id'] ?? 0);
+            $type = Security::sanitize($_POST['type'] ?? '');
+
+            if ($forumId > 0 && !empty($type)) {
+                $commModel->toggleForumReaction($forumId, $user['id'], $type);
+                $summary = $commModel->getForumReactionSummary($forumId, $user['id']);
+                echo json_encode(['status' => 'success', 'summary' => $summary, 'forum_id' => $forumId]);
+                exit();
+            }
+        }
+
+        echo json_encode(['status' => 'error', 'message' => 'Invalid request']);
         exit();
     }
 
@@ -258,6 +288,7 @@ class ForumController {
         }
 
         $comments = $commModel->getKomentar($id);
+        $reactions = $commModel->getForumReactionSummary($id, $user['id']);
         require_once ROOT_PATH . 'views/forum/detail.php';
     }
 }

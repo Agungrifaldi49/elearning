@@ -1,6 +1,6 @@
 /**
- * Forum Realtime Polling Engine (assets/js/forum.js)
- * Zero-reload AJAX Topic Creation, Comment Replies, Topic Deletion, and Realtime Polling
+ * Forum Realtime Polling & Multi-Emoji Reaction Engine (assets/js/forum.js)
+ * Zero-reload AJAX Topic Creation, Comment Replies, Topic Deletion, Multi-Emoji Reactions, and Realtime Polling
  */
 const ForumApp = {
     state: {
@@ -42,6 +42,64 @@ const ForumApp = {
         } else if (commentsContainer && this.state.activeTopicId > 0) {
             this.startCommentPolling();
         }
+    },
+
+    // --- MULTI-EMOJI REACTION ENGINE (AJAX) ---
+    toggleReaction: function(forumId, type) {
+        const csrfTokenInput = document.querySelector('input[name=csrf_token]');
+        const csrfToken = csrfTokenInput ? csrfTokenInput.value : '';
+
+        const formData = new FormData();
+        formData.append('forum_id', forumId);
+        formData.append('type', type);
+        formData.append('csrf_token', csrfToken);
+        formData.append('is_ajax', '1');
+
+        fetch(`${BASE_URL}index.php?url=forum/react`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.status === 'success' && res.summary) {
+                this.updateReactionUI(res.forum_id, res.summary);
+            }
+        })
+        .catch(() => {});
+    },
+
+    updateReactionUI: function(forumId, summary) {
+        const container = document.querySelector(`.reaction-bar[data-forum-id="${forumId}"]`);
+        if (!container) return;
+
+        const reactionMap = [
+            { type: 'love', emoji: '❤️', label: 'Love' },
+            { type: 'like', emoji: '👍', label: 'Jempol' },
+            { type: 'laugh', emoji: '😂', label: 'Ketawa' },
+            { type: 'sad', emoji: '😢', label: 'Sedih' },
+            { type: 'wow', emoji: '😮', label: 'Kaget' },
+            { type: 'fire', emoji: '🔥', label: 'Menyala' }
+        ];
+
+        const html = reactionMap.map(r => {
+            const count = summary[r.type] || 0;
+            const isActive = (summary.my_reaction === r.type);
+            const activeClass = isActive ? 'btn-primary-subtle border-primary text-primary fw-bold shadow-sm' : 'btn-light border-0 text-secondary';
+            
+            return `
+                <button type="button" class="btn btn-sm ${activeClass} rounded-pill px-2 py-1 me-1 mb-1 btn-emoji-react" 
+                        onclick="ForumApp.toggleReaction(${forumId}, '${r.type}')" 
+                        title="${r.label}">
+                    <span class="fs-6 me-1">${r.emoji}</span>
+                    <span class="small">${count > 0 ? count : ''}</span>
+                </button>
+            `;
+        }).join('');
+
+        container.innerHTML = html;
     },
 
     // --- TOPIC CREATION (AJAX) ---
@@ -187,7 +245,32 @@ const ForumApp = {
         const html = topics.map(t => {
             const isPrivate = (t.visibility === 'private');
             const initial = t.full_name ? t.full_name.charAt(0).toUpperCase() : 'U';
-            
+            const reactions = t.reactions || { love:0, like:0, laugh:0, sad:0, wow:0, fire:0, my_reaction: null };
+
+            const reactionMap = [
+                { type: 'love', emoji: '❤️', label: 'Love' },
+                { type: 'like', emoji: '👍', label: 'Jempol' },
+                { type: 'laugh', emoji: '😂', label: 'Ketawa' },
+                { type: 'sad', emoji: '😢', label: 'Sedih' },
+                { type: 'wow', emoji: '😮', label: 'Kaget' },
+                { type: 'fire', emoji: '🔥', label: 'Menyala' }
+            ];
+
+            const reactionButtons = reactionMap.map(r => {
+                const count = reactions[r.type] || 0;
+                const isActive = (reactions.my_reaction === r.type);
+                const activeClass = isActive ? 'btn-primary-subtle border-primary text-primary fw-bold shadow-sm' : 'btn-light border-0 text-secondary';
+
+                return `
+                    <button type="button" class="btn btn-sm ${activeClass} rounded-pill px-2 py-1 me-1 mb-1 btn-emoji-react" 
+                            onclick="ForumApp.toggleReaction(${t.id}, '${r.type}')" 
+                            title="${r.label}">
+                        <span class="fs-6 me-1">${r.emoji}</span>
+                        <span class="small">${count > 0 ? count : ''}</span>
+                    </button>
+                `;
+            }).join('');
+
             return `
                 <div class="col-12 topic-card-item" data-topic-id="${t.id}">
                     <div class="card card-custom p-4 shadow-sm border-0 rounded-4">
@@ -235,7 +318,14 @@ const ForumApp = {
                         </h5>
                         <p class="text-muted mb-3">${t.konten_preview}...</p>
 
-                        <div class="d-flex align-items-center justify-content-between pt-3 border-top">
+                        <!-- Multi-Emoji Reaction Bar -->
+                        <div class="mb-3 pt-2 border-top">
+                            <div class="reaction-bar d-flex flex-wrap align-items-center" data-forum-id="${t.id}">
+                                ${reactionButtons}
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top">
                             <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
                                 <i class="bi bi-chat-text me-1"></i> ${t.total_replies} Balasan Diskusi
                             </a>

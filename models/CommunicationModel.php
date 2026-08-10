@@ -12,6 +12,24 @@ class CommunicationModel extends BaseModel {
         $this->ensureNotifikasiTable();
         $this->ensureLastSeenColumn();
         $this->ensureForumColumnsExist();
+        $this->ensureForumReactionsTable();
+    }
+
+    private function ensureForumReactionsTable() {
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS forum_reactions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    forum_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    reaction_type ENUM('love', 'like', 'laugh', 'sad', 'wow', 'fire') NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY unique_user_forum (forum_id, user_id),
+                    FOREIGN KEY (forum_id) REFERENCES forum(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+        } catch (Exception $e) {}
     }
 
     private function ensureForumColumnsExist() {
@@ -176,18 +194,84 @@ class CommunicationModel extends BaseModel {
         $topic = $this->getForumDetail($topicId);
         if (!$topic) return false;
 
-        // Authorization: Only original topic author or Administrator can delete
-        if ((int)$topic['user_id'] !== $userId && $userRoleLower !== 'administrator') {
+        $isAuthor = ((int)$topic['user_id'] === $userId);
+        $isAdmin = ($userRoleLower === 'administrator');
+
+        if (!$isAuthor && !$isAdmin) {
             return false;
         }
 
-        // Delete associated comments first
-        $stmtK = $this->db->prepare("DELETE FROM komentar WHERE forum_id = ?");
-        $stmtK->execute([$topicId]);
+        $this->db->prepare("DELETE FROM komentar WHERE forum_id = ?")->execute([$topicId]);
+        $this->db->prepare("DELETE FROM forum_reactions WHERE forum_id = ?")->execute([$topicId]);
+        return $this->db->prepare("DELETE FROM forum WHERE id = ?")->execute([$topicId]);
+    }
 
-        // Delete topic
-        $stmt = $this->db->prepare("DELETE FROM forum WHERE id = ?");
-        return $stmt->execute([$topicId]);
+    public function toggleForumReaction($forumId, $userId, $reactionType) {
+        $forumId = (int)$forumId;
+        $userId = (int)$userId;
+        $allowed = ['love', 'like', 'laugh', 'sad', 'wow', 'fire'];
+        if (!in_array($reactionType, $allowed)) return false;
+
+        $stmt = $this->db->prepare("SELECT reaction_type FROM forum_reactions WHERE forum_id = ? AND user_id = ?");
+        $stmt->execute([$forumId, $userId]);
+        $existing = $stmt->fetch();
+
+        if ($existing) {
+            if ($existing['reaction_type'] === $reactionType) {
+                $del = $this->db->prepare("DELETE FROM forum_reactions WHERE forum_id = ? AND user_id = ?");
+                $del->execute([$forumId, $userId]);
+            } else {
+                $upd = $this->db->prepare("UPDATE forum_reactions SET reaction_type = ?, created_at = NOW() WHERE forum_id = ? AND user_id = ?");
+                $upd->execute([$reactionType, $forumId, $userId]);
+            }
+        } else {
+            $ins = $this->db->prepare("INSERT INTO forum_reactions (forum_id, user_id, reaction_type) VALUES (?, ?, ?)");
+            $ins->execute([$forumId, $userId, $reactionType]);
+        }
+        return true;
+    }
+
+    public function getForumReactionSummary($forumId, $userId = null) {
+        $forumId = (int)$forumId;
+        $stmt = $this->db->prepare("
+            SELECT reaction_type, COUNT(*) as count 
+            FROM forum_reactions 
+            WHERE forum_id = ? 
+            GROUP BY reaction_type
+        ");
+        $stmt->execute([$forumId]);
+        $rows = $stmt->fetchAll();
+
+        $summary = [
+            'love' => 0,
+            'like' => 0,
+            'laugh' => 0,
+            'sad' => 0,
+            'wow' => 0,
+            'fire' => 0,
+            'total' => 0,
+            'my_reaction' => null
+        ];
+
+        foreach ($rows as $r) {
+            $t = $r['reaction_type'];
+            $c = (int)$r['count'];
+            if (isset($summary[$t])) {
+                $summary[$t] = $c;
+                $summary['total'] += $c;
+            }
+        }
+
+        if ($userId) {
+            $stmtMy = $this->db->prepare("SELECT reaction_type FROM forum_reactions WHERE forum_id = ? AND user_id = ?");
+            $stmtMy->execute([$forumId, (int)$userId]);
+            $my = $stmtMy->fetch();
+            if ($my) {
+                $summary['my_reaction'] = $my['reaction_type'];
+            }
+        }
+
+        return $summary;
     }
 
     public function getKomentar($forum_id) {
