@@ -12,6 +12,10 @@
                 <p class="text-muted small mb-0">Komunikasi langsung 1-on-1 antar pengguna, filter kontak per Rombel Kelas & Guru, serta manajemen edit & hapus chat.</p>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
+                <button class="btn btn-primary rounded-pill px-3 shadow-sm d-flex align-items-center gap-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#contactsOffcanvas" aria-controls="contactsOffcanvas">
+                    <i class="bi bi-list fs-5"></i>
+                    <span>Cari & Pilih Kontak (☰)</span>
+                </button>
                 <span class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill px-3 py-2">
                     <i class="bi bi-shield-lock-fill text-warning me-1"></i> Pesan Otomatis Hilang 7 Hari
                 </span>
@@ -21,117 +25,123 @@
             </div>
         </div>
 
-        <div class="card card-custom p-0 overflow-hidden shadow-sm border-0 rounded-4">
-            <div class="row g-0">
-                
-                <!-- Contacts List Column (Left Panel) -->
-                <div class="col-12 col-md-5 col-lg-4 border-end bg-white">
-                    <div class="p-3 border-bottom bg-light">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-people-fill text-primary me-2"></i>Kontak Pengguna</h6>
-                            <span class="badge bg-primary rounded-pill" id="contactCountBadge"><?= count($contacts) ?> Kontak</span>
-                        </div>
-
-                        <!-- Search Bar -->
-                        <div class="position-relative mb-2">
-                            <input type="text" id="chatSearchInput" class="form-control form-control-sm ps-5 rounded-pill shadow-sm" placeholder="Cari nama, NIS, NIP, kelas, mapel...">
-                            <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-                        </div>
-
-                        <!-- Filter Dropdowns (Kelas & Role/Mapel) -->
-                        <div class="row g-1">
-                            <div class="col-6">
-                                <select id="filterRole" class="form-select form-select-sm rounded-3">
-                                    <option value="">Semua Peran</option>
-                                    <option value="guru">Guru / Pengajar</option>
-                                    <option value="siswa">Siswa</option>
-                                    <option value="administrator">Administrator</option>
-                                    <option value="kepala sekolah">Kepala Sekolah</option>
-                                </select>
-                            </div>
-                            <div class="col-6">
-                                <select id="filterKelas" class="form-select form-select-sm rounded-3">
-                                    <option value="">Semua Kelas</option>
-                                    <?php foreach ($classList as $k): ?>
-                                        <option value="<?= strtolower(htmlspecialchars($k['nama_kelas'])) ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
+        <!-- Offcanvas Drawer Contact List Sidebar (Default Collapsed / Closed) -->
+        <div class="offcanvas offcanvas-start shadow border-0" tabindex="-1" id="contactsOffcanvas" aria-labelledby="contactsOffcanvasLabel" style="width: 380px;">
+            <div class="offcanvas-header bg-primary text-white py-3">
+                <h6 class="offcanvas-title fw-bold mb-0" id="contactsOffcanvasLabel">
+                    <i class="bi bi-people-fill me-2"></i> Kontak Pengguna
+                </h6>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-white text-primary rounded-pill" id="contactCountBadge"><?= count($contacts) ?> Kontak</span>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="offcanvas-body p-0 bg-white">
+                <div class="p-3 border-bottom bg-light">
+                    <!-- Search Bar -->
+                    <div class="position-relative mb-2">
+                        <input type="text" id="chatSearchInput" class="form-control form-control-sm ps-5 rounded-pill shadow-sm" placeholder="Cari nama, NIS, NIP, kelas, mapel...">
+                        <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
                     </div>
 
-                    <!-- Contact List Items -->
-                    <div class="list-group list-group-flush overflow-auto" id="contactListContainer" style="max-height: 540px;">
-                        <?php if (empty($contacts)): ?>
-                            <div class="p-4 text-center text-muted small">Belum ada kontak tersedia.</div>
-                        <?php else: ?>
-                            <?php foreach ($contacts as $c): 
-                                $isSel = ($activeContactId == $c['id']);
-                                $avUrl = $c['avatar_url'] ?? '';
-                                $hasAvatar = !empty($avUrl);
-                                $avatarSrc = $avUrl;
-                                
-                                $roleLower = strtolower($c['role_name'] ?? '');
-                                $kelasName = htmlspecialchars($c['nama_kelas'] ?? '');
-                                $mapelName = htmlspecialchars($c['mata_pelajaran'] ?? '');
-                            ?>
-                                <a href="<?= BASE_URL ?>index.php?url=chat&with=<?= $c['id'] ?>" 
-                                   class="list-group-item list-group-item-action p-3 contact-item <?= $isSel ? 'bg-primary bg-opacity-10 border-start border-4 border-primary' : '' ?>"
-                                   data-contact-id="<?= $c['id'] ?>"
-                                   data-name="<?= strtolower(htmlspecialchars($c['full_name'])) ?>"
-                                   data-role="<?= $roleLower ?>"
-                                   data-kelas="<?= strtolower($kelasName) ?>"
-                                   data-mapel="<?= strtolower($mapelName) ?>">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="position-relative flex-shrink-0">
-                                            <?php if ($hasAvatar): ?>
-                                                <img src="<?= $avatarSrc ?>" alt="Avatar" class="rounded-circle object-fit-cover shadow-sm" style="width:42px; height:42px;">
-                                            <?php else: ?>
-                                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width:42px; height:42px; font-size: 1rem;">
-                                                    <?= strtoupper(substr($c['full_name'], 0, 1)) ?>
-                                                </div>
-                                            <?php endif; ?>
-                                            <span class="position-absolute bottom-0 end-0 p-1 border border-2 border-white rounded-circle status-dot <?= ($c['is_online'] ?? 0) == 1 ? 'bg-success' : 'bg-danger' ?>" style="width:12px; height:12px;"></span>
-                                        </div>
-
-                                        <div class="w-100 overflow-hidden">
-                                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <h6 class="fw-bold mb-0 text-truncate text-dark small"><?= htmlspecialchars($c['full_name']) ?></h6>
-                                                <div class="d-flex align-items-center gap-1">
-                                                     <?php if (($c['is_online'] ?? 0) == 1): ?>
-                                                         <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0 status-badge" style="font-size:0.65rem;"><i class="bi bi-circle-fill text-success me-1" style="font-size:0.45rem;"></i>Online</span>
-                                                     <?php else: ?>
-                                                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0 status-badge" style="font-size:0.65rem;"><i class="bi bi-circle-fill text-danger me-1" style="font-size:0.45rem;"></i>Off</span>
-                                                     <?php endif; ?>
-                                                     <span class="badge bg-secondary opacity-75" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
-                                                 </div>
-                                            </div>
-
-                                            <!-- Contextual Subtitle: Kelas for Siswa, Mapel for Guru -->
-                                            <?php if (!empty($kelasName)): ?>
-                                                <div class="mb-1"><span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.68rem;"><i class="bi bi-bounding-box-circles me-1"></i><?= $kelasName ?></span></div>
-                                            <?php elseif (!empty($mapelName)): ?>
-                                                <div class="mb-1 text-truncate"><span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:0.68rem;"><i class="bi bi-journal-bookmark me-1"></i><?= $mapelName ?></span></div>
-                                            <?php endif; ?>
-
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <small class="text-muted text-truncate d-block" style="font-size:0.75rem;">
-                                                    <?= htmlspecialchars($c['last_message'] ?? 'Klik untuk mengobrol...') ?>
-                                                </small>
-                                                <?php if (($c['unread_count'] ?? 0) > 0): ?>
-                                                    <span class="badge bg-danger rounded-pill ms-1" style="font-size:0.65rem;"><?= $c['unread_count'] ?></span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </a>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                    <!-- Filter Dropdowns (Kelas & Role/Mapel) -->
+                    <div class="row g-1">
+                        <div class="col-6">
+                            <select id="filterRole" class="form-select form-select-sm rounded-3">
+                                <option value="">Semua Peran</option>
+                                <option value="guru">Guru / Pengajar</option>
+                                <option value="siswa">Siswa</option>
+                                <option value="administrator">Administrator</option>
+                                <option value="kepala sekolah">Kepala Sekolah</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select id="filterKelas" class="form-select form-select-sm rounded-3">
+                                <option value="">Semua Kelas</option>
+                                <?php foreach ($classList as $k): ?>
+                                    <option value="<?= strtolower(htmlspecialchars($k['nama_kelas'])) ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Chat Messages Column (Right Panel) -->
-                <div class="col-12 col-md-7 col-lg-8 d-flex flex-column bg-light">
+                <!-- Contact List Items Container -->
+                <div class="list-group list-group-flush overflow-auto" id="contactListContainer" style="max-height: calc(100vh - 160px);">
+                    <?php if (empty($contacts)): ?>
+                        <div class="p-4 text-center text-muted small">Belum ada kontak tersedia.</div>
+                    <?php else: ?>
+                        <?php foreach ($contacts as $c): 
+                            $isSel = ($activeContactId == $c['id']);
+                            $avUrl = $c['avatar_url'] ?? '';
+                            $hasAvatar = !empty($avUrl);
+                            $avatarSrc = $avUrl;
+                            
+                            $roleLower = strtolower($c['role_name'] ?? '');
+                            $kelasName = htmlspecialchars($c['nama_kelas'] ?? '');
+                            $mapelName = htmlspecialchars($c['mata_pelajaran'] ?? '');
+                        ?>
+                            <a href="<?= BASE_URL ?>index.php?url=chat&with=<?= $c['id'] ?>" 
+                               class="list-group-item list-group-item-action p-3 contact-item <?= $isSel ? 'bg-primary bg-opacity-10 border-start border-4 border-primary' : '' ?>"
+                               data-contact-id="<?= $c['id'] ?>"
+                               data-name="<?= strtolower(htmlspecialchars($c['full_name'])) ?>"
+                               data-role="<?= $roleLower ?>"
+                               data-kelas="<?= strtolower($kelasName) ?>"
+                               data-mapel="<?= strtolower($mapelName) ?>">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="position-relative flex-shrink-0">
+                                        <?php if ($hasAvatar): ?>
+                                            <img src="<?= $avatarSrc ?>" alt="Avatar" class="rounded-circle object-fit-cover shadow-sm" style="width:42px; height:42px;">
+                                        <?php else: ?>
+                                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width:42px; height:42px; font-size: 1rem;">
+                                                <?= strtoupper(substr($c['full_name'], 0, 1)) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <span class="position-absolute bottom-0 end-0 p-1 border border-2 border-white rounded-circle status-dot <?= ($c['is_online'] ?? 0) == 1 ? 'bg-success' : 'bg-danger' ?>" style="width:12px; height:12px;"></span>
+                                    </div>
+
+                                    <div class="w-100 overflow-hidden">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="fw-bold mb-0 text-truncate text-dark small"><?= htmlspecialchars($c['full_name']) ?></h6>
+                                            <div class="d-flex align-items-center gap-1">
+                                                 <?php if (($c['is_online'] ?? 0) == 1): ?>
+                                                     <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0 status-badge" style="font-size:0.65rem;"><i class="bi bi-circle-fill text-success me-1" style="font-size:0.45rem;"></i>Online</span>
+                                                 <?php else: ?>
+                                                     <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0 status-badge" style="font-size:0.65rem;"><i class="bi bi-circle-fill text-danger me-1" style="font-size:0.45rem;"></i>Off</span>
+                                                 <?php endif; ?>
+                                                 <span class="badge bg-secondary opacity-75" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
+                                             </div>
+                                        </div>
+
+                                        <!-- Contextual Subtitle: Kelas for Siswa, Mapel for Guru -->
+                                        <?php if (!empty($kelasName)): ?>
+                                            <div class="mb-1"><span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.68rem;"><i class="bi bi-bounding-box-circles me-1"></i><?= $kelasName ?></span></div>
+                                        <?php elseif (!empty($mapelName)): ?>
+                                            <div class="mb-1 text-truncate"><span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:0.68rem;"><i class="bi bi-journal-bookmark me-1"></i><?= $mapelName ?></span></div>
+                                        <?php endif; ?>
+
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted text-truncate d-block" style="font-size:0.75rem;">
+                                                <?= htmlspecialchars($c['last_message'] ?? 'Klik untuk mengobrol...') ?>
+                                            </small>
+                                            <?php if (($c['unread_count'] ?? 0) > 0): ?>
+                                                <span class="badge bg-danger rounded-pill ms-1" style="font-size:0.65rem;"><?= $c['unread_count'] ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-custom p-0 overflow-hidden shadow-sm border-0 rounded-4">
+            <div class="row g-0">
+                
+                <!-- Chat Messages Column (Full Width 12-Columns Main Area) -->
+                <div class="col-12 d-flex flex-column bg-light">
                     <?php if ($activeContactId > 0 && !empty($activeContactInfo)): 
                         $actAvUrl = $activeContactInfo['avatar_url'] ?? '';
                         $actHasAvatar = !empty($actAvUrl);
@@ -141,6 +151,9 @@
                         <!-- Active Chat Top Header -->
                         <div class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-3">
+                                <button class="btn btn-light btn-sm rounded-circle p-2 shadow-sm text-primary flex-shrink-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#contactsOffcanvas" aria-controls="contactsOffcanvas" title="Buka Daftar Kontak (☰)">
+                                    <i class="bi bi-list fs-5"></i>
+                                </button>
                                 <div class="position-relative flex-shrink-0">
                                     <?php if ($actHasAvatar): ?>
                                         <img src="<?= $actAvatarSrc ?>" alt="Avatar" class="rounded-circle object-fit-cover shadow-sm" style="width:42px; height:42px;">
@@ -318,6 +331,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (searchInput) searchInput.addEventListener('keyup', filterContacts);
     if (filterRole) filterRole.addEventListener('change', filterContacts);
     if (filterKelas) filterKelas.addEventListener('change', filterContacts);
+
+    contactItems.forEach(function(item) {
+        item.addEventListener('click', function() {
+            const offcanvasElem = document.getElementById('contactsOffcanvas');
+            if (offcanvasElem && typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+                const instance = bootstrap.Offcanvas.getInstance(offcanvasElem);
+                if (instance) instance.hide();
+            }
+        });
+    });
 });
 </script>
 
