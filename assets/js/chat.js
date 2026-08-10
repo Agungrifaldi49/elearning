@@ -34,7 +34,57 @@ const ChatApp = {
         this.state.currentUserId = parseInt(document.body.getAttribute('data-user-id') || 0, 10);
 
         this.bindEvents();
+        this.initEmojiPicker();
         this.startPolling();
+    },
+
+    initEmojiPicker: function() {
+        const btn = document.getElementById('emojiPickerBtn');
+        const popover = document.getElementById('emojiPickerPopover');
+        const closeBtn = document.getElementById('closeEmojiPickerBtn');
+        const container = document.getElementById('emojiListContainer');
+        const input = document.getElementById('messageInput');
+
+        if (!btn || !popover || !container || !input) return;
+
+        const emojis = [
+            '😊','😂','🤣','😍','🥰','😎','😇','🥳','🤯','😱','😴','🤔','🙃','🤐','😷',
+            '👍','👎','👏','🙏','✌️','🤝','💪','👌','👋','👊','🖐️','🙌','🤘',
+            '❤️','💖','💕','🔥','🎉','🚀','💡','📌','✅','⚡','💯','⭐','🏆','🎖️',
+            '🎓','📚','✏️','💬','🔔','📢','✨','🌟','🎯','📝','💻','📱','🏫','👨‍🏫','👩‍🎓'
+        ];
+
+        container.innerHTML = emojis.map(e => `
+            <button type="button" class="btn btn-light btn-sm p-1 fs-5 border-0 emoji-item" style="width: 38px; height: 38px; line-height: 1;">${e}</button>
+        `).join('');
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            popover.classList.toggle('d-none');
+        });
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => popover.classList.add('d-none'));
+        }
+
+        container.querySelectorAll('.emoji-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const emoji = item.textContent.trim();
+                const start = input.selectionStart || input.value.length;
+                const end = input.selectionEnd || input.value.length;
+                const val = input.value;
+                input.value = val.substring(0, start) + emoji + val.substring(end);
+                input.focus();
+                input.selectionStart = input.selectionEnd = start + emoji.length;
+            });
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!popover.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+                popover.classList.add('d-none');
+            }
+        });
     },
 
     bindEvents: function() {
@@ -395,6 +445,40 @@ const ChatApp = {
                 this.fetchState(true);
             } else {
                 alert(res.message || 'Gagal menghapus pesan untuk semua orang');
+            }
+        })
+        .catch(() => {
+            this.state.isMutating = false;
+            this.fetchState(true);
+        });
+    },
+
+    clearConversation: function() {
+        if (!this.state.activeWithId) return;
+        if (!confirm('Apakah Anda yakin ingin menghapus seluruh pesan obrolan dengan kontak ini?')) return;
+
+        this.state.isMutating = true;
+        const csrfTokenInput = document.querySelector('#chatForm input[name="csrf_token"]');
+        const csrfToken = csrfTokenInput ? csrfTokenInput.value : '';
+
+        const formData = new FormData();
+        formData.append('with', this.state.activeWithId);
+        formData.append('csrf_token', csrfToken);
+
+        fetch(`${BASE_URL}index.php?url=chat/clearHistory`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(res => {
+            this.state.isMutating = false;
+            if (res.status === 'success') {
+                const chatBox = document.getElementById('chatBox');
+                if (chatBox) chatBox.innerHTML = '';
+                this.state.messages = [];
+                this.fetchState(true);
+            } else {
+                alert(res.message || 'Gagal membersihkan obrolan');
             }
         })
         .catch(() => {

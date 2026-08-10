@@ -245,4 +245,30 @@ class ChatController {
         }
         exit();
     }
+
+    public function clearHistory() {
+        AuthHelper::requireLogin();
+        header('Content-Type: application/json');
+
+        if (!Security::verifyCsrfToken()) {
+            echo json_encode(['status' => 'error', 'message' => 'CSRF Token Invalid']);
+            exit();
+        }
+
+        $user = AuthHelper::user();
+        $contactId = (int)($_POST['with'] ?? ($_GET['with'] ?? 0));
+
+        if ($contactId > 0) {
+            $commModel = new CommunicationModel();
+            $success = $commModel->clearChatHistory($user['id'], $contactId);
+            if ($success) {
+                echo json_encode(['status' => 'success']);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Gagal membersihkan obrolan']);
+            }
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Kontak tidak valid']);
+        }
+        exit();
+    }
 }

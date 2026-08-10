@@ -205,6 +205,19 @@ class CommunicationModel extends BaseModel {
         return $stmt->execute([$chatId, $userId]);
     }
 
+    public function clearChatHistory($currentUserId, $contactId) {
+        $uid = (int)$currentUserId;
+        $cid = (int)$contactId;
+
+        $stmt1 = $this->db->prepare("UPDATE chat SET deleted_by_sender = 1 WHERE sender_id = ? AND receiver_id = ?");
+        $stmt1->execute([$uid, $cid]);
+
+        $stmt2 = $this->db->prepare("UPDATE chat SET deleted_by_receiver = 1 WHERE sender_id = ? AND receiver_id = ?");
+        $stmt2->execute([$cid, $uid]);
+
+        return true;
+    }
+
     public function getChatContacts($currentUserId) {
         $uid = (int)$currentUserId;
         $stmt = $this->db->prepare("

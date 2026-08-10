@@ -154,7 +154,21 @@
                                     </div>
                                 </div>
                             </div>
-                            <span class="badge bg-success-subtle text-success small border border-success-subtle"><i class="bi bi-record-fill me-1 text-success"></i> Terhubung</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-success-subtle text-success small border border-success-subtle"><i class="bi bi-record-fill me-1 text-success"></i> Terhubung</span>
+                                <div class="dropdown">
+                                    <button class="btn btn-light btn-sm rounded-circle p-2 shadow-sm text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Opsi Obrolan">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3" style="font-size: 0.85rem;">
+                                        <li>
+                                            <a class="dropdown-item text-danger py-2" href="javascript:void(0)" onclick="ChatApp.clearConversation()">
+                                                <i class="bi bi-trash3 me-2"></i> Bersihkan Semua Pesan
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Chat Messages Box -->
@@ -203,10 +217,28 @@
                         </div>
 
                         <!-- Chat Input Form -->
-                        <div class="p-3 border-top bg-white">
-                            <form id="chatForm" class="d-flex gap-2">
+                        <div class="p-3 border-top bg-white position-relative">
+                            <!-- Emoji Picker Popover Box -->
+                            <div id="emojiPickerPopover" class="card shadow-lg border-0 rounded-4 position-absolute bottom-100 start-0 ms-3 mb-2 d-none" style="width: 320px; z-index: 1050;">
+                                <div class="card-header bg-primary text-white py-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
+                                    <span class="small fw-bold"><i class="bi bi-emoji-smile me-1"></i> Pilih Emoji</span>
+                                    <button type="button" class="btn-close btn-close-white small" id="closeEmojiPickerBtn"></button>
+                                </div>
+                                <div class="card-body p-2 overflow-auto" style="max-height: 220px; font-size: 1.3rem;">
+                                    <div class="d-flex flex-wrap gap-1" id="emojiListContainer">
+                                        <!-- Emojis dynamically inserted by JS -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form id="chatForm" class="d-flex gap-2 align-items-center">
                                 <?= Security::csrfField() ?>
                                 <input type="hidden" id="receiverId" value="<?= $activeContactId ?>">
+                                
+                                <button type="button" id="emojiPickerBtn" class="btn btn-light border rounded-circle text-secondary flex-shrink-0" style="width:42px; height:42px;" title="Pilih Emoji">
+                                    <i class="bi bi-emoji-smile fs-5"></i>
+                                </button>
+                                
                                 <input type="text" id="messageInput" class="form-control rounded-pill px-4" placeholder="Tuliskan pesan percakapan di sini..." required autocomplete="off">
                                 <button type="submit" class="btn btn-primary rounded-circle p-2 flex-shrink-0" style="width:42px; height:42px;" title="Kirim Pesan">
                                     <i class="bi bi-send-fill"></i>
