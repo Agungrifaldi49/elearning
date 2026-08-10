@@ -6,8 +6,8 @@
 
 class Database {
     private static $host = 'localhost';
-    private static $db_name = 'db_elearning_smkmh';
-    private static $username = 'root';
+    private static $db_name = '';
+    private static $username = '';
     private static $password = '';
     private static $conn = null;
 
