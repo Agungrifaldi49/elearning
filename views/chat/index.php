@@ -4,7 +4,52 @@
 
 <script src="<?= BASE_URL ?>assets/js/chat.js?v=<?= time() ?>"></script>
 
-<main class="main-content px-3 px-md-4">
+<style>
+/* Responsive Chat Styles */
+#contactsOffcanvas {
+    max-width: 85vw;
+    width: 380px;
+}
+
+#chatBox {
+    height: calc(100vh - 270px);
+    min-height: 420px;
+    max-height: 650px;
+}
+
+.chat-bubble {
+    max-width: 75%;
+    border-radius: 1rem;
+}
+
+#emojiPickerPopover {
+    max-width: 92vw;
+    width: 350px;
+}
+
+@media (max-width: 575.98px) {
+    #chatBox {
+        height: calc(100vh - 290px);
+        min-height: 350px;
+        padding: 0.75rem !important;
+    }
+
+    .chat-bubble {
+        max-width: 88%;
+    }
+
+    #emojiPickerPopover {
+        width: 310px;
+    }
+
+    .active-status-badge {
+        font-size: 0.7rem !important;
+        padding: 4px 8px !important;
+    }
+}
+</style>
+
+<main class="main-content px-2 px-md-4">
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <div>
@@ -198,7 +243,7 @@
                         </div>
 
                         <!-- Chat Messages Box -->
-                        <div class="p-4 chat-box flex-grow-1 overflow-auto" id="chatBox" style="min-height: 400px; max-height: 480px;">
+                        <div class="p-3 p-md-4 chat-box flex-grow-1 overflow-auto" id="chatBox">
                             <?php foreach ($messages as $msg): 
                                 $isMe = ($msg['sender_id'] == $user['id']);
                                 $isDeletedEveryone = ((int)($msg['is_deleted_everyone'] ?? 0) === 1);
