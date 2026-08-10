@@ -109,15 +109,15 @@
 
     <!-- Search & Filter Controls Card -->
     <div class="card border-0 rounded-4 shadow-sm p-3 mb-4 bg-white">
-        <div class="row g-2.5 align-items-center">
-            <div class="col-12 col-md-5">
+        <div class="row g-3 align-items-center">
+            <div class="col-12 col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3 text-muted"><i class="bi bi-search"></i></span>
-                    <input type="text" id="searchInput" class="form-control bg-light border-start-0 rounded-end-pill ps-0 text-slate-800" placeholder="Cari judul kuis atau nama mapel..." oninput="filterQuizItems()" style="font-size: 0.88rem;">
+                    <input type="text" id="searchInput" class="form-control bg-light border-start-0 rounded-end-pill ps-0" placeholder="Cari judul kuis atau nama mapel..." oninput="filterQuizItems()" style="font-size: 0.88rem;">
                 </div>
             </div>
-            <div class="col-6 col-md-3.5">
-                <select id="filterMapel" class="form-select rounded-pill text-slate-700" onchange="filterQuizItems()" style="font-size: 0.85rem;">
+            <div class="col-6 col-md-3">
+                <select id="filterMapel" class="form-select rounded-pill" onchange="filterQuizItems()" style="font-size: 0.85rem;">
                     <option value="">Semua Mata Pelajaran</option>
                     <?php 
                     $mapelNames = array_unique(array_column($quizList, 'nama_mapel'));
@@ -127,8 +127,8 @@
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-6 col-md-3.5">
-                <select id="filterStatus" class="form-select rounded-pill text-slate-700" onchange="filterQuizItems()" style="font-size: 0.85rem;">
+            <div class="col-6 col-md-3">
+                <select id="filterStatus" class="form-select rounded-pill" onchange="filterQuizItems()" style="font-size: 0.85rem;">
                     <option value="">Semua Status</option>
                     <option value="terdaftar">Terdaftar / Aktif</option>
                     <option value="terkunci">Terkunci / Expired</option>
@@ -167,128 +167,110 @@
                 $cardStatusClass = !$isEnrolled ? 'status-locked' : ($isDisqualified || ($isExpired && !$canAccess) ? 'status-expired' : 'status-active');
                 $statusCardVal = $isDisqualified ? 'didiskualifikasi' : (!$isEnrolled ? 'terkunci' : ($isExpired && !$canAccess ? 'terkunci' : 'terdaftar'));
             ?>
-                <div class="col-12 col-md-6 col-lg-4 quiz-item-col" data-title="<?= htmlspecialchars(strtolower($q['judul'])) ?>" data-mapel="<?= htmlspecialchars($q['nama_mapel']) ?>" data-status="<?= $statusCardVal ?>">
-                    <div class="quiz-card-item <?= $cardStatusClass ?> p-4 text-center">
-                        
-                        <!-- Top Icon & Header Badges -->
-                        <div class="position-relative mb-3">
-                            <div class="quiz-icon-badge mx-auto shadow-xs <?= !$canAccess ? 'bg-danger text-white' : 'bg-primary bg-gradient text-white' ?>">
-                                <i class="bi <?= !$canAccess ? 'bi-lock-fill' : 'bi-stopwatch' ?> fs-3"></i>
+                <div class="col-12 col-md-6 col-xl-4 quiz-item-col" data-title="<?= htmlspecialchars(strtolower($q['judul'])) ?>" data-mapel="<?= htmlspecialchars($q['nama_mapel']) ?>" data-status="<?= $statusCardVal ?>">
+                    <div class="quiz-card-item <?= $cardStatusClass ?> p-4 shadow-sm border-0 rounded-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <!-- Header Row: Icon, Mapel Badge & Status Badge -->
+                            <div class="d-flex align-items-center justify-content-between mb-3 gap-2 flex-wrap">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle <?= !$canAccess ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle' ?> d-flex align-items-center justify-content-center shadow-xs" style="width: 42px; height: 42px; min-width: 42px;">
+                                        <i class="bi <?= !$canAccess ? 'bi-lock-fill' : 'bi-stopwatch-fill' ?> fs-5"></i>
+                                    </div>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.75rem;">
+                                        <i class="bi bi-journal-bookmark me-1"></i><?= htmlspecialchars($q['nama_mapel']) ?>
+                                    </span>
+                                </div>
+
+                                <div class="d-flex gap-1 align-items-center">
+                                    <?php if (($q['kategori'] ?? '') === 'uts'): ?>
+                                        <span class="badge text-white rounded-pill px-2.5 py-1" style="background:#7c3aed; font-size:0.7rem;"><i class="bi bi-trophy-fill me-1"></i>UTS</span>
+                                    <?php elseif (($q['kategori'] ?? '') === 'uas'): ?>
+                                        <span class="badge bg-danger text-white rounded-pill px-2.5 py-1" style="font-size:0.7rem;"><i class="bi bi-award-fill me-1"></i>UAS</span>
+                                    <?php endif; ?>
+
+                                    <?php if ($isDisqualified): ?>
+                                        <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 small fw-bold">Didiskualifikasi</span>
+                                    <?php elseif ($isExpired): ?>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small fw-bold">Expired</span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
 
-                            <?php if ($isDisqualified): ?>
-                                <span class="position-absolute top-0 end-0 badge bg-danger rounded-pill px-3 py-1.5 fw-bold shadow-xs small">
-                                    <i class="bi bi-shield-x me-1"></i>Didiskualifikasi
-                                </span>
-                            <?php elseif ($isExpired): ?>
-                                <span class="position-absolute top-0 end-0 badge bg-danger rounded-pill px-3 py-1.5 fw-bold shadow-xs small">
-                                    <i class="bi bi-clock-history me-1"></i>Expired
-                                </span>
-                            <?php endif; ?>
-                        </div>
+                            <!-- Quiz Title & Teacher Info -->
+                            <h5 class="fw-bold text-dark mb-1" style="letter-spacing: -0.2px; line-height: 1.35;">
+                                <?= htmlspecialchars($q['judul']) ?>
+                            </h5>
+                            <div class="text-muted small mb-3">
+                                <i class="bi bi-person-circle text-primary me-1"></i>Guru: <strong><?= htmlspecialchars($q['nama_guru'] ?? 'Guru Pengampu') ?></strong>
+                            </div>
 
-                        <!-- Quiz Title & Mapel Info -->
-                        <h5 class="fw-bold mb-1.5 text-dark d-flex align-items-center justify-content-center gap-1.5 flex-wrap" style="letter-spacing: -0.2px; line-height: 1.35;">
-                            <?= htmlspecialchars($q['judul']) ?>
-                            <?php if (($q['kategori'] ?? '') === 'uts'): ?>
-                                <span class="badge text-white rounded-pill px-2.5 py-1" style="background:#7c3aed; font-size:0.7rem;"><i class="bi bi-trophy-fill me-1"></i>UTS</span>
-                            <?php elseif (($q['kategori'] ?? '') === 'uas'): ?>
-                                <span class="badge bg-danger text-white rounded-pill px-2.5 py-1" style="font-size:0.7rem;"><i class="bi bi-award-fill me-1"></i>UAS</span>
-                            <?php endif; ?>
-                        </h5>
-                        <p class="small fw-bold mb-2">
-                            <span class="badge-mapel-tag"><i class="bi bi-journal-bookmark-fill me-1"></i><?= htmlspecialchars($q['nama_mapel']) ?></span>
-                        </p>
-                        
-                        <div class="text-muted small mb-3">
-                            <i class="bi bi-person-circle text-primary me-1"></i>Guru Pengampu: <strong><?= htmlspecialchars($q['nama_guru'] ?? 'Guru Pengampu') ?></strong>
-                        </div>
-
-                        <!-- Deadline, Duration & Attempt Pills -->
-                        <div class="d-flex flex-column align-items-center gap-1.5 mb-4 pb-3 border-bottom">
-                            <?php if (!empty($q['deadline'])): ?>
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1.5 fw-semibold" style="font-size:0.78rem;">
-                                    <i class="bi bi-calendar-x me-1"></i>Deadline: <?= date('d M Y, H:i', strtotime($q['deadline'])) ?> WIB
-                                </span>
-                            <?php else: ?>
-                                <span class="badge bg-light text-dark border rounded-pill px-3 py-1.5 fw-semibold" style="font-size:0.78rem;">
-                                    <i class="bi bi-calendar-check text-success me-1"></i>Batas Waktu: Tanpa Deadline
-                                </span>
-                            <?php endif; ?>
-
-                            <div class="d-flex align-items-center gap-1.5 flex-wrap justify-content-center">
-                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.78rem;">
-                                    <i class="bi bi-clock me-1"></i>Durasi: <?= $q['durasi_menit'] ?> Menit
-                                </span>
-                                <?php 
-                                $maxAttemptsVal = (int)($q['max_attempts'] ?? 1);
-                                $currentAttemptDone = isset($completedMap[$q['id']]) ? (int)($completedMap[$q['id']]['attempt_count'] ?? 1) : 0;
-                                if ($maxAttemptsVal == 0) {
-                                    $attemptBadgeText = "Tanpa Batas";
-                                } else {
-                                    $sisaAttempts = max(0, $maxAttemptsVal - $currentAttemptDone);
-                                    $attemptBadgeText = "Sisa " . $sisaAttempts . "x (" . $currentAttemptDone . "/" . $maxAttemptsVal . ")";
-                                }
-                                ?>
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.78rem;">
-                                    <i class="bi bi-arrow-repeat me-1"></i><?= $attemptBadgeText ?>
-                                </span>
+                            <!-- Meta Info Bar (Deadline, Durasi, Attempt) -->
+                            <div class="p-3 bg-light rounded-3 mb-3 border border-slate-200">
+                                <div class="row g-2 text-center" style="font-size: 0.78rem;">
+                                    <div class="col-6 border-end">
+                                        <span class="text-muted d-block mb-1"><i class="bi bi-clock me-1 text-warning"></i>Durasi</span>
+                                        <strong class="text-dark fs-6"><?= $q['durasi_menit'] ?> Menit</strong>
+                                    </div>
+                                    <div class="col-6">
+                                        <?php 
+                                        $maxAttemptsVal = (int)($q['max_attempts'] ?? 1);
+                                        $currentAttemptDone = isset($completedMap[$q['id']]) ? (int)($completedMap[$q['id']]['attempt_count'] ?? 1) : 0;
+                                        $sisaAttempts = ($maxAttemptsVal == 0) ? '∞' : max(0, $maxAttemptsVal - $currentAttemptDone);
+                                        ?>
+                                        <span class="text-muted d-block mb-1"><i class="bi bi-arrow-repeat me-1 text-primary"></i>Sisa Kesempatan</span>
+                                        <strong class="text-dark fs-6"><?= $sisaAttempts ?>x</strong>
+                                    </div>
+                                </div>
+                                <?php if (!empty($q['deadline'])): ?>
+                                    <div class="mt-2 pt-2 border-top text-center text-danger fw-semibold" style="font-size: 0.75rem;">
+                                        <i class="bi bi-calendar-x me-1"></i>Deadline: <?= date('d M Y, H:i', strtotime($q['deadline'])) ?> WIB
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
-                        
+
                         <!-- Action Button Area -->
-                        <div class="mt-auto">
+                        <div class="pt-2">
                             <?php 
                             $needsToken = in_array($q['kategori'] ?? '', ['uts', 'uas']) && !empty($q['access_key']) && empty($_SESSION['quiz_access_key_' . $q['id']]);
                             $susulanStatus = $accessCheck['status'] ?? '';
                             ?>
                             <?php if (!$isEnrolled): ?>
-                                <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-warning text-dark w-100 fw-bold rounded-pill shadow-xs py-2.5 d-flex align-items-center justify-content-center gap-1" title="Akses Terkunci! Masukkan Key Mapel untuk Mengerjakan">
+                                <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-warning text-dark w-100 fw-bold rounded-pill shadow-xs py-2 d-flex align-items-center justify-content-center gap-1">
                                     <i class="bi bi-key-fill me-1"></i> Input Key Mapel (Terkunci <i class="bi bi-lock-fill"></i>)
                                 </a>
 
                             <?php elseif ($susulanStatus === 'disetujui_susulan'): ?>
-                                <script>
-                                    localStorage.removeItem('cbt_violation_locked_<?= $q['id'] ?>');
-                                    sessionStorage.removeItem('cbt_warning_count_<?= $q['id'] ?>');
-                                    sessionStorage.removeItem('cbt_remaining_time_<?= $q['id'] ?>');
-                                </script>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle mb-2.5 d-block py-2 rounded-pill fw-bold small text-wrap">
-                                    <i class="bi bi-check-circle-fill me-1"></i>Izin Susulan Disetujui Guru (Akses Terbuka)
+                                <span class="badge bg-success-subtle text-success border border-success-subtle mb-2 d-block py-2 rounded-pill fw-bold small text-wrap">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Izin Susulan Disetujui Guru
                                 </span>
                                 <?php if ($needsToken): ?>
-                                    <button type="button" class="btn btn-warning text-dark w-100 fw-bold rounded-pill shadow-xs py-2.5 d-flex align-items-center justify-content-center gap-1" data-bs-toggle="modal" data-bs-target="#modalAccessKey<?= $q['id'] ?>">
-                                        <i class="bi bi-key-fill me-1"></i> Masukkan Token Kunci Ujian (<?= strtoupper($q['kategori']) ?>)
+                                    <button type="button" class="btn btn-warning text-dark w-100 fw-bold rounded-pill shadow-xs py-2 d-flex align-items-center justify-content-center gap-1" data-bs-toggle="modal" data-bs-target="#modalAccessKey<?= $q['id'] ?>">
+                                        <i class="bi bi-key-fill me-1"></i> Token Ujian (<?= strtoupper($q['kategori']) ?>)
                                     </button>
                                 <?php else: ?>
-                                    <a href="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $q['id'] ?>" class="btn btn-success w-100 fw-bold rounded-pill shadow-sm py-2.5 text-white">
-                                        <i class="bi bi-play-circle-fill me-1.5"></i> Kerjakan Ujian Susulan Sekarang
+                                    <a href="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $q['id'] ?>" class="btn btn-success w-100 fw-bold rounded-pill shadow-sm py-2 text-white">
+                                        <i class="bi bi-play-circle-fill me-1"></i> Kerjakan Ujian Susulan
                                     </a>
                                 <?php endif; ?>
 
                             <?php elseif ($susulanStatus === 'pending'): ?>
-                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle mb-2.5 d-block py-2 rounded-pill fw-bold small text-wrap">
-                                    <i class="bi bi-hourglass-split me-1"></i>Permohonan Susulan Terkirim
-                                </span>
-                                <button type="button" class="btn btn-warning text-dark w-100 fw-bold rounded-pill shadow-xs py-2.5" disabled>
-                                    <i class="bi bi-hourglass-split me-1.5"></i> Menunggu Persetujuan Guru
+                                <button type="button" class="btn btn-warning text-dark w-100 fw-bold rounded-pill shadow-xs py-2" disabled>
+                                    <i class="bi bi-hourglass-split me-1"></i> Permohonan Susulan Terkirim
                                 </button>
 
                             <?php elseif ($susulanStatus === 'ditolak'): ?>
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle mb-2.5 d-block py-2 rounded-pill fw-bold small text-wrap">
-                                    <i class="bi bi-x-circle-fill me-1"></i>Permohonan Susulan Ditolak Guru
-                                </span>
-                                <button type="button" class="btn btn-outline-danger w-100 fw-bold rounded-pill shadow-xs py-2.5" disabled>
-                                    <i class="bi bi-x-circle-fill me-1.5"></i> Susulan Ditolak oleh Guru
+                                <button type="button" class="btn btn-outline-danger w-100 fw-bold rounded-pill shadow-xs py-2" disabled>
+                                    <i class="bi bi-x-circle-fill me-1"></i> Susulan Ditolak Guru
                                 </button>
 
                             <?php elseif ($isDisqualified): ?>
-                                <button type="button" class="btn btn-outline-danger w-100 fw-bold rounded-pill shadow-xs py-2.5 d-flex align-items-center justify-content-center gap-1" data-bs-toggle="modal" data-bs-target="#modalSusulan<?= $q['id'] ?>">
+                                <button type="button" class="btn btn-outline-danger w-100 fw-bold rounded-pill shadow-xs py-2 d-flex align-items-center justify-content-center gap-1" data-bs-toggle="modal" data-bs-target="#modalSusulan<?= $q['id'] ?>">
                                     <i class="bi bi-shield-x me-1"></i> Minta Buka Kunci / Susulan
                                 </button>
 
                             <?php elseif ($needsToken): ?>
-                                <button type="button" class="btn btn-warning text-dark w-100 fw-bold rounded-pill shadow-xs py-2.5 d-flex align-items-center justify-content-center gap-1" data-bs-toggle="modal" data-bs-target="#modalAccessKey<?= $q['id'] ?>">
+                                <button type="button" class="btn btn-warning text-dark w-100 fw-bold rounded-pill shadow-xs py-2 d-flex align-items-center justify-content-center gap-1" data-bs-toggle="modal" data-bs-target="#modalAccessKey<?= $q['id'] ?>">
                                     <i class="bi bi-key-fill me-1"></i> Masukkan Token Kunci Ujian (<?= strtoupper($q['kategori']) ?>)
                                 </button>
 
@@ -299,31 +281,26 @@
                                 $highestScore = (float)($comp['nilai_tertinggi'] ?? $comp['total_nilai'] ?? 0);
                                 $canReattempt = ($maxAtt == 0 || $attCount < $maxAtt);
                             ?>
-                                <?php if ($canReattempt && $canAccess): ?>
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle mb-2.5 d-block py-2 rounded-pill fw-bold small text-wrap">
-                                        <i class="bi bi-trophy-fill me-1"></i>Nilai Tertinggi: <?= number_format($highestScore, 1) ?> (Percobaan Ke-<?= $attCount ?> dari <?= $maxAtt > 0 ? $maxAtt.'x' : '∞' ?>)
-                                    </span>
-                                    <div class="d-flex flex-column gap-2">
-                                        <a href="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $q['id'] ?>" class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm py-2 text-white" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
-                                            <i class="bi bi-arrow-repeat me-1.5"></i> Kerjakan Ulang (Percobaan Ke-<?= $attCount + 1 ?>)
+                                <div class="bg-success bg-opacity-10 text-success border border-success border-opacity-25 p-2 rounded-3 text-center mb-2">
+                                    <span class="small fw-bold d-block"><i class="bi bi-trophy-fill me-1"></i>Nilai Tertinggi: <?= number_format($highestScore, 1) ?></span>
+                                    <span class="text-muted" style="font-size: 0.72rem;">(Percobaan ke-<?= $attCount ?> dari <?= $maxAtt > 0 ? $maxAtt.'x' : '∞' ?>)</span>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <?php if ($canReattempt && $canAccess): ?>
+                                        <a href="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $q['id'] ?>" class="btn btn-primary flex-grow-1 fw-bold rounded-pill shadow-sm py-2 text-white small" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                                            <i class="bi bi-arrow-repeat me-1"></i> Kerjakan Ulang
                                         </a>
-                                        <a href="<?= BASE_URL ?>index.php?url=siswa/reviewQuiz&id=<?= $q['id'] ?>" class="btn btn-outline-secondary w-100 fw-bold rounded-pill py-2 small">
-                                            <i class="bi bi-file-earmark-check-fill me-1.5"></i> Review Jawaban
-                                        </a>
-                                    </div>
-                                <?php else: ?>
-                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle mb-2.5 d-block py-2 rounded-pill fw-bold small text-wrap">
-                                        <i class="bi bi-lock-fill me-1"></i>Kesempatan Mengerjakan Habis (<?= $attCount ?>/<?= $maxAtt ?> • Nilai: <?= number_format($highestScore, 1) ?>)
-                                    </span>
-                                    <button type="button" class="btn btn-outline-primary w-100 fw-bold rounded-pill py-2 small" data-bs-toggle="modal" data-bs-target="#modalSusulan<?= $q['id'] ?>">
-                                        <i class="bi bi-envelope-plus me-1"></i> Minta Izin Ujian Susulan
-                                    </button>
-                                <?php endif; ?>
+                                    <?php endif; ?>
+                                    <a href="<?= BASE_URL ?>index.php?url=siswa/reviewQuiz&id=<?= $q['id'] ?>" class="btn btn-outline-secondary <?= ($canReattempt && $canAccess) ? '' : 'w-100' ?> fw-bold rounded-pill py-2 small">
+                                        <i class="bi bi-file-earmark-check-fill me-1"></i> Review
+                                    </a>
+                                </div>
 
                             <?php else: ?>
                                 <?php if ($canAccess): ?>
                                     <a href="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $q['id'] ?>" class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm py-2.5 text-white" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
-                                        <i class="bi bi-pencil-square me-1.5"></i> Kerjakan Ujian <?= strtoupper($q['kategori'] ?? 'CBT') ?> Sekarang
+                                        <i class="bi bi-pencil-square me-1"></i> Kerjakan Ujian Sekarang
                                     </a>
                                 <?php else: ?>
                                     <button type="button" class="btn btn-outline-danger w-100 fw-bold rounded-pill shadow-xs py-2.5 d-flex align-items-center justify-content-center gap-1" data-bs-toggle="modal" data-bs-target="#modalSusulan<?= $q['id'] ?>">
