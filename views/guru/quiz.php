@@ -107,6 +107,11 @@
 $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'administrator');
 $hasilQuizSubmissions = $hasilQuizSubmissions ?? [];
 $susulanRequests = $susulanRequests ?? [];
+
+$activeTab = $_GET['tab'] ?? 'paket';
+if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
+    $activeTab = 'paket';
+}
 ?>
 
 <main class="main-content px-3 px-md-4 quiz-guru-page-wrapper pt-4 mt-4 mt-md-5">
@@ -238,12 +243,12 @@ $susulanRequests = $susulanRequests ?? [];
         <!-- 📑 TABBED NAVIGATION -->
         <ul class="nav nav-pills quiz-nav-tabs gap-2 mb-4 p-1.5 bg-white rounded-4 border shadow-xs" id="quizGuruTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active d-flex align-items-center gap-2" id="tab-paket-tab" data-bs-toggle="tab" data-bs-target="#tab-paket" type="button" role="tab">
+                <button class="nav-link <?= $activeTab === 'paket' ? 'active' : '' ?> d-flex align-items-center gap-2" id="tab-paket-tab" data-bs-toggle="tab" data-bs-target="#tab-paket" type="button" role="tab">
                     <i class="bi bi-collection-play-fill"></i> Paket Kuis & Soal CBT
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link d-flex align-items-center gap-2" id="tab-koreksi-tab" data-bs-toggle="tab" data-bs-target="#tab-koreksi" type="button" role="tab">
+                <button class="nav-link <?= $activeTab === 'koreksi' ? 'active' : '' ?> d-flex align-items-center gap-2" id="tab-koreksi-tab" data-bs-toggle="tab" data-bs-target="#tab-koreksi" type="button" role="tab">
                     <i class="bi bi-award-fill"></i> Hasil & Koreksi Essay
                     <?php if ($pendingEssayCount > 0): ?>
                         <span id="badgeEssayCount" class="badge bg-danger rounded-pill px-2.5 py-1" style="font-size:0.72rem;"><?= $pendingEssayCount ?></span>
@@ -251,7 +256,7 @@ $susulanRequests = $susulanRequests ?? [];
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link d-flex align-items-center gap-2" id="tab-susulan-tab" data-bs-toggle="tab" data-bs-target="#tab-susulan" type="button" role="tab">
+                <button class="nav-link <?= $activeTab === 'susulan' ? 'active' : '' ?> d-flex align-items-center gap-2" id="tab-susulan-tab" data-bs-toggle="tab" data-bs-target="#tab-susulan" type="button" role="tab">
                     <i class="bi bi-envelope-paper-heart-fill"></i> Izin Susulan
                     <?php if ($pendingSusulanCount > 0): ?>
                         <span id="badgeSusulanCount" class="badge bg-warning text-dark rounded-pill px-2.5 py-1" style="font-size:0.72rem;"><?= $pendingSusulanCount ?></span>
@@ -264,7 +269,7 @@ $susulanRequests = $susulanRequests ?? [];
         <div class="tab-content" id="quizGuruTabContent">
             
             <!-- TAB 1: PAKET KUIS & BANK SOAL CBT -->
-            <div class="tab-pane fade show active" id="tab-paket" role="tabpanel">
+            <div class="tab-pane fade <?= $activeTab === 'paket' ? 'show active' : '' ?>" id="tab-paket" role="tabpanel">
                 <div class="table-card-custom p-4">
                     
                     <!-- Search & Filter Controls -->
@@ -393,7 +398,7 @@ $susulanRequests = $susulanRequests ?? [];
             </div>
 
             <!-- TAB 2: HASIL UJIAN & KOREKSI ESSAY SISWA -->
-            <div class="tab-pane fade" id="tab-koreksi" role="tabpanel">
+            <div class="tab-pane fade <?= $activeTab === 'koreksi' ? 'show active' : '' ?>" id="tab-koreksi" role="tabpanel">
                 <div class="table-card-custom p-4 border-top border-4 border-warning">
                     
                     <?php
@@ -556,7 +561,7 @@ $susulanRequests = $susulanRequests ?? [];
             </div>
 
             <!-- TAB 3: IZIN SUSULAN SISWA -->
-            <div class="tab-pane fade" id="tab-susulan" role="tabpanel">
+            <div class="tab-pane fade <?= $activeTab === 'susulan' ? 'show active' : '' ?>" id="tab-susulan" role="tabpanel">
                 <div class="table-card-custom p-4 border-top border-4 border-danger">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-envelope-paper-heart-fill text-danger me-2"></i>Permintaan Izin Ujian Susulan Siswa</h5>
@@ -1317,6 +1322,7 @@ $susulanRequests = $susulanRequests ?? [];
                     <div class="modal-body p-4">
                         <?= Security::csrfField() ?>
                         <input type="hidden" name="action" value="grade_quiz_essay">
+                        <input type="hidden" name="redirect_tab" value="koreksi">
                         <input type="hidden" name="quiz_id" value="<?= $hq['quiz_id'] ?>">
                         <input type="hidden" name="siswa_id" value="<?= $hq['siswa_id'] ?>">
 
@@ -1672,7 +1678,20 @@ function pollQuizLiveStatus() {
 
 // Poll every 4 seconds for instant real-time responsiveness
 setInterval(pollQuizLiveStatus, 4000);
-document.addEventListener('DOMContentLoaded', pollQuizLiveStatus);
+document.addEventListener('DOMContentLoaded', function() {
+    pollQuizLiveStatus();
+
+    // Auto-activate tab based on URL query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam) {
+        const targetBtn = document.getElementById('tab-' + tabParam + '-tab');
+        if (targetBtn) {
+            const bsTab = new bootstrap.Tab(targetBtn);
+            bsTab.show();
+        }
+    }
+});
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>

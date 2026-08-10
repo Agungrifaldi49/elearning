@@ -650,7 +650,8 @@ class GuruController {
                 FlashHelper::setSuccess('Nilai Essay siswa berhasil disimpan dan total nilai kuis telah diperbarui.');
             }
 
-            header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+            $redirectTab = $_POST['redirect_tab'] ?? ($action === 'grade_quiz_essay' ? 'koreksi' : (($action === 'approve_susulan' || $action === 'reject_susulan') ? 'susulan' : 'paket'));
+            header('Location: ' . BASE_URL . "index.php?url=guru/quiz&tab={$redirectTab}");
             exit();
         }
 
