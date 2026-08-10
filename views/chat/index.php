@@ -172,7 +172,28 @@
                                     </div>
                                 <?php else: ?>
                                     <div class="chat-bubble <?= $isMe ? 'sent' : 'received' ?>" data-msg-id="<?= $msg['id'] ?>">
-                                        <div class="msg-content"><?= htmlspecialchars($msg['message']) ?></div>
+                                        <div class="d-flex justify-content-between align-items-start gap-2">
+                                            <div class="msg-content flex-grow-1"><?= htmlspecialchars($msg['message']) ?></div>
+                                            <div class="dropdown ms-1 flex-shrink-0">
+                                                <button class="btn btn-link btn-sm p-0 text-reset opacity-50 dropdown-toggle no-arrow" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Opsi Pesan">
+                                                    <i class="bi bi-three-dots-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3" style="font-size: 0.82rem;">
+                                                    <li>
+                                                        <a class="dropdown-item py-1 text-danger" href="javascript:void(0)" onclick="ChatApp.deleteMessageForMe(<?= $msg['id'] ?>)">
+                                                            <i class="bi bi-trash me-2"></i> Hapus untuk Saya
+                                                        </a>
+                                                    </li>
+                                                    <?php if ($isMe): ?>
+                                                        <li>
+                                                            <a class="dropdown-item py-1 text-danger fw-semibold" href="javascript:void(0)" onclick="ChatApp.deleteMessageForEveryone(<?= $msg['id'] ?>)">
+                                                                <i class="bi bi-slash-circle me-2"></i> Hapus untuk Semua Orang
+                                                            </a>
+                                                        </li>
+                                                    <?php endif; ?>
+                                                </ul>
+                                            </div>
+                                        </div>
                                         <div class="d-flex justify-content-end align-items-center mt-1 opacity-75" style="font-size: 0.68rem;">
                                             <span><?= $time ?></span>
                                         </div>

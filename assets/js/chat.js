@@ -147,14 +147,46 @@ const ChatApp = {
                 }
             } else {
                 const newNode = document.createElement('div');
-                newNode.className = `chat-bubble ${bubbleClass}`;
-                newNode.setAttribute('data-msg-id', msgId);
-                newNode.innerHTML = `
-                    <div class="msg-content">${this.escapeHtml(msg.message)}</div>
-                    <div class="d-flex justify-content-end align-items-center mt-1 opacity-75" style="font-size: 0.68rem;">
-                        <span>${time}</span>
-                    </div>
-                `;
+                const isDeletedEveryone = (msg.is_deleted_everyone === 1);
+
+                if (isDeletedEveryone) {
+                    newNode.className = `chat-bubble ${bubbleClass} bg-light text-muted border border-dashed shadow-none`;
+                    newNode.setAttribute('data-msg-id', msgId);
+                    newNode.innerHTML = `
+                        <div class="fst-italic small text-muted"><i class="bi bi-slash-circle me-1 text-danger"></i> Pesan ini telah dihapus</div>
+                        <div style="font-size: 0.68rem; opacity: 0.6; text-align: right; margin-top: 4px;">${time}</div>
+                    `;
+                } else {
+                    newNode.className = `chat-bubble ${bubbleClass}`;
+                    newNode.setAttribute('data-msg-id', msgId);
+                    newNode.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="msg-content flex-grow-1">${this.escapeHtml(msg.message)}</div>
+                            <div class="dropdown ms-1 flex-shrink-0">
+                                <button class="btn btn-link btn-sm p-0 text-reset opacity-50 dropdown-toggle no-arrow" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Opsi Pesan">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3" style="font-size: 0.82rem;">
+                                    <li>
+                                        <a class="dropdown-item py-1 text-danger" href="javascript:void(0)" onclick="ChatApp.deleteMessageForMe(${msgId})">
+                                            <i class="bi bi-trash me-2"></i> Hapus untuk Saya
+                                        </a>
+                                    </li>
+                                    ${isMe ? `
+                                        <li>
+                                            <a class="dropdown-item py-1 text-danger fw-semibold" href="javascript:void(0)" onclick="ChatApp.deleteMessageForEveryone(${msgId})">
+                                                <i class="bi bi-slash-circle me-2"></i> Hapus untuk Semua Orang
+                                            </a>
+                                        </li>
+                                    ` : ''}
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center mt-1 opacity-75" style="font-size: 0.68rem;">
+                            <span>${time}</span>
+                        </div>
+                    `;
+                }
                 chatBox.appendChild(newNode);
             }
         });
@@ -292,6 +324,73 @@ const ChatApp = {
             });
         });
         return filtered;
+    },
+
+    deleteMessageForMe: function(chatId) {
+        if (!confirm('Hapus pesan ini dari tampilan Anda?')) return;
+        this.state.isMutating = true;
+
+        const csrfTokenInput = document.querySelector('#chatForm input[name="csrf_token"]');
+        const csrfToken = csrfTokenInput ? csrfTokenInput.value : '';
+
+        const formData = new FormData();
+        formData.append('chat_id', chatId);
+        formData.append('csrf_token', csrfToken);
+
+        fetch(`${BASE_URL}index.php?url=chat/deleteForMe`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(res => {
+            this.state.isMutating = false;
+            if (res.status === 'success') {
+                const node = document.querySelector(`.chat-bubble[data-msg-id="${chatId}"]`);
+                if (node) {
+                    node.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    node.style.opacity = '0';
+                    node.style.transform = 'scale(0.9)';
+                    setTimeout(() => node.remove(), 300);
+                }
+                this.fetchState(true);
+            } else {
+                alert(res.message || 'Gagal menghapus pesan');
+            }
+        })
+        .catch(() => {
+            this.state.isMutating = false;
+            this.fetchState(true);
+        });
+    },
+
+    deleteMessageForEveryone: function(chatId) {
+        if (!confirm('Tarik / hapus pesan ini untuk semua orang?')) return;
+        this.state.isMutating = true;
+
+        const csrfTokenInput = document.querySelector('#chatForm input[name="csrf_token"]');
+        const csrfToken = csrfTokenInput ? csrfTokenInput.value : '';
+
+        const formData = new FormData();
+        formData.append('chat_id', chatId);
+        formData.append('csrf_token', csrfToken);
+
+        fetch(`${BASE_URL}index.php?url=chat/deleteForEveryone`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(res => {
+            this.state.isMutating = false;
+            if (res.status === 'success') {
+                this.fetchState(true);
+            } else {
+                alert(res.message || 'Gagal menghapus pesan untuk semua orang');
+            }
+        })
+        .catch(() => {
+            this.state.isMutating = false;
+            this.fetchState(true);
+        });
     },
 
     escapeHtml: function(text) {
