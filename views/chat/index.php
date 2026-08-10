@@ -245,12 +245,20 @@
                         <!-- Chat Input Form -->
                         <div class="p-3 border-top bg-white position-relative">
                             <!-- Emoji Picker Popover Box -->
-                            <div id="emojiPickerPopover" class="card shadow-lg border-0 rounded-4 position-absolute bottom-100 start-0 ms-3 mb-2 d-none" style="width: 320px; z-index: 1050;">
+                            <div id="emojiPickerPopover" class="card shadow-lg border-0 rounded-4 position-absolute bottom-100 start-0 ms-3 mb-2 d-none" style="width: 350px; z-index: 1050;">
                                 <div class="card-header bg-primary text-white py-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
                                     <span class="small fw-bold"><i class="bi bi-emoji-smile me-1"></i> Pilih Emoji</span>
                                     <button type="button" class="btn-close btn-close-white small" id="closeEmojiPickerBtn"></button>
                                 </div>
-                                <div class="card-body p-2 overflow-auto" style="max-height: 220px; font-size: 1.3rem;">
+                                <!-- Emoji Category Tabs -->
+                                <div class="bg-light border-bottom d-flex justify-content-around p-1" id="emojiCatTabs">
+                                    <button type="button" class="btn btn-sm btn-light border-0 emoji-cat-tab active" data-cat="smileys" title="Ekspresi 😀" style="font-size: 1.1rem;">😀</button>
+                                    <button type="button" class="btn btn-sm btn-light border-0 emoji-cat-tab" data-cat="gestures" title="Gestur 👋" style="font-size: 1.1rem;">👋</button>
+                                    <button type="button" class="btn btn-sm btn-light border-0 emoji-cat-tab" data-cat="love" title="Hati & Simbol ❤️" style="font-size: 1.1rem;">❤️</button>
+                                    <button type="button" class="btn btn-sm btn-light border-0 emoji-cat-tab" data-cat="education" title="Sekolah & Edukasi 🎓" style="font-size: 1.1rem;">🎓</button>
+                                    <button type="button" class="btn btn-sm btn-light border-0 emoji-cat-tab" data-cat="activities" title="Aktivitas & Pesta 🔥" style="font-size: 1.1rem;">🔥</button>
+                                </div>
+                                <div class="card-body p-2 overflow-auto" style="max-height: 240px; font-size: 1.35rem;">
                                     <div class="d-flex flex-wrap gap-1" id="emojiListContainer">
                                         <!-- Emojis dynamically inserted by JS -->
                                     </div>

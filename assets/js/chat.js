@@ -44,19 +44,49 @@ const ChatApp = {
         const closeBtn = document.getElementById('closeEmojiPickerBtn');
         const container = document.getElementById('emojiListContainer');
         const input = document.getElementById('messageInput');
+        const catTabs = document.querySelectorAll('.emoji-cat-tab');
 
         if (!btn || !popover || !container || !input) return;
 
-        const emojis = [
-            '😊','😂','🤣','😍','🥰','😎','😇','🥳','🤯','😱','😴','🤔','🙃','🤐','😷',
-            '👍','👎','👏','🙏','✌️','🤝','💪','👌','👋','👊','🖐️','🙌','🤘',
-            '❤️','💖','💕','🔥','🎉','🚀','💡','📌','✅','⚡','💯','⭐','🏆','🎖️',
-            '🎓','📚','✏️','💬','🔔','📢','✨','🌟','🎯','📝','💻','📱','🏫','👨‍🏫','👩‍🎓'
-        ];
+        const emojiCategories = {
+            smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','🥲','🥹','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😮‍💨','😤','😠','😡','🤬','🤯','😱','😨','😰','😥','😓','🤗','🤔','🫣','🤭','🥱','😴','🤤','😷','🤒','🤕','🤢','🤮','🤧','😵','🤠'],
+            gestures: ['👍','👎','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🫁','🧠','🗣️','👤','👥'],
+            love: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🔒','🔓','🔑','🛡️','⚔️','⚖️','💯','⚡','✨','🌟','⭐'],
+            education: ['🎓','📚','📖','📜','📑','📰','📊','📈','📉','📄','📅','📆','📇','📋','📁','📂','📒','📓','📔','📕','📗','📘','📙','🖋️','🖊️','🖌️','🖍️','📝','✏️','📏','📐','✂️','📌','📍','🔍','🔎','🏫','👨‍🏫','👩‍🏫','👨‍🎓','👩‍🎓','💻','🖥️','🖨️','📱','⌨️','🖱️','💾'],
+            activities: ['🔥','🎉','🎊','🎈','🎁','🎀','🏆','🥇','🥈','🥉','🏅','🎖️','🎗️','⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🥊','🥋','🚀','🎯','🇮🇩','🏁','🚩']
+        };
 
-        container.innerHTML = emojis.map(e => `
-            <button type="button" class="btn btn-light btn-sm p-1 fs-5 border-0 emoji-item" style="width: 38px; height: 38px; line-height: 1;">${e}</button>
-        `).join('');
+        function renderCategory(catKey) {
+            const list = emojiCategories[catKey] || emojiCategories.smileys;
+            container.innerHTML = list.map(e => `
+                <button type="button" class="btn btn-light btn-sm p-1 fs-5 border-0 emoji-item" style="width: 38px; height: 38px; line-height: 1;">${e}</button>
+            `).join('');
+
+            container.querySelectorAll('.emoji-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const emoji = item.textContent.trim();
+                    const start = input.selectionStart || input.value.length;
+                    const end = input.selectionEnd || input.value.length;
+                    const val = input.value;
+                    input.value = val.substring(0, start) + emoji + val.substring(end);
+                    input.focus();
+                    input.selectionStart = input.selectionEnd = start + emoji.length;
+                });
+            });
+        }
+
+        renderCategory('smileys');
+
+        catTabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                e.stopPropagation();
+                catTabs.forEach(t => t.classList.remove('active', 'bg-white', 'shadow-sm'));
+                tab.classList.add('active', 'bg-white', 'shadow-sm');
+                const cat = tab.getAttribute('data-cat');
+                renderCategory(cat);
+            });
+        });
 
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -66,19 +96,6 @@ const ChatApp = {
         if (closeBtn) {
             closeBtn.addEventListener('click', () => popover.classList.add('d-none'));
         }
-
-        container.querySelectorAll('.emoji-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const emoji = item.textContent.trim();
-                const start = input.selectionStart || input.value.length;
-                const end = input.selectionEnd || input.value.length;
-                const val = input.value;
-                input.value = val.substring(0, start) + emoji + val.substring(end);
-                input.focus();
-                input.selectionStart = input.selectionEnd = start + emoji.length;
-            });
-        });
 
         document.addEventListener('click', (e) => {
             if (!popover.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
