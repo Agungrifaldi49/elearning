@@ -10,6 +10,7 @@ class ExamModel extends BaseModel {
         parent::__construct();
         $this->ensureGambarColumn();
         $this->ensureDeadlineAndSusulanTables();
+        $this->recalibrateAllQuizScores();
     }
 
     private function ensureGambarColumn() {
@@ -339,8 +340,9 @@ class ExamModel extends BaseModel {
     }
 
     public function addSoal($quiz_id, $jenis_soal, $pertanyaan, $bobot, $pilihanArray, $gambar = null) {
+        $bobotVal = ((int)$bobot > 0) ? (int)$bobot : 10;
         $stmt = $this->db->prepare("INSERT INTO soal (quiz_id, jenis_soal, pertanyaan, bobot, gambar) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$quiz_id, $jenis_soal, $pertanyaan, $bobot, $gambar]);
+        $stmt->execute([$quiz_id, $jenis_soal, $pertanyaan, $bobotVal, $gambar]);
         $soal_id = $this->db->lastInsertId();
 
         if (($jenis_soal === 'pg' || $jenis_soal === 'tf') && !empty($pilihanArray)) {
@@ -604,10 +606,21 @@ class ExamModel extends BaseModel {
         }
     }
 
-    public function finishQuiz($siswa_id, $quiz_id) {
+    public function finishQuiz($siswa_id, $quiz_id, $isNewAttempt = true) {
         $stmtScore = $this->db->prepare("SELECT SUM(COALESCE(nilai, 0)) FROM jawaban_siswa WHERE siswa_id = ? AND quiz_id = ?");
         $stmtScore->execute([$siswa_id, $quiz_id]);
-        $currentScore = (float)$stmtScore->fetchColumn();
+        $earnedScore = (float)$stmtScore->fetchColumn();
+
+        // Calculate total max weight of questions in this quiz
+        $stmtTotalBobot = $this->db->prepare("SELECT SUM(bobot) FROM soal WHERE quiz_id = ?");
+        $stmtTotalBobot->execute([$quiz_id]);
+        $totalMaxBobot = (float)$stmtTotalBobot->fetchColumn();
+
+        if ($totalMaxBobot > 0) {
+            $currentScore = round(($earnedScore / $totalMaxBobot) * 100, 2);
+        } else {
+            $currentScore = 0.00;
+        }
 
         // Check if quiz has ungraded essay questions
         $stmtUngraded = $this->db->prepare("
@@ -620,19 +633,38 @@ class ExamModel extends BaseModel {
 
         $statusLulus = $hasUngradedEssay ? 'menunggu' : (($currentScore >= 70) ? 'lulus' : 'tidak_lulus');
 
-        // Count previous attempts in history
-        $stmtCount = $this->db->prepare("SELECT COUNT(*) FROM hasil_quiz_history WHERE siswa_id = ? AND quiz_id = ?");
-        $stmtCount->execute([$siswa_id, $quiz_id]);
-        $attemptNum = ((int)$stmtCount->fetchColumn()) + 1;
+        if ($isNewAttempt) {
+            // Count previous attempts in history
+            $stmtCount = $this->db->prepare("SELECT COUNT(*) FROM hasil_quiz_history WHERE siswa_id = ? AND quiz_id = ?");
+            $stmtCount->execute([$siswa_id, $quiz_id]);
+            $attemptNum = ((int)$stmtCount->fetchColumn()) + 1;
 
-        // Log this attempt in history table
-        $stmtHist = $this->db->prepare("INSERT INTO hasil_quiz_history (siswa_id, quiz_id, attempt_number, total_nilai, status_lulus) VALUES (?, ?, ?, ?, ?)");
-        $stmtHist->execute([$siswa_id, $quiz_id, $attemptNum, $currentScore, $statusLulus]);
+            // Log this attempt in history table
+            $stmtHist = $this->db->prepare("INSERT INTO hasil_quiz_history (siswa_id, quiz_id, attempt_number, total_nilai, status_lulus) VALUES (?, ?, ?, ?, ?)");
+            $stmtHist->execute([$siswa_id, $quiz_id, $attemptNum, $currentScore, $statusLulus]);
+        } else {
+            // Update latest attempt in history table if exists
+            $stmtLastHist = $this->db->prepare("SELECT id FROM hasil_quiz_history WHERE siswa_id = ? AND quiz_id = ? ORDER BY id DESC LIMIT 1");
+            $stmtLastHist->execute([$siswa_id, $quiz_id]);
+            $lastHistId = $stmtLastHist->fetchColumn();
+
+            if ($lastHistId) {
+                $stmtUpdateHist = $this->db->prepare("UPDATE hasil_quiz_history SET total_nilai = ?, status_lulus = ? WHERE id = ?");
+                $stmtUpdateHist->execute([$currentScore, $statusLulus, $lastHistId]);
+            }
+
+            $stmtCount = $this->db->prepare("SELECT COUNT(*) FROM hasil_quiz_history WHERE siswa_id = ? AND quiz_id = ?");
+            $stmtCount->execute([$siswa_id, $quiz_id]);
+            $attemptNum = (int)$stmtCount->fetchColumn();
+            if ($attemptNum == 0) $attemptNum = 1;
+        }
 
         // Get highest score achieved across all attempts
         $stmtMax = $this->db->prepare("SELECT MAX(total_nilai) FROM hasil_quiz_history WHERE siswa_id = ? AND quiz_id = ?");
         $stmtMax->execute([$siswa_id, $quiz_id]);
-        $highestScore = (float)$stmtMax->fetchColumn();
+        $highestScore = $stmtMax->fetchColumn();
+        $highestScore = ($highestScore !== false && $highestScore !== null) ? (float)$highestScore : $currentScore;
+
         if ($highestScore < $currentScore) {
             $highestScore = $currentScore;
         }
@@ -669,7 +701,17 @@ class ExamModel extends BaseModel {
     }
 
     public function recalculateQuizScore($siswa_id, $quiz_id) {
-        return $this->finishQuiz($siswa_id, $quiz_id);
+        return $this->finishQuiz($siswa_id, $quiz_id, false);
+    }
+
+    public function recalibrateAllQuizScores() {
+        try {
+            $stmt = $this->db->query("SELECT DISTINCT siswa_id, quiz_id FROM hasil_quiz");
+            $rows = $stmt->fetchAll();
+            foreach ($rows as $r) {
+                $this->recalculateQuizScore((int)$r['siswa_id'], (int)$r['quiz_id']);
+            }
+        } catch (Exception $e) {}
     }
 
     public function getHasilQuizListByGuru($guruId = null) {
