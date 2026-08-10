@@ -235,12 +235,13 @@ const ChatApp = {
 
         const tempId = Date.now();
         const now = new Date().toISOString();
+        const cleanText = this.filterBadWords(messageText);
 
         const optimisticMsg = {
             id: tempId,
             sender_id: this.state.currentUserId,
             receiver_id: receiverId,
-            message: messageText,
+            message: cleanText,
             created_at: now,
             sender_name: '',
             sender_avatar: '',
@@ -269,6 +270,28 @@ const ChatApp = {
             this.state.isMutating = false;
             this.fetchState(true);
         });
+    },
+
+    filterBadWords: function(text) {
+        if (!text) return '';
+        const badWords = [
+            'anjing', 'babi', 'bangsat', 'kontol', 'memek', 'pantek', 'pepek', 'itil', 'peler', 'ngentot',
+            'jembut', 'goblok', 'tolol', 'kampret', 'bajingan', 'bego', 'jancok', 'jancuk', 'modar', 'perek',
+            'lonte', 'silit', 'sange', 'tetek', 'toket', 'ngaceng', 'crot', 'bokep', 'porno', 'banci', 'bencong',
+            'fuck', 'shit', 'bitch', 'asshole', 'bastard', 'cunt', 'dick', 'pussy', 'cock', 'motherfucker',
+            'porn', 'nude', 'naked', 'suicide', 'bacok', 'gorok', 'membunuh'
+        ];
+
+        let filtered = text;
+        badWords.forEach(word => {
+            if (word.length < 2) return;
+            const regex = new RegExp('\\b' + word.split('').join('[\\s\\._\\-\\*]*') + '\\b', 'gi');
+            filtered = filtered.replace(regex, function(match) {
+                if (match.length <= 2) return '*'.repeat(match.length);
+                return match[0] + '*'.repeat(match.length - 2) + match[match.length - 1];
+            });
+        });
+        return filtered;
     },
 
     escapeHtml: function(text) {

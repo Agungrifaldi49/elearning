@@ -52,14 +52,18 @@ class ChatController {
     }
 
     private function normalizeMessages($messages, $currentUserId) {
+        require_once ROOT_PATH . 'helpers/ProfanityFilterHelper.php';
         $result = [];
         foreach ($messages as $msg) {
             $avFile = (string)($msg['sender_avatar'] ?? '');
+            $rawMsg = (string)($msg['message'] ?? '');
+            $cleanMsg = ProfanityFilterHelper::filter($rawMsg);
+
             $result[] = [
                 'id' => (int)$msg['id'],
                 'sender_id' => (int)$msg['sender_id'],
                 'receiver_id' => (int)$msg['receiver_id'],
-                'message' => (string)$msg['message'],
+                'message' => $cleanMsg,
                 'is_read' => (int)($msg['is_read'] ?? 0),
                 'is_edited' => (int)($msg['is_edited'] ?? 0),
                 'deleted_by_sender' => (int)($msg['deleted_by_sender'] ?? 0),

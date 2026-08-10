@@ -162,17 +162,21 @@ class CommunicationModel extends BaseModel {
     }
 
     public function sendChatMessage($senderId, $receiverId, $message) {
+        require_once ROOT_PATH . 'helpers/ProfanityFilterHelper.php';
+        $cleanMessage = ProfanityFilterHelper::filter($message);
         $stmt = $this->db->prepare("INSERT INTO chat (sender_id, receiver_id, message) VALUES (?, ?, ?)");
-        return $stmt->execute([$senderId, $receiverId, $message]);
+        return $stmt->execute([$senderId, $receiverId, $cleanMessage]);
     }
 
     public function editChatMessage($chatId, $userId, $newMessage) {
+        require_once ROOT_PATH . 'helpers/ProfanityFilterHelper.php';
+        $cleanMessage = ProfanityFilterHelper::filter($newMessage);
         $stmt = $this->db->prepare("
             UPDATE chat 
             SET message = ?, is_edited = 1 
             WHERE id = ? AND sender_id = ? AND is_deleted_everyone = 0
         ");
-        return $stmt->execute([$newMessage, $chatId, $userId]);
+        return $stmt->execute([$cleanMessage, $chatId, $userId]);
     }
 
     public function deleteChatForMe($chatId, $userId) {
