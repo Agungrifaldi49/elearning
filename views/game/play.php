@@ -2,6 +2,7 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<!-- Declare Game Engine & Window Helpers BEFORE HTML elements render -->
 <script>
 function toggleArenaFullscreen() {
     const arenaCard = document.getElementById('gameArenaCard');
@@ -28,173 +29,7 @@ function toggleArenaFullscreen() {
     } catch(e) {}
 }
 window.toggleArenaFullscreen = toggleArenaFullscreen;
-</script>
 
-<main class="main-content px-2 px-md-4 py-3">
-    <div class="container-fluid">
-        <!-- Top Navigation Bar -->
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold">
-                <i class="bi bi-arrow-left me-1"></i> Keluar Arena Game
-            </a>
-            <button type="button" class="btn btn-outline-warning rounded-pill px-4 py-2 fw-bold text-dark shadow-sm hover-scale" onclick="toggleArenaFullscreen()" id="btnFullscreenHeader">
-                <i class="bi bi-arrows-fullscreen me-1"></i> Mode Layar Penuh (Fullscreen 🚀)
-            </button>
-        </div>
-
-        <!-- Game Arena Card Container -->
-        <div class="card card-custom p-3 p-md-5 mb-4 shadow-lg border-0 rounded-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); color: white; min-height: 520px;" id="gameArenaCard">
-
-            <!-- Arena Header Bar -->
-            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 pb-3 border-bottom border-secondary border-opacity-50">
-                <div>
-                    <?php if (strtolower(trim($_SESSION['user']['role_name'] ?? '')) === 'guru'): ?>
-                        <span class="badge bg-warning text-dark px-3 py-1 rounded-pill small mb-1 d-inline-block fw-bold shadow-sm">
-                            <i class="bi bi-eye-fill me-1"></i> Mode Pratinjau Guru (Uji Coba Arena)
-                        </span>
-                    <?php endif; ?>
-                    <h4 class="fw-bold mb-0 text-warning d-flex align-items-center gap-2">
-                        <i class="bi bi-controller text-danger"></i> <?= htmlspecialchars($game['judul']) ?>
-                    </h4>
-                    <small class="text-white-50 fs-6"><?= htmlspecialchars($game['nama_mapel']) ?> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong></small>
-                </div>
-
-                <!-- HUD Status Badges -->
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <!-- Nyawa / Lives -->
-                    <div class="bg-black bg-opacity-50 px-3 py-2 rounded-pill d-flex align-items-center gap-1 border border-danger border-opacity-50 shadow-sm">
-                        <small class="text-white-50 me-1 d-none d-sm-inline">Nyawa:</small>
-                        <span id="livesContainer" class="fs-5">❤️❤️❤️</span>
-                    </div>
-
-                    <!-- Combo Streak -->
-                    <div class="bg-black bg-opacity-50 px-3 py-2 rounded-pill d-flex align-items-center gap-1 border border-warning border-opacity-50 shadow-sm">
-                        <small class="text-white-50 me-1 d-none d-sm-inline">Combo:</small>
-                        <span id="comboBadge" class="fw-bold text-warning fs-6">1x 🔥</span>
-                    </div>
-
-                    <!-- Score Badge -->
-                    <div class="bg-primary bg-gradient px-3 px-sm-4 py-2 rounded-pill shadow border border-primary border-opacity-50">
-                        <small class="text-white-50 me-1">Skor:</small>
-                        <span id="currentScore" class="fw-bold text-white fs-5">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Start Screen Overlay Container (Initial State) -->
-            <div id="startScreenOverlay" class="text-center py-4 px-2">
-                <div class="mb-3">
-                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold fs-6 shadow">
-                        <i class="bi bi-controller me-1"></i> ARENA KUIS SIAP DIMULAI
-                    </span>
-                </div>
-                <h2 class="fw-bold text-white mb-2 display-6"><?= htmlspecialchars($game['judul']) ?></h2>
-                <p class="text-white-50 max-w-xl mx-auto mb-4 fs-6">
-                    Mata Pelajaran: <strong><?= htmlspecialchars($game['nama_mapel']) ?></strong> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong>
-                </p>
-
-                <!-- Game Rules Info Box -->
-                <div class="row g-3 justify-content-center max-w-2xl mx-auto mb-4 text-start">
-                    <div class="col-12 col-md-4">
-                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
-                            <div class="fs-3 mb-1">❤️❤️❤️</div>
-                            <small class="text-white-50 d-block">Kesempatan</small>
-                            <span class="fw-bold text-white">3 Nyawa Permainan</span>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
-                            <div class="fs-3 mb-1">⏱️ <?= $game['durasi_per_soal'] ?>s</div>
-                            <small class="text-white-50 d-block">Timer per Soal</small>
-                            <span class="fw-bold text-warning"><?= $game['durasi_per_soal'] ?> Detik / Soal</span>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
-                            <div class="fs-3 mb-1">🔥 5x</div>
-                            <small class="text-white-50 d-block">Pengganda Skor</small>
-                            <span class="fw-bold text-info">Combo Streak Bonus</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button type="button" class="btn btn-warning btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg text-dark fs-4 hover-scale" id="btnStartGame" onclick="window.startGameArena()">
-                    <i class="bi bi-play-circle-fill me-2 fs-3"></i> MULAI PERMAINAN (FULLSCREEN 🚀)
-                </button>
-            </div>
-
-            <!-- Timer Progress Bar Box (Hidden Initially) -->
-            <div id="timerBarContainer" class="progress bg-secondary bg-opacity-25 rounded-pill mb-4 d-none" style="height: 14px;">
-                <div id="gameTimerBar" class="progress-bar bg-warning progress-bar-striped progress-bar-animated rounded-pill" role="progressbar" style="width: 100%;"></div>
-            </div>
-
-            <!-- Question Card Box (Hidden Initially) -->
-            <div id="quizBoxContainer" class="text-center py-2 py-md-4 px-1 px-md-3 d-none">
-                <div class="mb-3">
-                    <span class="badge bg-danger bg-opacity-90 text-white px-3 py-2 rounded-pill fw-bold fs-6 shadow-sm" id="questionCounter">Soal 1 dari <?= count($soalList) ?></span>
-                </div>
-
-                <h3 class="fw-bold text-white mb-4 px-md-4 fs-3 fs-md-2" id="questionText" style="line-height: 1.4; word-break: break-word;">
-                    Loading Pertanyaan...
-                </h3>
-
-                <!-- Multiple Choice Options Grid -->
-                <div class="row g-3 max-w-2xl mx-auto text-start" id="optionsContainer">
-                    <!-- Dynamic Answer Options -->
-                </div>
-            </div>
-
-            <!-- Feedback Popup Banner -->
-            <div id="feedbackBanner" class="alert position-absolute top-50 start-50 translate-middle shadow-lg rounded-4 text-center p-4 d-none" style="min-width: 290px; max-width: 90%; z-index: 1050; backdrop-filter: blur(8px);">
-                <div id="feedbackIcon" class="display-3 mb-2"></div>
-                <h4 id="feedbackTitle" class="fw-bold mb-1"></h4>
-                <p id="feedbackDesc" class="small mb-0"></p>
-            </div>
-        </div>
-    </div>
-</main>
-
-<!-- Modal End Game Victory / Defeat -->
-<div class="modal fade" id="modalEndGame" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow-lg text-center p-4">
-            <div class="modal-body p-3 p-md-4">
-                <div id="endGameIcon" class="display-1 mb-2">🏆</div>
-                <h3 id="endGameTitle" class="fw-bold text-dark mb-1">Permainan Selesai!</h3>
-                <div id="endGameStars" class="fs-2 text-warning mb-3">⭐⭐⭐</div>
-
-                <div class="p-3 bg-light rounded-4 mb-4">
-                    <div class="row g-2 text-center">
-                        <div class="col-6 border-end">
-                            <small class="text-muted d-block">Skor Akhir</small>
-                            <span class="fw-bold fs-3 text-primary" id="endScoreVal">0</span>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Max Combo Streak</small>
-                            <span class="fw-bold fs-3 text-warning" id="endComboVal">0x 🔥</span>
-                        </div>
-                    </div>
-                    <hr class="my-2">
-                    <div class="d-flex justify-content-between text-muted small">
-                        <span>Total Benar: <strong class="text-dark" id="endCorrectVal">0</strong></span>
-                        <span>Status: <strong id="endStatusVal">LULUS</strong></span>
-                    </div>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <a href="<?= BASE_URL ?>index.php?url=game/play&id=<?= $game['id'] ?>" class="btn btn-outline-danger rounded-pill w-100 py-2 fw-bold">
-                        <i class="bi bi-arrow-repeat me-1"></i> Main Lagi
-                    </a>
-                    <a href="<?= BASE_URL ?>index.php?url=game/leaderboard&id=<?= $game['id'] ?>" class="btn btn-warning rounded-pill w-100 py-2 fw-bold shadow">
-                        <i class="bi bi-trophy-fill me-1"></i> Peringkat
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
 window.GameEngine = {
     data: {
         gameId: <?= (int)$game['id'] ?>,
@@ -471,7 +306,6 @@ window.startGameArena = function() {
     }
 };
 
-// Event Listener Attachment for maximum compatibility across browsers
 document.addEventListener('DOMContentLoaded', function() {
     const btnStart = document.getElementById('btnStartGame');
     if (btnStart) {
@@ -482,5 +316,169 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<main class="main-content px-2 px-md-4 py-3">
+    <div class="container-fluid">
+        <!-- Top Navigation Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold">
+                <i class="bi bi-arrow-left me-1"></i> Keluar Arena Game
+            </a>
+            <button type="button" class="btn btn-outline-warning rounded-pill px-4 py-2 fw-bold text-dark shadow-sm hover-scale" onclick="window.toggleArenaFullscreen()" id="btnFullscreenHeader">
+                <i class="bi bi-arrows-fullscreen me-1"></i> Mode Layar Penuh (Fullscreen 🚀)
+            </button>
+        </div>
+
+        <!-- Game Arena Card Container -->
+        <div class="card card-custom p-3 p-md-5 mb-4 shadow-lg border-0 rounded-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); color: white; min-height: 520px;" id="gameArenaCard">
+
+            <!-- Arena Header Bar -->
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 pb-3 border-bottom border-secondary border-opacity-50">
+                <div>
+                    <?php if (strtolower(trim($_SESSION['user']['role_name'] ?? '')) === 'guru'): ?>
+                        <span class="badge bg-warning text-dark px-3 py-1 rounded-pill small mb-1 d-inline-block fw-bold shadow-sm">
+                            <i class="bi bi-eye-fill me-1"></i> Mode Pratinjau Guru (Uji Coba Arena)
+                        </span>
+                    <?php endif; ?>
+                    <h4 class="fw-bold mb-0 text-warning d-flex align-items-center gap-2">
+                        <i class="bi bi-controller text-danger"></i> <?= htmlspecialchars($game['judul']) ?>
+                    </h4>
+                    <small class="text-white-50 fs-6"><?= htmlspecialchars($game['nama_mapel']) ?> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong></small>
+                </div>
+
+                <!-- HUD Status Badges -->
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <!-- Nyawa / Lives -->
+                    <div class="bg-black bg-opacity-50 px-3 py-2 rounded-pill d-flex align-items-center gap-1 border border-danger border-opacity-50 shadow-sm">
+                        <small class="text-white-50 me-1 d-none d-sm-inline">Nyawa:</small>
+                        <span id="livesContainer" class="fs-5">❤️❤️❤️</span>
+                    </div>
+
+                    <!-- Combo Streak -->
+                    <div class="bg-black bg-opacity-50 px-3 py-2 rounded-pill d-flex align-items-center gap-1 border border-warning border-opacity-50 shadow-sm">
+                        <small class="text-white-50 me-1 d-none d-sm-inline">Combo:</small>
+                        <span id="comboBadge" class="fw-bold text-warning fs-6">1x 🔥</span>
+                    </div>
+
+                    <!-- Score Badge -->
+                    <div class="bg-primary bg-gradient px-3 px-sm-4 py-2 rounded-pill shadow border border-primary border-opacity-50">
+                        <small class="text-white-50 me-1">Skor:</small>
+                        <span id="currentScore" class="fw-bold text-white fs-5">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Start Screen Overlay Container (Initial State) -->
+            <div id="startScreenOverlay" class="text-center py-4 px-2">
+                <div class="mb-3">
+                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold fs-6 shadow">
+                        <i class="bi bi-controller me-1"></i> ARENA KUIS SIAP DIMULAI
+                    </span>
+                </div>
+                <h2 class="fw-bold text-white mb-2 display-6"><?= htmlspecialchars($game['judul']) ?></h2>
+                <p class="text-white-50 max-w-xl mx-auto mb-4 fs-6">
+                    Mata Pelajaran: <strong><?= htmlspecialchars($game['nama_mapel']) ?></strong> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong>
+                </p>
+
+                <!-- Game Rules Info Box -->
+                <div class="row g-3 justify-content-center max-w-2xl mx-auto mb-4 text-start">
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
+                            <div class="fs-3 mb-1">❤️❤️❤️</div>
+                            <small class="text-white-50 d-block">Kesempatan</small>
+                            <span class="fw-bold text-white">3 Nyawa Permainan</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
+                            <div class="fs-3 mb-1">⏱️ <?= $game['durasi_per_soal'] ?>s</div>
+                            <small class="text-white-50 d-block">Timer per Soal</small>
+                            <span class="fw-bold text-warning"><?= $game['durasi_per_soal'] ?> Detik / Soal</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
+                            <div class="fs-3 mb-1">🔥 5x</div>
+                            <small class="text-white-50 d-block">Pengganda Skor</small>
+                            <span class="fw-bold text-info">Combo Streak Bonus</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-warning btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg text-dark fs-4 hover-scale" id="btnStartGame" onclick="window.startGameArena()">
+                    <i class="bi bi-play-circle-fill me-2 fs-3"></i> MULAI PERMAINAN (FULLSCREEN 🚀)
+                </button>
+            </div>
+
+            <!-- Timer Progress Bar Box (Hidden Initially) -->
+            <div id="timerBarContainer" class="progress bg-secondary bg-opacity-25 rounded-pill mb-4 d-none" style="height: 14px;">
+                <div id="gameTimerBar" class="progress-bar bg-warning progress-bar-striped progress-bar-animated rounded-pill" role="progressbar" style="width: 100%;"></div>
+            </div>
+
+            <!-- Question Card Box (Hidden Initially) -->
+            <div id="quizBoxContainer" class="text-center py-2 py-md-4 px-1 px-md-3 d-none">
+                <div class="mb-3">
+                    <span class="badge bg-danger bg-opacity-90 text-white px-3 py-2 rounded-pill fw-bold fs-6 shadow-sm" id="questionCounter">Soal 1 dari <?= count($soalList) ?></span>
+                </div>
+
+                <h3 class="fw-bold text-white mb-4 px-md-4 fs-3 fs-md-2" id="questionText" style="line-height: 1.4; word-break: break-word;">
+                    Loading Pertanyaan...
+                </h3>
+
+                <!-- Multiple Choice Options Grid -->
+                <div class="row g-3 max-w-2xl mx-auto text-start" id="optionsContainer">
+                    <!-- Dynamic Answer Options -->
+                </div>
+            </div>
+
+            <!-- Feedback Popup Banner -->
+            <div id="feedbackBanner" class="alert position-absolute top-50 start-50 translate-middle shadow-lg rounded-4 text-center p-4 d-none" style="min-width: 290px; max-width: 90%; z-index: 1050; backdrop-filter: blur(8px);">
+                <div id="feedbackIcon" class="display-3 mb-2"></div>
+                <h4 id="feedbackTitle" class="fw-bold mb-1"></h4>
+                <p id="feedbackDesc" class="small mb-0"></p>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Modal End Game Victory / Defeat -->
+<div class="modal fade" id="modalEndGame" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg text-center p-4">
+            <div class="modal-body p-3 p-md-4">
+                <div id="endGameIcon" class="display-1 mb-2">🏆</div>
+                <h3 id="endGameTitle" class="fw-bold text-dark mb-1">Permainan Selesai!</h3>
+                <div id="endGameStars" class="fs-2 text-warning mb-3">⭐⭐⭐</div>
+
+                <div class="p-3 bg-light rounded-4 mb-4">
+                    <div class="row g-2 text-center">
+                        <div class="col-6 border-end">
+                            <small class="text-muted d-block">Skor Akhir</small>
+                            <span class="fw-bold fs-3 text-primary" id="endScoreVal">0</span>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">Max Combo Streak</small>
+                            <span class="fw-bold fs-3 text-warning" id="endComboVal">0x 🔥</span>
+                        </div>
+                    </div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between text-muted small">
+                        <span>Total Benar: <strong class="text-dark" id="endCorrectVal">0</strong></span>
+                        <span>Status: <strong id="endStatusVal">LULUS</strong></span>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a href="<?= BASE_URL ?>index.php?url=game/play&id=<?= $game['id'] ?>" class="btn btn-outline-danger rounded-pill w-100 py-2 fw-bold">
+                        <i class="bi bi-arrow-repeat me-1"></i> Main Lagi
+                    </a>
+                    <a href="<?= BASE_URL ?>index.php?url=game/leaderboard&id=<?= $game['id'] ?>" class="btn btn-warning rounded-pill w-100 py-2 fw-bold shadow">
+                        <i class="bi bi-trophy-fill me-1"></i> Peringkat
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
