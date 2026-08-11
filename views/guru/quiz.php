@@ -411,14 +411,21 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                         foreach ($hasilQuizSubmissions as $hqItem) {
                             $tCount = (int)($hqItem['total_essay_count'] ?? 0);
                             $uCount = (int)($hqItem['ungraded_essay_count'] ?? 0);
+                            $stLulus = strtolower(trim($hqItem['status_lulus'] ?? ''));
+                            $isBannedItem = (!empty($hqItem['status_banned']) || !empty($hqItem['pelanggaran_count']));
+
                             if ($tCount > 0) {
-                                if ($uCount > 0) {
+                                if ($uCount > 0 || $stLulus === 'menunggu' || $isBannedItem) {
                                     $totalPendingEssay++;
                                 } else {
                                     $totalGradedEssay++;
                                 }
                             } else {
-                                $totalAutoPg++;
+                                if ($isBannedItem || $stLulus === 'menunggu') {
+                                    $totalPendingEssay++;
+                                } else {
+                                    $totalAutoPg++;
+                                }
                             }
                         }
                     }
@@ -444,24 +451,49 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                             </button>
                         </div>
 
-                        <select id="filterEssayStatus" class="form-select form-select-sm d-inline-block w-auto rounded-pill fw-semibold" onchange="filterGuruEssaySubmissions()">
-                            <option value="">Semua Status Koreksi</option>
-                            <option value="pending">⏳ Belum Dinilai Guru (<?= $totalPendingEssay ?>)</option>
-                            <option value="graded">✓ Koreksi Selesai (<?= $totalGradedEssay ?>)</option>
-                            <option value="pg_auto">🤖 Kuis PG Otomatis (<?= $totalAutoPg ?>)</option>
-                        </select>
+                        <div class="text-muted small fw-semibold">
+                            Total: <?= $totalSubmissions ?> Pengerjaan Siswa
+                        </div>
                     </div>
 
-                    <!-- Search Controls -->
-                    <div class="row g-3 mb-4 align-items-center">
-                        <div class="col-12 col-md-8">
+                    <!-- Search & Filters (Filter Kelas, Jurusan, Status, & Search) -->
+                    <div class="row g-2 mb-4 align-items-center">
+                        <div class="col-12 col-md-4">
                             <div class="input-group">
                                 <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
-                                <input type="text" id="searchEssayInput" class="form-control border-start-0 ps-0" placeholder="Cari nama siswa, kelas, atau judul kuis..." onkeyup="filterGuruEssaySubmissions()">
+                                <input type="text" id="searchEssayInput" class="form-control border-start-0 ps-0" placeholder="Cari nama siswa atau kuis..." onkeyup="filterGuruEssaySubmissions()">
                             </div>
                         </div>
-                        <div class="col-12 col-md-4 text-md-end text-muted small fw-medium">
-                            Menampilkan data pengerjaan kuis real-time.
+                        <div class="col-6 col-md-3">
+                            <select id="filterKelasInput" class="form-select fw-semibold" onchange="filterGuruEssaySubmissions()">
+                                <option value="">-- Semua Kelas --</option>
+                                <?php foreach (($kelasList ?? []) as $kls): ?>
+                                    <option value="<?= htmlspecialchars($kls['nama_kelas']) ?>"><?= htmlspecialchars($kls['nama_kelas']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <select id="filterJurusanInput" class="form-select fw-semibold" onchange="filterGuruEssaySubmissions()">
+                                <option value="">-- Semua Jurusan --</option>
+                                <?php 
+                                $jurList = $jurusanList ?? [];
+                                if (empty($jurList)) {
+                                    try {
+                                        $jurList = Database::getConnection()->query("SELECT * FROM jurusan ORDER BY nama_jurusan ASC")->fetchAll();
+                                    } catch(Exception $e) {}
+                                }
+                                foreach ($jurList as $jur): ?>
+                                    <option value="<?= htmlspecialchars($jur['nama_jurusan']) ?>"><?= htmlspecialchars($jur['nama_jurusan']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <select id="filterEssayStatus" class="form-select fw-semibold" onchange="filterGuruEssaySubmissions()">
+                                <option value="">-- Status --</option>
+                                <option value="pending">⏳ Belum Dinilai</option>
+                                <option value="graded">✓ Selesai Dinilai</option>
+                                <option value="pg_auto">🤖 Kuis PG</option>
+                            </select>
                         </div>
                     </div>
 
@@ -469,50 +501,69 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                         <table class="table table-hover align-middle">
                             <thead class="table-light">
                                 <tr>
+                                    <th class="ps-3" style="width: 50px;">No.</th>
                                     <th>Nama Siswa</th>
                                     <th>Kelas</th>
+                                    <th>Jurusan</th>
                                     <th>Judul Kuis</th>
                                     <th>Mata Pelajaran</th>
                                     <th>Waktu Selesai</th>
                                     <th>Nilai Akhir</th>
-                                    <th>Status Koreksi Essay</th>
+                                    <th>Status Koreksi</th>
                                     <th class="text-center">Aksi Koreksi</th>
                                 </tr>
                             </thead>
                             <tbody id="guruEssayTableBody">
                                 <?php if (empty($hasilQuizSubmissions)): ?>
                                     <tr>
-                                        <td colspan="8" class="text-center py-5 text-muted">
+                                        <td colspan="10" class="text-center py-5 text-muted">
                                             <i class="bi bi-journal-x fs-1 text-slate-300 d-block mb-2"></i>
                                             Belum ada pengerjaan kuis siswa yang masuk.
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($hasilQuizSubmissions as $hq): 
+                                    <?php 
+                                    $rowNo = 1;
+                                    foreach ($hasilQuizSubmissions as $hq): 
                                         $tEssay = (int)($hq['total_essay_count'] ?? 0);
                                         $uEssay = (int)($hq['ungraded_essay_count'] ?? 0);
+                                        $stLulus = strtolower(trim($hq['status_lulus'] ?? ''));
+                                        $isBanned = (!empty($hq['status_banned']) || !empty($hq['pelanggaran_count']));
                                         
                                         if ($tEssay > 0) {
-                                            if ($uEssay > 0) {
-                                                $statusKey = 'pending';
+                                            if ($uEssay > 0 || $stLulus === 'menunggu' || $isBanned) {
+                                                $statusKey = 'pending'; // BELUM DINILAI
                                                 $rowStyle = 'style="background-color: #fffbeb !important;"';
                                                 $borderStyle = 'border-start border-4 border-warning';
                                             } else {
-                                                $statusKey = 'graded';
+                                                $statusKey = 'graded'; // SELESAI DINILAI
                                                 $rowStyle = '';
                                                 $borderStyle = 'border-start border-4 border-success';
                                             }
                                         } else {
-                                            $statusKey = 'pg_auto';
-                                            $rowStyle = '';
-                                            $borderStyle = 'border-start border-4 border-info';
+                                            if ($isBanned || $stLulus === 'menunggu') {
+                                                $statusKey = 'pending'; // BELUM DINILAI (Banned student)
+                                                $rowStyle = 'style="background-color: #fff1f2 !important;"';
+                                                $borderStyle = 'border-start border-4 border-danger';
+                                            } else {
+                                                $statusKey = 'pg_auto'; // KUIS PG OTOMATIS
+                                                $rowStyle = '';
+                                                $borderStyle = 'border-start border-4 border-info';
+                                            }
                                         }
                                     ?>
-                                        <tr class="guru-essay-row <?= $borderStyle ?>" <?= $rowStyle ?> data-text="<?= htmlspecialchars($hq['nama_siswa'] . ' ' . $hq['nama_kelas'] . ' ' . $hq['nama_quiz']) ?>" data-status="<?= $statusKey ?>">
+                                        <tr class="guru-essay-row <?= $borderStyle ?>" 
+                                            <?= $rowStyle ?> 
+                                            data-text="<?= htmlspecialchars(strtolower($hq['nama_siswa'] . ' ' . $hq['nama_quiz'])) ?>" 
+                                            data-kelas="<?= htmlspecialchars($hq['nama_kelas'] ?? '') ?>" 
+                                            data-jurusan="<?= htmlspecialchars($hq['nama_jurusan'] ?? '') ?>" 
+                                            data-status="<?= $statusKey ?>">
+                                            <td class="ps-3 fw-bold text-muted row-num"><?= $rowNo++ ?></td>
                                             <td class="fw-bold text-dark">
                                                 <i class="bi bi-person-circle text-primary me-1.5"></i><?= htmlspecialchars($hq['nama_siswa']) ?>
                                             </td>
                                             <td><span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3 py-1.5 fw-bold"><?= htmlspecialchars($hq['nama_kelas']) ?></span></td>
+                                            <td><span class="badge bg-light text-dark border rounded-pill px-3 py-1.5"><?= htmlspecialchars($hq['nama_jurusan'] ?? '-') ?></span></td>
                                             <td class="fw-semibold text-dark"><?= htmlspecialchars($hq['nama_quiz']) ?></td>
                                             <td><span class="badge-mapel-tag"><?= htmlspecialchars($hq['nama_mapel']) ?></span></td>
                                             <td class="small text-muted"><?= date('d M Y, H:i', strtotime($hq['finished_at'] ?? $hq['started_at'])) ?> WIB</td>
@@ -524,11 +575,11 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                                             <td>
                                                 <?php if ($statusKey === 'pending'): ?>
                                                     <span class="badge bg-warning text-dark border border-warning-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs">
-                                                        <i class="bi bi-exclamation-circle-fill text-danger me-1"></i>Belum Dinilai (<?= $uEssay ?>/<?= $tEssay ?> Essay Pending)
+                                                        <i class="bi bi-exclamation-circle-fill text-danger me-1"></i>Belum Dinilai <?= ($tEssay > 0) ? "({$uEssay}/{$tEssay} Essay Pending)" : "(Verifikasi)" ?>
                                                     </span>
                                                 <?php elseif ($statusKey === 'graded'): ?>
                                                     <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold">
-                                                        <i class="bi bi-check-circle-fill me-1"></i>Koreksi Selesai (<?= $tEssay ?> Essay)
+                                                        <i class="bi bi-check-circle-fill me-1"></i>Selesai Dinilai (<?= $tEssay ?> Essay)
                                                     </span>
                                                 <?php else: ?>
                                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold">
@@ -539,7 +590,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                                             <td class="text-center">
                                                 <?php if ($statusKey === 'pending'): ?>
                                                     <button class="btn btn-sm btn-warning text-dark px-3 rounded-pill fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
-                                                        <i class="bi bi-pencil-square me-1"></i> Koreksi Sekarang (<?= $uEssay ?>)
+                                                        <i class="bi bi-pencil-square me-1"></i> Koreksi Sekarang <?= ($uEssay > 0) ? "({$uEssay})" : "" ?>
                                                     </button>
                                                 <?php elseif ($statusKey === 'graded'): ?>
                                                     <button class="btn btn-sm btn-outline-success px-3 rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
@@ -1676,10 +1727,62 @@ function pollQuizLiveStatus() {
         .catch(err => console.log('Polling status error:', err));
 }
 
+let currentEssayFilterStatus = '';
+
+function setGuruEssayFilter(status, btnElem) {
+    currentEssayFilterStatus = status;
+    const pills = document.querySelectorAll('.essay-filter-pill');
+    pills.forEach(p => {
+        p.classList.remove('active', 'btn-dark', 'btn-warning', 'btn-outline-success', 'btn-outline-primary');
+        p.classList.add('btn-outline-secondary');
+    });
+
+    if (btnElem) {
+        btnElem.classList.remove('btn-outline-secondary');
+        btnElem.classList.add('active', 'btn-dark');
+    }
+
+    const selectStatus = document.getElementById('filterEssayStatus');
+    if (selectStatus) selectStatus.value = status;
+
+    filterGuruEssaySubmissions();
+}
+
+function filterGuruEssaySubmissions() {
+    const searchVal = (document.getElementById('searchEssayInput')?.value || '').toLowerCase().trim();
+    const kelasVal = (document.getElementById('filterKelasInput')?.value || '').toLowerCase().trim();
+    const jurusanVal = (document.getElementById('filterJurusanInput')?.value || '').toLowerCase().trim();
+    const statusVal = (document.getElementById('filterEssayStatus')?.value || currentEssayFilterStatus || '').toLowerCase().trim();
+
+    const rows = document.querySelectorAll('.guru-essay-row');
+    let visibleIndex = 1;
+
+    rows.forEach(row => {
+        const rowText = (row.getAttribute('data-text') || '').toLowerCase();
+        const rowKelas = (row.getAttribute('data-kelas') || '').toLowerCase();
+        const rowJurusan = (row.getAttribute('data-jurusan') || '').toLowerCase();
+        const rowStatus = (row.getAttribute('data-status') || '').toLowerCase();
+
+        const matchSearch = !searchVal || rowText.includes(searchVal);
+        const matchKelas = !kelasVal || rowKelas.includes(kelasVal);
+        const matchJurusan = !jurusanVal || rowJurusan.includes(jurusanVal);
+        const matchStatus = !statusVal || rowStatus === statusVal;
+
+        if (matchSearch && matchKelas && matchJurusan && matchStatus) {
+            row.style.display = '';
+            const numCell = row.querySelector('.row-num');
+            if (numCell) numCell.textContent = visibleIndex++;
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
 // Poll every 4 seconds for instant real-time responsiveness
 setInterval(pollQuizLiveStatus, 4000);
 document.addEventListener('DOMContentLoaded', function() {
     pollQuizLiveStatus();
+    filterGuruEssaySubmissions();
 
     // Auto-activate tab based on URL query parameter
     const urlParams = new URLSearchParams(window.location.search);

@@ -682,6 +682,8 @@ class GuruController {
         $kelasList = $academicModel->getKelasByGuru($guruId);
         if (empty($kelasList)) $kelasList = $academicModel->getKelas();
 
+        $jurusanList = $academicModel->getJurusan();
+
         require_once ROOT_PATH . 'views/guru/quiz.php';
     }
 
