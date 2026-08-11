@@ -1,4 +1,8 @@
 <?php
+if (!defined('APP_NAME') && defined('ROOT_PATH')) {
+    require_once ROOT_PATH . 'config/app.php';
+}
+
 // Load dynamic settings for Favicon & Page Title
 $appSettings = [];
 $settingsPath = ROOT_PATH . 'config/settings.json';

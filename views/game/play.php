@@ -1,6 +1,15 @@
-<?php require_once ROOT_PATH . 'views/layouts/header.php'; ?>
-<?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
-<?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
+<?php
+if (!class_exists('Security') && defined('ROOT_PATH') && file_exists(ROOT_PATH . 'helpers/Security.php')) {
+    require_once ROOT_PATH . 'helpers/Security.php';
+}
+require_once ROOT_PATH . 'views/layouts/header.php';
+require_once ROOT_PATH . 'views/layouts/navbar.php';
+require_once ROOT_PATH . 'views/layouts/sidebar.php';
+
+$csrfTokenVal = (class_exists('Security') && method_exists('Security', 'generateCsrfToken')) ? Security::generateCsrfToken() : ($_SESSION['csrf_token'] ?? '');
+$soalJsonData = json_encode($soalList ?: [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+if (!$soalJsonData) $soalJsonData = '[]';
+?>
 
 <!-- Declare Game Engine & Window Helpers BEFORE HTML elements render -->
 <script>
@@ -35,8 +44,8 @@ window.GameEngine = {
         gameId: <?= (int)$game['id'] ?>,
         kkm: <?= (int)$game['kkm'] ?>,
         timerDuration: <?= (int)$game['durasi_per_soal'] ?>,
-        questions: <?= json_encode($soalList, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
-        csrfToken: '<?= Security::csrfToken() ?>',
+        questions: <?= $soalJsonData ?>,
+        csrfToken: '<?= $csrfTokenVal ?>',
         baseUrl: '<?= BASE_URL ?>'
     },
     state: {

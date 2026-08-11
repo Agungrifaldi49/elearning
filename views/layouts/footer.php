@@ -13,6 +13,13 @@
     <!-- Real-Time Header Notification Polling JS -->
     <script src="<?= BASE_URL ?>assets/js/header-notif-polling.js"></script>
 
-    <?= FlashHelper::render() ?>
+    <?php
+    if (!class_exists('FlashHelper') && defined('ROOT_PATH') && file_exists(ROOT_PATH . 'helpers/FlashHelper.php')) {
+        require_once ROOT_PATH . 'helpers/FlashHelper.php';
+    }
+    if (class_exists('FlashHelper')) {
+        echo FlashHelper::render();
+    }
+    ?>
 </body>
 </html>

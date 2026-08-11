@@ -16,6 +16,10 @@ class Security {
         return $_SESSION['csrf_token'];
     }
 
+    public static function csrfToken() {
+        return self::generateCsrfToken();
+    }
+
     /**
      * Output CSRF Form Field
      */
