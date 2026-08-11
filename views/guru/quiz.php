@@ -434,24 +434,24 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-3 border-bottom">
                         <div class="d-flex flex-wrap gap-2 align-items-center">
                             <button type="button" class="btn btn-sm btn-dark rounded-pill fw-bold px-3 py-1.5 essay-filter-pill active" onclick="setGuruEssayFilter('', this)">
-                                <i class="bi bi-collection-fill me-1"></i> Semua (<?= $totalSubmissions ?>)
+                                <i class="bi bi-collection-fill me-1"></i> Semua (<span id="pillCountSemua"><?= $totalSubmissions ?></span>)
                             </button>
                             <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill fw-bold px-3 py-1.5 essay-filter-pill position-relative shadow-xs" onclick="setGuruEssayFilter('pending', this)">
-                                <i class="bi bi-exclamation-circle-fill me-1 text-danger"></i> ⏳ Belum Dinilai (<?= $totalPendingEssay ?>)
+                                <i class="bi bi-exclamation-circle-fill me-1 text-danger"></i> ⏳ Belum Dinilai (<span id="pillCountPending"><?= $totalPendingEssay ?></span>)
                                 <?php if ($totalPendingEssay > 0): ?>
                                     <span class="position-absolute top-0 start-100 translate-middle p-1.5 bg-danger border border-light rounded-circle"></span>
                                 <?php endif; ?>
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-bold px-3 py-1.5 essay-filter-pill" onclick="setGuruEssayFilter('graded', this)">
-                                <i class="bi bi-check-circle-fill me-1"></i> ✓ Selesai Dinilai (<?= $totalGradedEssay ?>)
+                                <i class="bi bi-check-circle-fill me-1"></i> ✓ Selesai Dinilai (<span id="pillCountGraded"><?= $totalGradedEssay ?></span>)
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 py-1.5 essay-filter-pill" onclick="setGuruEssayFilter('pg_auto', this)">
-                                <i class="bi bi-robot me-1"></i> 🤖 Kuis PG (<?= $totalAutoPg ?>)
+                                <i class="bi bi-robot me-1"></i> 🤖 Kuis PG (<span id="pillCountPg"><?= $totalAutoPg ?></span>)
                             </button>
                         </div>
 
                         <div class="text-muted small fw-semibold">
-                            Total: <?= $totalSubmissions ?> Pengerjaan Siswa
+                            Total: <span id="totalHeaderSubmissions" class="fw-bold text-dark"><?= $totalSubmissions ?></span> Pengerjaan Siswa
                         </div>
                     </div>
 
@@ -1863,6 +1863,11 @@ function filterGuruEssaySubmissions() {
     const rows = document.querySelectorAll('.guru-essay-row');
     filteredEssayRows = [];
 
+    let countSemua = 0;
+    let countPending = 0;
+    let countGraded = 0;
+    let countPg = 0;
+
     rows.forEach(row => {
         const rowText = (row.getAttribute('data-text') || '').toLowerCase();
         const rowKelas = (row.getAttribute('data-kelas') || '').toLowerCase();
@@ -1872,12 +1877,32 @@ function filterGuruEssaySubmissions() {
         const matchSearch = !searchVal || rowText.includes(searchVal);
         const matchKelas = !kelasVal || rowKelas.includes(kelasVal);
         const matchJurusan = !jurusanVal || rowJurusan.includes(jurusanVal);
-        const matchStatus = !statusVal || rowStatus === statusVal;
 
-        if (matchSearch && matchKelas && matchJurusan && matchStatus) {
-            filteredEssayRows.push(row);
+        if (matchSearch && matchKelas && matchJurusan) {
+            countSemua++;
+            if (rowStatus === 'pending') countPending++;
+            else if (rowStatus === 'graded') countGraded++;
+            else if (rowStatus === 'pg_auto') countPg++;
+
+            const matchStatus = !statusVal || rowStatus === statusVal;
+            if (matchStatus) {
+                filteredEssayRows.push(row);
+            }
         }
     });
+
+    // Update Pill Counter Badges dynamically so everything is 100% linked and synced
+    const btnSemua = document.getElementById('pillCountSemua');
+    const btnPending = document.getElementById('pillCountPending');
+    const btnGraded = document.getElementById('pillCountGraded');
+    const btnPg = document.getElementById('pillCountPg');
+    const headerTotal = document.getElementById('totalHeaderSubmissions');
+
+    if (btnSemua) btnSemua.textContent = countSemua;
+    if (btnPending) btnPending.textContent = countPending;
+    if (btnGraded) btnGraded.textContent = countGraded;
+    if (btnPg) btnPg.textContent = countPg;
+    if (headerTotal) headerTotal.textContent = countSemua;
 
     currentEssayPage = 1;
     renderEssayPage();
