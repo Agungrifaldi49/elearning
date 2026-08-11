@@ -2,6 +2,38 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+// Helper Function to resolve student profile photo URL or gradient fallback badge
+function renderStudentAvatar($studentName, $avatarFile, $size = 64, $extraBorderClass = '') {
+    $cleanName = htmlspecialchars($studentName ?: 'Siswa');
+    $initial = strtoupper(substr(trim($cleanName), 0, 1));
+    if (empty($initial)) $initial = 'S';
+
+    $avatarUrl = null;
+    if (!empty($avatarFile) && $avatarFile !== 'default_avatar.png') {
+        $possiblePaths = [
+            'assets/uploads/profile/' . $avatarFile,
+            'assets/uploads/' . $avatarFile,
+            'assets/uploads/avatar/' . $avatarFile,
+            'assets/uploads/avatars/' . $avatarFile
+        ];
+        foreach ($possiblePaths as $relPath) {
+            if (file_exists(ROOT_PATH . $relPath)) {
+                $avatarUrl = BASE_URL . $relPath;
+                break;
+            }
+        }
+    }
+
+    if ($avatarUrl) {
+        return '<img src="' . $avatarUrl . '" class="rounded-circle object-fit-cover shadow-sm ' . $extraBorderClass . '" style="width: ' . $size . 'px; height: ' . $size . 'px;" alt="' . $cleanName . '" onError="this.onerror=null; this.src=\'' . BASE_URL . 'assets/images/default_avatar.png\';">';
+    } else {
+        $fontSize = max(14, round($size * 0.4));
+        return '<div class="rounded-circle bg-primary bg-gradient text-white d-inline-flex align-items-center justify-content-center fw-bold shadow-sm ' . $extraBorderClass . '" style="width: ' . $size . 'px; height: ' . $size . 'px; font-size: ' . $fontSize . 'px;">' . $initial . '</div>';
+    }
+}
+?>
+
 <main class="main-content px-3 px-md-4 py-3">
     <div class="container-fluid">
 
@@ -15,7 +47,7 @@
             </a>
         </div>
 
-        <!-- Leaderboard Premium Hero Banner -->
+        <!-- Leaderboard Hero Banner (Clean Dark Gradient Backdrop) -->
         <div class="card border-0 rounded-4 shadow-lg overflow-hidden mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%); color: white;">
             <div class="card-body p-4 p-md-5 text-center position-relative">
                 <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-20 text-warning rounded-circle p-3 mb-3 border border-warning border-opacity-30 shadow" style="width: 72px; height: 72px;">
@@ -54,12 +86,10 @@
                     <div class="col-12 col-sm-4 col-md-3 text-center order-2 order-sm-1">
                         <div class="card p-3 p-md-4 shadow-sm border-0 rounded-4 bg-white hover-top h-100">
                             <div class="position-relative d-inline-block mb-2">
-                                <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-inline-flex align-items-center justify-content-center p-3" style="width: 64px; height: 64px;">
-                                    <i class="bi bi-person-fill fs-2"></i>
-                                </div>
+                                <?= renderStudentAvatar($p2['nama_siswa'], $p2['avatar'] ?? '', 72, 'border border-2 border-secondary') ?>
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-secondary fs-6 p-2 shadow">🥈</span>
                             </div>
-                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill small mb-2">Peringkat #2</span>
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill small mb-2 d-inline-block">Peringkat #2</span>
                             <h6 class="fw-bold mb-1 text-dark text-truncate" title="<?= htmlspecialchars($p2['nama_siswa']) ?>"><?= htmlspecialchars($p2['nama_siswa']) ?></h6>
                             <small class="text-muted d-block mb-3"><?= htmlspecialchars($p2['nama_kelas'] ?? 'Siswa') ?></small>
                             <span class="badge bg-secondary rounded-pill px-3 py-2 fs-6 shadow-sm"><?= number_format($p2['skor_akhir']) ?> Poin</span>
@@ -75,9 +105,7 @@
                             👑 JUARA 1 ARENA GAME 👑
                         </div>
                         <div class="position-relative d-inline-block mb-2">
-                            <div class="bg-warning bg-opacity-20 text-warning rounded-circle d-inline-flex align-items-center justify-content-center p-3 border border-warning" style="width: 80px; height: 80px;">
-                                <i class="bi bi-person-fill display-5"></i>
-                            </div>
+                            <?= renderStudentAvatar($p1['nama_siswa'], $p1['avatar'] ?? '', 88, 'border border-3 border-warning shadow') ?>
                             <span class="position-absolute top-0 start-100 translate-middle fs-3">🥇</span>
                         </div>
                         <h5 class="fw-bold mb-1 text-dark text-truncate" title="<?= htmlspecialchars($p1['nama_siswa']) ?>"><?= htmlspecialchars($p1['nama_siswa']) ?></h5>
@@ -93,12 +121,10 @@
                     <div class="col-12 col-sm-4 col-md-3 text-center order-3 order-sm-3">
                         <div class="card p-3 p-md-4 shadow-sm border-0 rounded-4 bg-white hover-top h-100">
                             <div class="position-relative d-inline-block mb-2">
-                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center p-3" style="width: 64px; height: 64px;">
-                                    <i class="bi bi-person-fill fs-2"></i>
-                                </div>
+                                <?= renderStudentAvatar($p3['nama_siswa'], $p3['avatar'] ?? '', 72, 'border border-2 border-danger') ?>
                                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-danger fs-6 p-2 shadow">🥉</span>
                             </div>
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small mb-2">Peringkat #3</span>
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small mb-2 d-inline-block">Peringkat #3</span>
                             <h6 class="fw-bold mb-1 text-dark text-truncate" title="<?= htmlspecialchars($p3['nama_siswa']) ?>"><?= htmlspecialchars($p3['nama_siswa']) ?></h6>
                             <small class="text-muted d-block mb-3"><?= htmlspecialchars($p3['nama_kelas'] ?? 'Siswa') ?></small>
                             <span class="badge bg-danger bg-opacity-75 text-white rounded-pill px-3 py-2 fs-6 shadow-sm"><?= number_format($p3['skor_akhir']) ?> Poin</span>
@@ -141,10 +167,8 @@
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px;">
-                                                <?= strtoupper(substr($lb['nama_siswa'], 0, 1)) ?>
-                                            </div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <?= renderStudentAvatar($lb['nama_siswa'], $lb['avatar'] ?? '', 42) ?>
                                             <div>
                                                 <span class="fw-bold text-dark d-block"><?= htmlspecialchars($lb['nama_siswa']) ?></span>
                                             </div>
