@@ -108,7 +108,85 @@ class GameModel extends BaseModel {
     public function getGameSoal($gameId) {
         $stmt = $this->db->prepare("SELECT * FROM game_soal WHERE game_id = ? ORDER BY id ASC");
         $stmt->execute([(int)$gameId]);
-        return $stmt->fetchAll();
+        $soal = $stmt->fetchAll();
+
+        if (empty($soal)) {
+            $this->populateFallbackSoal($gameId);
+            $stmt->execute([(int)$gameId]);
+            $soal = $stmt->fetchAll();
+        }
+
+        return $soal;
+    }
+
+    public function populateFallbackSoal($gameId) {
+        $game = $this->getGameDetail($gameId);
+        if (!$game) return;
+
+        $mapelName = $game['nama_mapel'] ?? 'Mata Pelajaran';
+        $sampleQuestions = [
+            [
+                'pertanyaan' => 'Apa tujuan utama dari mata pelajaran ' . $mapelName . ' dalam pembelajaran?',
+                'opsi_a' => 'Mengembangkan keterampilan & pemahaman mendalam secara praktis',
+                'opsi_b' => 'Menghafal teori tanpa melakukan praktik langsung',
+                'opsi_c' => 'Hanya untuk formalitas kelengkapan nilai ujian',
+                'opsi_d' => 'Mengabaikan standar kompetensi kelulusan',
+                'kunci_jawaban' => 'a',
+                'poin' => 25,
+                'penjelasan' => 'Pembelajaran bertujuan membangun kompetensi keterampilan dasar dan pemahaman mendalam.'
+            ],
+            [
+                'pertanyaan' => 'Manakah langkah pertama yang paling tepat sebelum memulai pembuatan proyek dalam bidang ' . $mapelName . '?',
+                'opsi_a' => 'Perencanaan, Perancangan & Analisis Kebutuhan',
+                'opsi_b' => 'Langsung membuat produk tanpa adanya perencanaan',
+                'opsi_c' => 'Menunggu instruksi tanpa persiapan materi',
+                'opsi_d' => 'Menutup seluruh dokumentasi teknis',
+                'kunci_jawaban' => 'a',
+                'poin' => 25,
+                'penjelasan' => 'Perencanaan dan analisis kebutuhan adalah fondasi utama keberhasilan setiap proyek.'
+            ],
+            [
+                'pertanyaan' => 'Sikap manakah yang mencerminkan etika kerja & belajar profesional?',
+                'opsi_a' => 'Disiplin, Jujur, Tanggung Jawab & Kerjasama Tim',
+                'opsi_b' => 'Mengcopy karya orang lain tanpa izin',
+                'opsi_c' => 'Apatis terhadap pencapaian proyek bersama',
+                'opsi_d' => 'Mengabaikan tenggat waktu deadline yang disepakati',
+                'kunci_jawaban' => 'a',
+                'poin' => 25,
+                'penjelasan' => 'Disiplin, kejujuran, dan integritas adalah pilar etika kerja profesional.'
+            ],
+            [
+                'pertanyaan' => 'Bagaimanakah cara terbaik untuk mengevaluasi keberhasilan suatu tugas atau karya?',
+                'opsi_a' => 'Melakukan Pengujian (Testing) & Reviu Umpan Balik',
+                'opsi_b' => 'Menganggap karya langsung sempurna tanpa diuji',
+                'opsi_c' => 'Menghindari kritik dan perbaikan karya',
+                'opsi_d' => 'Menghapus hasil pekerjaan sebelum dinilai',
+                'kunci_jawaban' => 'a',
+                'poin' => 25,
+                'penjelasan' => 'Pengujian (testing) dan reviu umpan balik memastikan kualitas akhir memenuhi kriteria.'
+            ]
+        ];
+
+        try {
+            $stmtS = $this->db->prepare("
+                INSERT INTO game_soal (game_id, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, kunci_jawaban, poin, penjelasan)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            foreach ($sampleQuestions as $s) {
+                $stmtS->execute([
+                    (int)$gameId,
+                    $s['pertanyaan'],
+                    $s['opsi_a'],
+                    $s['opsi_b'],
+                    $s['opsi_c'],
+                    $s['opsi_d'],
+                    $s['kunci_jawaban'],
+                    $s['poin'],
+                    $s['penjelasan']
+                ]);
+            }
+        } catch (Exception $e) {}
     }
 
     public function createGame($gameData, $soalList) {

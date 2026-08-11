@@ -162,6 +162,13 @@ const GameEngine = {
     },
 
     renderQuestion: function() {
+        if (!this.data.questions || !Array.isArray(this.data.questions) || this.data.questions.length === 0) {
+            document.getElementById('questionCounter').textContent = "Informasi Game";
+            document.getElementById('questionText').innerHTML = "<div class='alert alert-warning text-dark border-0 rounded-4 p-4 my-2'><i class='bi bi-info-circle-fill me-2'></i>Bank soal untuk game ini sedang disiapkan. Silakan coba game lainnya atau hubungi Guru Pengampu.</div>";
+            document.getElementById('optionsContainer').innerHTML = "";
+            return;
+        }
+
         if (this.state.currentIdx >= this.data.questions.length || this.state.lives <= 0) {
             this.endGame();
             return;
