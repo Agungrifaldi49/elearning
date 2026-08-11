@@ -14,6 +14,11 @@
             <!-- Arena Header Bar -->
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 pb-3 border-bottom border-secondary border-opacity-50">
                 <div>
+                    <?php if (strtolower(trim($_SESSION['user']['role_name'] ?? '')) === 'guru'): ?>
+                        <span class="badge bg-warning text-dark px-3 py-1 rounded-pill small mb-1 d-inline-block fw-bold">
+                            <i class="bi bi-eye-fill me-1"></i> Mode Pratinjau Guru (Uji Coba Arena)
+                        </span>
+                    <?php endif; ?>
                     <h5 class="fw-bold mb-0 text-warning"><i class="bi bi-controller me-2"></i><?= htmlspecialchars($game['judul']) ?></h5>
                     <small class="text-white-50"><?= htmlspecialchars($game['nama_mapel']) ?> | KKM Target: <?= $game['kkm'] ?> Poin</small>
                 </div>
