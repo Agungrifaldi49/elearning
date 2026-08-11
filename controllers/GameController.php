@@ -130,6 +130,92 @@ class GameController {
         require_once ROOT_PATH . 'views/game/create.php';
     }
 
+    public function edit() {
+        AuthHelper::requireLogin();
+        $user = AuthHelper::user();
+        $roleId = (int)($user['role_id'] ?? 0);
+        $roleName = strtolower(trim($user['role_name'] ?? ''));
+
+        if ($roleId !== 2 && strpos($roleName, 'guru') === false) {
+            FlashHelper::setError('Pengeditan Game Edukasi hanya dapat dilakukan oleh Guru Pengampu.');
+            header('Location: ' . BASE_URL . 'index.php?url=game');
+            exit();
+        }
+
+        $id = (int)($_GET['id'] ?? ($_POST['id'] ?? 0));
+        $gameModel = new GameModel();
+        $game = $gameModel->getGameDetail($id);
+
+        if (!$game) {
+            FlashHelper::setError('Game Edukasi tidak ditemukan.');
+            header('Location: ' . BASE_URL . 'index.php?url=game');
+            exit();
+        }
+
+        $guruId = $this->getGuruId($user['id']);
+        if ((int)$game['guru_id'] !== (int)$guruId && $roleId !== 1) {
+            FlashHelper::setError('Anda hanya dapat mengedit Game Edukasi buatan Anda sendiri.');
+            header('Location: ' . BASE_URL . 'index.php?url=game');
+            exit();
+        }
+
+        $academicModel = new AcademicModel();
+        $mapelList = $academicModel->getMapel();
+        $classList = $academicModel->getKelas();
+        $soalList = $gameModel->getGameSoal($id);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('CSRF Token Invalid');
+                header('Location: ' . BASE_URL . 'index.php?url=game/edit&id=' . $id);
+                exit();
+            }
+
+            $gameData = [
+                'mapel_id' => (int)$_POST['mapel_id'],
+                'kelas_id' => (int)($_POST['kelas_id'] ?? 0),
+                'judul' => Security::sanitize($_POST['judul']),
+                'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? ''),
+                'durasi_per_soal' => (int)($_POST['durasi_per_soal'] ?? 15),
+                'kkm' => (int)($_POST['kkm'] ?? 75)
+            ];
+
+            $soalRaw = $_POST['soal'] ?? [];
+            $newSoalList = [];
+
+            foreach ($soalRaw as $s) {
+                if (empty($s['pertanyaan']) || empty($s['opsi_a']) || empty($s['opsi_b'])) continue;
+                $newSoalList[] = [
+                    'pertanyaan' => Security::sanitize($s['pertanyaan']),
+                    'opsi_a' => Security::sanitize($s['opsi_a']),
+                    'opsi_b' => Security::sanitize($s['opsi_b']),
+                    'opsi_c' => Security::sanitize($s['opsi_c'] ?? ''),
+                    'opsi_d' => Security::sanitize($s['opsi_d'] ?? ''),
+                    'kunci_jawaban' => Security::sanitize($s['kunci_jawaban'] ?? 'a'),
+                    'poin' => (int)($s['poin'] ?? 10),
+                    'penjelasan' => Security::sanitize($s['penjelasan'] ?? '')
+                ];
+            }
+
+            if (empty($newSoalList)) {
+                FlashHelper::setError('Game Edukasi harus memiliki minimal 1 soal pertanyaan.');
+                header('Location: ' . BASE_URL . 'index.php?url=game/edit&id=' . $id);
+                exit();
+            }
+
+            $res = $gameModel->updateGame($id, $gameData, $newSoalList);
+            if ($res) {
+                FlashHelper::setSuccess('Game Edukasi berhasil diperbarui!');
+                header('Location: ' . BASE_URL . 'index.php?url=game');
+                exit();
+            } else {
+                FlashHelper::setError('Gagal memperbarui Game Edukasi.');
+            }
+        }
+
+        require_once ROOT_PATH . 'views/game/edit.php';
+    }
+
     public function play() {
         AuthHelper::requireLogin();
         $user = AuthHelper::user();

@@ -248,6 +248,55 @@ class GameModel extends BaseModel {
         return $stmt->execute([(int)$id]);
     }
 
+    public function updateGame($id, $gameData, $soalList) {
+        $this->db->beginTransaction();
+        try {
+            $stmtG = $this->db->prepare("
+                UPDATE game_edukasi 
+                SET mapel_id = ?, kelas_id = ?, judul = ?, deskripsi = ?, durasi_per_soal = ?, kkm = ?
+                WHERE id = ?
+            ");
+            $stmtG->execute([
+                (int)$gameData['mapel_id'],
+                !empty($gameData['kelas_id']) ? (int)$gameData['kelas_id'] : null,
+                $gameData['judul'],
+                $gameData['deskripsi'] ?? '',
+                (int)($gameData['durasi_per_soal'] ?? 15),
+                (int)($gameData['kkm'] ?? 75),
+                (int)$id
+            ]);
+
+            $stmtDel = $this->db->prepare("DELETE FROM game_soal WHERE game_id = ?");
+            $stmtDel->execute([(int)$id]);
+
+            $stmtS = $this->db->prepare("
+                INSERT INTO game_soal (game_id, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, kunci_jawaban, poin, penjelasan)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            foreach ($soalList as $s) {
+                if (empty($s['pertanyaan']) || empty($s['opsi_a']) || empty($s['opsi_b'])) continue;
+                $stmtS->execute([
+                    (int)$id,
+                    $s['pertanyaan'],
+                    $s['opsi_a'],
+                    $s['opsi_b'],
+                    $s['opsi_c'] ?? '',
+                    $s['opsi_d'] ?? '',
+                    strtolower($s['kunci_jawaban'] ?? 'a'),
+                    (int)($s['poin'] ?? 10),
+                    $s['penjelasan'] ?? ''
+                ]);
+            }
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return false;
+        }
+    }
+
     public function saveScore($gameId, $siswaId, $skorAkhir, $maxCombo, $totalBenar, $totalSoal, $waktuSelesai, $statusLulus) {
         $stmt = $this->db->prepare("
             INSERT INTO game_skor (game_id, siswa_id, skor_akhir, max_combo, total_benar, total_soal, waktu_selesai, status_lulus)
