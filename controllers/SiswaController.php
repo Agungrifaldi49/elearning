@@ -25,6 +25,21 @@ class SiswaController {
         return $siswaModel->ensureSiswaProfile($user['id'], $user['full_name']);
     }
 
+    public function game() {
+        require_once ROOT_PATH . 'controllers/GameController.php';
+        $gameCtrl = new GameController();
+        $action = $_GET['action'] ?? ($_GET['a'] ?? 'index');
+        if (method_exists($gameCtrl, $action)) {
+            $gameCtrl->$action();
+        } else {
+            $gameCtrl->index();
+        }
+    }
+
+    public function gameEdukasi() {
+        $this->game();
+    }
+
     public function dashboard() {
         $user = AuthHelper::user();
         $siswaModel = new SiswaModel();

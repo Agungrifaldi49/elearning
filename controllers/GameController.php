@@ -21,13 +21,14 @@ class GameController {
 
     private function getSiswaInfo($userId) {
         $siswaModel = new SiswaModel();
-        return $siswaModel->getByUserId($userId);
+        $user = AuthHelper::user();
+        return $siswaModel->ensureSiswaProfile($userId, $user['full_name'] ?? 'Siswa');
     }
 
     public function index() {
         AuthHelper::requireLogin();
         $user = AuthHelper::user();
-        $roleName = strtolower($user['role_name'] ?? '');
+        $roleName = strtolower(trim($user['role_name'] ?? ''));
         $gameModel = new GameModel();
 
         $guruId = null;

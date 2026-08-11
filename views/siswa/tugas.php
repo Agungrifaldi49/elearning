@@ -196,14 +196,14 @@
 
     <!-- 🎛️ SEARCH & FILTER CONTROLS CARD -->
     <div class="card border-0 rounded-4 shadow-sm p-3.5 mb-4 bg-white">
-        <div class="row g-2.5 align-items-center">
-            <div class="col-12 col-md-5">
+        <div class="row g-3 align-items-center">
+            <div class="col-12 col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3 text-muted"><i class="bi bi-search"></i></span>
                     <input type="text" id="searchInput" class="form-control bg-light border-start-0 rounded-end-pill ps-0 text-slate-800" placeholder="Cari judul tugas atau nama mapel..." oninput="filterTaskItems()" style="font-size: 0.88rem;">
                 </div>
             </div>
-            <div class="col-6 col-md-3.5">
+            <div class="col-6 col-md-3">
                 <select id="filterMapel" class="form-select rounded-pill text-slate-700" onchange="filterTaskItems()" style="font-size: 0.85rem;">
                     <option value="">Semua Mata Pelajaran</option>
                     <?php 
@@ -214,7 +214,7 @@
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="col-6 col-md-3.5">
+            <div class="col-6 col-md-3">
                 <select id="filterStatus" class="form-select rounded-pill text-slate-700" onchange="filterTaskItems()" style="font-size: 0.85rem;">
                     <option value="">Semua Status</option>
                     <option value="dikumpulkan">Sudah Dikumpulkan</option>
@@ -258,49 +258,50 @@
                 $statusCardVal = $isSubmitted ? 'dikumpulkan' : (!$isEnrolled ? 'terkunci' : ($isExpired && !$canAccess ? 'terkunci' : 'terdaftar'));
             ?>
                 <div class="col-12 col-lg-6 task-item-col" data-title="<?= htmlspecialchars(strtolower($t['judul'])) ?>" data-mapel="<?= htmlspecialchars($t['nama_mapel']) ?>" data-status="<?= $statusCardVal ?>">
-                    <div class="task-card-item <?= $cardStatusClass ?> p-4">
-                        
-                        <!-- Top Header Badges -->
-                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                            <span class="badge-mapel-tag">
-                                <i class="bi bi-journal-bookmark-fill me-1"></i><?= htmlspecialchars($t['nama_mapel']) ?>
-                            </span>
+                    <div class="task-card-item <?= $cardStatusClass ?> p-4 shadow-sm border-0 rounded-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <!-- Top Header Badges -->
+                            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size: 0.75rem;">
+                                    <i class="bi bi-journal-bookmark me-1"></i><?= htmlspecialchars($t['nama_mapel']) ?>
+                                </span>
 
-                            <div>
-                                <?php if ($isSubmitted): ?>
-                                    <span class="badge bg-success text-white rounded-pill px-3 py-1 fw-bold small shadow-xs">
-                                        <i class="bi bi-check-all me-1"></i>Sudah Dikumpulkan
-                                    </span>
-                                <?php elseif (!$isEnrolled): ?>
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1 fw-bold small">
-                                        <i class="bi bi-lock-fill me-1"></i>Mapel Terkunci
-                                    </span>
-                                <?php elseif ($isExpired && !$canAccess): ?>
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1 fw-bold small">
-                                        <i class="bi bi-clock-history me-1"></i>Expired (Terkunci)
-                                    </span>
-                                <?php else: ?>
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-bold small">
-                                        <i class="bi bi-check-circle-fill me-1"></i>Terdaftar / Aktif
-                                    </span>
-                                <?php endif; ?>
+                                <div>
+                                    <?php if ($isSubmitted): ?>
+                                        <span class="badge bg-success text-white rounded-pill px-3 py-1.5 fw-bold small shadow-xs">
+                                            <i class="bi bi-check-all me-1"></i>Sudah Dikumpulkan
+                                        </span>
+                                    <?php elseif (!$isEnrolled): ?>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1.5 fw-bold small">
+                                            <i class="bi bi-lock-fill me-1"></i>Mapel Terkunci
+                                        </span>
+                                    <?php elseif ($isExpired && !$canAccess): ?>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1.5 fw-bold small">
+                                            <i class="bi bi-clock-history me-1"></i>Expired (Terkunci)
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold small">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Aktif / Belum Dikumpul
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
-                        </div>
 
-                        <!-- Title & Meta Info -->
-                        <h5 class="fw-bold mb-2 text-dark" style="letter-spacing: -0.2px; line-height: 1.35;"><?= htmlspecialchars($t['judul']) ?></h5>
-                        
-                        <div class="d-flex align-items-center flex-wrap gap-3 mb-3 pb-3 border-bottom text-muted small">
-                            <span><i class="bi bi-person-circle text-primary me-1"></i>Guru: <strong><?= htmlspecialchars($t['nama_guru']) ?></strong></span>
-                            <span class="badge-deadline-tag">
-                                <i class="bi bi-calendar-event me-1"></i>Deadline: <?= date('d M Y, H:i', strtotime($t['deadline'])) ?> WIB
-                            </span>
-                        </div>
+                            <!-- Title & Meta Info -->
+                            <h5 class="fw-bold mb-1 text-dark" style="letter-spacing: -0.2px; line-height: 1.35;"><?= htmlspecialchars($t['judul']) ?></h5>
+                            
+                            <div class="d-flex align-items-center flex-wrap gap-2 mb-3 text-muted small">
+                                <span><i class="bi bi-person-circle text-primary me-1"></i>Guru: <strong><?= htmlspecialchars($t['nama_guru']) ?></strong></span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1 fw-semibold" style="font-size:0.75rem;">
+                                    <i class="bi bi-calendar-event me-1"></i>Deadline: <?= date('d M Y, H:i', strtotime($t['deadline'])) ?> WIB
+                                </span>
+                            </div>
 
-                        <!-- Task Description -->
-                        <p class="text-slate-600 small mb-3 flex-grow-1" style="color: #475569; line-height: 1.6; font-size: 0.9rem;">
-                            <?= nl2br(htmlspecialchars($t['deskripsi'])) ?>
-                        </p>
+                            <!-- Task Description -->
+                            <p class="text-slate-600 small mb-3 flex-grow-1" style="color: #475569; line-height: 1.6; font-size: 0.88rem;">
+                                <?= nl2br(htmlspecialchars($t['deskripsi'])) ?>
+                            </p>
+                        </div>
 
                         <!-- 📎 LAMPIRAN BERKAS SOAL GURU -->
                         <?php if (!empty($t['file_path'])): 

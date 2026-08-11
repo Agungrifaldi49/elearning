@@ -114,7 +114,7 @@ const GameEngine = {
         gameId: <?= $game['id'] ?>,
         kkm: <?= $game['kkm'] ?>,
         timerDuration: <?= $game['durasi_per_soal'] ?>,
-        questions: <?= json_encode($soalList) ?>,
+        questions: <?= json_encode($soalList, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
         csrfToken: '<?= Security::csrfToken() ?>',
         baseUrl: '<?= BASE_URL ?>'
     },
@@ -176,13 +176,14 @@ const GameEngine = {
         const optionsHtml = ['a', 'b', 'c', 'd'].map(opt => {
             const text = q['opsi_' + opt];
             if (!text) return '';
+            const safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             return `
                 <div class="col-12 col-md-6">
                     <button type="button" class="btn btn-outline-light w-100 p-3 rounded-4 text-start d-flex align-items-center gap-3 option-btn shadow-sm" onclick="GameEngine.checkAnswer('${opt}')">
                         <span class="rounded-circle bg-primary bg-gradient text-white d-flex align-items-center justify-content-center fw-bold fs-6" style="width: 38px; height: 38px; min-width: 38px;">
                             ${opt.toUpperCase()}
                         </span>
-                        <span class="fw-semibold text-white fs-6">${text}</span>
+                        <span class="fw-semibold text-white fs-6">${safeText}</span>
                     </button>
                 </div>
             `;
@@ -216,7 +217,8 @@ const GameEngine = {
         clearInterval(this.state.timerInterval);
 
         const q = this.data.questions[this.state.currentIdx];
-        const isCorrect = (selectedOpt.toLowerCase() === q.kunci_jawaban.toLowerCase());
+        const keyAnswer = (q.kunci_jawaban || 'a').toString().trim().toLowerCase();
+        const isCorrect = (selectedOpt.toLowerCase() === keyAnswer);
 
         if (isCorrect) {
             this.playSound('correct');
