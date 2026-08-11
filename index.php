@@ -107,6 +107,16 @@ switch ($routeGroup) {
         }
         break;
 
+    case 'auth':
+        require_once ROOT_PATH . 'controllers/AuthController.php';
+        $controller = new AuthController();
+        if (method_exists($controller, $action)) {
+            $controller->$action();
+        } else {
+            $controller->login();
+        }
+        break;
+
     default:
         require_once ROOT_PATH . 'controllers/LandingController.php';
         $controller = new LandingController();

@@ -159,8 +159,32 @@ class AuthController {
                     exit();
                 }
 
-                if (empty($newPassword) || strlen($newPassword) < 5) {
-                    FlashHelper::setError('Password baru minimal harus 5 karakter.');
+                if (strlen($newPassword) < 8) {
+                    FlashHelper::setError('Password baru harus memiliki panjang minimal 8 karakter.');
+                    header('Location: ' . BASE_URL . 'index.php?url=auth/forgotPassword&step=2');
+                    exit();
+                }
+
+                if (!preg_match('/[A-Z]/', $newPassword)) {
+                    FlashHelper::setError('Keamanan Gagal: Password baru harus mengandung minimal 1 huruf besar (A-Z).');
+                    header('Location: ' . BASE_URL . 'index.php?url=auth/forgotPassword&step=2');
+                    exit();
+                }
+
+                if (!preg_match('/[a-z]/', $newPassword)) {
+                    FlashHelper::setError('Keamanan Gagal: Password baru harus mengandung minimal 1 huruf kecil (a-z).');
+                    header('Location: ' . BASE_URL . 'index.php?url=auth/forgotPassword&step=2');
+                    exit();
+                }
+
+                if (!preg_match('/[0-9]/', $newPassword)) {
+                    FlashHelper::setError('Keamanan Gagal: Password baru harus mengandung minimal 1 angka (0-9).');
+                    header('Location: ' . BASE_URL . 'index.php?url=auth/forgotPassword&step=2');
+                    exit();
+                }
+
+                if (!preg_match('/[\W_]/', $newPassword)) {
+                    FlashHelper::setError('Keamanan Gagal: Password baru harus mengandung minimal 1 karakter simbol/spesial (!@#$%^&* dll).');
                     header('Location: ' . BASE_URL . 'index.php?url=auth/forgotPassword&step=2');
                     exit();
                 }

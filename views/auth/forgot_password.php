@@ -83,8 +83,8 @@ if ($currentStep === 2 && !$isVerified) {
                         </form>
 
                     <?php elseif ($currentStep === 2 && $isVerified): ?>
-                        <!-- STEP 2: FORM SETUP PASSWORD BARU -->
-                        <form action="<?= BASE_URL ?>index.php?url=auth/forgotPassword&step=2" method="POST">
+                        <!-- STEP 2: FORM SETUP PASSWORD BARU WITH LIVE VALIDATION CHECKLIST -->
+                        <form action="<?= BASE_URL ?>index.php?url=auth/forgotPassword&step=2" method="POST" id="formResetPassword">
                             <?= Security::csrfField() ?>
                             <input type="hidden" name="step" value="2">
 
@@ -97,12 +97,42 @@ if ($currentStep === 2 && !$isVerified) {
 
                             <div class="mb-3">
                                 <label class="form-label small fw-semibold text-dark">Password Baru <span class="text-danger">*</span></label>
-                                <div class="input-group">
+                                <div class="input-group mb-2">
                                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-lock text-muted"></i></span>
-                                    <input type="password" name="new_password" id="newPassword" class="form-control border-start-0 border-end-0 ps-0" placeholder="Minimal 5 karakter..." minlength="5" required autofocus>
+                                    <input type="password" name="new_password" id="newPassword" class="form-control border-start-0 border-end-0 ps-0" placeholder="Minimal 8 karakter (kombinasi huruf, angka, simbol)..." minlength="8" required autofocus>
                                     <button class="btn btn-outline-secondary border-start-0" type="button" onclick="togglePassVisibility('newPassword', 'toggleIcon1')">
                                         <i class="bi bi-eye" id="toggleIcon1"></i>
                                     </button>
+                                </div>
+                            </div>
+
+                            <!-- Live Password Requirements Checklist & Strength Bar -->
+                            <div class="p-3 bg-light rounded-3 border mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small fw-bold text-dark"><i class="bi bi-shield-check text-primary me-1"></i> Syarat Keamanan Password:</span>
+                                    <span id="strengthText" class="badge bg-secondary small">Belum Diisi</span>
+                                </div>
+
+                                <div class="progress mb-3" style="height: 6px;">
+                                    <div id="strengthBar" class="progress-bar bg-secondary" role="progressbar" style="width: 0%;"></div>
+                                </div>
+
+                                <div class="row g-2 small" id="passwordChecklist">
+                                    <div class="col-6 text-muted" id="ruleLength">
+                                        <i class="bi bi-x-circle me-1"></i> Min 8 Karakter
+                                    </div>
+                                    <div class="col-6 text-muted" id="ruleUpper">
+                                        <i class="bi bi-x-circle me-1"></i> Huruf Besar (A-Z)
+                                    </div>
+                                    <div class="col-6 text-muted" id="ruleLower">
+                                        <i class="bi bi-x-circle me-1"></i> Huruf Kecil (a-z)
+                                    </div>
+                                    <div class="col-6 text-muted" id="ruleNumber">
+                                        <i class="bi bi-x-circle me-1"></i> Angka (0-9)
+                                    </div>
+                                    <div class="col-12 text-muted" id="ruleSymbol">
+                                        <i class="bi bi-x-circle me-1"></i> Simbol / Spesial (!@#$%)
+                                    </div>
                                 </div>
                             </div>
 
@@ -110,14 +140,15 @@ if ($currentStep === 2 && !$isVerified) {
                                 <label class="form-label small fw-semibold text-dark">Konfirmasi Password Baru <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-shield-lock text-muted"></i></span>
-                                    <input type="password" name="confirm_password" id="confirmPassword" class="form-control border-start-0 border-end-0 ps-0" placeholder="Ulangi password baru..." minlength="5" required>
+                                    <input type="password" name="confirm_password" id="confirmPassword" class="form-control border-start-0 border-end-0 ps-0" placeholder="Ulangi password baru..." minlength="8" required>
                                     <button class="btn btn-outline-secondary border-start-0" type="button" onclick="togglePassVisibility('confirmPassword', 'toggleIcon2')">
                                         <i class="bi bi-eye" id="toggleIcon2"></i>
                                     </button>
                                 </div>
+                                <div id="matchText" class="small mt-1 d-none"></div>
                             </div>
 
-                            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold shadow-sm mb-2 hover-scale">
+                            <button type="submit" id="btnSubmitReset" class="btn btn-primary w-100 py-3 fw-bold shadow-sm mb-2 hover-scale">
                                 <i class="bi bi-check-circle-fill me-2"></i> Simpan Password Baru
                             </button>
 
@@ -147,6 +178,91 @@ function togglePassVisibility(inputId, iconId) {
         icon.className = 'bi bi-eye';
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const passInput = document.getElementById('newPassword');
+    const confirmInput = document.getElementById('confirmPassword');
+    if (!passInput) return;
+
+    function updateRule(elemId, isValid) {
+        const el = document.getElementById(elemId);
+        if (!el) return;
+
+        if (isValid) {
+            el.className = 'col-6 text-success fw-bold';
+            if (elemId === 'ruleSymbol') el.className = 'col-12 text-success fw-bold';
+            el.querySelector('i').className = 'bi bi-check-circle-fill me-1';
+        } else {
+            el.className = 'col-6 text-muted';
+            if (elemId === 'ruleSymbol') el.className = 'col-12 text-muted';
+            el.querySelector('i').className = 'bi bi-x-circle me-1';
+        }
+    }
+
+    function checkStrength() {
+        const val = passInput.value;
+        const confirmVal = confirmInput ? confirmInput.value : '';
+
+        const hasLen = val.length >= 8;
+        const hasUpper = /[A-Z]/.test(val);
+        const hasLower = /[a-z]/.test(val);
+        const hasNum = /[0-9]/.test(val);
+        const hasSym = /[\W_]/.test(val);
+
+        updateRule('ruleLength', hasLen);
+        updateRule('ruleUpper', hasUpper);
+        updateRule('ruleLower', hasLower);
+        updateRule('ruleNumber', hasNum);
+        updateRule('ruleSymbol', hasSym);
+
+        let score = (hasLen ? 1 : 0) + (hasUpper ? 1 : 0) + (hasLower ? 1 : 0) + (hasNum ? 1 : 0) + (hasSym ? 1 : 0);
+
+        const strengthBar = document.getElementById('strengthBar');
+        const strengthText = document.getElementById('strengthText');
+
+        if (val.length === 0) {
+            strengthBar.style.width = '0%';
+            strengthBar.className = 'progress-bar bg-secondary';
+            strengthText.textContent = 'Belum Diisi';
+            strengthText.className = 'badge bg-secondary small';
+        } else if (score <= 2) {
+            strengthBar.style.width = '35%';
+            strengthBar.className = 'progress-bar bg-danger';
+            strengthText.textContent = 'Sangat Lemah ⚠️';
+            strengthText.className = 'badge bg-danger small';
+        } else if (score <= 4) {
+            strengthBar.style.width = '70%';
+            strengthBar.className = 'progress-bar bg-warning text-dark';
+            strengthText.textContent = 'Sedang 🟡';
+            strengthText.className = 'badge bg-warning text-dark small';
+        } else {
+            strengthBar.style.width = '100%';
+            strengthBar.className = 'progress-bar bg-success';
+            strengthText.textContent = 'Sangat Kuat 🔥';
+            strengthText.className = 'badge bg-success small';
+        }
+
+        // Check password match
+        const matchText = document.getElementById('matchText');
+        if (confirmInput && confirmVal.length > 0) {
+            matchText.classList.remove('d-none');
+            if (val === confirmVal) {
+                matchText.textContent = '✓ Konfirmasi password cocok';
+                matchText.className = 'small mt-1 text-success fw-bold';
+            } else {
+                matchText.textContent = '✗ Konfirmasi password tidak cocok';
+                matchText.className = 'small mt-1 text-danger fw-bold';
+            }
+        } else if (matchText) {
+            matchText.classList.add('d-none');
+        }
+    }
+
+    passInput.addEventListener('input', checkStrength);
+    if (confirmInput) {
+        confirmInput.addEventListener('input', checkStrength);
+    }
+});
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
