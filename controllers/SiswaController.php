@@ -28,9 +28,11 @@ class SiswaController {
     public function game() {
         require_once ROOT_PATH . 'controllers/GameController.php';
         $gameCtrl = new GameController();
-        $action = $_GET['action'] ?? ($_GET['a'] ?? 'index');
-        if (method_exists($gameCtrl, $action)) {
-            $gameCtrl->$action();
+        $url = $_GET['url'] ?? '';
+        $parts = explode('/', rtrim($url, '/'));
+        $subAction = $parts[2] ?? ($_GET['action'] ?? 'index');
+        if (method_exists($gameCtrl, $subAction)) {
+            $gameCtrl->$subAction();
         } else {
             $gameCtrl->index();
         }

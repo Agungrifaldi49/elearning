@@ -24,6 +24,23 @@ class AdminController {
         AuthHelper::requireRole(['Administrator']);
     }
 
+    public function game() {
+        require_once ROOT_PATH . 'controllers/GameController.php';
+        $gameCtrl = new GameController();
+        $url = $_GET['url'] ?? '';
+        $parts = explode('/', rtrim($url, '/'));
+        $subAction = $parts[2] ?? ($_GET['action'] ?? 'index');
+        if (method_exists($gameCtrl, $subAction)) {
+            $gameCtrl->$subAction();
+        } else {
+            $gameCtrl->index();
+        }
+    }
+
+    public function gameEdukasi() {
+        $this->game();
+    }
+
     public function dashboard() {
         $reportModel = new ReportModel();
         $commModel = new CommunicationModel();

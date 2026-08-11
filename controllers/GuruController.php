@@ -27,6 +27,23 @@ class GuruController {
         return $guruModel->ensureGuruProfile($user['id'], $user['full_name']);
     }
 
+    public function game() {
+        require_once ROOT_PATH . 'controllers/GameController.php';
+        $gameCtrl = new GameController();
+        $url = $_GET['url'] ?? '';
+        $parts = explode('/', rtrim($url, '/'));
+        $subAction = $parts[2] ?? ($_GET['action'] ?? 'index');
+        if (method_exists($gameCtrl, $subAction)) {
+            $gameCtrl->$subAction();
+        } else {
+            $gameCtrl->index();
+        }
+    }
+
+    public function gameEdukasi() {
+        $this->game();
+    }
+
     public function dashboard() {
         $guru = $this->getGuruInfo();
         $guruId = $guru['id'];
