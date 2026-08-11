@@ -137,8 +137,17 @@ const GameEngine = {
     },
 
     init: function() {
-        this.state.startTime = Date.now();
-        this.renderQuestion();
+        try {
+            this.state.startTime = Date.now();
+            this.renderQuestion();
+        } catch (err) {
+            console.error('GameEngine Init Error:', err);
+            const textEl = document.getElementById('questionText');
+            if (textEl) {
+                textEl.textContent = 'Memulai permainan kuis...';
+            }
+            setTimeout(() => { this.renderQuestion(); }, 200);
+        }
     },
 
     // Synthetic Sound Effect (Web Audio API)
@@ -344,8 +353,18 @@ const GameEngine = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', function() {
-    GameEngine.init();
+// Immediate & Event-based execution for 100% reliability
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(function() { GameEngine.init(); }, 1);
+} else {
+    document.addEventListener('DOMContentLoaded', function() {
+        GameEngine.init();
+    });
+}
+window.addEventListener('load', function() {
+    if (!GameEngine.state.startTime) {
+        GameEngine.init();
+    }
 });
 </script>
 
