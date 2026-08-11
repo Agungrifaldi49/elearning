@@ -189,4 +189,24 @@ class UserModel extends BaseModel {
         $stmt = $this->db->prepare("DELETE FROM users WHERE id = ?");
         return $stmt->execute([$id]);
     }
+
+    public function verifyUserForReset($username, $email) {
+        $stmt = $this->db->prepare("
+            SELECT u.*, r.name as role_name 
+            FROM users u
+            JOIN roles r ON u.role_id = r.id
+            WHERE LOWER(TRIM(u.username)) = LOWER(TRIM(?)) 
+              AND LOWER(TRIM(u.email)) = LOWER(TRIM(?))
+              AND u.status = 'active'
+            LIMIT 1
+        ");
+        $stmt->execute([$username, $email]);
+        return $stmt->fetch();
+    }
+
+    public function resetUserPassword($userId, $newPassword) {
+        $hash = password_hash($newPassword, PASSWORD_BCRYPT);
+        $stmt = $this->db->prepare("UPDATE users SET password = ? WHERE id = ?");
+        return $stmt->execute([$hash, (int)$userId]);
+    }
 }
