@@ -60,9 +60,9 @@ class GameController {
     public function create() {
         AuthHelper::requireLogin();
         $user = AuthHelper::user();
-        $roleName = strtolower($user['role_name'] ?? '');
+        $roleName = strtolower(trim($user['role_name'] ?? ''));
 
-        if ($roleName !== 'guru' && $roleName !== 'administrator') {
+        if ($roleName !== 'guru' && $roleName !== 'administrator' && $roleName !== 'admin') {
             FlashHelper::setError('Hanya Guru / Pengajar yang berhak membuat Game Edukasi Baru.');
             header('Location: ' . BASE_URL . 'index.php?url=game');
             exit();
@@ -229,7 +229,7 @@ class GameController {
     public function delete() {
         AuthHelper::requireLogin();
         $user = AuthHelper::user();
-        $roleName = strtolower($user['role_name'] ?? '');
+        $roleName = strtolower(trim($user['role_name'] ?? ''));
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
@@ -240,7 +240,7 @@ class GameController {
 
             $id = (int)($_POST['id'] ?? 0);
             $guruId = $this->getGuruId($user['id']);
-            $isAdmin = ($roleName === 'administrator');
+            $isAdmin = ($roleName === 'administrator' || $roleName === 'admin');
 
             $gameModel = new GameModel();
             $res = $gameModel->deleteGame($id, $guruId, $isAdmin);

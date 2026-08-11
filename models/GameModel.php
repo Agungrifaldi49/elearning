@@ -77,12 +77,12 @@ class GameModel extends BaseModel {
         $params = [];
 
         if ($guruId) {
-            $sql .= " AND g.guru_id = ?";
+            $sql .= " AND (g.guru_id = ? OR g.kelas_id IS NULL OR g.kelas_id = 0)";
             $params[] = (int)$guruId;
         }
 
         if ($kelasId) {
-            $sql .= " AND (g.kelas_id IS NULL OR g.kelas_id = ?)";
+            $sql .= " AND (g.kelas_id IS NULL OR g.kelas_id = 0 OR g.kelas_id = ?)";
             $params[] = (int)$kelasId;
         }
 
@@ -279,14 +279,21 @@ class GameModel extends BaseModel {
         $stmt = $this->db->prepare("
             SELECT gs.*, s.nama_lengkap as nama_siswa, s.nisn, k.nama_kelas, u.avatar
             FROM game_skor gs
+            JOIN (
+                SELECT siswa_id, MAX(skor_akhir) as max_score
+                FROM game_skor
+                WHERE game_id = ?
+                GROUP BY siswa_id
+            ) best ON gs.siswa_id = best.siswa_id AND gs.skor_akhir = best.max_score
             JOIN siswa s ON gs.siswa_id = s.id
             JOIN users u ON s.user_id = u.id
             LEFT JOIN kelas k ON s.kelas_id = k.id
             WHERE gs.game_id = ?
+            GROUP BY gs.siswa_id
             ORDER BY gs.skor_akhir DESC, gs.max_combo DESC, gs.waktu_selesai ASC
             LIMIT 15
         ");
-        $stmt->execute([(int)$gameId]);
+        $stmt->execute([(int)$gameId, (int)$gameId]);
         return $stmt->fetchAll();
     }
 }

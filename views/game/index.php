@@ -2,6 +2,12 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+$roleName = strtolower(trim($_SESSION['user']['role_name'] ?? ''));
+$isTeacherOrAdmin = in_array($roleName, ['guru', 'administrator', 'admin']);
+$isStudent = ($roleName === 'siswa');
+?>
+
 <main class="main-content px-3 px-md-4">
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
@@ -14,7 +20,7 @@
                 </p>
             </div>
             <div>
-                <?php if ($roleName === 'guru' || $roleName === 'administrator'): ?>
+                <?php if ($isTeacherOrAdmin): ?>
                     <a href="<?= BASE_URL ?>index.php?url=game/create" class="btn btn-primary shadow-sm rounded-pill px-4 fw-bold">
                         <i class="bi bi-plus-circle me-1"></i> Buat Game Edukasi Baru
                     </a>
@@ -30,9 +36,9 @@
                     </div>
                     <h5 class="fw-bold text-dark mb-2">Belum Ada Game Edukasi Tersedia</h5>
                     <p class="text-muted small max-w-md mx-auto mb-4">
-                        <?= ($roleName === 'guru') ? 'Ayo buat game edukasi interaktif pertama Anda untuk meningkatkan antusiasme belajar siswa!' : 'Belum ada game edukasi yang dipublikasikan oleh Bapak/Ibu Guru untuk kelas Anda.' ?>
+                        <?= ($isTeacherOrAdmin) ? 'Ayo buat game edukasi interaktif pertama Anda untuk meningkatkan antusiasme belajar siswa!' : 'Belum ada game edukasi yang dipublikasikan oleh Bapak/Ibu Guru untuk kelas Anda.' ?>
                     </p>
-                    <?php if ($roleName === 'guru' || $roleName === 'administrator'): ?>
+                    <?php if ($isTeacherOrAdmin): ?>
                         <a href="<?= BASE_URL ?>index.php?url=game/create" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">
                             <i class="bi bi-controller me-1"></i> Buat Game Sekarang
                         </a>
@@ -102,7 +108,7 @@
                                     </a>
 
                                     <div class="d-flex gap-1">
-                                        <?php if ($roleName === 'guru' || $roleName === 'administrator'): ?>
+                                        <?php if ($isTeacherOrAdmin): ?>
                                             <form action="<?= BASE_URL ?>index.php?url=game/delete" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Game Edukasi ini?');">
                                                 <?= Security::csrfField() ?>
                                                 <input type="hidden" name="id" value="<?= $g['id'] ?>">
@@ -113,7 +119,7 @@
                                         <?php endif; ?>
 
                                         <a href="<?= BASE_URL ?>index.php?url=game/play&id=<?= $g['id'] ?>" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold shadow-sm">
-                                            <i class="bi bi-controller me-1"></i> <?= ($roleName === 'siswa') ? 'Mainkan Game' : 'Pratinjau Arena' ?>
+                                            <i class="bi bi-controller me-1"></i> <?= ($isStudent) ? 'Mainkan Game' : 'Pratinjau Arena' ?>
                                         </a>
                                     </div>
                                 </div>
