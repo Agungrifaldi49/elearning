@@ -715,6 +715,20 @@ class ExamModel extends BaseModel {
     }
 
     public function getHasilQuizListByGuru($guruId = null) {
+        // Auto-heal any stale 'menunggu' status in database where ungraded_essay_count is 0
+        try {
+            $this->db->exec("
+                UPDATE hasil_quiz hq
+                SET hq.status_lulus = IF(hq.total_nilai >= 70, 'lulus', 'tidak_lulus')
+                WHERE hq.status_lulus = 'menunggu'
+                AND NOT EXISTS (
+                    SELECT 1 FROM soal s 
+                    LEFT JOIN jawaban_siswa js ON js.soal_id = s.id AND js.siswa_id = hq.siswa_id AND js.quiz_id = hq.quiz_id
+                    WHERE s.quiz_id = hq.quiz_id AND s.jenis_soal = 'essay' AND (js.nilai IS NULL OR js.id IS NULL)
+                )
+            ");
+        } catch (Exception $e) {}
+
         $sql = "
             SELECT hq.*, q.judul as nama_quiz, map.nama_mapel, k.nama_kelas, jur.nama_jurusan, s.nama_lengkap as nama_siswa, s.nis,
             (SELECT COUNT(*) FROM soal s2 WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay') as total_essay_count,
