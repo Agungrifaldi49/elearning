@@ -4,12 +4,17 @@
 
 <main class="main-content px-3 px-md-4">
     <div class="container-fluid">
-        <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-secondary mb-3 rounded-pill px-3">
-            <i class="bi bi-arrow-left me-1"></i> Keluar Arena
-        </a>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-secondary rounded-pill px-3">
+                <i class="bi bi-arrow-left me-1"></i> Keluar Arena
+            </a>
+            <button type="button" class="btn btn-outline-warning rounded-pill px-3" onclick="toggleArenaFullscreen()" id="btnFullscreenToggle">
+                <i class="bi bi-arrows-fullscreen me-1"></i> Mode Layar Penuh (Fullscreen)
+            </button>
+        </div>
 
         <!-- Game Arena Card Container -->
-        <div class="card card-custom p-4 p-md-5 mb-4 shadow-lg border-0 rounded-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white;" id="gameArenaCard">
+        <div class="card card-custom p-4 p-md-5 mb-4 shadow-lg border-0 rounded-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; min-height: 520px;" id="gameArenaCard">
 
             <!-- Arena Header Bar -->
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 pb-3 border-bottom border-secondary border-opacity-50">
@@ -43,13 +48,55 @@
                 </div>
             </div>
 
-            <!-- Timer Progress Bar -->
-            <div class="progress bg-secondary bg-opacity-25 rounded-pill mb-4" style="height: 12px;">
+            <!-- Start Screen Overlay Container (Initial State) -->
+            <div id="startScreenOverlay" class="text-center py-4 px-2">
+                <div class="mb-3">
+                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold fs-6 shadow">
+                        <i class="bi bi-controller me-1"></i> ARENA KUIS SIAP DIMULAI
+                    </span>
+                </div>
+                <h2 class="fw-bold text-white mb-2 display-6"><?= htmlspecialchars($game['judul']) ?></h2>
+                <p class="text-white-50 max-w-xl mx-auto mb-4 fs-6">
+                    Mata Pelajaran: <strong><?= htmlspecialchars($game['nama_mapel']) ?></strong> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong>
+                </p>
+
+                <!-- Game Rules Info Box -->
+                <div class="row g-3 justify-content-center max-w-2xl mx-auto mb-4 text-start">
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
+                            <div class="fs-3 mb-1">❤️❤️❤️</div>
+                            <small class="text-white-50 d-block">Kesempatan</small>
+                            <span class="fw-bold text-white">3 Nyawa Permainan</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
+                            <div class="fs-3 mb-1">⏱️ <?= $game['durasi_per_soal'] ?>s</div>
+                            <small class="text-white-50 d-block">Timer per Soal</small>
+                            <span class="fw-bold text-warning"><?= $game['durasi_per_soal'] ?> Detik / Soal</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
+                            <div class="fs-3 mb-1">🔥 5x</div>
+                            <small class="text-white-50 d-block">Pengganda Skor</small>
+                            <span class="fw-bold text-info">Combo Streak Bonus</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-warning btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg text-dark fs-4 hover-scale" id="btnStartArena" onclick="GameEngine.startArena()">
+                    <i class="bi bi-play-circle-fill me-2 fs-3"></i> MULAI PERMAINAN (FULLSCREEN 🚀)
+                </button>
+            </div>
+
+            <!-- Timer Progress Bar Box (Hidden Initially) -->
+            <div id="timerBarContainer" class="progress bg-secondary bg-opacity-25 rounded-pill mb-4 d-none" style="height: 12px;">
                 <div id="gameTimerBar" class="progress-bar bg-warning progress-bar-striped progress-bar-animated rounded-pill" role="progressbar" style="width: 100%;"></div>
             </div>
 
-            <!-- Question Card Box -->
-            <div id="quizBoxContainer" class="text-center py-4 px-2">
+            <!-- Question Card Box (Hidden Initially) -->
+            <div id="quizBoxContainer" class="text-center py-4 px-2 d-none">
                 <div class="mb-2">
                     <span class="badge bg-danger bg-opacity-75 text-white px-3 py-1 rounded-pill fw-semibold" id="questionCounter">Soal 1 dari <?= count($soalList) ?></span>
                 </div>
@@ -114,6 +161,25 @@
 </div>
 
 <script>
+function toggleArenaFullscreen() {
+    const arenaCard = document.getElementById('gameArenaCard');
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (arenaCard.requestFullscreen) {
+            arenaCard.requestFullscreen().catch(() => {});
+        } else if (arenaCard.webkitRequestFullscreen) {
+            arenaCard.webkitRequestFullscreen();
+        } else if (arenaCard.msRequestFullscreen) {
+            arenaCard.msRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        }
+    }
+}
+
 const GameEngine = {
     data: {
         gameId: <?= $game['id'] ?>,
@@ -133,7 +199,27 @@ const GameEngine = {
         startTime: 0,
         timerInterval: null,
         timeLeft: 0,
-        isAnswered: false
+        isAnswered: false,
+        isStarted: false
+    },
+
+    startArena: function() {
+        if (this.state.isStarted) return;
+        this.state.isStarted = true;
+
+        // Auto Request Fullscreen mode
+        toggleArenaFullscreen();
+
+        // Switch screens
+        const overlay = document.getElementById('startScreenOverlay');
+        const timerBox = document.getElementById('timerBarContainer');
+        const quizBox = document.getElementById('quizBoxContainer');
+
+        if (overlay) overlay.classList.add('d-none');
+        if (timerBox) timerBox.classList.remove('d-none');
+        if (quizBox) quizBox.classList.remove('d-none');
+
+        this.init();
     },
 
     init: function() {
@@ -223,7 +309,7 @@ const GameEngine = {
         this.state.timerInterval = setInterval(() => {
             this.state.timeLeft -= 0.1;
             const pct = Math.max(0, (this.state.timeLeft / this.data.timerDuration) * 100);
-            timerBar.style.width = pct + '%';
+            if (timerBar) timerBar.style.width = pct + '%';
 
             if (this.state.timeLeft <= 0) {
                 clearInterval(this.state.timerInterval);
@@ -352,20 +438,6 @@ const GameEngine = {
         modal.show();
     }
 };
-
-// Immediate & Event-based execution for 100% reliability
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    setTimeout(function() { GameEngine.init(); }, 1);
-} else {
-    document.addEventListener('DOMContentLoaded', function() {
-        GameEngine.init();
-    });
-}
-window.addEventListener('load', function() {
-    if (!GameEngine.state.startTime) {
-        GameEngine.init();
-    }
-});
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
