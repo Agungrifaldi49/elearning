@@ -2,6 +2,34 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<script>
+function toggleArenaFullscreen() {
+    const arenaCard = document.getElementById('gameArenaCard');
+    if (!arenaCard) return;
+
+    try {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            if (arenaCard.requestFullscreen) {
+                arenaCard.requestFullscreen().catch(() => {});
+            } else if (arenaCard.webkitRequestFullscreen) {
+                arenaCard.webkitRequestFullscreen();
+            } else if (arenaCard.msRequestFullscreen) {
+                arenaCard.msRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+    } catch(e) {}
+}
+window.toggleArenaFullscreen = toggleArenaFullscreen;
+</script>
+
 <main class="main-content px-2 px-md-4 py-3">
     <div class="container-fluid">
         <!-- Top Navigation Bar -->
@@ -9,13 +37,13 @@
             <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold">
                 <i class="bi bi-arrow-left me-1"></i> Keluar Arena Game
             </a>
-            <button type="button" class="btn btn-warning rounded-pill px-4 py-2 fw-bold text-dark shadow-sm hover-scale" onclick="toggleArenaFullscreen()" id="btnFullscreenHeader">
+            <button type="button" class="btn btn-outline-warning rounded-pill px-4 py-2 fw-bold text-dark shadow-sm hover-scale" onclick="toggleArenaFullscreen()" id="btnFullscreenHeader">
                 <i class="bi bi-arrows-fullscreen me-1"></i> Mode Layar Penuh (Fullscreen 🚀)
             </button>
         </div>
 
         <!-- Game Arena Card Container -->
-        <div class="card card-custom p-3 p-md-5 mb-4 shadow-lg border-0 rounded-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); color: white; min-height: 480px;" id="gameArenaCard">
+        <div class="card card-custom p-3 p-md-5 mb-4 shadow-lg border-0 rounded-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); color: white; min-height: 520px;" id="gameArenaCard">
 
             <!-- Arena Header Bar -->
             <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 pb-3 border-bottom border-secondary border-opacity-50">
@@ -53,13 +81,55 @@
                 </div>
             </div>
 
-            <!-- Timer Progress Bar Box -->
-            <div id="timerBarContainer" class="progress bg-secondary bg-opacity-25 rounded-pill mb-4" style="height: 14px;">
+            <!-- Start Screen Overlay Container (Initial State) -->
+            <div id="startScreenOverlay" class="text-center py-4 px-2">
+                <div class="mb-3">
+                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold fs-6 shadow">
+                        <i class="bi bi-controller me-1"></i> ARENA KUIS SIAP DIMULAI
+                    </span>
+                </div>
+                <h2 class="fw-bold text-white mb-2 display-6"><?= htmlspecialchars($game['judul']) ?></h2>
+                <p class="text-white-50 max-w-xl mx-auto mb-4 fs-6">
+                    Mata Pelajaran: <strong><?= htmlspecialchars($game['nama_mapel']) ?></strong> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong>
+                </p>
+
+                <!-- Game Rules Info Box -->
+                <div class="row g-3 justify-content-center max-w-2xl mx-auto mb-4 text-start">
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
+                            <div class="fs-3 mb-1">❤️❤️❤️</div>
+                            <small class="text-white-50 d-block">Kesempatan</small>
+                            <span class="fw-bold text-white">3 Nyawa Permainan</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
+                            <div class="fs-3 mb-1">⏱️ <?= $game['durasi_per_soal'] ?>s</div>
+                            <small class="text-white-50 d-block">Timer per Soal</small>
+                            <span class="fw-bold text-warning"><?= $game['durasi_per_soal'] ?> Detik / Soal</span>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
+                            <div class="fs-3 mb-1">🔥 5x</div>
+                            <small class="text-white-50 d-block">Pengganda Skor</small>
+                            <span class="fw-bold text-info">Combo Streak Bonus</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-warning btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg text-dark fs-4 hover-scale" id="btnStartGame" onclick="window.startGameArena()">
+                    <i class="bi bi-play-circle-fill me-2 fs-3"></i> MULAI PERMAINAN (FULLSCREEN 🚀)
+                </button>
+            </div>
+
+            <!-- Timer Progress Bar Box (Hidden Initially) -->
+            <div id="timerBarContainer" class="progress bg-secondary bg-opacity-25 rounded-pill mb-4 d-none" style="height: 14px;">
                 <div id="gameTimerBar" class="progress-bar bg-warning progress-bar-striped progress-bar-animated rounded-pill" role="progressbar" style="width: 100%;"></div>
             </div>
 
-            <!-- Question Card Box (Directly Active & Responsive) -->
-            <div id="quizBoxContainer" class="text-center py-2 py-md-4 px-1 px-md-3">
+            <!-- Question Card Box (Hidden Initially) -->
+            <div id="quizBoxContainer" class="text-center py-2 py-md-4 px-1 px-md-3 d-none">
                 <div class="mb-3">
                     <span class="badge bg-danger bg-opacity-90 text-white px-3 py-2 rounded-pill fw-bold fs-6 shadow-sm" id="questionCounter">Soal 1 dari <?= count($soalList) ?></span>
                 </div>
@@ -125,30 +195,7 @@
 </div>
 
 <script>
-function toggleArenaFullscreen() {
-    const arenaCard = document.getElementById('gameArenaCard');
-    if (!arenaCard) return;
-
-    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-        if (arenaCard.requestFullscreen) {
-            arenaCard.requestFullscreen().catch(err => console.log('Fullscreen rejected:', err));
-        } else if (arenaCard.webkitRequestFullscreen) {
-            arenaCard.webkitRequestFullscreen();
-        } else if (arenaCard.msRequestFullscreen) {
-            arenaCard.msRequestFullscreen();
-        }
-    } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen().catch(err => console.log('Exit fullscreen rejected:', err));
-        } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) {
-            document.msExitFullscreen();
-        }
-    }
-}
-
-const GameEngine = {
+window.GameEngine = {
     data: {
         gameId: <?= (int)$game['id'] ?>,
         kkm: <?= (int)$game['kkm'] ?>,
@@ -168,7 +215,27 @@ const GameEngine = {
         timerInterval: null,
         timeLeft: 0,
         isAnswered: false,
-        isEnded: false
+        isEnded: false,
+        isStarted: false
+    },
+
+    startArena: function() {
+        if (this.state.isStarted) return;
+        this.state.isStarted = true;
+
+        // Trigger Fullscreen
+        window.toggleArenaFullscreen();
+
+        // Switch screens
+        const overlay = document.getElementById('startScreenOverlay');
+        const timerBox = document.getElementById('timerBarContainer');
+        const quizBox = document.getElementById('quizBoxContainer');
+
+        if (overlay) overlay.classList.add('d-none');
+        if (timerBox) timerBox.classList.remove('d-none');
+        if (quizBox) quizBox.classList.remove('d-none');
+
+        this.init();
     },
 
     init: function() {
@@ -178,9 +245,7 @@ const GameEngine = {
         } catch (err) {
             console.error('GameEngine Init Error:', err);
             const textEl = document.getElementById('questionText');
-            if (textEl) {
-                textEl.textContent = 'Memulai arena permainan...';
-            }
+            if (textEl) textEl.textContent = 'Memulai arena permainan...';
             setTimeout(() => { this.renderQuestion(); }, 150);
         }
     },
@@ -235,7 +300,7 @@ const GameEngine = {
             const safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             return `
                 <div class="col-12 col-md-6">
-                    <button type="button" class="btn btn-outline-light w-100 p-3 rounded-4 text-start d-flex align-items-center gap-3 option-btn shadow-sm" onclick="GameEngine.checkAnswer('${opt}')">
+                    <button type="button" class="btn btn-outline-light w-100 p-3 rounded-4 text-start d-flex align-items-center gap-3 option-btn shadow-sm" onclick="window.GameEngine.checkAnswer('${opt}')">
                         <span class="rounded-circle bg-primary bg-gradient text-white d-flex align-items-center justify-content-center fw-bold fs-6" style="width: 38px; height: 38px; min-width: 38px;">
                             ${opt.toUpperCase()}
                         </span>
@@ -400,20 +465,22 @@ const GameEngine = {
     }
 };
 
-// Immediate Fail-Safe Execution on Page Load
-(function() {
-    function start() {
-        if (!GameEngine.state.startTime) {
-            GameEngine.init();
-        }
+window.startGameArena = function() {
+    if (window.GameEngine) {
+        window.GameEngine.startArena();
     }
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(start, 10);
-    } else {
-        document.addEventListener('DOMContentLoaded', start);
+};
+
+// Event Listener Attachment for maximum compatibility across browsers
+document.addEventListener('DOMContentLoaded', function() {
+    const btnStart = document.getElementById('btnStartGame');
+    if (btnStart) {
+        btnStart.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.startGameArena();
+        });
     }
-    window.addEventListener('load', start);
-})();
+});
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
