@@ -608,6 +608,22 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Table Pagination Controls (10 Data per Halaman) -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top gap-2" id="paginationEssayContainer">
+                        <div class="small text-muted fw-semibold">
+                            Menampilkan <span id="essayPageStart" class="fw-bold text-dark">0</span> - <span id="essayPageEnd" class="fw-bold text-dark">0</span> dari <span id="essayTotalCount" class="fw-bold text-primary">0</span> data pengerjaan
+                        </div>
+                        <div class="d-flex gap-1.5 align-items-center" id="essayPaginationButtons">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-bold" id="btnPrevPage" onclick="changeEssayPage(-1)">
+                                <i class="bi bi-chevron-left me-1"></i>Sebelumnya
+                            </button>
+                            <div class="d-inline-flex gap-1" id="essayPageNumbers"></div>
+                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs" id="btnNextPage" onclick="changeEssayPage(1)">
+                                Lanjutkan <i class="bi bi-chevron-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1728,6 +1744,9 @@ function pollQuizLiveStatus() {
 }
 
 let currentEssayFilterStatus = '';
+let currentEssayPage = 1;
+const essayItemsPerPage = 10;
+let filteredEssayRows = [];
 
 function setGuruEssayFilter(status, btnElem) {
     currentEssayFilterStatus = status;
@@ -1748,6 +1767,74 @@ function setGuruEssayFilter(status, btnElem) {
     filterGuruEssaySubmissions();
 }
 
+function changeEssayPage(delta) {
+    const totalPages = Math.ceil(filteredEssayRows.length / essayItemsPerPage) || 1;
+    const newPage = currentEssayPage + delta;
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentEssayPage = newPage;
+        renderEssayPage();
+    }
+}
+
+function goToEssayPage(pageNum) {
+    currentEssayPage = pageNum;
+    renderEssayPage();
+}
+
+function renderEssayPage() {
+    const allRows = document.querySelectorAll('.guru-essay-row');
+    allRows.forEach(r => r.style.display = 'none');
+
+    const totalVisible = filteredEssayRows.length;
+    const totalPages = Math.ceil(totalVisible / essayItemsPerPage) || 1;
+
+    if (currentEssayPage > totalPages) currentEssayPage = totalPages;
+    if (currentEssayPage < 1) currentEssayPage = 1;
+
+    const startIdx = (currentEssayPage - 1) * essayItemsPerPage;
+    const endIdx = Math.min(startIdx + essayItemsPerPage, totalVisible);
+
+    for (let i = startIdx; i < endIdx; i++) {
+        const row = filteredEssayRows[i];
+        if (row) {
+            row.style.display = '';
+            const numCell = row.querySelector('.row-num');
+            if (numCell) numCell.textContent = (i + 1);
+        }
+    }
+
+    // Update Text Info
+    const elStart = document.getElementById('essayPageStart');
+    const elEnd = document.getElementById('essayPageEnd');
+    const elTotal = document.getElementById('essayTotalCount');
+
+    if (elStart) elStart.textContent = totalVisible > 0 ? (startIdx + 1) : 0;
+    if (elEnd) elEnd.textContent = endIdx;
+    if (elTotal) elTotal.textContent = totalVisible;
+
+    // Update Button Disabled States
+    const btnPrev = document.getElementById('btnPrevPage');
+    const btnNext = document.getElementById('btnNextPage');
+    if (btnPrev) btnPrev.disabled = (currentEssayPage <= 1);
+    if (btnNext) btnNext.disabled = (currentEssayPage >= totalPages || totalVisible === 0);
+
+    // Render Page Number Buttons
+    const pageNumContainer = document.getElementById('essayPageNumbers');
+    if (pageNumContainer) {
+        pageNumContainer.innerHTML = '';
+        if (totalPages > 1) {
+            for (let p = 1; p <= totalPages; p++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm rounded-pill px-2.5 py-1 fw-bold ' + (p === currentEssayPage ? 'btn-primary' : 'btn-outline-secondary');
+                btn.textContent = p;
+                btn.onclick = (function(page) { return function() { goToEssayPage(page); }; })(p);
+                pageNumContainer.appendChild(btn);
+            }
+        }
+    }
+}
+
 function filterGuruEssaySubmissions() {
     const searchVal = (document.getElementById('searchEssayInput')?.value || '').toLowerCase().trim();
     const kelasVal = (document.getElementById('filterKelasInput')?.value || '').toLowerCase().trim();
@@ -1755,7 +1842,7 @@ function filterGuruEssaySubmissions() {
     const statusVal = (document.getElementById('filterEssayStatus')?.value || currentEssayFilterStatus || '').toLowerCase().trim();
 
     const rows = document.querySelectorAll('.guru-essay-row');
-    let visibleIndex = 1;
+    filteredEssayRows = [];
 
     rows.forEach(row => {
         const rowText = (row.getAttribute('data-text') || '').toLowerCase();
@@ -1769,13 +1856,12 @@ function filterGuruEssaySubmissions() {
         const matchStatus = !statusVal || rowStatus === statusVal;
 
         if (matchSearch && matchKelas && matchJurusan && matchStatus) {
-            row.style.display = '';
-            const numCell = row.querySelector('.row-num');
-            if (numCell) numCell.textContent = visibleIndex++;
-        } else {
-            row.style.display = 'none';
+            filteredEssayRows.push(row);
         }
     });
+
+    currentEssayPage = 1;
+    renderEssayPage();
 }
 
 // Poll every 4 seconds for instant real-time responsiveness

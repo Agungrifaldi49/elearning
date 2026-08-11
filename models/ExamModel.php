@@ -721,6 +721,11 @@ class ExamModel extends BaseModel {
             (SELECT COUNT(*) FROM soal s2 LEFT JOIN jawaban_siswa js2 ON js2.soal_id = s2.id AND js2.siswa_id = hq.siswa_id AND js2.quiz_id = hq.quiz_id WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay' AND (js2.nilai IS NULL OR js2.id IS NULL)) as ungraded_essay_count,
             (SELECT COUNT(*) FROM soal s2 JOIN jawaban_siswa js2 ON js2.soal_id = s2.id AND js2.siswa_id = hq.siswa_id AND js2.quiz_id = hq.quiz_id WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay' AND js2.nilai IS NOT NULL) as graded_essay_count
             FROM hasil_quiz hq
+            INNER JOIN (
+                SELECT MAX(id) as max_id
+                FROM hasil_quiz
+                GROUP BY siswa_id, quiz_id
+            ) latest_hq ON hq.id = latest_hq.max_id
             JOIN quiz q ON hq.quiz_id = q.id
             JOIN mata_pelajaran map ON q.mapel_id = map.id
             JOIN siswa s ON hq.siswa_id = s.id
@@ -730,7 +735,7 @@ class ExamModel extends BaseModel {
         if ($guruId !== null) {
             $sql .= " WHERE q.guru_id = " . (int)$guruId;
         }
-        $sql .= " ORDER BY hq.finished_at DESC";
+        $sql .= " ORDER BY hq.finished_at DESC, hq.id DESC";
         return $this->db->query($sql)->fetchAll();
     }
 
