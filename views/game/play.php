@@ -2,116 +2,80 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
-<main class="main-content px-3 px-md-4">
+<main class="main-content px-2 px-md-4 py-3">
     <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-secondary rounded-pill px-3">
-                <i class="bi bi-arrow-left me-1"></i> Keluar Arena
+        <!-- Top Navigation Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold">
+                <i class="bi bi-arrow-left me-1"></i> Keluar Arena Game
             </a>
-            <button type="button" class="btn btn-outline-warning rounded-pill px-3" onclick="toggleArenaFullscreen()" id="btnFullscreenToggle">
-                <i class="bi bi-arrows-fullscreen me-1"></i> Mode Layar Penuh (Fullscreen)
+            <button type="button" class="btn btn-warning rounded-pill px-4 py-2 fw-bold text-dark shadow-sm hover-scale" onclick="toggleArenaFullscreen()" id="btnFullscreenHeader">
+                <i class="bi bi-arrows-fullscreen me-1"></i> Mode Layar Penuh (Fullscreen 🚀)
             </button>
         </div>
 
         <!-- Game Arena Card Container -->
-        <div class="card card-custom p-4 p-md-5 mb-4 shadow-lg border-0 rounded-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; min-height: 520px;" id="gameArenaCard">
+        <div class="card card-custom p-3 p-md-5 mb-4 shadow-lg border-0 rounded-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); color: white; min-height: 480px;" id="gameArenaCard">
 
             <!-- Arena Header Bar -->
-            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 pb-3 border-bottom border-secondary border-opacity-50">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 pb-3 border-bottom border-secondary border-opacity-50">
                 <div>
                     <?php if (strtolower(trim($_SESSION['user']['role_name'] ?? '')) === 'guru'): ?>
-                        <span class="badge bg-warning text-dark px-3 py-1 rounded-pill small mb-1 d-inline-block fw-bold">
+                        <span class="badge bg-warning text-dark px-3 py-1 rounded-pill small mb-1 d-inline-block fw-bold shadow-sm">
                             <i class="bi bi-eye-fill me-1"></i> Mode Pratinjau Guru (Uji Coba Arena)
                         </span>
                     <?php endif; ?>
-                    <h5 class="fw-bold mb-0 text-warning"><i class="bi bi-controller me-2"></i><?= htmlspecialchars($game['judul']) ?></h5>
-                    <small class="text-white-50"><?= htmlspecialchars($game['nama_mapel']) ?> | KKM Target: <?= $game['kkm'] ?> Poin</small>
+                    <h4 class="fw-bold mb-0 text-warning d-flex align-items-center gap-2">
+                        <i class="bi bi-controller text-danger"></i> <?= htmlspecialchars($game['judul']) ?>
+                    </h4>
+                    <small class="text-white-50 fs-6"><?= htmlspecialchars($game['nama_mapel']) ?> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong></small>
                 </div>
-                <div class="d-flex align-items-center gap-3">
+
+                <!-- HUD Status Badges -->
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <!-- Nyawa / Lives -->
-                    <div class="bg-black bg-opacity-40 px-3 py-1 rounded-pill d-flex align-items-center gap-1 border border-danger">
-                        <span class="small text-white-50 me-1">Nyawa:</span>
+                    <div class="bg-black bg-opacity-50 px-3 py-2 rounded-pill d-flex align-items-center gap-1 border border-danger border-opacity-50 shadow-sm">
+                        <small class="text-white-50 me-1 d-none d-sm-inline">Nyawa:</small>
                         <span id="livesContainer" class="fs-5">❤️❤️❤️</span>
                     </div>
 
                     <!-- Combo Streak -->
-                    <div class="bg-black bg-opacity-40 px-3 py-1 rounded-pill d-flex align-items-center gap-1 border border-warning">
-                        <span class="small text-white-50 me-1">Combo:</span>
+                    <div class="bg-black bg-opacity-50 px-3 py-2 rounded-pill d-flex align-items-center gap-1 border border-warning border-opacity-50 shadow-sm">
+                        <small class="text-white-50 me-1 d-none d-sm-inline">Combo:</small>
                         <span id="comboBadge" class="fw-bold text-warning fs-6">1x 🔥</span>
                     </div>
 
                     <!-- Score Badge -->
-                    <div class="bg-primary bg-gradient px-4 py-1 rounded-pill shadow">
-                        <span class="small text-white-50 me-1">Skor:</span>
+                    <div class="bg-primary bg-gradient px-3 px-sm-4 py-2 rounded-pill shadow border border-primary border-opacity-50">
+                        <small class="text-white-50 me-1">Skor:</small>
                         <span id="currentScore" class="fw-bold text-white fs-5">0</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Start Screen Overlay Container (Initial State) -->
-            <div id="startScreenOverlay" class="text-center py-4 px-2">
-                <div class="mb-3">
-                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold fs-6 shadow">
-                        <i class="bi bi-controller me-1"></i> ARENA KUIS SIAP DIMULAI
-                    </span>
-                </div>
-                <h2 class="fw-bold text-white mb-2 display-6"><?= htmlspecialchars($game['judul']) ?></h2>
-                <p class="text-white-50 max-w-xl mx-auto mb-4 fs-6">
-                    Mata Pelajaran: <strong><?= htmlspecialchars($game['nama_mapel']) ?></strong> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong>
-                </p>
-
-                <!-- Game Rules Info Box -->
-                <div class="row g-3 justify-content-center max-w-2xl mx-auto mb-4 text-start">
-                    <div class="col-12 col-md-4">
-                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
-                            <div class="fs-3 mb-1">❤️❤️❤️</div>
-                            <small class="text-white-50 d-block">Kesempatan</small>
-                            <span class="fw-bold text-white">3 Nyawa Permainan</span>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
-                            <div class="fs-3 mb-1">⏱️ <?= $game['durasi_per_soal'] ?>s</div>
-                            <small class="text-white-50 d-block">Timer per Soal</small>
-                            <span class="fw-bold text-warning"><?= $game['durasi_per_soal'] ?> Detik / Soal</span>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
-                            <div class="fs-3 mb-1">🔥 5x</div>
-                            <small class="text-white-50 d-block">Pengganda Skor</small>
-                            <span class="fw-bold text-info">Combo Streak Bonus</span>
-                        </div>
-                    </div>
-                </div>
-
-                <button type="button" class="btn btn-warning btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg text-dark fs-4 hover-scale" id="btnStartArena" onclick="GameEngine.startArena()">
-                    <i class="bi bi-play-circle-fill me-2 fs-3"></i> MULAI PERMAINAN (FULLSCREEN 🚀)
-                </button>
-            </div>
-
-            <!-- Timer Progress Bar Box (Hidden Initially) -->
-            <div id="timerBarContainer" class="progress bg-secondary bg-opacity-25 rounded-pill mb-4 d-none" style="height: 12px;">
+            <!-- Timer Progress Bar Box -->
+            <div id="timerBarContainer" class="progress bg-secondary bg-opacity-25 rounded-pill mb-4" style="height: 14px;">
                 <div id="gameTimerBar" class="progress-bar bg-warning progress-bar-striped progress-bar-animated rounded-pill" role="progressbar" style="width: 100%;"></div>
             </div>
 
-            <!-- Question Card Box (Hidden Initially) -->
-            <div id="quizBoxContainer" class="text-center py-4 px-2 d-none">
-                <div class="mb-2">
-                    <span class="badge bg-danger bg-opacity-75 text-white px-3 py-1 rounded-pill fw-semibold" id="questionCounter">Soal 1 dari <?= count($soalList) ?></span>
+            <!-- Question Card Box (Directly Active & Responsive) -->
+            <div id="quizBoxContainer" class="text-center py-2 py-md-4 px-1 px-md-3">
+                <div class="mb-3">
+                    <span class="badge bg-danger bg-opacity-90 text-white px-3 py-2 rounded-pill fw-bold fs-6 shadow-sm" id="questionCounter">Soal 1 dari <?= count($soalList) ?></span>
                 </div>
-                <h3 class="fw-bold text-white mb-4 px-md-5" id="questionText" style="line-height: 1.4;">
+
+                <h3 class="fw-bold text-white mb-4 px-md-4 fs-3 fs-md-2" id="questionText" style="line-height: 1.4; word-break: break-word;">
                     Loading Pertanyaan...
                 </h3>
 
-                <!-- Multiple Choice Options -->
+                <!-- Multiple Choice Options Grid -->
                 <div class="row g-3 max-w-2xl mx-auto text-start" id="optionsContainer">
                     <!-- Dynamic Answer Options -->
                 </div>
             </div>
 
             <!-- Feedback Popup Banner -->
-            <div id="feedbackBanner" class="alert position-absolute top-50 start-50 translate-middle shadow-lg rounded-4 text-center p-4 d-none" style="min-width: 320px; z-index: 1050;">
+            <div id="feedbackBanner" class="alert position-absolute top-50 start-50 translate-middle shadow-lg rounded-4 text-center p-4 d-none" style="min-width: 290px; max-width: 90%; z-index: 1050; backdrop-filter: blur(8px);">
                 <div id="feedbackIcon" class="display-3 mb-2"></div>
                 <h4 id="feedbackTitle" class="fw-bold mb-1"></h4>
                 <p id="feedbackDesc" class="small mb-0"></p>
@@ -124,7 +88,7 @@
 <div class="modal fade" id="modalEndGame" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg text-center p-4">
-            <div class="modal-body p-4">
+            <div class="modal-body p-3 p-md-4">
                 <div id="endGameIcon" class="display-1 mb-2">🏆</div>
                 <h3 id="endGameTitle" class="fw-bold text-dark mb-1">Permainan Selesai!</h3>
                 <div id="endGameStars" class="fs-2 text-warning mb-3">⭐⭐⭐</div>
@@ -163,9 +127,11 @@
 <script>
 function toggleArenaFullscreen() {
     const arenaCard = document.getElementById('gameArenaCard');
-    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    if (!arenaCard) return;
+
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
         if (arenaCard.requestFullscreen) {
-            arenaCard.requestFullscreen().catch(() => {});
+            arenaCard.requestFullscreen().catch(err => console.log('Fullscreen rejected:', err));
         } else if (arenaCard.webkitRequestFullscreen) {
             arenaCard.webkitRequestFullscreen();
         } else if (arenaCard.msRequestFullscreen) {
@@ -173,18 +139,20 @@ function toggleArenaFullscreen() {
         }
     } else {
         if (document.exitFullscreen) {
-            document.exitFullscreen().catch(() => {});
+            document.exitFullscreen().catch(err => console.log('Exit fullscreen rejected:', err));
         } else if (document.webkitExitFullscreen) {
             document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
         }
     }
 }
 
 const GameEngine = {
     data: {
-        gameId: <?= $game['id'] ?>,
-        kkm: <?= $game['kkm'] ?>,
-        timerDuration: <?= $game['durasi_per_soal'] ?>,
+        gameId: <?= (int)$game['id'] ?>,
+        kkm: <?= (int)$game['kkm'] ?>,
+        timerDuration: <?= (int)$game['durasi_per_soal'] ?>,
         questions: <?= json_encode($soalList, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>,
         csrfToken: '<?= Security::csrfToken() ?>',
         baseUrl: '<?= BASE_URL ?>'
@@ -200,26 +168,7 @@ const GameEngine = {
         timerInterval: null,
         timeLeft: 0,
         isAnswered: false,
-        isStarted: false
-    },
-
-    startArena: function() {
-        if (this.state.isStarted) return;
-        this.state.isStarted = true;
-
-        // Auto Request Fullscreen mode
-        toggleArenaFullscreen();
-
-        // Switch screens
-        const overlay = document.getElementById('startScreenOverlay');
-        const timerBox = document.getElementById('timerBarContainer');
-        const quizBox = document.getElementById('quizBoxContainer');
-
-        if (overlay) overlay.classList.add('d-none');
-        if (timerBox) timerBox.classList.remove('d-none');
-        if (quizBox) quizBox.classList.remove('d-none');
-
-        this.init();
+        isEnded: false
     },
 
     init: function() {
@@ -230,9 +179,9 @@ const GameEngine = {
             console.error('GameEngine Init Error:', err);
             const textEl = document.getElementById('questionText');
             if (textEl) {
-                textEl.textContent = 'Memulai permainan kuis...';
+                textEl.textContent = 'Memulai arena permainan...';
             }
-            setTimeout(() => { this.renderQuestion(); }, 200);
+            setTimeout(() => { this.renderQuestion(); }, 150);
         }
     },
 
@@ -264,7 +213,7 @@ const GameEngine = {
     renderQuestion: function() {
         if (!this.data.questions || !Array.isArray(this.data.questions) || this.data.questions.length === 0) {
             document.getElementById('questionCounter').textContent = "Informasi Game";
-            document.getElementById('questionText').innerHTML = "<div class='alert alert-warning text-dark border-0 rounded-4 p-4 my-2'><i class='bi bi-info-circle-fill me-2'></i>Bank soal untuk game ini sedang disiapkan. Silakan coba game lainnya atau hubungi Guru Pengampu.</div>";
+            document.getElementById('questionText').innerHTML = "<div class='alert alert-warning text-dark border-0 rounded-4 p-4 my-2'><i class='bi bi-info-circle-fill me-2'></i>Bank soal untuk game ini sedang disiapkan oleh Guru Pengampu. Silakan coba game lainnya.</div>";
             document.getElementById('optionsContainer').innerHTML = "";
             return;
         }
@@ -290,7 +239,7 @@ const GameEngine = {
                         <span class="rounded-circle bg-primary bg-gradient text-white d-flex align-items-center justify-content-center fw-bold fs-6" style="width: 38px; height: 38px; min-width: 38px;">
                             ${opt.toUpperCase()}
                         </span>
-                        <span class="fw-semibold text-white fs-6">${safeText}</span>
+                        <span class="fw-semibold text-white fs-6 flex-grow-1">${safeText}</span>
                     </button>
                 </div>
             `;
@@ -335,7 +284,7 @@ const GameEngine = {
 
             const comboMultiplier = Math.min(5, Math.floor(this.state.combo / 2) + 1);
             const timeBonus = Math.floor(this.state.timeLeft * 2);
-            const pointsGained = (q.poin || 10) * comboMultiplier + timeBonus;
+            const pointsGained = (parseInt(q.poin) || 10) * comboMultiplier + timeBonus;
 
             this.state.score += pointsGained;
 
@@ -353,7 +302,7 @@ const GameEngine = {
         setTimeout(() => {
             this.state.currentIdx++;
             this.renderQuestion();
-        }, 1600);
+        }, 1400);
     },
 
     handleTimeout: function() {
@@ -371,18 +320,22 @@ const GameEngine = {
         setTimeout(() => {
             this.state.currentIdx++;
             this.renderQuestion();
-        }, 1600);
+        }, 1400);
     },
 
     updateHUD: function() {
-        document.getElementById('currentScore').textContent = this.state.score;
-        document.getElementById('comboBadge').textContent = `${this.state.combo}x 🔥`;
+        const scoreEl = document.getElementById('currentScore');
+        const comboEl = document.getElementById('comboBadge');
+        const livesEl = document.getElementById('livesContainer');
+
+        if (scoreEl) scoreEl.textContent = this.state.score;
+        if (comboEl) comboEl.textContent = `${this.state.combo}x 🔥`;
 
         let hearts = '';
         for (let i = 0; i < 3; i++) {
             hearts += (i < this.state.lives) ? '❤️' : '🖤';
         }
-        document.getElementById('livesContainer').textContent = hearts;
+        if (livesEl) livesEl.textContent = hearts;
     },
 
     showFeedback: function(isSuccess, title, desc) {
@@ -391,17 +344,22 @@ const GameEngine = {
         const titleElem = document.getElementById('feedbackTitle');
         const descElem = document.getElementById('feedbackDesc');
 
+        if (!banner) return;
+
         banner.className = `alert position-absolute top-50 start-50 translate-middle shadow-lg rounded-4 text-center p-4 ${isSuccess ? 'alert-success border-success' : 'alert-danger border-danger'}`;
         icon.textContent = isSuccess ? '🎉' : '❌';
         titleElem.textContent = title;
         descElem.textContent = desc;
 
         banner.classList.remove('d-none');
-        setTimeout(() => banner.classList.add('d-none'), 1400);
+        setTimeout(() => banner.classList.add('d-none'), 1200);
     },
 
     endGame: function() {
+        if (this.state.isEnded) return;
+        this.state.isEnded = true;
         clearInterval(this.state.timerInterval);
+
         const elapsedTime = Math.round((Date.now() - this.state.startTime) / 1000);
         const isPassed = (this.state.score >= this.data.kkm);
 
@@ -434,10 +392,28 @@ const GameEngine = {
             body: formData
         }).catch(() => {});
 
-        const modal = new bootstrap.Modal(document.getElementById('modalEndGame'));
-        modal.show();
+        const modalEl = document.getElementById('modalEndGame');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
     }
 };
+
+// Immediate Fail-Safe Execution on Page Load
+(function() {
+    function start() {
+        if (!GameEngine.state.startTime) {
+            GameEngine.init();
+        }
+    }
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(start, 10);
+    } else {
+        document.addEventListener('DOMContentLoaded', start);
+    }
+    window.addEventListener('load', start);
+})();
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
