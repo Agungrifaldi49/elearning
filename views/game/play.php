@@ -269,6 +269,19 @@ window.GameEngine = {
         this.state.isEnded = true;
         clearInterval(this.state.timerInterval);
 
+        // Auto exit fullscreen on game completion
+        try {
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        } catch(e) {}
+
         const elapsedTime = Math.round((Date.now() - this.state.startTime) / 1000);
         const isPassed = (this.state.score >= this.data.kkm);
 
