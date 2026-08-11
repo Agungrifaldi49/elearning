@@ -411,17 +411,16 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                         foreach ($hasilQuizSubmissions as $hqItem) {
                             $tCount = (int)($hqItem['total_essay_count'] ?? 0);
                             $uCount = (int)($hqItem['ungraded_essay_count'] ?? 0);
-                            $stLulus = strtolower(trim($hqItem['status_lulus'] ?? ''));
                             $isBannedItem = (!empty($hqItem['status_banned']) || !empty($hqItem['pelanggaran_count']));
 
                             if ($tCount > 0) {
-                                if ($uCount > 0 || $stLulus === 'menunggu' || $isBannedItem) {
+                                if ($uCount > 0 || $isBannedItem) {
                                     $totalPendingEssay++;
                                 } else {
                                     $totalGradedEssay++;
                                 }
                             } else {
-                                if ($isBannedItem || $stLulus === 'menunggu') {
+                                if ($isBannedItem) {
                                     $totalPendingEssay++;
                                 } else {
                                     $totalAutoPg++;
@@ -527,11 +526,10 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                                     foreach ($hasilQuizSubmissions as $hq): 
                                         $tEssay = (int)($hq['total_essay_count'] ?? 0);
                                         $uEssay = (int)($hq['ungraded_essay_count'] ?? 0);
-                                        $stLulus = strtolower(trim($hq['status_lulus'] ?? ''));
                                         $isBanned = (!empty($hq['status_banned']) || !empty($hq['pelanggaran_count']));
                                         
                                         if ($tEssay > 0) {
-                                            if ($uEssay > 0 || $stLulus === 'menunggu' || $isBanned) {
+                                            if ($uEssay > 0 || $isBanned) {
                                                 $statusKey = 'pending'; // BELUM DINILAI
                                                 $rowStyle = 'style="background-color: #fffbeb !important;"';
                                                 $borderStyle = 'border-start border-4 border-warning';
@@ -541,7 +539,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                                                 $borderStyle = 'border-start border-4 border-success';
                                             }
                                         } else {
-                                            if ($isBanned || $stLulus === 'menunggu') {
+                                            if ($isBanned) {
                                                 $statusKey = 'pending'; // BELUM DINILAI (Banned student)
                                                 $rowStyle = 'style="background-color: #fff1f2 !important;"';
                                                 $borderStyle = 'border-start border-4 border-danger';
