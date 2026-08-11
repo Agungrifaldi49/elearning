@@ -1837,7 +1837,28 @@ function filterGuruEssaySubmissions() {
     const searchVal = (document.getElementById('searchEssayInput')?.value || '').toLowerCase().trim();
     const kelasVal = (document.getElementById('filterKelasInput')?.value || '').toLowerCase().trim();
     const jurusanVal = (document.getElementById('filterJurusanInput')?.value || '').toLowerCase().trim();
-    const statusVal = (document.getElementById('filterEssayStatus')?.value || currentEssayFilterStatus || '').toLowerCase().trim();
+    
+    const selectElem = document.getElementById('filterEssayStatus');
+    if (selectElem && selectElem.value !== undefined) {
+        currentEssayFilterStatus = selectElem.value;
+    }
+    const statusVal = (currentEssayFilterStatus || '').toLowerCase().trim();
+
+    // Sync active pill state
+    const pills = document.querySelectorAll('.essay-filter-pill');
+    pills.forEach(p => {
+        const pillOnClick = p.getAttribute('onclick') || '';
+        if (statusVal === '' && (pillOnClick.includes("''") || pillOnClick.includes('""'))) {
+            p.classList.add('active', 'btn-dark');
+            p.classList.remove('btn-outline-secondary');
+        } else if (statusVal !== '' && pillOnClick.includes("'" + statusVal + "'")) {
+            p.classList.add('active', 'btn-dark');
+            p.classList.remove('btn-outline-secondary');
+        } else {
+            p.classList.remove('active', 'btn-dark');
+            p.classList.add('btn-outline-secondary');
+        }
+    });
 
     const rows = document.querySelectorAll('.guru-essay-row');
     filteredEssayRows = [];
