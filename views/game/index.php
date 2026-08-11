@@ -4,7 +4,8 @@
 
 <?php
 $roleName = strtolower(trim($_SESSION['user']['role_name'] ?? ''));
-$isTeacherOrAdmin = in_array($roleName, ['guru', 'administrator', 'admin']);
+$isTeacher = ($roleName === 'guru');
+$isAdmin = ($roleName === 'administrator' || $roleName === 'admin');
 $isStudent = ($roleName === 'siswa');
 ?>
 
@@ -20,10 +21,14 @@ $isStudent = ($roleName === 'siswa');
                 </p>
             </div>
             <div>
-                <?php if ($isTeacherOrAdmin): ?>
+                <?php if ($isTeacher): ?>
                     <a href="<?= BASE_URL ?>index.php?url=game/create" class="btn btn-primary shadow-sm rounded-pill px-4 fw-bold">
                         <i class="bi bi-plus-circle me-1"></i> Buat Game Edukasi Baru
                     </a>
+                <?php elseif ($isAdmin): ?>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-3 py-2 rounded-pill small">
+                        <i class="bi bi-shield-lock-fill me-1 text-primary"></i> Mode Administrator (Read-Only / Memantau)
+                    </span>
                 <?php endif; ?>
             </div>
         </div>
@@ -36,9 +41,9 @@ $isStudent = ($roleName === 'siswa');
                     </div>
                     <h5 class="fw-bold text-dark mb-2">Belum Ada Game Edukasi Tersedia</h5>
                     <p class="text-muted small max-w-md mx-auto mb-4">
-                        <?= ($isTeacherOrAdmin) ? 'Ayo buat game edukasi interaktif pertama Anda untuk meningkatkan antusiasme belajar siswa!' : 'Belum ada game edukasi yang dipublikasikan oleh Bapak/Ibu Guru untuk kelas Anda.' ?>
+                        <?= ($isTeacher) ? 'Ayo buat game edukasi interaktif pertama Anda untuk meningkatkan antusiasme belajar siswa!' : (($isAdmin) ? 'Belum ada game edukasi yang dipublikasikan oleh Bapak/Ibu Guru.' : 'Belum ada game edukasi yang dipublikasikan oleh Bapak/Ibu Guru untuk kelas Anda.') ?>
                     </p>
-                    <?php if ($isTeacherOrAdmin): ?>
+                    <?php if ($isTeacher): ?>
                         <a href="<?= BASE_URL ?>index.php?url=game/create" class="btn btn-danger rounded-pill px-4 fw-bold shadow-sm">
                             <i class="bi bi-controller me-1"></i> Buat Game Sekarang
                         </a>
@@ -91,7 +96,7 @@ $isStudent = ($roleName === 'siswa');
                                         </span>
                                     </div>
 
-                                    <?php if ($roleName === 'siswa' && isset($g['my_best_score'])): ?>
+                                    <?php if ($isStudent && isset($g['my_best_score'])): ?>
                                         <div class="p-2 bg-light rounded-3 mb-3 d-flex justify-content-between align-items-center">
                                             <small class="text-muted">Skor Terbaik Anda:</small>
                                             <span class="fw-bold fs-6 <?= ($g['my_status'] === 'lulus') ? 'text-success' : 'text-danger' ?>">
@@ -103,25 +108,30 @@ $isStudent = ($roleName === 'siswa');
                                 </div>
 
                                 <div class="pt-3 border-top d-flex align-items-center justify-content-between gap-2">
-                                    <a href="<?= BASE_URL ?>index.php?url=game/leaderboard&id=<?= $g['id'] ?>" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-semibold" title="Papan Peringkat Top 10">
-                                        <i class="bi bi-trophy-fill text-warning me-1"></i> Peringkat
+                                    <a href="<?= BASE_URL ?>index.php?url=game/leaderboard&id=<?= $g['id'] ?>" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-semibold w-100 text-center" title="Papan Peringkat Top 15">
+                                        <i class="bi bi-trophy-fill text-warning me-1"></i> Papan Peringkat
                                     </a>
 
-                                    <div class="d-flex gap-1">
-                                        <?php if ($isTeacherOrAdmin): ?>
-                                            <form action="<?= BASE_URL ?>index.php?url=game/delete" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Game Edukasi ini?');">
-                                                <?= Security::csrfField() ?>
-                                                <input type="hidden" name="id" value="<?= $g['id'] ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle p-2" title="Hapus Game">
-                                                    <i class="bi bi-trash3"></i>
-                                                </button>
-                                            </form>
-                                        <?php endif; ?>
-
-                                        <a href="<?= BASE_URL ?>index.php?url=game/play&id=<?= $g['id'] ?>" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold shadow-sm">
-                                            <i class="bi bi-controller me-1"></i> <?= ($isStudent) ? 'Mainkan Game' : 'Pratinjau Arena' ?>
-                                        </a>
-                                    </div>
+                                    <?php if (!$isAdmin): ?>
+                                        <div class="d-flex gap-1">
+                                            <?php if ($isTeacher): ?>
+                                                <form action="<?= BASE_URL ?>index.php?url=game/delete" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Game Edukasi ini?');">
+                                                    <?= Security::csrfField() ?>
+                                                    <input type="hidden" name="id" value="<?= $g['id'] ?>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-circle p-2" title="Hapus Game">
+                                                        <i class="bi bi-trash3"></i>
+                                                    </button>
+                                                </form>
+                                                <a href="<?= BASE_URL ?>index.php?url=game/play&id=<?= $g['id'] ?>" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-sm text-nowrap">
+                                                    <i class="bi bi-eye me-1"></i> Pratinjau Arena
+                                                </a>
+                                            <?php elseif ($isStudent): ?>
+                                                <a href="<?= BASE_URL ?>index.php?url=game/play&id=<?= $g['id'] ?>" class="btn btn-sm btn-danger rounded-pill px-4 fw-bold shadow-sm text-nowrap">
+                                                    <i class="bi bi-controller me-1"></i> Mainkan Game
+                                                </a>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

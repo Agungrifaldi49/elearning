@@ -62,8 +62,8 @@ class GameController {
         $user = AuthHelper::user();
         $roleName = strtolower(trim($user['role_name'] ?? ''));
 
-        if ($roleName !== 'guru' && $roleName !== 'administrator' && $roleName !== 'admin') {
-            FlashHelper::setError('Hanya Guru / Pengajar yang berhak membuat Game Edukasi Baru.');
+        if ($roleName !== 'guru') {
+            FlashHelper::setError('Pembuatan Game Edukasi hanya dapat dilakukan oleh Guru Pengampu. Administrator hanya memiliki hak akses memantau (read-only).');
             header('Location: ' . BASE_URL . 'index.php?url=game');
             exit();
         }
@@ -82,12 +82,6 @@ class GameController {
             }
 
             $guruId = $this->getGuruId($user['id']);
-            if (!$guruId && $roleName === 'administrator') {
-                // Assign first available guru id for admin demo
-                $db = Database::getConnection();
-                $gRow = $db->query("SELECT id FROM guru LIMIT 1")->fetch();
-                $guruId = $gRow ? $gRow['id'] : 1;
-            }
 
             $gameData = [
                 'guru_id' => $guruId,
@@ -139,9 +133,15 @@ class GameController {
     public function play() {
         AuthHelper::requireLogin();
         $user = AuthHelper::user();
-        $roleName = strtolower($user['role_name'] ?? '');
-
+        $roleName = strtolower(trim($user['role_name'] ?? ''));
         $id = (int)($_GET['id'] ?? 0);
+
+        if ($roleName === 'administrator' || $roleName === 'admin') {
+            FlashHelper::setInfo('Administrator memiliki akses read-only (memantau Papan Peringkat & Statistik Hasil Game). Siswa yang mengerjakan sesuai ketentuan Guru.');
+            header('Location: ' . BASE_URL . 'index.php?url=game/leaderboard&id=' . $id);
+            exit();
+        }
+
         $gameModel = new GameModel();
 
         $game = $gameModel->getGameDetail($id);
@@ -231,6 +231,12 @@ class GameController {
         $user = AuthHelper::user();
         $roleName = strtolower(trim($user['role_name'] ?? ''));
 
+        if ($roleName !== 'guru') {
+            FlashHelper::setError('Penghapusan Game Edukasi hanya dapat dilakukan oleh Guru Pengampu. Administrator hanya memiliki akses monitoring / read-only.');
+            header('Location: ' . BASE_URL . 'index.php?url=game');
+            exit();
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
                 FlashHelper::setError('CSRF Token Invalid');
@@ -240,15 +246,14 @@ class GameController {
 
             $id = (int)($_POST['id'] ?? 0);
             $guruId = $this->getGuruId($user['id']);
-            $isAdmin = ($roleName === 'administrator' || $roleName === 'admin');
 
             $gameModel = new GameModel();
-            $res = $gameModel->deleteGame($id, $guruId, $isAdmin);
+            $res = $gameModel->deleteGame($id, $guruId, false);
 
             if ($res) {
                 FlashHelper::setSuccess('Game Edukasi berhasil dihapus.');
             } else {
-                FlashHelper::setError('Gagal menghapus Game Edukasi. Anda tidak memiliki hak akses.');
+                FlashHelper::setError('Gagal menghapus Game Edukasi. Anda hanya dapat menghapus game buatan Anda sendiri.');
             }
         }
 
