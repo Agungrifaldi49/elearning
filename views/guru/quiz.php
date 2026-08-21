@@ -439,24 +439,21 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-3 border-bottom">
                         <div class="d-flex flex-wrap gap-2 align-items-center">
                             <button type="button" class="btn btn-sm btn-dark rounded-pill fw-bold px-3 py-1.5 essay-filter-pill active" onclick="setGuruEssayFilter('', this)">
-                                <i class="bi bi-collection-fill me-1"></i> Semua (<span id="pillCountSemua"><?= $totalSubmissions ?></span>)
+                                <i class="bi bi-collection-fill me-1"></i> Semua (<span id="pillCountSemua"><?= count($hasilQuizSubmissions ?? []) ?></span>)
                             </button>
                             <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill fw-bold px-3 py-1.5 essay-filter-pill position-relative shadow-xs" onclick="setGuruEssayFilter('pending', this)">
-                                <i class="bi bi-exclamation-circle-fill me-1 text-danger"></i> ⏳ Belum Dinilai (<span id="pillCountPending"><?= $totalPendingEssay ?></span>)
-                                <?php if ($totalPendingEssay > 0): ?>
+                                <i class="bi bi-exclamation-circle-fill me-1 text-danger"></i> ⏳ Belum Dinilai (<span id="pillCountPending"><?= $pendingEssayCount ?></span>)
+                                <?php if ($pendingEssayCount > 0): ?>
                                     <span class="position-absolute top-0 start-100 translate-middle p-1.5 bg-danger border border-light rounded-circle"></span>
                                 <?php endif; ?>
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-success rounded-pill fw-bold px-3 py-1.5 essay-filter-pill" onclick="setGuruEssayFilter('graded', this)">
-                                <i class="bi bi-check-circle-fill me-1"></i> ✓ Selesai Dinilai (<span id="pillCountGraded"><?= $totalGradedEssay ?></span>)
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 py-1.5 essay-filter-pill" onclick="setGuruEssayFilter('pg_auto', this)">
-                                <i class="bi bi-robot me-1"></i> 🤖 Kuis PG (<span id="pillCountPg"><?= $totalAutoPg ?></span>)
+                                <i class="bi bi-check-circle-fill me-1"></i> ✓ Selesai Dinilai (<span id="pillCountGraded"><?= count($hasilQuizSubmissions ?? []) - $pendingEssayCount ?></span>)
                             </button>
                         </div>
 
                         <div class="text-muted small fw-semibold">
-                            Total: <span id="totalHeaderSubmissions" class="fw-bold text-dark"><?= $totalSubmissions ?></span> Pengerjaan Siswa
+                            Total: <span id="totalHeaderSubmissions" class="fw-bold text-dark"><?= count($hasilQuizSubmissions ?? []) ?></span> Pengerjaan Siswa
                         </div>
                     </div>
 
@@ -493,10 +490,9 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                         </div>
                         <div class="col-12 col-md-2">
                             <select id="filterEssayStatus" class="form-select fw-semibold" onchange="filterGuruEssaySubmissions()">
-                                <option value="">-- Status --</option>
-                                <option value="pending">⏳ Belum Dinilai</option>
-                                <option value="graded">✓ Selesai Dinilai</option>
-                                <option value="pg_auto">🤖 Kuis PG</option>
+                                <option value="">-- Semua Status --</option>
+                                <option value="pending">⏳ Belum Dinilai (Koreksi Pending / Suspend)</option>
+                                <option value="graded">✓ Selesai Dinilai (Tuntas / Kuis PG)</option>
                             </select>
                         </div>
                     </div>
@@ -549,7 +545,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                                 $rowStyle = 'style="background-color: #fff1f2 !important;"';
                                                 $borderStyle = 'border-start border-4 border-danger';
                                             } else {
-                                                $statusKey = 'pg_auto'; // KUIS PG OTOMATIS
+                                                $statusKey = 'graded'; // SELESAI DINILAI (Kuis PG Otomatis)
                                                 $rowStyle = '';
                                                 $borderStyle = 'border-start border-4 border-info';
                                             }
@@ -577,17 +573,29 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                             </td>
                                             <td>
                                                 <?php if ($statusKey === 'pending'): ?>
-                                                    <span class="badge bg-warning text-dark border border-warning-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs">
-                                                        <i class="bi bi-exclamation-circle-fill text-danger me-1"></i>Belum Dinilai <?= ($tEssay > 0) ? "({$uEssay}/{$tEssay} Essay Pending)" : "(Verifikasi)" ?>
-                                                    </span>
-                                                <?php elseif ($statusKey === 'graded'): ?>
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold">
-                                                        <i class="bi bi-check-circle-fill me-1"></i>Selesai Dinilai (<?= $tEssay ?> Essay)
-                                                    </span>
+                                                    <?php if ($tEssay > 0 && $uEssay > 0): ?>
+                                                        <span class="badge bg-warning text-dark border border-warning-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs">
+                                                            <i class="bi bi-exclamation-circle-fill text-danger me-1"></i>Belum Dinilai (<?= $uEssay ?>/<?= $tEssay ?> Essay Pending)
+                                                        </span>
+                                                    <?php elseif ($isBanned): ?>
+                                                        <span class="badge bg-danger text-white border border-danger-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs">
+                                                            <i class="bi bi-slash-circle-fill me-1"></i>Belum Dinilai (Suspend / Verifikasi)
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-warning text-dark border rounded-pill px-3 py-1.5 fw-bold">
+                                                            <i class="bi bi-hourglass-split me-1"></i>Belum Dinilai
+                                                        </span>
+                                                    <?php endif; ?>
                                                 <?php else: ?>
-                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold">
-                                                        <i class="bi bi-robot me-1"></i>Kuis PG (Terpenuhi Otomatis)
-                                                    </span>
+                                                    <?php if ($tEssay > 0): ?>
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold">
+                                                            <i class="bi bi-check-circle-fill me-1"></i>Selesai Dinilai (<?= $tEssay ?> Essay Selesai)
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold">
+                                                            <i class="bi bi-check-all me-1"></i>Selesai Dinilai (Kuis PG Otomatis)
+                                                        </span>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center">
@@ -595,13 +603,9 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                                     <button class="btn btn-sm btn-warning text-dark px-3 rounded-pill fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
                                                         <i class="bi bi-pencil-square me-1"></i> Koreksi Sekarang <?= ($uEssay > 0) ? "({$uEssay})" : "" ?>
                                                     </button>
-                                                <?php elseif ($statusKey === 'graded'): ?>
-                                                    <button class="btn btn-sm btn-outline-success px-3 rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
-                                                        <i class="bi bi-check2-all me-1"></i> Edit Nilai Essay
-                                                    </button>
                                                 <?php else: ?>
-                                                    <button class="btn btn-sm btn-outline-primary px-3 rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
-                                                        <i class="bi bi-eye me-1"></i> Lihat Hasil Kuis
+                                                    <button class="btn btn-sm btn-outline-success px-3 rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
+                                                        <i class="bi bi-pencil me-1"></i> <?= ($tEssay > 0) ? 'Edit Nilai Essay' : 'Lihat Hasil Kuis' ?>
                                                     </button>
                                                 <?php endif; ?>
                                             </td>
@@ -2184,8 +2188,7 @@ function filterGuruEssaySubmissions() {
         if (matchSearch && matchKelas && matchJurusan) {
             countSemua++;
             if (rowStatus === 'pending') countPending++;
-            else if (rowStatus === 'graded') countGraded++;
-            else if (rowStatus === 'pg_auto') countPg++;
+            else countGraded++;
 
             const matchStatus = !statusVal || rowStatus === statusVal;
             if (matchStatus) {
