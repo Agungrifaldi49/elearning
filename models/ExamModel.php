@@ -1019,4 +1019,17 @@ class ExamModel extends BaseModel {
             'matrix' => $matrix
         ];
     }
+
+    public function deleteHasilQuiz($quizId, $siswaId) {
+        $stmt1 = $this->db->prepare("DELETE FROM hasil_quiz WHERE quiz_id = ? AND siswa_id = ?");
+        $stmt1->execute([(int)$quizId, (int)$siswaId]);
+
+        $stmt2 = $this->db->prepare("DELETE FROM jawaban_siswa WHERE quiz_id = ? AND siswa_id = ?");
+        $stmt2->execute([(int)$quizId, (int)$siswaId]);
+
+        $stmt3 = $this->db->prepare("DELETE FROM hasil_quiz_history WHERE quiz_id = ? AND siswa_id = ?");
+        $stmt3->execute([(int)$quizId, (int)$siswaId]);
+
+        return true;
+    }
 }

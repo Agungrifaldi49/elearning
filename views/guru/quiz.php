@@ -611,9 +611,21 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                             </td>
                                             <td class="text-center">
                                                 <?php if ($statusKey === 'pending'): ?>
-                                                    <button class="btn btn-sm btn-warning text-dark px-3 rounded-pill fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
-                                                        <i class="bi bi-pencil-square me-1"></i> Koreksi Sekarang <?= ($uEssay > 0) ? "({$uEssay})" : "" ?>
-                                                    </button>
+                                                    <div class="d-flex justify-content-center gap-1.5 align-items-center flex-wrap">
+                                                        <button class="btn btn-sm btn-warning text-dark px-3 rounded-pill fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
+                                                            <i class="bi bi-pencil-square me-1"></i> Koreksi Sekarang <?= ($uEssay > 0) ? "({$uEssay})" : "" ?>
+                                                        </button>
+                                                        <form action="<?= BASE_URL ?>index.php?url=guru/quiz" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data pengerjaan kuis siswa ini? Data nilai dan jawaban akan dihapus permanen.');">
+                                                            <?= Security::csrfField() ?>
+                                                            <input type="hidden" name="action" value="delete_hasil_quiz">
+                                                            <input type="hidden" name="redirect_tab" value="koreksi">
+                                                            <input type="hidden" name="quiz_id" value="<?= $hq['quiz_id'] ?>">
+                                                            <input type="hidden" name="siswa_id" value="<?= $hq['siswa_id'] ?>">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill fw-bold px-2.5 py-1 hover-scale" style="font-size:0.78rem;" title="Hapus Data Pengerjaan Siswa">
+                                                                <i class="bi bi-trash-fill me-1"></i> Hapus
+                                                            </button>
+                                                        </form>
+                                                    </div>
                                                 <?php else: ?>
                                                     <button class="btn btn-sm btn-outline-success px-3 rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" style="font-size:0.78rem;">
                                                         <i class="bi bi-pencil me-1"></i> <?= ($tEssay > 0) ? 'Edit Nilai Essay' : 'Lihat Hasil Kuis' ?>

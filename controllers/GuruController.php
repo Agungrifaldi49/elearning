@@ -624,6 +624,12 @@ class GuruController {
                 $examModel->deleteSoal($soalId);
                 FlashHelper::setSuccess('Soal berhasil dihapus.');
 
+            } elseif ($action === 'delete_hasil_quiz') {
+                $quizId = (int)$_POST['quiz_id'];
+                $siswaId = (int)$_POST['siswa_id'];
+                $examModel->deleteHasilQuiz($quizId, $siswaId);
+                FlashHelper::setSuccess('Data pengerjaan kuis siswa berhasil dihapus.');
+
             } elseif ($action === 'grade_quiz_essay') {
                 $quizId = (int)$_POST['quiz_id'];
                 $siswaId = (int)$_POST['siswa_id'];
