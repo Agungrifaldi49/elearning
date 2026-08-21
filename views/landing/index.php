@@ -25,30 +25,32 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
 ?>
 
 <!-- Navbar Landing Page -->
-<nav class="navbar navbar-expand-lg navbar-dark fixed-top py-3 shadow" id="mainNavbar" style="background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%) !important; backdrop-filter: blur(10px); z-index: 1050;">
-    <div class="container">
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top py-2.5 shadow" id="mainNavbar" style="background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%) !important; backdrop-filter: blur(10px); z-index: 1050;">
+    <div class="container d-flex align-items-center justify-content-between flex-nowrap">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2 m-0 text-truncate" href="#" style="max-width: calc(100% - 60px);">
             <?php if ($logoUrl): ?>
-                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" class="rounded-3 bg-white p-1 shadow-sm" style="height:40px; object-fit:contain;">
+                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" class="rounded-3 bg-white p-1 shadow-sm flex-shrink-0" style="height:36px; width:36px; object-fit:contain;">
             <?php else: ?>
-                <div class="bg-warning text-dark rounded-3 d-flex align-items-center justify-content-center fw-bold fs-5 shadow-sm" style="width:40px; height:40px;">
+                <div class="bg-warning text-dark rounded-3 d-flex align-items-center justify-content-center fw-bold fs-5 shadow-sm flex-shrink-0" style="width:36px; height:36px;">
                     🎓
                 </div>
             <?php endif; ?>
-            <span class="fs-5 tracking-tight text-white font-heading"><?= $schoolName ?></span>
+            <span class="fs-6 fs-md-5 tracking-tight text-white font-heading text-truncate m-0"><?= $schoolName ?></span>
         </a>
-        <button class="navbar-toggler border-0 shadow-none text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic" aria-controls="navPublic" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
+        
+        <button class="navbar-toggler border-0 shadow-none text-white p-2 flex-shrink-0" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic" aria-controls="navPublic" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-list fs-2"></i>
         </button>
+
         <div class="collapse navbar-collapse" id="navPublic">
-            <ul class="navbar-nav ms-auto me-lg-4 gap-1 py-2 py-lg-0">
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 opacity-90" href="#profil"><i class="bi bi-info-circle me-1"></i> Profil</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 opacity-90" href="#fitur"><i class="bi bi-stars me-1"></i> Fitur LMS</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 opacity-90" href="#jurusan"><i class="bi bi-award me-1"></i> Jurusan</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 opacity-90" href="#guru"><i class="bi bi-people me-1"></i> Pengajar</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 opacity-90" href="#kontak"><i class="bi bi-geo-alt me-1"></i> Kontak</a></li>
+            <ul class="navbar-nav ms-auto me-lg-4 gap-1 py-3 py-lg-0 border-top border-white border-opacity-10 border-top-lg-0 mt-2 mt-lg-0">
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-3" href="#profil"><i class="bi bi-info-circle me-2"></i> Profil</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-3" href="#fitur"><i class="bi bi-stars me-2"></i> Fitur LMS</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-3" href="#jurusan"><i class="bi bi-award me-2"></i> Jurusan</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-3" href="#guru"><i class="bi bi-people me-2"></i> Pengajar</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-3" href="#kontak"><i class="bi bi-geo-alt me-2"></i> Kontak</a></li>
             </ul>
-            <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill shadow-sm d-inline-flex align-items-center gap-2">
+            <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 py-2.5 rounded-pill shadow-sm d-inline-flex align-items-center justify-content-center gap-2 w-100 w-lg-auto mb-2 mb-lg-0">
                 <i class="bi bi-box-arrow-in-right fs-5"></i>
                 <span>Masuk E-Learning</span>
             </a>
@@ -56,8 +58,8 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
     </div>
 </nav>
 
-<!-- Hero Banner Section (Clean padding-top: 120px to prevent navbar clipping) -->
-<section class="text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 40%, #073896 100%) !important; padding-top: 125px !important; padding-bottom: 70px !important;">
+<!-- Hero Banner Section -->
+<section class="text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 40%, #073896 100%) !important; padding-top: 110px !important; padding-bottom: 60px !important;">
     <div class="container">
         <div class="row align-items-center gy-5">
             <div class="col-lg-7 text-center text-lg-start">
