@@ -282,6 +282,30 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     letter-spacing: -0.02em;
 }
 
+/* Explicit Nav Link Alignment Rule for Landing Page */
+#mainNavbar .nav-link {
+    display: inline-flex !important;
+    align-items: center !important;
+    flex-direction: row !important;
+    white-space: nowrap !important;
+    font-size: 0.925rem !important;
+    font-weight: 600 !important;
+    color: rgba(255, 255, 255, 0.95) !important;
+    padding: 8px 14px !important;
+    border-radius: 999px !important;
+    transition: all 0.2s ease !important;
+}
+#mainNavbar .nav-link i {
+    display: inline-block !important;
+    margin-right: 6px !important;
+    font-size: 1.05rem !important;
+    line-height: 1 !important;
+}
+#mainNavbar .nav-link:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+}
+
 .landing-navbar {
     transition: all 0.3s ease;
     backdrop-filter: blur(16px);

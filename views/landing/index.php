@@ -43,14 +43,14 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
         </button>
 
         <div class="collapse navbar-collapse" id="navPublic">
-            <ul class="navbar-nav ms-auto me-lg-4 gap-1 py-3 py-lg-0 border-top border-white border-opacity-10 border-top-lg-0 mt-2 mt-lg-0">
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-3" href="#profil"><i class="bi bi-info-circle me-2"></i> Profil</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-3" href="#fitur"><i class="bi bi-stars me-2"></i> Fitur LMS</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-3" href="#jurusan"><i class="bi bi-award me-2"></i> Jurusan</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-3" href="#guru"><i class="bi bi-people me-2"></i> Pengajar</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-3" href="#kontak"><i class="bi bi-geo-alt me-2"></i> Kontak</a></li>
+            <ul class="navbar-nav ms-auto me-lg-3 gap-1 py-3 py-lg-0 border-top border-white border-opacity-10 border-top-lg-0 mt-2 mt-lg-0">
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-pill" href="#profil"><i class="bi bi-info-circle me-1.5"></i><span>Profil</span></a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-pill" href="#fitur"><i class="bi bi-stars me-1.5"></i><span>Fitur LMS</span></a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-pill" href="#jurusan"><i class="bi bi-award me-1.5"></i><span>Jurusan</span></a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-pill" href="#guru"><i class="bi bi-people me-1.5"></i><span>Pengajar</span></a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-pill" href="#kontak"><i class="bi bi-geo-alt me-1.5"></i><span>Kontak</span></a></li>
             </ul>
-            <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 py-2.5 rounded-pill shadow-sm d-inline-flex align-items-center justify-content-center gap-2 w-100 w-lg-auto mb-2 mb-lg-0">
+            <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill shadow-sm d-inline-flex align-items-center justify-content-center gap-2 w-100 w-lg-auto mb-2 mb-lg-0">
                 <i class="bi bi-box-arrow-in-right fs-5"></i>
                 <span>Masuk E-Learning</span>
             </a>
