@@ -707,6 +707,9 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
             <!-- TAB 4: LAPORAN & REKAP NILAI CBT -->
             <div class="tab-pane fade <?= $activeTab === 'laporan' ? 'show active' : '' ?>" id="tab-laporan" role="tabpanel">
                 <div class="table-card-custom p-4 border-top border-4 border-warning">
