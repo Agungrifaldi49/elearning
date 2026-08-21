@@ -176,6 +176,7 @@ class GameController {
                 'kelas_id' => (int)($_POST['kelas_id'] ?? 0),
                 'judul' => Security::sanitize($_POST['judul']),
                 'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? ''),
+                'tipe_game' => Security::sanitize($_POST['tipe_game'] ?? 'mario_run'),
                 'durasi_per_soal' => (int)($_POST['durasi_per_soal'] ?? 15),
                 'kkm' => (int)($_POST['kkm'] ?? 75)
             ];

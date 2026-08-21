@@ -256,7 +256,7 @@ class GameModel extends BaseModel {
         try {
             $stmtG = $this->db->prepare("
                 UPDATE game_edukasi 
-                SET mapel_id = ?, kelas_id = ?, judul = ?, deskripsi = ?, durasi_per_soal = ?, kkm = ?
+                SET mapel_id = ?, kelas_id = ?, judul = ?, deskripsi = ?, tipe_game = ?, durasi_per_soal = ?, kkm = ?
                 WHERE id = ?
             ");
             $stmtG->execute([
@@ -264,6 +264,7 @@ class GameModel extends BaseModel {
                 !empty($gameData['kelas_id']) ? (int)$gameData['kelas_id'] : null,
                 $gameData['judul'],
                 $gameData['deskripsi'] ?? '',
+                $gameData['tipe_game'] ?? 'mario_run',
                 (int)($gameData['durasi_per_soal'] ?? 15),
                 (int)($gameData['kkm'] ?? 75),
                 (int)$id
