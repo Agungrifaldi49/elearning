@@ -275,3 +275,100 @@ body {
 
 /* ============== Badge Pill Large ============== */
 .badge-pill-lg { padding: 8px 18px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
+
+/* ============== Landing Page Modern Styles & Misi Formatting ============== */
+.landing-navbar {
+    transition: all 0.3s ease;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(13, 110, 253, 0.92);
+}
+.landing-navbar.scrolled {
+    background: rgba(11, 87, 208, 0.98) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.landing-hero {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a4ecb 50%, #073896 100%);
+    position: relative;
+    overflow: hidden;
+}
+.landing-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(255,193,7,0.2) 0%, rgba(255,255,255,0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.card-hover-effect {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(0,0,0,0.06);
+}
+.card-hover-effect:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(13, 110, 253, 0.12);
+    border-color: rgba(13, 110, 253, 0.3);
+}
+
+.icon-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%);
+    color: #ffffff;
+}
+.icon-gradient-success {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    color: #ffffff;
+}
+.icon-gradient-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    color: #212529;
+}
+
+/* Styled Lists for Misi & Visi Content */
+.landing-misi-content ol {
+    padding-left: 1.25rem;
+    margin-bottom: 0.75rem;
+    list-style-type: decimal;
+}
+.landing-misi-content ol[type="a"] {
+    list-style-type: lower-alpha;
+}
+.landing-misi-content ol[type="A"] {
+    list-style-type: upper-alpha;
+}
+.landing-misi-content ul {
+    padding-left: 1.25rem;
+    margin-bottom: 0.75rem;
+    list-style-type: disc;
+}
+.landing-misi-content li {
+    margin-bottom: 0.4rem;
+    line-height: 1.5;
+}
+.landing-misi-content b, 
+.landing-misi-content strong {
+    font-weight: 700;
+    color: var(--bs-heading-color, #1e293b);
+}
+.landing-misi-content i, 
+.landing-misi-content em {
+    font-style: italic;
+}
+.landing-misi-content u {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: #0d6efd;
+}
+

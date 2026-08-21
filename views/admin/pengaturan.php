@@ -264,11 +264,32 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                             </div>
                             <div class="col-12 col-md-6">
                                 <label class="form-label small fw-bold">Isi Visi Sekolah</label>
-                                <textarea name="landing_visi_desc" class="form-control" rows="3" required><?= htmlspecialchars($settings['landing_visi_desc'] ?? 'Menjadi SMK Unggulan berstandar Nasional berbasis Teknologi & Imtaq.') ?></textarea>
+                                <textarea name="landing_visi_desc" class="form-control" rows="5" required><?= htmlspecialchars($settings['landing_visi_desc'] ?? 'Menjadi SMK Unggulan berstandar Nasional berbasis Teknologi & Imtaq.') ?></textarea>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label class="form-label small fw-bold">Isi Misi Sekolah</label>
-                                <textarea name="landing_misi_desc" class="form-control" rows="3" required><?= htmlspecialchars($settings['landing_misi_desc'] ?? 'Mengembangkan kurikulum industri & sertifikasi kompetensi keahlian.') ?></textarea>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-bold mb-0">Isi Misi Sekolah</label>
+                                    <small class="text-primary fw-medium"><i class="bi bi-magic me-1"></i>Format Teks & List</small>
+                                </div>
+                                <!-- Formatting Toolbar -->
+                                <div class="btn-toolbar gap-1 mb-2 bg-light p-1 rounded border" role="toolbar" aria-label="Toolbar Pengolah Kata Misi">
+                                    <div class="btn-group btn-group-sm me-1">
+                                        <button type="button" class="btn btn-outline-dark fw-bold" onclick="insertMisiTag('<b>', '</b>')" title="Tebal (Bold)"><i class="bi bi-type-bold"></i> B</button>
+                                        <button type="button" class="btn btn-outline-dark fst-italic" onclick="insertMisiTag('<i>', '</i>')" title="Miring (Italic)"><i class="bi bi-type-italic"></i> I</button>
+                                        <button type="button" class="btn btn-outline-dark text-decoration-underline" onclick="insertMisiTag('<u>', '</u>')" title="Garis Bawah (Underline)"><i class="bi bi-type-underline"></i> U</button>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary" onclick="insertMisiList('ol-1')" title="List Angka (1, 2, 3)"><i class="bi bi-list-ol"></i> List Angka (1,2,3)</button>
+                                        <button type="button" class="btn btn-outline-primary" onclick="insertMisiList('ol-a')" title="List Huruf (a, b, c)"><i class="bi bi-list-nested"></i> List Huruf (a,b,c)</button>
+                                        <button type="button" class="btn btn-outline-primary" onclick="insertMisiList('ul')" title="List Bullets (•)"><i class="bi bi-list-ul"></i> Bullets</button>
+                                    </div>
+                                </div>
+                                <textarea id="landingMisiInput" name="landing_misi_desc" class="form-control font-monospace" rows="5" required placeholder="Tuliskan misi sekolah disini..."><?= htmlspecialchars($settings['landing_misi_desc'] ?? 'Mengembangkan kurikulum industri & sertifikasi kompetensi keahlian.') ?></textarea>
+                                
+                                <div class="mt-2 p-2 bg-white rounded border border-info border-opacity-25 shadow-sm">
+                                    <small class="fw-bold text-info d-block mb-1"><i class="bi bi-eye-fill me-1"></i> Live Preview Tampilan Misi:</small>
+                                    <div id="misiLivePreview" class="small text-dark p-2 rounded bg-light border"></div>
+                                </div>
                             </div>
                             <div class="col-12">
                                 <label class="form-label small fw-bold">URL Video Youtube Profil (Embed / Watch Link)</label>
@@ -315,5 +336,64 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
 
 </div>
 </main>
+
+<script>
+function updateMisiPreview() {
+    const input = document.getElementById('landingMisiInput');
+    const preview = document.getElementById('misiLivePreview');
+    if (input && preview) {
+        let val = input.value;
+        if (!val.trim()) {
+            preview.innerHTML = '<span class="text-muted fst-italic">Pratinjau misi kosong...</span>';
+        } else {
+            preview.innerHTML = val;
+        }
+    }
+}
+
+function insertMisiTag(openTag, closeTag) {
+    const textarea = document.getElementById('landingMisiInput');
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = textarea.value.substring(start, end);
+    const replacement = openTag + (selected || 'teks') + closeTag;
+    
+    textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+    textarea.focus();
+    textarea.selectionStart = start + openTag.length;
+    textarea.selectionEnd = start + openTag.length + (selected ? selected.length : 4);
+    updateMisiPreview();
+}
+
+function insertMisiList(type) {
+    const textarea = document.getElementById('landingMisiInput');
+    if (!textarea) return;
+
+    let snippet = '';
+    if (type === 'ol-1') {
+        snippet = "\n<ol>\n  <li>Menyiapkan sumber daya manusia kompeten.</li>\n  <li>Mengembangkan kerja sama dengan dunia industri.</li>\n  <li>Meningkatkan prestasi akademis dan non-akademis.</li>\n</ol>\n";
+    } else if (type === 'ol-a') {
+        snippet = "\n<ol type=\"a\">\n  <li>Meningkatkan disiplin dan imtaq.</li>\n  <li>Memperluas sertifikasi kompetensi.</li>\n  <li>Menjalin kemitraan dengan IDUKA.</li>\n</ol>\n";
+    } else if (type === 'ul') {
+        snippet = "\n<ul>\n  <li>Kurikulum berbasis industri.</li>\n  <li>Pembelajaran digital terpadu.</li>\n  <li>Pengembangan karakter unggul.</li>\n</ul>\n";
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    textarea.value = textarea.value.substring(0, start) + snippet + textarea.value.substring(end);
+    textarea.focus();
+    updateMisiPreview();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('landingMisiInput');
+    if (input) {
+        input.addEventListener('input', updateMisiPreview);
+        updateMisiPreview();
+    }
+});
+</script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
