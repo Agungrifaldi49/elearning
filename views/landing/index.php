@@ -25,13 +25,13 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
 ?>
 
 <!-- Navbar Landing Page -->
-<nav class="navbar navbar-expand-lg navbar-dark fixed-top py-3 shadow-sm" id="mainNavbar" style="background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%) !important; backdrop-filter: blur(10px);">
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top py-3 shadow" id="mainNavbar" style="background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%) !important; backdrop-filter: blur(10px); z-index: 1050;">
     <div class="container">
         <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
             <?php if ($logoUrl): ?>
-                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" class="rounded-3 bg-white p-1 shadow-sm" style="height:38px; object-fit:contain;">
+                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" class="rounded-3 bg-white p-1 shadow-sm" style="height:40px; object-fit:contain;">
             <?php else: ?>
-                <div class="bg-warning text-dark rounded-3 d-flex align-items-center justify-content-center fw-bold fs-5 shadow-sm" style="width:38px; height:38px;">
+                <div class="bg-warning text-dark rounded-3 d-flex align-items-center justify-content-center fw-bold fs-5 shadow-sm" style="width:40px; height:40px;">
                     🎓
                 </div>
             <?php endif; ?>
@@ -56,9 +56,9 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
     </div>
 </nav>
 
-<!-- Hero Banner Section (Guaranteed High Contrast Gradient) -->
-<section class="text-white pt-5 pb-5 position-relative overflow-hidden" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 40%, #073896 100%) !important;">
-    <div class="container py-5 my-lg-4 mt-4">
+<!-- Hero Banner Section (Clean padding-top: 120px to prevent navbar clipping) -->
+<section class="text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 40%, #073896 100%) !important; padding-top: 125px !important; padding-bottom: 70px !important;">
+    <div class="container">
         <div class="row align-items-center gy-5">
             <div class="col-lg-7 text-center text-lg-start">
                 <div class="d-inline-flex align-items-center gap-2 bg-white px-3 py-2 rounded-pill mb-4 shadow">
@@ -153,20 +153,6 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
                 <div class="p-2">
                     <h2 class="fw-extrabold text-danger mb-0 font-heading">24/7</h2>
                     <span class="small text-dark fw-bold d-flex align-items-center justify-content-center gap-1"><i class="bi bi-shield-check text-danger me-1"></i> Akses KBM &amp; Ujian</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-                <div class="p-2">
-                    <h2 class="fw-extrabold text-warning mb-0 font-heading"><?= count($guruList ?? []) ?>+</h2>
-                    <span class="small text-muted fw-semibold">Guru & Pengajar Professional</span>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="p-2">
-                    <h2 class="fw-extrabold text-danger mb-0 font-heading">24/7</h2>
-                    <span class="small text-muted fw-semibold">Akses KBM & Ujian Online</span>
                 </div>
             </div>
         </div>
