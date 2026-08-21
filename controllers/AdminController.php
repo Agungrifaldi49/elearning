@@ -369,6 +369,28 @@ class AdminController {
                 ];
                 $settingsModel->saveBatch($updateData);
                 $flashSuccess = 'Konfigurasi SMTP Email berhasil disimpan!';
+            } elseif ($section === 'landing') {
+                $updateData = [
+                    'landing_hero_badge' => Security::sanitize($_POST['landing_hero_badge'] ?? ''),
+                    'landing_hero_title' => Security::sanitize($_POST['landing_hero_title'] ?? ''),
+                    'landing_hero_desc' => Security::sanitize($_POST['landing_hero_desc'] ?? ''),
+                    'landing_hero_card_title' => Security::sanitize($_POST['landing_hero_card_title'] ?? ''),
+                    'landing_hero_card_desc' => Security::sanitize($_POST['landing_hero_card_desc'] ?? ''),
+                    'landing_profil_tag' => Security::sanitize($_POST['landing_profil_tag'] ?? ''),
+                    'landing_profil_title' => Security::sanitize($_POST['landing_profil_title'] ?? ''),
+                    'landing_profil_desc' => Security::sanitize($_POST['landing_profil_desc'] ?? ''),
+                    'landing_visi_title' => Security::sanitize($_POST['landing_visi_title'] ?? ''),
+                    'landing_visi_desc' => Security::sanitize($_POST['landing_visi_desc'] ?? ''),
+                    'landing_misi_title' => Security::sanitize($_POST['landing_misi_title'] ?? ''),
+                    'landing_misi_desc' => Security::sanitize($_POST['landing_misi_desc'] ?? ''),
+                    'landing_video_url' => trim($_POST['landing_video_url'] ?? ''),
+                    'landing_kontak_tag' => Security::sanitize($_POST['landing_kontak_tag'] ?? ''),
+                    'landing_kontak_title' => Security::sanitize($_POST['landing_kontak_title'] ?? ''),
+                    'landing_email' => Security::sanitize($_POST['landing_email'] ?? ''),
+                    'landing_maps_url' => trim($_POST['landing_maps_url'] ?? ''),
+                ];
+                $settingsModel->saveBatch($updateData);
+                $flashSuccess = 'Pengaturan Halaman Landing & Visi Misi berhasil disimpan!';
             }
         }
 

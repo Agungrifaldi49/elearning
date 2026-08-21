@@ -27,6 +27,11 @@
             </button>
         </li>
         <li class="nav-item">
+            <button class="nav-link fw-bold" id="landing-tab" data-bs-toggle="tab" data-bs-target="#landingTab" type="button">
+                <i class="bi bi-window-stack me-1"></i> Halaman Landing & Visi Misi
+            </button>
+        </li>
+        <li class="nav-item">
             <button class="nav-link fw-bold" id="smtp-tab" data-bs-toggle="tab" data-bs-target="#smtpTab" type="button">
                 <i class="bi bi-envelope-at me-1"></i> Pengaturan SMTP Email
             </button>
@@ -188,6 +193,118 @@
                     </div>
                 </div>
                 <small class="text-muted">Gunakan API Key ini untuk integrasi ke sistem SIMAK, Absensi Mesin Biometrik, atau Android App.</small>
+            </div>
+        </div>
+
+        <!-- Tab 5: Landing Page & Visi Misi -->
+        <div class="tab-pane fade" id="landingTab" role="tabpanel">
+            <div class="card-custom p-4 p-md-5">
+                <form action="<?= BASE_URL ?>index.php?url=admin/pengaturan" method="POST">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="section" value="landing">
+
+                    <!-- Section 1: Hero Banner -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-window-fullscreen me-2"></i>1. Bagian Hero & Banner Utama
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Hero Badge (Pill)</label>
+                                <input type="text" name="landing_hero_badge" class="form-control" value="<?= htmlspecialchars($settings['landing_hero_badge'] ?? 'Portal Pembelajaran Digital') ?>" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Judul Utama Hero (H1)</label>
+                                <input type="text" name="landing_hero_title" class="form-control" value="<?= htmlspecialchars($settings['landing_hero_title'] ?? 'E-Learning SMK Muthia Harapan Cicalengka') ?>" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Deskripsi Sub-Hero</label>
+                                <textarea name="landing_hero_desc" class="form-control" rows="2" required><?= htmlspecialchars($settings['landing_hero_desc'] ?? 'Sistem Manajemen Pembelajaran Digital Interaktif, Transparan, dan Modern untuk Membentuk Generasi Unggul Siap Kerja.') ?></textarea>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Judul Kartu Fitur Hero</label>
+                                <input type="text" name="landing_hero_card_title" class="form-control" value="<?= htmlspecialchars($settings['landing_hero_card_title'] ?? 'KBM Digital Terpadu') ?>" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Deskripsi Kartu Fitur Hero</label>
+                                <input type="text" name="landing_hero_card_desc" class="form-control" value="<?= htmlspecialchars($settings['landing_hero_card_desc'] ?? 'Materi, CBT, Quiz, Absensi QR Code, & Laporan Real-time') ?>" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Profil & Visi Misi -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-file-text-fill me-2"></i>2. Profil Sekolah, Visi & Misi
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold">Sub-Tag Profil</label>
+                                <input type="text" name="landing_profil_tag" class="form-control" value="<?= htmlspecialchars($settings['landing_profil_tag'] ?? 'Profil Sekolah') ?>" required>
+                            </div>
+                            <div class="col-12 col-md-8">
+                                <label class="form-label small fw-bold">Judul Utama Profil</label>
+                                <input type="text" name="landing_profil_title" class="form-control" value="<?= htmlspecialchars($settings['landing_profil_title'] ?? 'Mencetak Lulusan Berkarakter & Competent') ?>" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Deskripsi Profil Sekolah</label>
+                                <textarea name="landing_profil_desc" class="form-control" rows="3" required><?= htmlspecialchars($settings['landing_profil_desc'] ?? 'SMK Muthia Harapan Cicalengka berkomitmen memberikan pendidikan kejuruan berkualitas tinggi berbasis teknologi informasi dan industri modern di Jawa Barat.') ?></textarea>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Judul Visi</label>
+                                <input type="text" name="landing_visi_title" class="form-control" value="<?= htmlspecialchars($settings['landing_visi_title'] ?? 'Visi Utama') ?>" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Judul Misi</label>
+                                <input type="text" name="landing_misi_title" class="form-control" value="<?= htmlspecialchars($settings['landing_misi_title'] ?? 'Misi Presisi') ?>" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Isi Visi Sekolah</label>
+                                <textarea name="landing_visi_desc" class="form-control" rows="3" required><?= htmlspecialchars($settings['landing_visi_desc'] ?? 'Menjadi SMK Unggulan berstandar Nasional berbasis Teknologi & Imtaq.') ?></textarea>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Isi Misi Sekolah</label>
+                                <textarea name="landing_misi_desc" class="form-control" rows="3" required><?= htmlspecialchars($settings['landing_misi_desc'] ?? 'Mengembangkan kurikulum industri & sertifikasi kompetensi keahlian.') ?></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">URL Video Youtube Profil (Embed / Watch Link)</label>
+                                <input type="text" name="landing_video_url" class="form-control" value="<?= htmlspecialchars($settings['landing_video_url'] ?? 'https://www.youtube.com/embed/dQw4w9WgXcQ') ?>" placeholder="https://www.youtube.com/embed/dQw4w9WgXcQ">
+                                <small class="text-muted">Format rekomendasi: <code>https://www.youtube.com/embed/VIDEO_ID</code></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Kontak & Google Maps -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary border-bottom pb-2 mb-3">
+                            <i class="bi bi-geo-alt-fill me-2"></i>3. Kontak & Google Maps Embed
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold">Tag Kontak</label>
+                                <input type="text" name="landing_kontak_tag" class="form-control" value="<?= htmlspecialchars($settings['landing_kontak_tag'] ?? 'Hubungi Kami') ?>" required>
+                            </div>
+                            <div class="col-12 col-md-8">
+                                <label class="form-label small fw-bold">Judul Kontak</label>
+                                <input type="text" name="landing_kontak_title" class="form-control" value="<?= htmlspecialchars($settings['landing_kontak_title'] ?? 'Lokasi & Kontak Sekolah') ?>" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Email Resmi Sekolah</label>
+                                <input type="email" name="landing_email" class="form-control" value="<?= htmlspecialchars($settings['landing_email'] ?? 'info@smkmh-cicalengka.sch.id') ?>" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">URL Embed Google Maps</label>
+                                <input type="text" name="landing_maps_url" class="form-control" value="<?= htmlspecialchars($settings['landing_maps_url'] ?? 'https://maps.google.com/maps?q=Cicalengka&t=&z=13&ie=UTF8&iwloc=&output=embed') ?>" placeholder="https://maps.google.com/maps?q=...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary fw-bold px-4">
+                            <i class="bi bi-save me-1"></i> Simpan Halaman Landing & Visi Misi
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
