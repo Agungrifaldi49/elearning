@@ -1162,4 +1162,149 @@ class GuruController {
         ]);
         exit();
     }
+
+    public function cetakCbtReportPdf() {
+        AuthHelper::requireRole(['guru', 'administrator']);
+        $guru = $this->getGuruInfo();
+        $guruId = $guru ? $guru['id'] : null;
+
+        $roleName = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $queryGuruId = ($roleName === 'administrator') ? null : $guruId;
+
+        $examModel = new ExamModel();
+        $academicModel = new AcademicModel();
+
+        $reportQuizId = $_GET['report_quiz_id'] ?? 'all';
+        $reportKelasId = !empty($_GET['report_kelas_id']) ? (int)$_GET['report_kelas_id'] : null;
+
+        $quizReportDetail = null;
+        if ($reportQuizId !== 'all' && (int)$reportQuizId > 0) {
+            $quizReportDetail = $examModel->getDetailedReportByQuiz((int)$reportQuizId);
+        }
+        $rekapCbtMatrix = $examModel->getRekapNilaiCbtMatrixByGuru($queryGuruId, $reportKelasId);
+
+        require_once ROOT_PATH . 'views/guru/cetak_cbt_report.php';
+    }
+
+    public function exportCbtReportExcel() {
+        AuthHelper::requireRole(['guru', 'administrator']);
+        $guru = $this->getGuruInfo();
+        $guruId = $guru ? $guru['id'] : null;
+
+        $roleName = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $queryGuruId = ($roleName === 'administrator') ? null : $guruId;
+
+        $examModel = new ExamModel();
+
+        $reportQuizId = $_GET['report_quiz_id'] ?? 'all';
+        $reportKelasId = !empty($_GET['report_kelas_id']) ? (int)$_GET['report_kelas_id'] : null;
+
+        header('Content-Type: text/csv; charset=utf-8');
+
+        if ($reportQuizId !== 'all' && (int)$reportQuizId > 0) {
+            $quizReport = $examModel->getDetailedReportByQuiz((int)$reportQuizId);
+            $qInfo = $quizReport['quiz'] ?? [];
+            $quizTitle = preg_replace('/[^A-Za-z0-9_-]/', '_', $qInfo['judul'] ?? 'Quiz');
+            $fileName = "Rekap_Nilai_CBT_{$quizTitle}_" . date('Ymd_His') . ".csv";
+
+            header('Content-Disposition: attachment; filename=' . $fileName);
+            $output = fopen('php://output', 'w');
+            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+            fwrite($output, "sep=;\n");
+
+            fputcsv($output, ['LAPORAN REKAPITULASI HASIL EVALUASI QUIZ / UJIAN CBT'], ';');
+            fputcsv($output, ['SMK MUTHIA HARAPAN CICALENGKA'], ';');
+            fputcsv($output, ['Judul Paket', $qInfo['judul'] ?? '-'], ';');
+            fputcsv($output, ['Mata Pelajaran', $qInfo['nama_mapel'] ?? '-'], ';');
+            fputcsv($output, ['Kelas', $qInfo['nama_kelas'] ?? '-'], ';');
+            fputcsv($output, ['Tanggal Eksport', date('d/m/Y H:i:s')], ';');
+            fputcsv($output, [''], ';');
+
+            fputcsv($output, ['No', 'NISN', 'NIS', 'Nama Siswa', 'Kelas', 'Status Pengerjaan', 'Attempt', 'Waktu Selesai', 'Nilai Quiz', 'Keterangan Status'], ';');
+
+            $no = 1;
+            foreach (($quizReport['report_data'] ?? []) as $item) {
+                $st = $item['siswa'];
+                $sub = $item['submission'];
+                $score = $item['score'];
+                $status = $item['status'];
+
+                $statusLabel = 'Belum Ada Data';
+                if ($status === 'lulus') $statusLabel = 'LULUS (>= KKM 70)';
+                elseif ($status === 'tidak_lulus') $statusLabel = 'BELUM TUNTAS';
+                elseif ($status === 'menunggu_essay') $statusLabel = 'PERLU KOREKSI ESSAY';
+                elseif ($status === 'belum_mengerjakan') $statusLabel = 'BELUM MENGERJAKAN';
+
+                fputcsv($output, [
+                    $no++,
+                    $st['nisn'] ?: '-',
+                    $st['nis'] ?: '-',
+                    $st['nama_lengkap'],
+                    $st['nama_kelas'],
+                    $sub ? 'Sudah Mengerjakan' : 'Belum Mengerjakan',
+                    $sub ? ($sub['attempt_count'] . 'x') : '-',
+                    $sub && !empty($sub['finished_at']) ? date('d/m/Y H:i', strtotime($sub['finished_at'])) : '-',
+                    $score !== null ? number_format($score, 1) : '-',
+                    $statusLabel
+                ], ';');
+            }
+            fclose($output);
+            exit();
+
+        } else {
+            $rekapMatrix = $examModel->getRekapNilaiCbtMatrixByGuru($queryGuruId, $reportKelasId);
+            $quizzes = $rekapMatrix['quizzes'] ?? [];
+            $matrix = $rekapMatrix['matrix'] ?? [];
+
+            $fileName = "Rekapitulasi_Matrix_Nilai_CBT_" . date('Ymd_His') . ".csv";
+            header('Content-Disposition: attachment; filename=' . $fileName);
+            $output = fopen('php://output', 'w');
+            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+            fwrite($output, "sep=;\n");
+
+            fputcsv($output, ['REKAPITULASI MATRIX HASIL SELURUH QUIZ & UJIAN CBT'], ';');
+            fputcsv($output, ['SMK MUTHIA HARAPAN CICALENGKA'], ';');
+            fputcsv($output, ['Tanggal Eksport', date('d/m/Y H:i:s')], ';');
+            fputcsv($output, [''], ';');
+
+            $headerRow = ['No', 'NISN', 'NIS', 'Nama Siswa', 'Kelas'];
+            foreach ($quizzes as $qz) {
+                $headerRow[] = $qz['judul'] . ' (' . strtoupper($qz['kategori'] ?? 'Kuis') . ')';
+            }
+            $headerRow[] = 'RATA-RATA NILAI AKHIR';
+            $headerRow[] = 'PREDIKAT';
+
+            fputcsv($output, $headerRow, ';');
+
+            $no = 1;
+            foreach ($matrix as $rowM) {
+                $stM = $rowM['siswa'];
+                $scMap = $rowM['scores'];
+                $finalAvg = $rowM['final_avg'];
+                $predikat = $rowM['predikat'];
+                $predikatLabel = $rowM['predikat_label'];
+
+                $dataRow = [
+                    $no++,
+                    $stM['nisn'] ?: '-',
+                    $stM['nis'] ?: '-',
+                    $stM['nama_lengkap'],
+                    $stM['nama_kelas']
+                ];
+
+                foreach ($quizzes as $qz) {
+                    $qId = $qz['id'];
+                    $val = $scMap[$qId] ?? null;
+                    $dataRow[] = $val !== null ? number_format($val, 1) : '-';
+                }
+
+                $dataRow[] = number_format($finalAvg, 1);
+                $dataRow[] = "{$predikat} ({$predikatLabel})";
+
+                fputcsv($output, $dataRow, ';');
+            }
+            fclose($output);
+            exit();
+        }
+    }
 }

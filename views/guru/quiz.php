@@ -791,9 +791,12 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                 </div>
                                 <div class="col-lg-5 text-lg-end">
                                     <div class="d-flex justify-content-lg-end gap-2 flex-wrap">
-                                        <button onclick="window.print()" class="btn btn-sm btn-outline-dark rounded-pill fw-bold px-3">
-                                            <i class="bi bi-printer-fill me-1"></i> Cetak Laporan
-                                        </button>
+                                        <a href="<?= BASE_URL ?>index.php?url=guru/cetakCbtReportPdf&report_quiz_id=<?= $reportQuizId ?>&report_kelas_id=<?= $reportKelasId ?>" target="_blank" class="btn btn-sm btn-dark rounded-pill fw-bold px-3 shadow-xs">
+                                            <i class="bi bi-printer-fill me-1"></i> Cetak Laporan PDF
+                                        </a>
+                                        <a href="<?= BASE_URL ?>index.php?url=guru/exportCbtReportExcel&report_quiz_id=<?= $reportQuizId ?>&report_kelas_id=<?= $reportKelasId ?>" class="btn btn-sm btn-success rounded-pill fw-bold px-3 shadow-xs">
+                                            <i class="bi bi-file-earmark-excel-fill me-1"></i> Export Excel (.CSV)
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -908,10 +911,13 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                 </h5>
                                 <small class="text-muted">Menampilkan daftar seluruh siswa beserta perolehan nilai tiap Quiz/Exam dan akumulasi <strong>Nilai Akhir (Rata-Rata) &amp; Predikat</strong>.</small>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button onclick="window.print()" class="btn btn-sm btn-outline-dark rounded-pill fw-bold px-3">
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a href="<?= BASE_URL ?>index.php?url=guru/cetakCbtReportPdf&report_quiz_id=all&report_kelas_id=<?= $reportKelasId ?>" target="_blank" class="btn btn-sm btn-dark rounded-pill fw-bold px-3 shadow-xs">
                                     <i class="bi bi-printer-fill me-1"></i> Cetak Rekap PDF
-                                </button>
+                                </a>
+                                <a href="<?= BASE_URL ?>index.php?url=guru/exportCbtReportExcel&report_quiz_id=all&report_kelas_id=<?= $reportKelasId ?>" class="btn btn-sm btn-success rounded-pill fw-bold px-3 shadow-xs">
+                                    <i class="bi bi-file-earmark-excel-fill me-1"></i> Export Excel (.CSV)
+                                </a>
                             </div>
                         </div>
 
