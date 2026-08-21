@@ -25,34 +25,29 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
 ?>
 
 <!-- Navbar Landing Page -->
-<nav class="navbar navbar-expand-lg navbar-dark fixed-top py-2.5 shadow" id="mainNavbar" style="background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%) !important; backdrop-filter: blur(10px); z-index: 1050;">
-    <div class="container d-flex align-items-center justify-content-between flex-nowrap">
-        <a class="navbar-brand fw-bold d-flex align-items-center gap-2 m-0 text-truncate" href="#" style="max-width: calc(100% - 60px);">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top shadow-sm py-3" id="mainNavbar">
+    <div class="container">
+        <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
             <?php if ($logoUrl): ?>
-                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" class="rounded-3 bg-white p-1 shadow-sm flex-shrink-0" style="height:36px; width:36px; object-fit:contain;">
+                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" class="rounded-3 bg-white p-1 shadow-sm" style="height:36px; object-fit:contain;">
             <?php else: ?>
-                <div class="bg-warning text-dark rounded-3 d-flex align-items-center justify-content-center fw-bold fs-5 shadow-sm flex-shrink-0" style="width:36px; height:36px;">
-                    🎓
-                </div>
+                <i class="bi bi-mortarboard-fill fs-3 text-warning"></i>
             <?php endif; ?>
-            <span class="fs-6 fs-md-5 tracking-tight text-white font-heading text-truncate m-0"><?= $schoolName ?></span>
+            <span class="fs-5 tracking-tight font-heading text-white"><?= $schoolName ?></span>
         </a>
-        
-        <button class="navbar-toggler border-0 shadow-none text-white p-2 flex-shrink-0" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic" aria-controls="navPublic" aria-expanded="false" aria-label="Toggle navigation">
-            <i class="bi bi-list fs-2"></i>
+        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic" aria-controls="navPublic" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
         </button>
-
         <div class="collapse navbar-collapse" id="navPublic">
-            <ul class="navbar-nav ms-auto me-lg-3 gap-1 py-3 py-lg-0 border-top border-white border-opacity-10 border-top-lg-0 mt-2 mt-lg-0">
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-pill" href="#profil"><i class="bi bi-info-circle me-1.5"></i><span>Profil</span></a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-pill" href="#fitur"><i class="bi bi-stars me-1.5"></i><span>Fitur LMS</span></a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-pill" href="#jurusan"><i class="bi bi-award me-1.5"></i><span>Jurusan</span></a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-pill" href="#guru"><i class="bi bi-people me-1.5"></i><span>Pengajar</span></a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 py-2 opacity-90 rounded-pill" href="#kontak"><i class="bi bi-geo-alt me-1.5"></i><span>Kontak</span></a></li>
+            <ul class="navbar-nav ms-auto me-3 gap-2 py-2 py-lg-0">
+                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#profil">Profil</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#fitur">Fitur LMS</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#jurusan">Jurusan</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#guru">Tenaga Pengajar</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#kontak">Kontak</a></li>
             </ul>
-            <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill shadow-sm d-inline-flex align-items-center justify-content-center gap-2 w-100 w-lg-auto mb-2 mb-lg-0">
-                <i class="bi bi-box-arrow-in-right fs-5"></i>
-                <span>Masuk E-Learning</span>
+            <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 rounded-pill shadow-sm">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Masuk E-Learning
             </a>
         </div>
     </div>
