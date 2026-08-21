@@ -61,9 +61,9 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
     <div class="container py-5 my-lg-4 mt-4">
         <div class="row align-items-center gy-5">
             <div class="col-lg-7 text-center text-lg-start">
-                <div class="d-inline-flex align-items-center gap-2 bg-white bg-opacity-20 backdrop-blur px-3 py-2 rounded-pill mb-4 border border-white border-opacity-30 shadow-sm">
+                <div class="d-inline-flex align-items-center gap-2 bg-white px-3 py-2 rounded-pill mb-4 shadow">
                     <span class="badge bg-warning text-dark fw-bold rounded-pill"><i class="bi bi-lightning-charge-fill me-1"></i> Next-Gen LMS</span>
-                    <span class="small fw-semibold text-white"><?= Security::safeText($settings['landing_hero_badge'] ?? 'Portal Pembelajaran Digital Terpadu') ?></span>
+                    <span class="small fw-bold text-dark" style="color: #000000 !important;"><?= Security::safeText($settings['landing_hero_badge'] ?? 'Portal Pembelajaran Digital Terpadu') ?></span>
                 </div>
                 <h1 class="display-4 fw-extrabold mb-3 text-white font-heading lh-sm" style="text-shadow: 0 2px 10px rgba(0,0,0,0.2);">
                     <?= Security::safeText($settings['landing_hero_title'] ?? 'E-Learning SMK Muthia Harapan Cicalengka') ?>
@@ -91,29 +91,35 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
                     
                     <div class="row g-2 text-start pt-3 border-top border-white border-opacity-20">
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-20 p-2.5 rounded-3">
-                                <i class="bi bi-check-circle-fill text-warning fs-5"></i>
-                                <span class="small fw-semibold text-white">CBT & Quiz Online</span>
+                            <div class="d-flex align-items-center gap-2 bg-white p-2.5 rounded-3 shadow-xs">
+                                <i class="bi bi-check-circle-fill text-success fs-5 flex-shrink-0"></i>
+                                <span class="small fw-bold text-dark" style="color: #000000 !important;">CBT &amp; Quiz Online</span>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-20 p-2.5 rounded-3">
-                                <i class="bi bi-check-circle-fill text-warning fs-5"></i>
-                                <span class="small fw-semibold text-white">Absensi QR Code</span>
+                            <div class="d-flex align-items-center gap-2 bg-white p-2.5 rounded-3 shadow-xs">
+                                <i class="bi bi-check-circle-fill text-success fs-5 flex-shrink-0"></i>
+                                <span class="small fw-bold text-dark" style="color: #000000 !important;">Absensi QR Code</span>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-20 p-2.5 rounded-3">
-                                <i class="bi bi-check-circle-fill text-warning fs-5"></i>
-                                <span class="small fw-semibold text-white">E-Modul & Video</span>
+                            <div class="d-flex align-items-center gap-2 bg-white p-2.5 rounded-3 shadow-xs">
+                                <i class="bi bi-check-circle-fill text-success fs-5 flex-shrink-0"></i>
+                                <span class="small fw-bold text-dark" style="color: #000000 !important;">E-Modul &amp; Video</span>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-20 p-2.5 rounded-3">
-                                <i class="bi bi-check-circle-fill text-warning fs-5"></i>
-                                <span class="small fw-semibold text-white">E-Rapor & Sertifikat</span>
+                            <div class="d-flex align-items-center gap-2 bg-white p-2.5 rounded-3 shadow-xs">
+                                <i class="bi bi-check-circle-fill text-success fs-5 flex-shrink-0"></i>
+                                <span class="small fw-bold text-dark" style="color: #000000 !important;">E-Rapor &amp; Sertifikat</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Registered Students Badge Showcase -->
+                    <div class="d-flex align-items-center justify-content-center gap-2 mt-3 pt-3 border-top border-white border-opacity-20 text-white">
+                        <i class="bi bi-people-fill text-warning fs-5"></i>
+                        <span class="small fw-semibold">Terhubung dengan <strong class="text-warning"><?= (int)($totalSiswa ?? 0) ?>+ Siswa Terdaftar</strong></span>
                     </div>
                 </div>
             </div>
@@ -127,17 +133,31 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
         <div class="row g-4 text-center">
             <div class="col-6 col-md-3">
                 <div class="p-2">
-                    <h2 class="fw-extrabold text-primary mb-0 font-heading">100%</h2>
-                    <span class="small text-muted fw-semibold">Digital Learning Platform</span>
+                    <h2 class="fw-extrabold text-primary mb-0 font-heading"><?= (int)($totalSiswa ?? 0) ?>+</h2>
+                    <span class="small text-dark fw-bold d-flex align-items-center justify-content-center gap-1"><i class="bi bi-people-fill text-primary me-1"></i> Siswa Terdaftar</span>
                 </div>
             </div>
             <div class="col-6 col-md-3">
                 <div class="p-2">
                     <h2 class="fw-extrabold text-success mb-0 font-heading"><?= count($jurusanList ?? []) ?>+</h2>
-                    <span class="small text-muted fw-semibold">Program Keahlian</span>
+                    <span class="small text-dark fw-bold d-flex align-items-center justify-content-center gap-1"><i class="bi bi-award-fill text-success me-1"></i> Program Keahlian</span>
                 </div>
             </div>
             <div class="col-6 col-md-3">
+                <div class="p-2">
+                    <h2 class="fw-extrabold text-warning mb-0 font-heading"><?= count($guruList ?? []) ?>+</h2>
+                    <span class="small text-dark fw-bold d-flex align-items-center justify-content-center gap-1"><i class="bi bi-person-badge-fill text-warning me-1"></i> Guru &amp; Pengajar</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-2">
+                    <h2 class="fw-extrabold text-danger mb-0 font-heading">24/7</h2>
+                    <span class="small text-dark fw-bold d-flex align-items-center justify-content-center gap-1"><i class="bi bi-shield-check text-danger me-1"></i> Akses KBM &amp; Ujian</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
                 <div class="p-2">
                     <h2 class="fw-extrabold text-warning mb-0 font-heading"><?= count($guruList ?? []) ?>+</h2>
                     <span class="small text-muted fw-semibold">Guru & Pengajar Professional</span>
