@@ -1748,7 +1748,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                                     <i class="bi bi-pencil-fill me-1"></i>Input Nilai Essay (Belum Diisi, Maksimal Bobot <?= $ea['bobot'] ?? 10 ?>):
                                                 </label>
                                             <?php endif; ?>
-                                            <input type="number" step="0.5" min="0" max="<?= $ea['bobot'] ?? 10 ?>" name="nilai_essay[<?= $ea['jawaban_id'] ?>]" class="form-control fw-bold <?= $isGraded ? 'border-success' : 'border-danger bg-white' ?>" value="<?= $isGraded ? (float)$ea['nilai'] : '' ?>" placeholder="Masukkan skor (0 - <?= $ea['bobot'] ?? 10 ?>)..." required>
+                                            <input type="number" step="0.5" min="0" max="<?= $ea['bobot'] ?? 10 ?>" name="nilai_essay[<?= $ea['soal_id'] ?>]" class="form-control fw-bold <?= $isGraded ? 'border-success' : 'border-danger bg-white' ?>" value="<?= $isGraded ? (float)$ea['nilai'] : '' ?>" placeholder="Masukkan skor (0 - <?= $ea['bobot'] ?? 10 ?>)..." required>
                                         </div>
                                     </div>
                                 </div>

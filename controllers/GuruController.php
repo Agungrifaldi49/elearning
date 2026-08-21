@@ -630,28 +630,46 @@ class GuruController {
                 $essayScores = $_POST['nilai_essay'] ?? [];
 
                 $db = Database::getConnection();
-                $stmtGetSoal = $db->prepare("SELECT s.bobot FROM jawaban_siswa js JOIN soal s ON js.soal_id = s.id WHERE js.id = ?");
+                
+                $stmtGetSoal = $db->prepare("SELECT bobot FROM soal WHERE id = ?");
+                $stmtCheckExist = $db->prepare("SELECT id FROM jawaban_siswa WHERE siswa_id = ? AND quiz_id = ? AND soal_id = ?");
                 $stmtUpdate = $db->prepare("UPDATE jawaban_siswa SET nilai = ?, is_benar = IF(? > 0, 1, 0) WHERE id = ?");
+                $stmtInsert = $db->prepare("INSERT INTO jawaban_siswa (siswa_id, quiz_id, soal_id, is_benar, nilai) VALUES (?, ?, ?, IF(? > 0, 1, 0), ?)");
 
-                foreach ($essayScores as $jawabanId => $scoreVal) {
+                foreach ($essayScores as $keyId => $scoreVal) {
+                    $keyId = (int)$keyId;
+                    if ($keyId <= 0) continue;
                     $scoreNum = (float)$scoreVal;
-                    
-                    // Fetch max bobot for this question to validate
-                    $stmtGetSoal->execute([(int)$jawabanId]);
-                    $soalRow = $stmtGetSoal->fetch();
-                    $maxBobot = (float)($soalRow['bobot'] ?? 10);
 
-                    // If teacher entered score > maxBobot (e.g., entered 80 out of 100 for a question of bobot 10)
-                    if ($scoreNum > $maxBobot) {
-                        if ($scoreNum <= 100 && $maxBobot > 0) {
-                            $scoreNum = round(($scoreNum / 100) * $maxBobot, 2);
-                        } else {
-                            $scoreNum = $maxBobot;
+                    // Try looking up by soal_id first
+                    $stmtCheckExist->execute([$siswaId, $quizId, $keyId]);
+                    $existId = $stmtCheckExist->fetchColumn();
+
+                    if ($existId) {
+                        $stmtGetSoal->execute([$keyId]);
+                        $soalRow = $stmtGetSoal->fetch();
+                        $maxBobot = (float)($soalRow['bobot'] ?? 10);
+
+                        if ($scoreNum > $maxBobot) {
+                            if ($scoreNum <= 100 && $maxBobot > 0) {
+                                $scoreNum = round(($scoreNum / 100) * $maxBobot, 2);
+                            } else {
+                                $scoreNum = $maxBobot;
+                            }
+                        }
+                        if ($scoreNum < 0) $scoreNum = 0;
+
+                        $stmtUpdate->execute([$scoreNum, $scoreNum, (int)$existId]);
+                    } else {
+                        // Direct update if keyId was a jawaban_id
+                        $stmtDirectUpdate = $db->prepare("UPDATE jawaban_siswa SET nilai = ?, is_benar = IF(? > 0, 1, 0) WHERE id = ?");
+                        $stmtDirectUpdate->execute([$scoreNum, $scoreNum, $keyId]);
+                        
+                        if ($stmtDirectUpdate->rowCount() == 0) {
+                            // Insert new row if neither existed
+                            $stmtInsert->execute([$siswaId, $quizId, $keyId, $scoreNum, $scoreNum]);
                         }
                     }
-                    if ($scoreNum < 0) $scoreNum = 0;
-
-                    $stmtUpdate->execute([$scoreNum, $scoreNum, (int)$jawabanId]);
                 }
 
                 $examModel->recalculateQuizScore($siswaId, $quizId);
