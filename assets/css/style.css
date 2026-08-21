@@ -277,50 +277,69 @@ body {
 .badge-pill-lg { padding: 8px 18px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
 
 /* ============== Landing Page Modern Styles & Misi Formatting ============== */
+h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.02em;
+}
+
 .landing-navbar {
     transition: all 0.3s ease;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    background: rgba(13, 110, 253, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(15, 23, 42, 0.88) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .landing-navbar.scrolled {
-    background: rgba(11, 87, 208, 0.98) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    background: rgba(15, 23, 42, 0.96) !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
 }
 
 .landing-hero {
-    background: linear-gradient(135deg, #0d6efd 0%, #0a4ecb 50%, #073896 100%);
+    background: radial-gradient(circle at 80% 20%, rgba(13, 110, 253, 0.25) 0%, rgba(0, 0, 0, 0) 50%),
+                linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d1b3e 100%);
     position: relative;
     overflow: hidden;
 }
 .landing-hero::before {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(255,193,7,0.2) 0%, rgba(255,255,255,0) 70%);
+    top: -40%;
+    right: -15%;
+    width: 650px;
+    height: 650px;
+    background: radial-gradient(circle, rgba(255, 193, 7, 0.18) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.landing-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(13, 110, 253, 0.25) 0%, rgba(255, 255, 255, 0) 70%);
     border-radius: 50%;
     pointer-events: none;
 }
 
 .glass-card {
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
 }
 
 .card-hover-effect {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid rgba(0,0,0,0.06);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    background: #ffffff;
 }
 .card-hover-effect:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(13, 110, 253, 0.12);
-    border-color: rgba(13, 110, 253, 0.3);
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 25px 40px -15px rgba(13, 110, 253, 0.15);
+    border-color: rgba(13, 110, 253, 0.4);
 }
 
 .icon-gradient-primary {
@@ -337,8 +356,13 @@ body {
 }
 
 /* Styled Lists for Misi & Visi Content */
+.landing-misi-content {
+    font-size: 0.95rem;
+    color: #334155;
+    line-height: 1.65;
+}
 .landing-misi-content ol {
-    padding-left: 1.25rem;
+    padding-left: 1.4rem;
     margin-bottom: 0.75rem;
     list-style-type: decimal;
 }
@@ -349,26 +373,42 @@ body {
     list-style-type: upper-alpha;
 }
 .landing-misi-content ul {
-    padding-left: 1.25rem;
+    padding-left: 1.4rem;
     margin-bottom: 0.75rem;
     list-style-type: disc;
 }
 .landing-misi-content li {
-    margin-bottom: 0.4rem;
-    line-height: 1.5;
+    margin-bottom: 0.5rem;
+    padding-left: 0.2rem;
+    color: #334155;
+}
+.landing-misi-content li::marker {
+    color: #0d6efd;
+    font-weight: 700;
 }
 .landing-misi-content b, 
 .landing-misi-content strong {
     font-weight: 700;
-    color: var(--bs-heading-color, #1e293b);
+    color: #0f172a;
 }
 .landing-misi-content i, 
 .landing-misi-content em {
     font-style: italic;
+    color: #1e293b;
 }
 .landing-misi-content u {
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-underline-offset: 4px;
     text-decoration-color: #0d6efd;
+    text-decoration-thickness: 2px;
 }
+.landing-misi-content p {
+    margin-bottom: 0.6rem;
+    line-height: 1.6;
+}
+
+.border-dashed {
+    border-style: dashed !important;
+}
+
 

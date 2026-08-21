@@ -269,26 +269,58 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                             <div class="col-12 col-md-6">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <label class="form-label small fw-bold mb-0">Isi Misi Sekolah</label>
-                                    <small class="text-primary fw-medium"><i class="bi bi-magic me-1"></i>Format Teks & List</small>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary fw-medium"><i class="bi bi-magic me-1"></i>Editor Auto-List</span>
                                 </div>
-                                <!-- Formatting Toolbar -->
-                                <div class="btn-toolbar gap-1 mb-2 bg-light p-1 rounded border" role="toolbar" aria-label="Toolbar Pengolah Kata Misi">
-                                    <div class="btn-group btn-group-sm me-1">
-                                        <button type="button" class="btn btn-outline-dark fw-bold" onclick="insertMisiTag('<b>', '</b>')" title="Tebal (Bold)"><i class="bi bi-type-bold"></i> B</button>
-                                        <button type="button" class="btn btn-outline-dark fst-italic" onclick="insertMisiTag('<i>', '</i>')" title="Miring (Italic)"><i class="bi bi-type-italic"></i> I</button>
-                                        <button type="button" class="btn btn-outline-dark text-decoration-underline" onclick="insertMisiTag('<u>', '</u>')" title="Garis Bawah (Underline)"><i class="bi bi-type-underline"></i> U</button>
-                                    </div>
-                                    <div class="btn-group btn-group-sm">
-                                        <button type="button" class="btn btn-outline-primary" onclick="insertMisiList('ol-1')" title="List Angka (1, 2, 3)"><i class="bi bi-list-ol"></i> List Angka (1,2,3)</button>
-                                        <button type="button" class="btn btn-outline-primary" onclick="insertMisiList('ol-a')" title="List Huruf (a, b, c)"><i class="bi bi-list-nested"></i> List Huruf (a,b,c)</button>
-                                        <button type="button" class="btn btn-outline-primary" onclick="insertMisiList('ul')" title="List Bullets (•)"><i class="bi bi-list-ul"></i> Bullets</button>
-                                    </div>
-                                </div>
-                                <textarea id="landingMisiInput" name="landing_misi_desc" class="form-control font-monospace" rows="5" required placeholder="Tuliskan misi sekolah disini..."><?= htmlspecialchars($settings['landing_misi_desc'] ?? 'Mengembangkan kurikulum industri & sertifikasi kompetensi keahlian.') ?></textarea>
                                 
-                                <div class="mt-2 p-2 bg-white rounded border border-info border-opacity-25 shadow-sm">
-                                    <small class="fw-bold text-info d-block mb-1"><i class="bi bi-eye-fill me-1"></i> Live Preview Tampilan Misi:</small>
-                                    <div id="misiLivePreview" class="small text-dark p-2 rounded bg-light border"></div>
+                                <div class="card p-3 border-0 bg-light rounded-3 mb-2 shadow-sm">
+                                    <!-- Jenis List Selector -->
+                                    <div class="mb-3">
+                                        <label class="form-label small text-muted fw-bold me-2 mb-1 d-block">1. Pilih Format List Misi:</label>
+                                        <div class="btn-group btn-group-sm w-100 flex-wrap" role="group" id="misiTypeSelector">
+                                            <input type="radio" class="btn-check" name="misi_type" id="type_ol_1" value="ol-1" checked onchange="setMisiType('ol-1')">
+                                            <label class="btn btn-outline-primary" for="type_ol_1"><i class="bi bi-list-ol me-1"></i> Angka (1,2,3)</label>
+
+                                            <input type="radio" class="btn-check" name="misi_type" id="type_ol_a" value="ol-a" onchange="setMisiType('ol-a')">
+                                            <label class="btn btn-outline-primary" for="type_ol_a"><i class="bi bi-list-nested me-1"></i> Huruf (a,b,c)</label>
+
+                                            <input type="radio" class="btn-check" name="misi_type" id="type_ol_A" value="ol-A" onchange="setMisiType('ol-A')">
+                                            <label class="btn btn-outline-primary" for="type_ol_A"><i class="bi bi-fonts me-1"></i> Huruf (A,B,C)</label>
+
+                                            <input type="radio" class="btn-check" name="misi_type" id="type_ul" value="ul" onchange="setMisiType('ul')">
+                                            <label class="btn btn-outline-primary" for="type_ul"><i class="bi bi-list-ul me-1"></i> Bullets (•)</label>
+
+                                            <input type="radio" class="btn-check" name="misi_type" id="type_text" value="text" onchange="setMisiType('text')">
+                                            <label class="btn btn-outline-primary" for="type_text"><i class="bi bi-text-paragraph me-1"></i> Paragraf</label>
+                                        </div>
+                                    </div>
+
+                                    <!-- Helper Info -->
+                                    <div class="alert alert-info py-1 px-2 mb-2 small d-flex align-items-center gap-2 border-0 bg-info bg-opacity-10 text-info-emphasis">
+                                        <i class="bi bi-info-circle-fill fs-6"></i>
+                                        <span>Ketik baris misi lalu tekan <strong>ENTER</strong> untuk otomatis membuat nomor/huruf berikutnya!</span>
+                                    </div>
+
+                                    <!-- Interactive List Items Container -->
+                                    <div id="misiItemsContainer" class="d-flex flex-column gap-2 mb-3">
+                                        <!-- Dynamic item rows will be injected here -->
+                                    </div>
+
+                                    <!-- Add New Row Button -->
+                                    <button type="button" class="btn btn-sm btn-outline-success border-dashed fw-bold" onclick="addMisiItemRow('', true)">
+                                        <i class="bi bi-plus-circle-fill me-1"></i> Tambah Baris Misi Baru
+                                    </button>
+
+                                    <!-- Hidden Input to store final output -->
+                                    <input type="hidden" id="landingMisiInput" name="landing_misi_desc" value="<?= htmlspecialchars($settings['landing_misi_desc'] ?? 'Mengembangkan kurikulum industri & sertifikasi kompetensi keahlian.') ?>">
+                                </div>
+
+                                <!-- Live Preview Box -->
+                                <div class="p-3 bg-white rounded-3 border border-info border-opacity-25 shadow-sm">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <small class="fw-bold text-info"><i class="bi bi-eye-fill me-1"></i> Pratinjau Tampilan di Landing Page:</small>
+                                        <span class="badge bg-info bg-opacity-10 text-info small">Live Preview</span>
+                                    </div>
+                                    <div id="misiLivePreview" class="small text-dark p-3 rounded-3 bg-light border landing-misi-content" style="min-height: 80px;"></div>
                                 </div>
                             </div>
                             <div class="col-12">
@@ -338,61 +370,245 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
 </main>
 
 <script>
-function updateMisiPreview() {
-    const input = document.getElementById('landingMisiInput');
-    const preview = document.getElementById('misiLivePreview');
-    if (input && preview) {
-        let val = input.value;
-        if (!val.trim()) {
-            preview.innerHTML = '<span class="text-muted fst-italic">Pratinjau misi kosong...</span>';
+let currentMisiType = 'ol-1';
+
+function setMisiType(type) {
+    currentMisiType = type;
+    updateMisiBadges();
+    serializeMisiOutput();
+}
+
+function updateMisiBadges() {
+    const rows = document.querySelectorAll('#misiItemsContainer .misi-item-row');
+    rows.forEach((row, index) => {
+        const badge = row.querySelector('.misi-badge-prefix');
+        if (badge) {
+            badge.innerText = getItemPrefix(index);
+        }
+    });
+}
+
+function getItemPrefix(index) {
+    if (currentMisiType === 'ol-1') {
+        return (index + 1) + '.';
+    } else if (currentMisiType === 'ol-a') {
+        return String.fromCharCode(97 + index) + '.';
+    } else if (currentMisiType === 'ol-A') {
+        return String.fromCharCode(65 + index) + '.';
+    } else if (currentMisiType === 'ul') {
+        return '•';
+    } else {
+        return '¶';
+    }
+}
+
+function addMisiItemRow(content = '', shouldFocus = false, insertAtIndex = null) {
+    const container = document.getElementById('misiItemsContainer');
+    if (!container) return;
+
+    const row = document.createElement('div');
+    row.className = 'd-flex align-items-center gap-2 misi-item-row p-1 bg-white rounded border shadow-2xs';
+
+    const prefixSpan = document.createElement('span');
+    prefixSpan.className = 'badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1 flex-shrink-0 misi-badge-prefix';
+    prefixSpan.style.minWidth = '32px';
+    prefixSpan.style.textAlign = 'center';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-control form-control-sm border-0 shadow-none text-dark fw-medium misi-item-input';
+    input.placeholder = 'Tuliskan poin misi sekolah... (Tekan ENTER untuk menambah baris)';
+    input.value = content;
+
+    // Formatting Toolbar Group
+    const btnGroup = document.createElement('div');
+    btnGroup.className = 'btn-group btn-group-sm flex-shrink-0 me-1';
+    
+    const btnBold = document.createElement('button');
+    btnBold.type = 'button';
+    btnBold.className = 'btn btn-sm btn-light border-0 fw-bold px-2';
+    btnBold.innerHTML = 'B';
+    btnBold.title = 'Tebal (Bold)';
+    btnBold.onclick = function() { applyFormatToInput(input, 'b'); };
+
+    const btnItalic = document.createElement('button');
+    btnItalic.type = 'button';
+    btnItalic.className = 'btn btn-sm btn-light border-0 fst-italic px-2';
+    btnItalic.innerHTML = 'I';
+    btnItalic.title = 'Miring (Italic)';
+    btnItalic.onclick = function() { applyFormatToInput(input, 'i'); };
+
+    const btnUnderline = document.createElement('button');
+    btnUnderline.type = 'button';
+    btnUnderline.className = 'btn btn-sm btn-light border-0 text-decoration-underline px-2';
+    btnUnderline.innerHTML = 'U';
+    btnUnderline.title = 'Garis Bawah (Underline)';
+    btnUnderline.onclick = function() { applyFormatToInput(input, 'u'); };
+
+    btnGroup.appendChild(btnBold);
+    btnGroup.appendChild(btnItalic);
+    btnGroup.appendChild(btnUnderline);
+
+    // Delete Button
+    const btnDelete = document.createElement('button');
+    btnDelete.type = 'button';
+    btnDelete.className = 'btn btn-sm btn-outline-danger border-0 flex-shrink-0 px-2';
+    btnDelete.innerHTML = '<i class="bi bi-trash"></i>';
+    btnDelete.title = 'Hapus Baris';
+    btnDelete.onclick = function() {
+        const totalRows = document.querySelectorAll('#misiItemsContainer .misi-item-row').length;
+        if (totalRows > 1) {
+            row.remove();
+            updateMisiBadges();
+            serializeMisiOutput();
         } else {
-            preview.innerHTML = val;
+            input.value = '';
+            serializeMisiOutput();
+        }
+    };
+
+    row.appendChild(prefixSpan);
+    row.appendChild(input);
+    row.appendChild(btnGroup);
+    row.appendChild(btnDelete);
+
+    if (insertAtIndex !== null && insertAtIndex < container.children.length) {
+        container.insertBefore(row, container.children[insertAtIndex]);
+    } else {
+        container.appendChild(row);
+    }
+
+    updateMisiBadges();
+
+    // Event Listeners for Input
+    input.addEventListener('input', serializeMisiOutput);
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const allRows = Array.from(container.children);
+            const currentIndex = allRows.indexOf(row);
+            addMisiItemRow('', true, currentIndex + 1);
+        } else if (e.key === 'Backspace' && input.value === '') {
+            const allRows = Array.from(container.children);
+            if (allRows.length > 1) {
+                e.preventDefault();
+                const currentIndex = allRows.indexOf(row);
+                const prevRow = allRows[currentIndex - 1] || allRows[currentIndex + 1];
+                row.remove();
+                updateMisiBadges();
+                serializeMisiOutput();
+                if (prevRow) {
+                    const prevInput = prevRow.querySelector('.misi-item-input');
+                    if (prevInput) prevInput.focus();
+                }
+            }
+        }
+    });
+
+    serializeMisiOutput();
+
+    if (shouldFocus) {
+        setTimeout(() => input.focus(), 50);
+    }
+}
+
+function applyFormatToInput(input, tag) {
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const val = input.value;
+    const selected = val.substring(start, end);
+    const openTag = `<${tag}>`;
+    const closeTag = `</${tag}>`;
+
+    if (selected) {
+        input.value = val.substring(0, start) + openTag + selected + closeTag + val.substring(end);
+    } else {
+        input.value = val + openTag + 'teks' + closeTag;
+    }
+    serializeMisiOutput();
+    input.focus();
+}
+
+function serializeMisiOutput() {
+    const hiddenInput = document.getElementById('landingMisiInput');
+    const preview = document.getElementById('misiLivePreview');
+    const inputs = document.querySelectorAll('#misiItemsContainer .misi-item-input');
+    
+    let items = [];
+    inputs.forEach(inp => {
+        let text = inp.value.trim();
+        if (text) items.push(text);
+    });
+
+    let resultHtml = '';
+    if (items.length === 0) {
+        resultHtml = '<span class="text-muted fst-italic">Belum ada poin misi diset.</span>';
+    } else {
+        if (currentMisiType === 'ol-1') {
+            resultHtml = '<ol>\n' + items.map(it => `  <li>${it}</li>`).join('\n') + '\n</ol>';
+        } else if (currentMisiType === 'ol-a') {
+            resultHtml = '<ol type="a">\n' + items.map(it => `  <li>${it}</li>`).join('\n') + '\n</ol>';
+        } else if (currentMisiType === 'ol-A') {
+            resultHtml = '<ol type="A">\n' + items.map(it => `  <li>${it}</li>`).join('\n') + '\n</ol>';
+        } else if (currentMisiType === 'ul') {
+            resultHtml = '<ul>\n' + items.map(it => `  <li>${it}</li>`).join('\n') + '\n</ul>';
+        } else {
+            resultHtml = items.map(it => `<p>${it}</p>`).join('\n');
         }
     }
+
+    if (hiddenInput) hiddenInput.value = resultHtml;
+    if (preview) preview.innerHTML = resultHtml;
 }
 
-function insertMisiTag(openTag, closeTag) {
-    const textarea = document.getElementById('landingMisiInput');
-    if (!textarea) return;
-    
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = textarea.value.substring(start, end);
-    const replacement = openTag + (selected || 'teks') + closeTag;
-    
-    textarea.value = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
-    textarea.focus();
-    textarea.selectionStart = start + openTag.length;
-    textarea.selectionEnd = start + openTag.length + (selected ? selected.length : 4);
-    updateMisiPreview();
-}
+function parseInitialMisi() {
+    const hiddenInput = document.getElementById('landingMisiInput');
+    const rawVal = hiddenInput ? hiddenInput.value.trim() : '';
 
-function insertMisiList(type) {
-    const textarea = document.getElementById('landingMisiInput');
-    if (!textarea) return;
-
-    let snippet = '';
-    if (type === 'ol-1') {
-        snippet = "\n<ol>\n  <li>Menyiapkan sumber daya manusia kompeten.</li>\n  <li>Mengembangkan kerja sama dengan dunia industri.</li>\n  <li>Meningkatkan prestasi akademis dan non-akademis.</li>\n</ol>\n";
-    } else if (type === 'ol-a') {
-        snippet = "\n<ol type=\"a\">\n  <li>Meningkatkan disiplin dan imtaq.</li>\n  <li>Memperluas sertifikasi kompetensi.</li>\n  <li>Menjalin kemitraan dengan IDUKA.</li>\n</ol>\n";
-    } else if (type === 'ul') {
-        snippet = "\n<ul>\n  <li>Kurikulum berbasis industri.</li>\n  <li>Pembelajaran digital terpadu.</li>\n  <li>Pengembangan karakter unggul.</li>\n</ul>\n";
+    if (rawVal.includes('<ol type="a">') || rawVal.includes('<ol type=\'a\'>')) {
+        currentMisiType = 'ol-a';
+        document.getElementById('type_ol_a').checked = true;
+    } else if (rawVal.includes('<ol type="A">') || rawVal.includes('<ol type=\'A\'>')) {
+        currentMisiType = 'ol-A';
+        document.getElementById('type_ol_A').checked = true;
+    } else if (rawVal.includes('<ol>')) {
+        currentMisiType = 'ol-1';
+        document.getElementById('type_ol_1').checked = true;
+    } else if (rawVal.includes('<ul>')) {
+        currentMisiType = 'ul';
+        document.getElementById('type_ul').checked = true;
+    } else if (rawVal.includes('<p>')) {
+        currentMisiType = 'text';
+        document.getElementById('type_text').checked = true;
     }
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    textarea.value = textarea.value.substring(0, start) + snippet + textarea.value.substring(end);
-    textarea.focus();
-    updateMisiPreview();
+    // Extract list items using regex
+    const liMatches = [...rawVal.matchAll(/<li>(.*?)<\/li>/gi)];
+    const container = document.getElementById('misiItemsContainer');
+    if (container) container.innerHTML = '';
+
+    if (liMatches.length > 0) {
+        liMatches.forEach(match => {
+            addMisiItemRow(match[1]);
+        });
+    } else if (rawVal) {
+        // Plain lines
+        const lines = rawVal.replace(/<[^>]+>/g, '\n').split('\n').filter(l => l.trim().length > 0);
+        if (lines.length > 0) {
+            lines.forEach(line => addMisiItemRow(line.trim()));
+        } else {
+            addMisiItemRow('Mengembangkan kurikulum industri & sertifikasi kompetensi keahlian.');
+        }
+    } else {
+        addMisiItemRow('Menyiapkan sumber daya manusia yang kompeten dan berakhlak mulia.');
+        addMisiItemRow('Mengembangkan kerja sama terpadu dengan dunia usaha dan dunia industri.');
+        addMisiItemRow('Meningkatkan mutu pembelajaran berbasis teknologi informasi modern.');
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const input = document.getElementById('landingMisiInput');
-    if (input) {
-        input.addEventListener('input', updateMisiPreview);
-        updateMisiPreview();
-    }
+    parseInitialMisi();
 });
 </script>
 
