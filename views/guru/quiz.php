@@ -166,7 +166,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
             foreach ($hasilQuizSubmissions as $hqItem) {
                 $tEssay = (int)($hqItem['total_essay_count'] ?? 0);
                 $uEssay = (int)($hqItem['ungraded_essay_count'] ?? 0);
-                $isBanned = (!empty($hqItem['status_banned']) || !empty($hqItem['pelanggaran_count']));
+                $isBanned = (!empty($hqItem['status_banned']) && (string)$hqItem['status_banned'] !== '0');
                 if (($tEssay > 0 && $uEssay > 0) || $isBanned) {
                     $pendingEssayCount++;
                 }
@@ -176,12 +176,12 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
             usort($hasilQuizSubmissions, function($a, $b) {
                 $aTEssay = (int)($a['total_essay_count'] ?? 0);
                 $aUEssay = (int)($a['ungraded_essay_count'] ?? 0);
-                $aBanned = (!empty($a['status_banned']) || !empty($a['pelanggaran_count']));
+                $aBanned = (!empty($a['status_banned']) && (string)$a['status_banned'] !== '0');
                 $aPending = (($aTEssay > 0 && $aUEssay > 0) || $aBanned) ? 1 : 0;
 
                 $bTEssay = (int)($b['total_essay_count'] ?? 0);
                 $bUEssay = (int)($b['ungraded_essay_count'] ?? 0);
-                $bBanned = (!empty($b['status_banned']) || !empty($b['pelanggaran_count']));
+                $bBanned = (!empty($b['status_banned']) && (string)$b['status_banned'] !== '0');
                 $bPending = (($bTEssay > 0 && $bUEssay > 0) || $bBanned) ? 1 : 0;
 
                 return $bPending <=> $aPending;
@@ -538,7 +538,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                     foreach ($hasilQuizSubmissions as $hq): 
                                         $tEssay = (int)($hq['total_essay_count'] ?? 0);
                                         $uEssay = (int)($hq['ungraded_essay_count'] ?? 0);
-                                        $isBanned = (!empty($hq['status_banned']) || !empty($hq['pelanggaran_count']));
+                                        $isBanned = (!empty($hq['status_banned']) && (string)$hq['status_banned'] !== '0');
                                         
                                         if ($tEssay > 0) {
                                             if ($uEssay > 0 || $isBanned) {
@@ -1714,6 +1714,15 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                             <strong>Mata Pelajaran:</strong> <?= htmlspecialchars($hq['nama_mapel']) ?><br>
                             <strong>Skor Saat Ini:</strong> <?= number_format((float)$hq['total_nilai'], 1) ?> / 100
                         </div>
+
+                        <?php if (!empty($hq['status_banned']) && (string)$hq['status_banned'] !== '0'): ?>
+                            <div class="form-check form-switch mb-3 p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3">
+                                <input class="form-check-input ms-0 me-2" type="checkbox" name="unban_siswa" value="1" id="unbanSwitch<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" checked>
+                                <label class="form-check-label fw-bold text-danger" for="unbanSwitch<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>">
+                                    <i class="bi bi-unlock-fill me-1"></i> Buka Suspend & Selesaikan Penilaian Siswa Ini
+                                </label>
+                            </div>
+                        <?php endif; ?>
 
                         <?php if (empty($essayAnswers)): ?>
                             <div class="text-center py-4 text-muted">

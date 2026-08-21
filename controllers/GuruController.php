@@ -672,6 +672,10 @@ class GuruController {
                     }
                 }
 
+                if (!empty($_POST['unban_siswa'])) {
+                    $db->prepare("UPDATE hasil_quiz SET status_banned = 0 WHERE quiz_id = ? AND siswa_id = ?")->execute([$quizId, $siswaId]);
+                }
+
                 $examModel->recalculateQuizScore($siswaId, $quizId);
 
                 $commModel = new CommunicationModel();
