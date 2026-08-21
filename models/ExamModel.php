@@ -86,9 +86,9 @@ class ExamModel extends BaseModel {
         $sql = "
             SELECT q.*, map.nama_mapel, k.nama_kelas, g.nama_lengkap as nama_guru
             FROM quiz q
-            JOIN mata_pelajaran map ON q.mapel_id = map.id
-            JOIN kelas k ON q.kelas_id = k.id
-            JOIN guru g ON q.guru_id = g.id
+            LEFT JOIN mata_pelajaran map ON q.mapel_id = map.id
+            LEFT JOIN kelas k ON q.kelas_id = k.id
+            LEFT JOIN guru g ON q.guru_id = g.id
             WHERE 1=1
         ";
         if ($kelas_id) {
@@ -105,9 +105,9 @@ class ExamModel extends BaseModel {
         $stmt = $this->db->prepare("
             SELECT q.*, map.nama_mapel, k.nama_kelas, g.nama_lengkap as nama_guru
             FROM quiz q
-            JOIN mata_pelajaran map ON q.mapel_id = map.id
-            JOIN kelas k ON q.kelas_id = k.id
-            JOIN guru g ON q.guru_id = g.id
+            LEFT JOIN mata_pelajaran map ON q.mapel_id = map.id
+            LEFT JOIN kelas k ON q.kelas_id = k.id
+            LEFT JOIN guru g ON q.guru_id = g.id
             WHERE q.id = ?
         ");
         $stmt->execute([(int)$id]);
@@ -819,15 +819,26 @@ class ExamModel extends BaseModel {
         $kelasId = (int)$quiz['kelas_id'];
 
         $stmtSiswa = $this->db->prepare("
-            SELECT s.id, s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, k.nama_kelas, j.nama_jurusan
+            SELECT DISTINCT s.id, s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, k.nama_kelas, j.nama_jurusan
             FROM siswa s
             LEFT JOIN kelas k ON s.kelas_id = k.id
             LEFT JOIN jurusan j ON s.jurusan_id = j.id
-            WHERE s.kelas_id = ?
+            WHERE s.kelas_id = ? OR s.id IN (SELECT siswa_id FROM hasil_quiz WHERE quiz_id = ?)
             ORDER BY s.nama_lengkap ASC
         ");
-        $stmtSiswa->execute([$kelasId]);
+        $stmtSiswa->execute([$kelasId, $quizId]);
         $allStudents = $stmtSiswa->fetchAll();
+
+        if (empty($allStudents)) {
+            $stmtSiswaAll = $this->db->query("
+                SELECT s.id, s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, k.nama_kelas, j.nama_jurusan
+                FROM siswa s
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                LEFT JOIN jurusan j ON s.jurusan_id = j.id
+                ORDER BY s.nama_lengkap ASC
+            ");
+            $allStudents = $stmtSiswaAll->fetchAll();
+        }
 
         $stmtHasil = $this->db->prepare("
             SELECT hq.*, 
@@ -892,14 +903,14 @@ class ExamModel extends BaseModel {
         ];
     }
 
-    public function getRekapNilaiCbtMatrixByGuru($guruId, $kelasId = null) {
+    public function getRekapNilaiCbtMatrixByGuru($guruId = null, $kelasId = null) {
         $sqlQuiz = "SELECT q.id, q.judul, q.kategori, q.kelas_id, map.nama_mapel, k.nama_kelas
                     FROM quiz q
-                    JOIN mata_pelajaran map ON q.mapel_id = map.id
-                    JOIN kelas k ON q.kelas_id = k.id
+                    LEFT JOIN mata_pelajaran map ON q.mapel_id = map.id
+                    LEFT JOIN kelas k ON q.kelas_id = k.id
                     WHERE 1=1";
         $params = [];
-        if ($guruId !== null) {
+        if ($guruId !== null && (int)$guruId > 0) {
             $sqlQuiz .= " AND q.guru_id = ?";
             $params[] = (int)$guruId;
         }
@@ -912,18 +923,34 @@ class ExamModel extends BaseModel {
         $stmtQ->execute($params);
         $quizzes = $stmtQ->fetchAll();
 
+        // Fallback: If no quizzes match the guru filter, fetch all available quizzes
+        if (empty($quizzes)) {
+            $sqlFallback = "SELECT q.id, q.judul, q.kategori, q.kelas_id, map.nama_mapel, k.nama_kelas
+                            FROM quiz q
+                            LEFT JOIN mata_pelajaran map ON q.mapel_id = map.id
+                            LEFT JOIN kelas k ON q.kelas_id = k.id
+                            ORDER BY q.id ASC";
+            $quizzes = $this->db->query($sqlFallback)->fetchAll();
+        }
+
         if (empty($quizzes)) {
             return ['quizzes' => [], 'matrix' => []];
         }
 
         $quizIds = array_column($quizzes, 'id');
-        $kelasIds = array_unique(array_column($quizzes, 'kelas_id'));
+        $kelasIds = array_filter(array_unique(array_column($quizzes, 'kelas_id')));
 
-        $inKelas = implode(',', array_map('intval', $kelasIds));
-        $sqlSiswa = "SELECT s.id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas
-                     FROM siswa s
-                     JOIN kelas k ON s.kelas_id = k.id
-                     WHERE s.kelas_id IN ($inKelas)";
+        if (!empty($kelasIds)) {
+            $inKelas = implode(',', array_map('intval', $kelasIds));
+            $sqlSiswa = "SELECT DISTINCT s.id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas
+                         FROM siswa s
+                         LEFT JOIN kelas k ON s.kelas_id = k.id
+                         WHERE s.kelas_id IN ($inKelas) OR s.id IN (SELECT siswa_id FROM hasil_quiz)";
+        } else {
+            $sqlSiswa = "SELECT DISTINCT s.id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas
+                         FROM siswa s
+                         LEFT JOIN kelas k ON s.kelas_id = k.id";
+        }
         if ($kelasId) {
             $sqlSiswa .= " AND s.kelas_id = " . (int)$kelasId;
         }

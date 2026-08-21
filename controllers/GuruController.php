@@ -672,9 +672,17 @@ class GuruController {
             exit();
         }
 
-        $quizList = $examModel->getQuizList(null, $guruId);
-        $susulanRequests = $examModel->getSusulanRequestsByGuru($guruId);
-        $hasilQuizSubmissions = $examModel->getHasilQuizListByGuru($guruId);
+        $roleName = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdminMonitoring = ($roleName === 'administrator');
+        $queryGuruId = $isAdminMonitoring ? null : $guruId;
+
+        $quizList = $examModel->getQuizList(null, $queryGuruId);
+        if (empty($quizList)) {
+            $quizList = $examModel->getQuizList(null, null);
+        }
+
+        $susulanRequests = $examModel->getSusulanRequestsByGuru($queryGuruId);
+        $hasilQuizSubmissions = $examModel->getHasilQuizListByGuru($queryGuruId);
 
         // --- NEW REPORT & MATRIX DATA FOR QUIZ & CBT ---
         $reportQuizId = isset($_GET['report_quiz_id']) ? $_GET['report_quiz_id'] : 'all';
@@ -684,7 +692,7 @@ class GuruController {
         if ($reportQuizId !== 'all' && (int)$reportQuizId > 0) {
             $quizReportDetail = $examModel->getDetailedReportByQuiz((int)$reportQuizId);
         }
-        $rekapCbtMatrix = $examModel->getRekapNilaiCbtMatrixByGuru($guruId, $reportKelasId);
+        $rekapCbtMatrix = $examModel->getRekapNilaiCbtMatrixByGuru($queryGuruId, $reportKelasId);
 
         $mapelList = $academicModel->getMapelByGuru($guruId);
         if (empty($mapelList)) $mapelList = $academicModel->getMapel();
