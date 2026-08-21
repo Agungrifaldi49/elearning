@@ -55,10 +55,31 @@ class Security {
     }
 
     /**
+     * Decode double/triple encoded HTML entities and return safe single-encoded string
+     */
+    public static function safeText($data) {
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $data[$key] = self::safeText($value);
+            }
+            return $data;
+        }
+        $str = (string)$data;
+        while (strpos($str, '&amp;') !== false) {
+            $str = html_entity_decode($str, ENT_QUOTES, 'UTF-8');
+        }
+        return htmlspecialchars(trim($str), ENT_QUOTES, 'UTF-8');
+    }
+
+    /**
      * Clean Raw HTML for safe display (permits safe formatting tags like lists, bold, italic, underline)
      */
     public static function sanitizeHtml($html) {
         if (empty($html)) return '';
+        $html = (string)$html;
+        while (strpos($html, '&amp;lt;') !== false || strpos($html, '&amp;amp;') !== false) {
+            $html = html_entity_decode($html, ENT_QUOTES, 'UTF-8');
+        }
         // Remove script tags and inline event attributes
         $html = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', "", $html);
         $html = preg_replace('/on[a-z]+\s*=\s*(["\']).*?\1/i', '', $html);
@@ -67,7 +88,14 @@ class Security {
 
         // Allowed tags
         $allowed = '<ol><ul><li><p><br><b><strong><i><em><u><span><div><style>';
-        return strip_tags(trim((string)$html), $allowed);
+        return strip_tags(trim($html), $allowed);
+    }
+
+    /**
+     * Safe HTML for formatted content
+     */
+    public static function safeHtml($html) {
+        return self::sanitizeHtml($html);
     }
 
     /**

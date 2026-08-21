@@ -19,13 +19,13 @@ if (preg_match('/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+
 }
 
 $mapsUrl = !empty($settings['landing_maps_url']) ? $settings['landing_maps_url'] : 'https://maps.google.com/maps?q=Cicalengka&t=&z=13&ie=UTF8&iwloc=&output=embed';
-$schoolName = $settings['nama_sekolah'] ?? 'SMK Muthia Harapan Cicalengka';
-$misiContent = Security::sanitizeHtml($settings['landing_misi_desc'] ?? 'Mengembangkan kurikulum industri & sertifikasi kompetensi keahlian.');
-$visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK Unggulan berstandar Nasional berbasis Teknologi & Imtaq.');
+$schoolName = Security::safeText($settings['nama_sekolah'] ?? 'SMK Muthia Harapan Cicalengka');
+$misiContent = Security::safeHtml($settings['landing_misi_desc'] ?? 'Mengembangkan kurikulum industri & sertifikasi kompetensi keahlian.');
+$visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK Unggulan berstandar Nasional berbasis Teknologi & Imtaq.');
 ?>
 
 <!-- Navbar Landing Page -->
-<nav class="navbar navbar-expand-lg navbar-dark landing-navbar fixed-top py-3" id="mainNavbar">
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top py-3 shadow-sm" id="mainNavbar" style="background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%) !important; backdrop-filter: blur(10px);">
     <div class="container">
         <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
             <?php if ($logoUrl): ?>
@@ -35,18 +35,18 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
                     🎓
                 </div>
             <?php endif; ?>
-            <span class="fs-5 tracking-tight text-white font-heading"><?= htmlspecialchars($schoolName) ?></span>
+            <span class="fs-5 tracking-tight text-white font-heading"><?= $schoolName ?></span>
         </a>
-        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic" aria-controls="navPublic" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler border-0 shadow-none text-white" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic" aria-controls="navPublic" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navPublic">
             <ul class="navbar-nav ms-auto me-lg-4 gap-1 py-2 py-lg-0">
-                <li class="nav-item"><a class="nav-link text-white-50 hover-white fw-medium px-3" href="#profil"><i class="bi bi-info-circle me-1"></i> Profil</a></li>
-                <li class="nav-item"><a class="nav-link text-white-50 hover-white fw-medium px-3" href="#fitur"><i class="bi bi-stars me-1"></i> Fitur LMS</a></li>
-                <li class="nav-item"><a class="nav-link text-white-50 hover-white fw-medium px-3" href="#jurusan"><i class="bi bi-award me-1"></i> Jurusan</a></li>
-                <li class="nav-item"><a class="nav-link text-white-50 hover-white fw-medium px-3" href="#guru"><i class="bi bi-people me-1"></i> Pengajar</a></li>
-                <li class="nav-item"><a class="nav-link text-white-50 hover-white fw-medium px-3" href="#kontak"><i class="bi bi-geo-alt me-1"></i> Kontak</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 opacity-90" href="#profil"><i class="bi bi-info-circle me-1"></i> Profil</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 opacity-90" href="#fitur"><i class="bi bi-stars me-1"></i> Fitur LMS</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 opacity-90" href="#jurusan"><i class="bi bi-award me-1"></i> Jurusan</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 opacity-90" href="#guru"><i class="bi bi-people me-1"></i> Pengajar</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium px-3 opacity-90" href="#kontak"><i class="bi bi-geo-alt me-1"></i> Kontak</a></li>
             </ul>
             <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill shadow-sm d-inline-flex align-items-center gap-2">
                 <i class="bi bi-box-arrow-in-right fs-5"></i>
@@ -56,20 +56,20 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
     </div>
 </nav>
 
-<!-- Hero Banner Section -->
-<section class="landing-hero text-white pt-5 pb-5 position-relative">
+<!-- Hero Banner Section (Guaranteed High Contrast Gradient) -->
+<section class="text-white pt-5 pb-5 position-relative overflow-hidden" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 40%, #073896 100%) !important;">
     <div class="container py-5 my-lg-4 mt-4">
         <div class="row align-items-center gy-5">
             <div class="col-lg-7 text-center text-lg-start">
-                <div class="d-inline-flex align-items-center gap-2 bg-white bg-opacity-10 backdrop-blur px-3 py-2 rounded-pill mb-4 border border-white border-opacity-25 shadow-sm">
+                <div class="d-inline-flex align-items-center gap-2 bg-white bg-opacity-20 backdrop-blur px-3 py-2 rounded-pill mb-4 border border-white border-opacity-30 shadow-sm">
                     <span class="badge bg-warning text-dark fw-bold rounded-pill"><i class="bi bi-lightning-charge-fill me-1"></i> Next-Gen LMS</span>
-                    <span class="small fw-semibold text-white"><?= htmlspecialchars($settings['landing_hero_badge'] ?? 'Portal Pembelajaran Digital Terpadu') ?></span>
+                    <span class="small fw-semibold text-white"><?= Security::safeText($settings['landing_hero_badge'] ?? 'Portal Pembelajaran Digital Terpadu') ?></span>
                 </div>
-                <h1 class="display-4 fw-extrabold mb-3 text-white font-heading lh-sm">
-                    <?= htmlspecialchars($settings['landing_hero_title'] ?? 'E-Learning SMK Muthia Harapan Cicalengka') ?>
+                <h1 class="display-4 fw-extrabold mb-3 text-white font-heading lh-sm" style="text-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+                    <?= Security::safeText($settings['landing_hero_title'] ?? 'E-Learning SMK Muthia Harapan Cicalengka') ?>
                 </h1>
-                <p class="lead text-white-50 mb-4 pe-lg-4 fw-normal fs-5">
-                    <?= htmlspecialchars($settings['landing_hero_desc'] ?? 'Sistem Manajemen Pembelajaran Digital Interaktif, Transparan, dan Modern untuk Membentuk Generasi Unggul Siap Kerja.') ?>
+                <p class="lead text-white opacity-90 mb-4 pe-lg-4 fw-normal fs-5" style="text-shadow: 0 1px 4px rgba(0,0,0,0.2);">
+                    <?= Security::safeText($settings['landing_hero_desc'] ?? 'Sistem Manajemen Pembelajaran Digital Interaktif, Transparan, dan Modern untuk Membentuk Generasi Unggul Siap Kerja.') ?>
                 </p>
                 <div class="d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap">
                     <a href="<?= BASE_URL ?>login.php" class="btn btn-warning btn-lg text-dark fw-bold px-4 py-3 rounded-pill shadow">
@@ -82,36 +82,36 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
             </div>
             
             <div class="col-lg-5 text-center">
-                <div class="glass-card p-4 p-md-5 rounded-4 border border-white border-opacity-25 shadow-lg text-white">
-                    <div class="bg-warning bg-opacity-20 text-warning d-inline-flex p-3 rounded-circle mb-3 border border-warning border-opacity-25 shadow-sm">
-                        <i class="bi bi-laptop display-4"></i>
+                <div class="p-4 p-md-5 rounded-4 border border-white border-opacity-30 shadow-lg text-white" style="background: rgba(255, 255, 255, 0.15) !important; backdrop-filter: blur(12px);">
+                    <div class="bg-warning text-dark d-inline-flex p-3 rounded-circle mb-3 shadow-sm">
+                        <i class="bi bi-laptop display-4 text-dark"></i>
                     </div>
-                    <h3 class="fw-bold mb-2 font-heading"><?= htmlspecialchars($settings['landing_hero_card_title'] ?? 'KBM Digital Terpadu') ?></h3>
-                    <p class="small text-white-50 mb-4"><?= htmlspecialchars($settings['landing_hero_card_desc'] ?? 'Materi, CBT, Quiz, Absensi QR Code, & Laporan Real-time') ?></p>
+                    <h3 class="fw-bold mb-2 text-white font-heading"><?= Security::safeText($settings['landing_hero_card_title'] ?? 'KBM Digital Terpadu') ?></h3>
+                    <p class="small text-white opacity-90 mb-4"><?= Security::safeText($settings['landing_hero_card_desc'] ?? 'Materi, CBT, Quiz, Absensi QR Code, & Laporan Real-time') ?></p>
                     
-                    <div class="row g-2 text-start pt-3 border-top border-white border-opacity-10">
+                    <div class="row g-2 text-start pt-3 border-top border-white border-opacity-20">
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-10 p-2.5 rounded-3">
+                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-20 p-2.5 rounded-3">
                                 <i class="bi bi-check-circle-fill text-warning fs-5"></i>
-                                <span class="small fw-semibold">CBT & Quiz Online</span>
+                                <span class="small fw-semibold text-white">CBT & Quiz Online</span>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-10 p-2.5 rounded-3">
+                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-20 p-2.5 rounded-3">
                                 <i class="bi bi-check-circle-fill text-warning fs-5"></i>
-                                <span class="small fw-semibold">Absensi QR Code</span>
+                                <span class="small fw-semibold text-white">Absensi QR Code</span>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-10 p-2.5 rounded-3">
+                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-20 p-2.5 rounded-3">
                                 <i class="bi bi-check-circle-fill text-warning fs-5"></i>
-                                <span class="small fw-semibold">E-Modul & Video</span>
+                                <span class="small fw-semibold text-white">E-Modul & Video</span>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-10 p-2.5 rounded-3">
+                            <div class="d-flex align-items-center gap-2 bg-white bg-opacity-20 p-2.5 rounded-3">
                                 <i class="bi bi-check-circle-fill text-warning fs-5"></i>
-                                <span class="small fw-semibold">E-Rapor & Sertifikat</span>
+                                <span class="small fw-semibold text-white">E-Rapor & Sertifikat</span>
                             </div>
                         </div>
                     </div>
@@ -159,13 +159,13 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
         <div class="row align-items-center gy-4 mb-4">
             <div class="col-lg-6">
                 <span class="badge bg-primary bg-opacity-10 text-primary fw-bold text-uppercase px-3 py-2 rounded-pill mb-2">
-                    <i class="bi bi-building me-1"></i> <?= htmlspecialchars($settings['landing_profil_tag'] ?? 'Profil Sekolah') ?>
+                    <i class="bi bi-building me-1"></i> <?= Security::safeText($settings['landing_profil_tag'] ?? 'Profil Sekolah') ?>
                 </span>
                 <h2 class="display-6 fw-bold text-dark mb-3 font-heading">
-                    <?= htmlspecialchars($settings['landing_profil_title'] ?? 'Mencetak Lulusan Berkarakter & Competent') ?>
+                    <?= Security::safeText($settings['landing_profil_title'] ?? 'Mencetak Lulusan Berkarakter & Competent') ?>
                 </h2>
                 <p class="text-secondary lead fs-6 mb-4">
-                    <?= htmlspecialchars($settings['landing_profil_desc'] ?? 'SMK Muthia Harapan Cicalengka berkomitmen memberikan pendidikan kejuruan berkualitas tinggi berbasis teknologi informasi dan industri modern di Jawa Barat.') ?>
+                    <?= Security::safeText($settings['landing_profil_desc'] ?? 'SMK Muthia Harapan Cicalengka berkomitmen memberikan pendidikan kejuruan berkualitas tinggi berbasis teknologi informasi dan industri modern di Jawa Barat.') ?>
                 </p>
                 
                 <div class="row g-3">
@@ -176,7 +176,7 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
                                 <div class="bg-primary text-white rounded-3 d-inline-flex align-items-center justify-content-center shadow-sm" style="width:38px; height:38px;">
                                     <i class="bi bi-eye-fill fs-5"></i>
                                 </div>
-                                <h5 class="fw-bold text-primary mb-0 font-heading"><?= htmlspecialchars($settings['landing_visi_title'] ?? 'Visi Utama') ?></h5>
+                                <h5 class="fw-bold text-primary mb-0 font-heading"><?= Security::safeText($settings['landing_visi_title'] ?? 'Visi Utama') ?></h5>
                             </div>
                             <div class="landing-misi-content">
                                 <?= $visiContent ?>
@@ -191,7 +191,7 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
                                 <div class="bg-success text-white rounded-3 d-inline-flex align-items-center justify-content-center shadow-sm" style="width:38px; height:38px;">
                                     <i class="bi bi-bullseye fs-5"></i>
                                 </div>
-                                <h5 class="fw-bold text-success mb-0 font-heading"><?= htmlspecialchars($settings['landing_misi_title'] ?? 'Misi Presisi') ?></h5>
+                                <h5 class="fw-bold text-success mb-0 font-heading"><?= Security::safeText($settings['landing_misi_title'] ?? 'Misi Presisi') ?></h5>
                             </div>
                             <div class="landing-misi-content">
                                 <?= $misiContent ?>
@@ -287,8 +287,8 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
                             <div class="bg-primary bg-opacity-10 text-primary rounded-4 d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width:70px; height:70px;">
                                 <i class="bi bi-laptop-fill fs-2"></i>
                             </div>
-                            <h5 class="fw-bold mb-2 text-dark font-heading"><?= htmlspecialchars($j['nama_jurusan']) ?></h5>
-                            <p class="small text-muted mb-3"><?= htmlspecialchars($j['deskripsi'] ?? 'Program keahlian terintegrasi dengan kebutuhan industri modern.') ?></p>
+                            <h5 class="fw-bold mb-2 text-dark font-heading"><?= Security::safeText($j['nama_jurusan']) ?></h5>
+                            <p class="small text-muted mb-3"><?= Security::safeText($j['deskripsi'] ?? 'Program keahlian terintegrasi dengan kebutuhan industri modern.') ?></p>
                             <span class="badge bg-light text-primary border border-primary border-opacity-25 rounded-pill px-3 py-2 mt-auto align-self-center">
                                 <i class="bi bi-check2-circle me-1"></i> Siap Kerja
                             </span>
@@ -321,9 +321,9 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
                                 </div>
                             </div>
                             <div class="card-body pt-1">
-                                <h6 class="fw-bold text-dark mb-1 fs-6 font-heading"><?= htmlspecialchars($g['nama_lengkap']) ?></h6>
+                                <h6 class="fw-bold text-dark mb-1 fs-6 font-heading"><?= Security::safeText($g['nama_lengkap']) ?></h6>
                                 <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill small mb-2">Guru Pengajar</span>
-                                <small class="text-muted d-block font-monospace">NIP: <?= htmlspecialchars($g['nip'] ?? '-') ?></small>
+                                <small class="text-muted d-block font-monospace">NIP: <?= Security::safeText($g['nip'] ?? '-') ?></small>
                             </div>
                         </div>
                     </div>
@@ -341,9 +341,9 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
         <div class="row gy-4">
             <div class="col-lg-5">
                 <span class="badge bg-danger bg-opacity-10 text-danger fw-bold text-uppercase px-3 py-2 rounded-pill mb-2">
-                    <?= htmlspecialchars($settings['landing_kontak_tag'] ?? 'Hubungi Kami') ?>
+                    <?= Security::safeText($settings['landing_kontak_tag'] ?? 'Hubungi Kami') ?>
                 </span>
-                <h2 class="fw-bold display-6 mb-4 font-heading"><?= htmlspecialchars($settings['landing_kontak_title'] ?? 'Lokasi & Kontak Sekolah') ?></h2>
+                <h2 class="fw-bold display-6 mb-4 font-heading"><?= Security::safeText($settings['landing_kontak_title'] ?? 'Lokasi & Kontak Sekolah') ?></h2>
                 
                 <div class="card-hover-effect p-3 mb-3 d-flex align-items-center gap-3 bg-white rounded-4">
                     <div class="bg-danger bg-opacity-10 text-danger rounded-3 p-3 flex-shrink-0">
@@ -351,7 +351,7 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
                     </div>
                     <div>
                         <h6 class="fw-bold mb-1 font-heading">Alamat Lengkap</h6>
-                        <p class="small text-muted mb-0"><?= htmlspecialchars($settings['alamat'] ?? 'Jl. Raya Cicalengka, Kab. Bandung, Jawa Barat 40395') ?></p>
+                        <p class="small text-muted mb-0"><?= Security::safeText($settings['alamat'] ?? 'Jl. Raya Cicalengka, Kab. Bandung, Jawa Barat 40395') ?></p>
                     </div>
                 </div>
 
@@ -361,7 +361,7 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
                     </div>
                     <div>
                         <h6 class="fw-bold mb-1 font-heading">Telepon / WhatsApp</h6>
-                        <p class="small text-muted mb-0"><?= htmlspecialchars($settings['telepon'] ?? '+62 812-3456-7890') ?></p>
+                        <p class="small text-muted mb-0"><?= Security::safeText($settings['telepon'] ?? '+62 812-3456-7890') ?></p>
                     </div>
                 </div>
 
@@ -371,7 +371,7 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
                     </div>
                     <div>
                         <h6 class="fw-bold mb-1 font-heading">Email Resmi</h6>
-                        <p class="small text-muted mb-0"><?= htmlspecialchars($settings['landing_email'] ?? $settings['smtp_user'] ?? 'info@smkmh-cicalengka.sch.id') ?></p>
+                        <p class="small text-muted mb-0"><?= Security::safeText($settings['landing_email'] ?? $settings['smtp_user'] ?? 'info@smkmh-cicalengka.sch.id') ?></p>
                     </div>
                 </div>
             </div>
@@ -388,7 +388,7 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
 </section>
 
 <!-- Footer -->
-<footer class="bg-dark text-white pt-5 pb-4 border-top border-secondary">
+<footer class="bg-dark text-white pt-5 pb-4 border-top border-secondary" style="background: #0f172a !important;">
     <div class="container">
         <div class="row gy-4 mb-4">
             <div class="col-lg-5">
@@ -398,7 +398,7 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
                     <?php else: ?>
                         <i class="bi bi-mortarboard-fill fs-3 text-warning"></i>
                     <?php endif; ?>
-                    <h5 class="fw-bold text-warning mb-0 font-heading"><?= htmlspecialchars($schoolName) ?></h5>
+                    <h5 class="fw-bold text-warning mb-0 font-heading"><?= $schoolName ?></h5>
                 </div>
                 <p class="small text-white-50 mb-3">
                     Portal Learning Management System Modern & Terintegrasi untuk mendukung kegiatan belajar mengajar berbasis digital di SMK Muthia Harapan Cicalengka.
@@ -418,7 +418,7 @@ $visiContent = Security::sanitizeHtml($settings['landing_visi_desc'] ?? 'Menjadi
                 <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill shadow-sm mb-3">
                     <i class="bi bi-box-arrow-in-right me-1"></i> Login E-Learning
                 </a>
-                <p class="small text-white-50 mb-0">&copy; <?= date('Y') ?> <?= htmlspecialchars($schoolName) ?>. All Rights Reserved.</p>
+                <p class="small text-white-50 mb-0">&copy; <?= date('Y') ?> <?= $schoolName ?>. All Rights Reserved.</p>
             </div>
         </div>
     </div>

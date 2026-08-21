@@ -59,8 +59,8 @@ $faviconVersion = !empty($rawLogo) ? @filemtime(ROOT_PATH . (strpos($rawLogo, 'a
     <!-- Google Fonts Inter & Plus Jakarta Sans -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Custom CSS -->
-    <link href="<?= BASE_URL ?>assets/css/style.css" rel="stylesheet">
+    <!-- Custom CSS with cache buster -->
+    <link href="<?= BASE_URL ?>assets/css/style.css?v=<?= time() ?>" rel="stylesheet">
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
