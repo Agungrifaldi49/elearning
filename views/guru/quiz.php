@@ -109,7 +109,7 @@ $hasilQuizSubmissions = $hasilQuizSubmissions ?? [];
 $susulanRequests = $susulanRequests ?? [];
 
 $activeTab = $_GET['tab'] ?? 'paket';
-if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
+if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
     $activeTab = 'paket';
 }
 ?>
@@ -261,6 +261,11 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                     <?php if ($pendingSusulanCount > 0): ?>
                         <span id="badgeSusulanCount" class="badge bg-warning text-dark rounded-pill px-2.5 py-1" style="font-size:0.72rem;"><?= $pendingSusulanCount ?></span>
                     <?php endif; ?>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link <?= $activeTab === 'laporan' ? 'active' : '' ?> d-flex align-items-center gap-2" id="tab-laporan-tab" data-bs-toggle="tab" data-bs-target="#tab-laporan" type="button" role="tab">
+                    <i class="bi bi-file-earmark-bar-graph-fill text-warning"></i> Laporan &amp; Rekap Nilai CBT
                 </button>
             </li>
         </ul>
@@ -702,6 +707,295 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan'])) {
                             </tbody>
                         </table>
                     </div>
+            <!-- TAB 4: LAPORAN & REKAP NILAI CBT -->
+            <div class="tab-pane fade <?= $activeTab === 'laporan' ? 'show active' : '' ?>" id="tab-laporan" role="tabpanel">
+                <div class="table-card-custom p-4 border-top border-4 border-warning">
+                    
+                    <!-- Filter Header Bar -->
+                    <div class="card bg-light border-0 rounded-4 p-3.5 mb-4 shadow-sm">
+                        <form action="<?= BASE_URL ?>index.php" method="GET" class="row g-3 align-items-end">
+                            <input type="hidden" name="url" value="guru/quiz">
+                            <input type="hidden" name="tab" value="laporan">
+                            
+                            <div class="col-12 col-md-5">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-funnel-fill text-warning me-1"></i> Pilih Paket Quiz / Ujian untuk Laporan:
+                                </label>
+                                <select name="report_quiz_id" class="form-select rounded-3 fw-semibold border-secondary-subtle" onchange="this.form.submit()">
+                                    <option value="all" <?= ($reportQuizId === 'all' || empty($reportQuizId)) ? 'selected' : '' ?>>
+                                        📊 [REKAPITULASI SEMUA QUIZ & NILAI AKHIR SISWA]
+                                    </option>
+                                    <?php if (!empty($quizList)): ?>
+                                        <optgroup label="Daftar Paket Quiz & Ujian CBT Guru">
+                                            <?php foreach ($quizList as $qz): ?>
+                                                <option value="<?= $qz['id'] ?>" <?= ((string)$reportQuizId === (string)$qz['id']) ? 'selected' : '' ?>>
+                                                    📝 <?= htmlspecialchars($qz['judul']) ?> (<?= htmlspecialchars($qz['nama_mapel'] ?? '-') ?> - <?= htmlspecialchars($qz['nama_kelas'] ?? '-') ?>)
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </optgroup>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-4">
+                                <label class="form-label fw-bold text-dark small mb-1">
+                                    <i class="bi bi-building me-1 text-primary"></i> Filter Kelas:
+                                </label>
+                                <select name="report_kelas_id" class="form-select rounded-3 fw-semibold border-secondary-subtle" onchange="this.form.submit()">
+                                    <option value="">Semua Kelas Terdaftar</option>
+                                    <?php if (!empty($kelasList)): ?>
+                                        <?php foreach ($kelasList as $kls): ?>
+                                            <option value="<?= $kls['id'] ?>" <?= ((string)$reportKelasId === (string)$kls['id']) ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($kls['nama_kelas']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-3 text-end d-flex gap-2">
+                                <button type="submit" class="btn btn-warning text-dark fw-bold px-3 rounded-pill w-100 shadow-xs">
+                                    <i class="bi bi-search me-1"></i> Tampilkan
+                                </button>
+                                <?php if ($reportQuizId !== 'all' || !empty($reportKelasId)): ?>
+                                    <a href="<?= BASE_URL ?>index.php?url=guru/quiz&tab=laporan" class="btn btn-outline-secondary rounded-pill px-3 fw-semibold" title="Reset Filter">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                        </form>
+                    </div>
+
+                    <?php if ($reportQuizId !== 'all' && !empty($quizReportDetail)): ?>
+                        <!-- VIEW MODE A: DETAIL REKAP NAMA SISWA PER QUIZ (e.g. Quiz 1, Quiz 2) -->
+                        <?php 
+                        $qInfo = $quizReportDetail['quiz'];
+                        $rData = $quizReportDetail['report_data'];
+                        ?>
+                        <div class="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-4 mb-4">
+                            <div class="row align-items-center gy-3">
+                                <div class="col-lg-7">
+                                    <span class="badge bg-warning text-dark fw-bold px-3 py-1.5 rounded-pill mb-2">
+                                        <i class="bi bi-file-earmark-text-fill me-1"></i> Mode Laporan Per Paket Quiz
+                                    </span>
+                                    <h4 class="fw-bold text-dark mb-1 font-heading"><?= htmlspecialchars($qInfo['judul']) ?></h4>
+                                    <p class="text-secondary small mb-0">
+                                        <i class="bi bi-book-half me-1"></i> <strong>Mapel:</strong> <?= htmlspecialchars($qInfo['nama_mapel']) ?> | 
+                                        <i class="bi bi-building me-1"></i> <strong>Kelas:</strong> <?= htmlspecialchars($qInfo['nama_kelas']) ?> | 
+                                        <i class="bi bi-clock me-1"></i> <strong>Durasi:</strong> <?= $qInfo['durasi_menit'] ?> Menit | 
+                                        <i class="bi bi-tag-fill me-1 text-primary"></i> <strong>Kategori:</strong> <?= strtoupper($qInfo['kategori'] ?? 'Kuis') ?>
+                                    </p>
+                                </div>
+                                <div class="col-lg-5 text-lg-end">
+                                    <div class="d-flex justify-content-lg-end gap-2 flex-wrap">
+                                        <button onclick="window.print()" class="btn btn-sm btn-outline-dark rounded-pill fw-bold px-3">
+                                            <i class="bi bi-printer-fill me-1"></i> Cetak Laporan
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KPI Mini Summary Cards -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 bg-white rounded-3 border shadow-xs text-center">
+                                    <small class="text-muted fw-bold d-block mb-1">Total Siswa / Submit</small>
+                                    <h5 class="fw-bold text-primary mb-0"><?= $quizReportDetail['total_submitted'] ?> / <?= $quizReportDetail['total_siswa'] ?> Siswa</h5>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 bg-white rounded-3 border shadow-xs text-center">
+                                    <small class="text-muted fw-bold d-block mb-1">Rata-rata Nilai Kelas</small>
+                                    <h5 class="fw-bold text-success mb-0"><?= $quizReportDetail['avg_score'] ?></h5>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 bg-white rounded-3 border shadow-xs text-center">
+                                    <small class="text-muted fw-bold d-block mb-1">Nilai Tertinggi / Terendah</small>
+                                    <h5 class="fw-bold text-dark mb-0"><?= $quizReportDetail['max_score'] ?> / <span class="text-danger"><?= $quizReportDetail['min_score'] ?></span></h5>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 bg-white rounded-3 border shadow-xs text-center">
+                                    <small class="text-muted fw-bold d-block mb-1">Tingkat Kelulusan (KKM 70)</small>
+                                    <h5 class="fw-bold text-warning-emphasis mb-0"><?= $quizReportDetail['total_submitted'] > 0 ? round(($quizReportDetail['passed_count'] / $quizReportDetail['total_submitted']) * 100, 1) : 0 ?>%</h5>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table Siswa Per Quiz -->
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle border">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="text-center" style="width:50px;">#</th>
+                                        <th>NIS / NISN</th>
+                                        <th>Nama Siswa</th>
+                                        <th>Kelas</th>
+                                        <th class="text-center">Status Pengerjaan</th>
+                                        <th class="text-center">Percobaan (Attempt)</th>
+                                        <th class="text-center">Waktu Selesai</th>
+                                        <th class="text-center">Nilai Quiz</th>
+                                        <th class="text-center">Keterangan Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php $no = 1; foreach ($rData as $item): 
+                                        $st = $item['siswa'];
+                                        $sub = $item['submission'];
+                                        $score = $item['score'];
+                                        $status = $item['status'];
+                                    ?>
+                                        <tr>
+                                            <td class="text-center fw-bold text-muted"><?= $no++ ?></td>
+                                            <td class="small font-monospace"><?= htmlspecialchars($st['nisn'] ?: ($st['nis'] ?: '-')) ?></td>
+                                            <td class="fw-bold text-dark"><?= htmlspecialchars($st['nama_lengkap']) ?></td>
+                                            <td><span class="badge bg-light text-dark border fw-semibold"><?= htmlspecialchars($st['nama_kelas']) ?></span></td>
+                                            <td class="text-center">
+                                                <?php if ($sub): ?>
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-bold">
+                                                        <i class="bi bi-check-circle-fill me-1"></i> Sudah Mengerjakan
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-1 fw-semibold">
+                                                        <i class="bi bi-dash-circle me-1"></i> Belum Mengerjakan
+                                                    </span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-center fw-semibold"><?= $sub ? $sub['attempt_count'] . 'x' : '-' ?></td>
+                                            <td class="text-center small text-muted"><?= $sub && !empty($sub['finished_at']) ? date('d/m/Y H:i', strtotime($sub['finished_at'])) : '-' ?></td>
+                                            <td class="text-center">
+                                                <?php if ($score !== null): ?>
+                                                    <span class="fs-6 fw-extrabold <?= $score >= 70 ? 'text-success' : 'text-danger' ?>">
+                                                        <?= number_format($score, 1) ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="text-muted fw-bold">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-center">
+                                                <?php if ($status === 'lulus'): ?>
+                                                    <span class="badge bg-success text-white rounded-pill px-3 py-1.5 fw-bold">LULUS (>= KKM)</span>
+                                                <?php elseif ($status === 'tidak_lulus'): ?>
+                                                    <span class="badge bg-danger text-white rounded-pill px-3 py-1.5 fw-bold">BELUM TUNTAS</span>
+                                                <?php elseif ($status === 'menunggu_essay'): ?>
+                                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5 fw-bold">PERLU KOREKSI ESSAY</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-light text-muted border rounded-pill px-3 py-1">BELUM ADA DATA</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    <?php else: ?>
+                        <!-- VIEW MODE B: REKAPITULASI MATRIX SEMUA QUIZ & NILAI AKHIR (AKUMULASI NILAI) -->
+                        <?php 
+                        $mQuizzes = $rekapCbtMatrix['quizzes'] ?? [];
+                        $mMatrix = $rekapCbtMatrix['matrix'] ?? [];
+                        ?>
+
+                        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                            <div>
+                                <h5 class="fw-bold text-dark mb-0">
+                                    <i class="bi bi-grid-3x3-gap-fill text-warning me-2"></i>Rekapitulasi Matrix Hasil Seluruh Quiz &amp; Nilai Akhir CBT
+                                </h5>
+                                <small class="text-muted">Menampilkan daftar seluruh siswa beserta perolehan nilai tiap Quiz/Exam dan akumulasi <strong>Nilai Akhir (Rata-Rata) &amp; Predikat</strong>.</small>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button onclick="window.print()" class="btn btn-sm btn-outline-dark rounded-pill fw-bold px-3">
+                                    <i class="bi bi-printer-fill me-1"></i> Cetak Rekap PDF
+                                </button>
+                            </div>
+                        </div>
+
+                        <?php if (empty($mQuizzes)): ?>
+                            <div class="alert alert-info border-0 rounded-4 p-4 text-center">
+                                <i class="bi bi-info-circle fs-1 text-primary d-block mb-2"></i>
+                                Belum ada paket Quiz / Ujian CBT yang dibuat oleh Guru untuk kelas ini.
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle border">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th class="text-center" style="width:40px;">#</th>
+                                            <th>NISN / NIS</th>
+                                            <th>Nama Siswa</th>
+                                            <th>Kelas</th>
+                                            <?php foreach ($mQuizzes as $qzHeader): ?>
+                                                <th class="text-center px-3" style="min-width:120px;" title="<?= htmlspecialchars($qzHeader['judul']) ?>">
+                                                    <div class="text-truncate" style="max-width:140px;"><?= htmlspecialchars($qzHeader['judul']) ?></div>
+                                                    <small class="fw-normal text-warning" style="font-size:0.7rem;"><?= strtoupper($qzHeader['kategori'] ?? 'Kuis') ?></small>
+                                                </th>
+                                            <?php endforeach; ?>
+                                            <th class="text-center bg-primary text-white" style="min-width:130px;">RATA-RATA NILAI AKHIR</th>
+                                            <th class="text-center bg-warning text-dark" style="min-width:100px;">PREDIKAT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($mMatrix)): ?>
+                                            <tr>
+                                                <td colspan="<?= 5 + count($mQuizzes) ?>" class="text-center py-4 text-muted">Belum ada siswa terdaftar dalam kelas ini.</td>
+                                            </tr>
+                                        <?php else: ?>
+                                            <?php $noM = 1; foreach ($mMatrix as $rowM): 
+                                                $stM = $rowM['siswa'];
+                                                $scMap = $rowM['scores'];
+                                                $finalAvg = $rowM['final_avg'];
+                                                $predikat = $rowM['predikat'];
+                                                $predikatLabel = $rowM['predikat_label'];
+                                            ?>
+                                                <tr>
+                                                    <td class="text-center fw-bold text-muted"><?= $noM++ ?></td>
+                                                    <td class="small font-monospace"><?= htmlspecialchars($stM['nisn'] ?: ($stM['nis'] ?: '-')) ?></td>
+                                                    <td class="fw-bold text-dark"><?= htmlspecialchars($stM['nama_lengkap']) ?></td>
+                                                    <td><span class="badge bg-light text-dark border fw-semibold"><?= htmlspecialchars($stM['nama_kelas']) ?></span></td>
+                                                    
+                                                    <?php foreach ($mQuizzes as $qzHeader): 
+                                                        $qId = $qzHeader['id'];
+                                                        $val = $scMap[$qId] ?? null;
+                                                    ?>
+                                                        <td class="text-center">
+                                                            <?php if ($val !== null): ?>
+                                                                <span class="badge <?= $val >= 70 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle' ?> fw-bold px-2.5 py-1.5 fs-6">
+                                                                    <?= number_format($val, 1) ?>
+                                                                </span>
+                                                            <?php else: ?>
+                                                                <span class="text-muted fw-bold">-</span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                    <?php endforeach; ?>
+
+                                                    <!-- Nilai Akhir Rata-Rata -->
+                                                    <td class="text-center bg-primary bg-opacity-10 fw-extrabold text-primary fs-6">
+                                                        <?= number_format($finalAvg, 1) ?>
+                                                    </td>
+
+                                                    <!-- Predikat Nilai Akhir -->
+                                                    <td class="text-center">
+                                                        <?php if ($predikat === 'A'): ?>
+                                                            <span class="badge bg-success text-white rounded-pill px-3 py-1.5 fw-bold">A (Sangat Baik)</span>
+                                                        <?php elseif ($predikat === 'B'): ?>
+                                                            <span class="badge bg-primary text-white rounded-pill px-3 py-1.5 fw-bold">B (Baik)</span>
+                                                        <?php elseif ($predikat === 'C'): ?>
+                                                            <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5 fw-bold">C (Cukup)</span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-danger text-white rounded-pill px-3 py-1.5 fw-bold">D (Kurang)</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+
+                    <?php endif; ?>
                 </div>
             </div>
 

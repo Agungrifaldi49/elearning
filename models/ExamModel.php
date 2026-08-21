@@ -811,4 +811,185 @@ class ExamModel extends BaseModel {
             'hasil' => $hasilQuiz
         ];
     }
+
+    public function getDetailedReportByQuiz($quizId) {
+        $quiz = $this->getQuizById($quizId);
+        if (!$quiz) return null;
+
+        $kelasId = (int)$quiz['kelas_id'];
+
+        $stmtSiswa = $this->db->prepare("
+            SELECT s.id, s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, k.nama_kelas, j.nama_jurusan
+            FROM siswa s
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            LEFT JOIN jurusan j ON s.jurusan_id = j.id
+            WHERE s.kelas_id = ?
+            ORDER BY s.nama_lengkap ASC
+        ");
+        $stmtSiswa->execute([$kelasId]);
+        $allStudents = $stmtSiswa->fetchAll();
+
+        $stmtHasil = $this->db->prepare("
+            SELECT hq.*, 
+            (SELECT COUNT(*) FROM soal s2 WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay') as total_essay_count,
+            (SELECT COUNT(*) FROM soal s2 LEFT JOIN jawaban_siswa js2 ON js2.soal_id = s2.id AND js2.siswa_id = hq.siswa_id AND js2.quiz_id = hq.quiz_id WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay' AND (js2.nilai IS NULL OR js2.id IS NULL)) as ungraded_essay_count
+            FROM hasil_quiz hq
+            WHERE hq.quiz_id = ?
+        ");
+        $stmtHasil->execute([$quizId]);
+        $submissions = $stmtHasil->fetchAll();
+
+        $submissionMap = [];
+        foreach ($submissions as $sub) {
+            $submissionMap[$sub['siswa_id']] = $sub;
+        }
+
+        $reportData = [];
+        $totalSubmitted = 0;
+        $sumScore = 0;
+        $maxScore = 0;
+        $minScore = 100;
+        $passedCount = 0;
+
+        foreach ($allStudents as $st) {
+            $stId = $st['id'];
+            $sub = $submissionMap[$stId] ?? null;
+
+            if ($sub) {
+                $totalSubmitted++;
+                $score = (float)$sub['total_nilai'];
+                $sumScore += $score;
+                if ($score > $maxScore) $maxScore = $score;
+                if ($score < $minScore) $minScore = $score;
+                if ($score >= 70) $passedCount++;
+
+                $statusText = ($sub['ungraded_essay_count'] ?? 0) > 0 ? 'menunggu_essay' : ($score >= 70 ? 'lulus' : 'tidak_lulus');
+            } else {
+                $score = null;
+                $statusText = 'belum_mengerjakan';
+            }
+
+            $reportData[] = [
+                'siswa' => $st,
+                'submission' => $sub,
+                'score' => $score,
+                'status' => $statusText
+            ];
+        }
+
+        $avgScore = $totalSubmitted > 0 ? round($sumScore / $totalSubmitted, 1) : 0;
+        if ($totalSubmitted == 0) $minScore = 0;
+
+        return [
+            'quiz' => $quiz,
+            'report_data' => $reportData,
+            'total_siswa' => count($allStudents),
+            'total_submitted' => $totalSubmitted,
+            'avg_score' => $avgScore,
+            'max_score' => $maxScore,
+            'min_score' => $minScore,
+            'passed_count' => $passedCount
+        ];
+    }
+
+    public function getRekapNilaiCbtMatrixByGuru($guruId, $kelasId = null) {
+        $sqlQuiz = "SELECT q.id, q.judul, q.kategori, q.kelas_id, map.nama_mapel, k.nama_kelas
+                    FROM quiz q
+                    JOIN mata_pelajaran map ON q.mapel_id = map.id
+                    JOIN kelas k ON q.kelas_id = k.id
+                    WHERE 1=1";
+        $params = [];
+        if ($guruId !== null) {
+            $sqlQuiz .= " AND q.guru_id = ?";
+            $params[] = (int)$guruId;
+        }
+        if ($kelasId) {
+            $sqlQuiz .= " AND q.kelas_id = ?";
+            $params[] = (int)$kelasId;
+        }
+        $sqlQuiz .= " ORDER BY q.id ASC";
+        $stmtQ = $this->db->prepare($sqlQuiz);
+        $stmtQ->execute($params);
+        $quizzes = $stmtQ->fetchAll();
+
+        if (empty($quizzes)) {
+            return ['quizzes' => [], 'matrix' => []];
+        }
+
+        $quizIds = array_column($quizzes, 'id');
+        $kelasIds = array_unique(array_column($quizzes, 'kelas_id'));
+
+        $inKelas = implode(',', array_map('intval', $kelasIds));
+        $sqlSiswa = "SELECT s.id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas
+                     FROM siswa s
+                     JOIN kelas k ON s.kelas_id = k.id
+                     WHERE s.kelas_id IN ($inKelas)";
+        if ($kelasId) {
+            $sqlSiswa .= " AND s.kelas_id = " . (int)$kelasId;
+        }
+        $sqlSiswa .= " ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC";
+        $students = $this->db->query($sqlSiswa)->fetchAll();
+
+        $inQuiz = implode(',', array_map('intval', $quizIds));
+        $sqlHasil = "SELECT hq.siswa_id, hq.quiz_id, hq.total_nilai, hq.status_lulus
+                     FROM hasil_quiz hq
+                     WHERE hq.quiz_id IN ($inQuiz)";
+        $hasilList = $this->db->query($sqlHasil)->fetchAll();
+
+        $hasilMap = [];
+        foreach ($hasilList as $h) {
+            $hasilMap[$h['siswa_id']][$h['quiz_id']] = (float)$h['total_nilai'];
+        }
+
+        $matrix = [];
+        foreach ($students as $s) {
+            $sId = $s['id'];
+            $scores = [];
+            $totalVal = 0;
+            $countTaken = 0;
+
+            foreach ($quizzes as $qz) {
+                $qId = $qz['id'];
+                if (isset($hasilMap[$sId][$qId])) {
+                    $sc = $hasilMap[$sId][$qId];
+                    $scores[$qId] = $sc;
+                    $totalVal += $sc;
+                    $countTaken++;
+                } else {
+                    $scores[$qId] = null;
+                }
+            }
+
+            $finalAvg = count($quizzes) > 0 ? round($totalVal / count($quizzes), 1) : 0;
+
+            if ($finalAvg >= 90) {
+                $predikat = 'A';
+                $predikatLabel = 'Sangat Baik';
+            } elseif ($finalAvg >= 80) {
+                $predikat = 'B';
+                $predikatLabel = 'Baik';
+            } elseif ($finalAvg >= 70) {
+                $predikat = 'C';
+                $predikatLabel = 'Cukup';
+            } else {
+                $predikat = 'D';
+                $predikatLabel = 'Kurang';
+            }
+
+            $matrix[] = [
+                'siswa' => $s,
+                'scores' => $scores,
+                'count_taken' => $countTaken,
+                'total_score' => $totalVal,
+                'final_avg' => $finalAvg,
+                'predikat' => $predikat,
+                'predikat_label' => $predikatLabel
+            ];
+        }
+
+        return [
+            'quizzes' => $quizzes,
+            'matrix' => $matrix
+        ];
+    }
 }

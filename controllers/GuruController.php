@@ -676,6 +676,16 @@ class GuruController {
         $susulanRequests = $examModel->getSusulanRequestsByGuru($guruId);
         $hasilQuizSubmissions = $examModel->getHasilQuizListByGuru($guruId);
 
+        // --- NEW REPORT & MATRIX DATA FOR QUIZ & CBT ---
+        $reportQuizId = isset($_GET['report_quiz_id']) ? $_GET['report_quiz_id'] : 'all';
+        $reportKelasId = isset($_GET['report_kelas_id']) && !empty($_GET['report_kelas_id']) ? (int)$_GET['report_kelas_id'] : null;
+
+        $quizReportDetail = null;
+        if ($reportQuizId !== 'all' && (int)$reportQuizId > 0) {
+            $quizReportDetail = $examModel->getDetailedReportByQuiz((int)$reportQuizId);
+        }
+        $rekapCbtMatrix = $examModel->getRekapNilaiCbtMatrixByGuru($guruId, $reportKelasId);
+
         $mapelList = $academicModel->getMapelByGuru($guruId);
         if (empty($mapelList)) $mapelList = $academicModel->getMapel();
 
