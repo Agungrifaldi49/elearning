@@ -313,16 +313,35 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
         <div class="row g-4">
             <?php if (!empty($guruList)): ?>
                 <?php foreach (array_slice($guruList, 0, 8) as $g): ?>
+                    <?php 
+                        $guruPhotoUrl = null;
+                        $avFile = $g['avatar'] ?? ($g['foto'] ?? ($g['foto_profil'] ?? ''));
+                        if (!empty($avFile) && $avFile !== 'default_avatar.png') {
+                            if (file_exists(ROOT_PATH . 'assets/uploads/profile/' . $avFile)) {
+                                $guruPhotoUrl = BASE_URL . 'assets/uploads/profile/' . htmlspecialchars($avFile);
+                            } elseif (file_exists(ROOT_PATH . 'assets/uploads/avatar/' . $avFile)) {
+                                $guruPhotoUrl = BASE_URL . 'assets/uploads/avatar/' . htmlspecialchars($avFile);
+                            } elseif (file_exists(ROOT_PATH . 'assets/uploads/' . $avFile)) {
+                                $guruPhotoUrl = BASE_URL . 'assets/uploads/' . htmlspecialchars($avFile);
+                            } elseif (strpos($avFile, 'http') === 0 || strpos($avFile, 'assets/') === 0) {
+                                $guruPhotoUrl = (strpos($avFile, 'http') === 0) ? $avFile : BASE_URL . $avFile;
+                            }
+                        }
+                    ?>
                     <div class="col-12 col-sm-6 col-lg-3">
                         <div class="card card-hover-effect h-100 text-center overflow-hidden border-0 bg-light rounded-4">
                             <div class="pt-4 px-4">
-                                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold fs-2 mx-auto mb-3 shadow-sm" style="width:84px; height:84px; background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%); border: 3px solid #fff;">
-                                    <?= strtoupper(substr($g['nama_lengkap'], 0, 1)) ?>
-                                </div>
+                                <?php if ($guruPhotoUrl): ?>
+                                    <img src="<?= $guruPhotoUrl ?>" alt="<?= Security::safeText($g['nama_lengkap']) ?>" class="guru-card-img mx-auto mb-3">
+                                <?php else: ?>
+                                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold fs-2 mx-auto mb-3 shadow-sm" style="width:84px; height:84px; background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%); border: 3px solid #fff;">
+                                        <?= strtoupper(substr(Security::safeText($g['nama_lengkap']), 0, 1)) ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <div class="card-body pt-1">
                                 <h6 class="fw-bold text-dark mb-1 fs-6 font-heading"><?= Security::safeText($g['nama_lengkap']) ?></h6>
-                                <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill small mb-2">Guru Pengajar</span>
+                                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill small mb-2">Guru Pengajar</span>
                                 <small class="text-muted d-block font-monospace">NIP: <?= Security::safeText($g['nip'] ?? '-') ?></small>
                             </div>
                         </div>

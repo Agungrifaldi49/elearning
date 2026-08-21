@@ -14,7 +14,7 @@ class LandingController {
         $settingsModel = new SettingsModel();
 
         $jurusanList = $academicModel->getJurusan();
-        $guruList = array_slice($guruModel->getAll(), 0, 4);
+        $guruList = array_slice($guruModel->getAll(), 0, 8);
         $settings = $settingsModel->getAll();
 
         require_once ROOT_PATH . 'views/landing/index.php';
