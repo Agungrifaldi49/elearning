@@ -62,6 +62,8 @@ window.GameEngine = {
         startTime: 0,
         timerInterval: null,
         marioLoopInterval: null,
+        wheelAngle: 0,
+        isWheelSpinning: false,
         timeLeft: 0,
         isAnswered: false,
         isEnded: false,
@@ -71,7 +73,9 @@ window.GameEngine = {
         marioY: 210,
         marioVy: 0,
         isJumping: false,
-        bgOffset: 0
+        bgOffset: 0,
+        flippedCards: [],
+        matchedPairs: 0
     },
 
     startArena: function() {
@@ -83,14 +87,27 @@ window.GameEngine = {
         const overlay = document.getElementById('startScreenOverlay');
         const timerBox = document.getElementById('timerBarContainer');
         const quizBox = document.getElementById('quizBoxContainer');
+
         const marioBox = document.getElementById('marioStageContainer');
+        const speedBox = document.getElementById('speedStageContainer');
+        const wheelBox = document.getElementById('spinWheelStageContainer');
+        const memoryBox = document.getElementById('memoryStageContainer');
 
         if (overlay) overlay.classList.add('d-none');
 
+        // Route to distinct visual stage based on gameType
         if (this.data.gameType === 'mario_run') {
             if (marioBox) marioBox.classList.remove('d-none');
             this.initMarioCanvas();
+        } else if (this.data.gameType === 'spin_wheel') {
+            if (wheelBox) wheelBox.classList.remove('d-none');
+            this.initSpinWheelCanvas();
+        } else if (this.data.gameType === 'memory_match') {
+            if (memoryBox) memoryBox.classList.remove('d-none');
+            this.initMemoryGrid();
         } else {
+            // Default or quiz_speed Mode
+            if (speedBox) speedBox.classList.remove('d-none');
             if (timerBox) timerBox.classList.remove('d-none');
             if (quizBox) quizBox.classList.remove('d-none');
         }
@@ -103,6 +120,10 @@ window.GameEngine = {
             this.state.startTime = Date.now();
             if (this.data.gameType === 'mario_run') {
                 this.startMarioRun();
+            } else if (this.data.gameType === 'spin_wheel') {
+                this.drawSpinWheel();
+            } else if (this.data.gameType === 'memory_match') {
+                // Handled in initMemoryGrid
             } else {
                 this.renderQuestion();
             }
@@ -114,13 +135,12 @@ window.GameEngine = {
         }
     },
 
-    // 🍄 SUPER MARIO PLATFORM RUNNER ENGINE
+    // 🍄 MODE 1: SUPER MARIO PLATFORM RUNNER ENGINE
     initMarioCanvas: function() {
         const canvas = document.getElementById('marioCanvas');
         if (!canvas) return;
         this.canvasCtx = canvas.getContext('2d');
 
-        // Keyboard jump controls (Spacebar or Up Arrow)
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' || e.code === 'ArrowUp') {
                 e.preventDefault();
@@ -138,7 +158,6 @@ window.GameEngine = {
         this.state.marioLoopInterval = setInterval(() => {
             if (!this.state.isMarioRunning || this.state.isEnded) return;
 
-            // Deplete stamina as Mario runs forward
             this.state.stamina -= 0.35;
             if (this.state.stamina <= 0) {
                 this.state.stamina = 0;
@@ -157,7 +176,6 @@ window.GameEngine = {
             this.state.marioVy = -13;
             this.playSound('jump');
 
-            // Collect coins bonus
             this.state.coins += 1;
             this.state.score += 5;
             this.updateHUD();
@@ -171,14 +189,12 @@ window.GameEngine = {
         const w = 800;
         const h = 320;
 
-        // Background Sky
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
         skyGrad.addColorStop(0, '#5c94fc');
         skyGrad.addColorStop(1, '#89cff0');
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, w, h);
 
-        // Moving Parallax Clouds
         this.state.bgOffset += 2;
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
         for (let i = 0; i < 4; i++) {
@@ -191,7 +207,6 @@ window.GameEngine = {
             ctx.fill();
         }
 
-        // Green Hills
         ctx.fillStyle = '#38b000';
         for (let i = 0; i < 3; i++) {
             let hx = ((i * 350) - (this.state.bgOffset * 0.8)) % (w + 150);
@@ -201,28 +216,23 @@ window.GameEngine = {
             ctx.fill();
         }
 
-        // Brick Floor
         const groundY = 240;
         ctx.fillStyle = '#d04648';
         ctx.fillRect(0, groundY, w, h - groundY);
         ctx.fillStyle = '#e56b6f';
         ctx.fillRect(0, groundY, w, 8);
 
-        // Mystery Boxes & Checkpoint Flag
-        const currentQNum = this.state.currentIdx + 1;
-        const totalQ = this.data.questions.length;
-        ctx.fillStyle = '#ffb703';
         let boxX = ((w * 0.7) - (this.state.bgOffset % w));
         if (boxX < -50) boxX += w;
+        ctx.fillStyle = '#ffb703';
         ctx.fillRect(boxX, 150, 36, 36);
         ctx.fillStyle = '#000000';
         ctx.font = 'bold 20px monospace';
         ctx.fillText('?', boxX + 12, 175);
 
-        // Mario Physics (Jump & Gravity)
         if (this.state.isJumping) {
             this.state.marioY += this.state.marioVy;
-            this.state.marioVy += 0.85; // Gravity
+            this.state.marioVy += 0.85;
             if (this.state.marioY >= 210) {
                 this.state.marioY = 210;
                 this.state.isJumping = false;
@@ -230,24 +240,19 @@ window.GameEngine = {
             }
         }
 
-        // Draw Super Mario Character (Pixel Style)
         const mx = this.state.marioX;
         const my = this.state.marioY;
 
-        // Hat & Shirt (Red)
         ctx.fillStyle = '#e63946';
-        ctx.fillRect(mx + 6, my - 30, 20, 8); // Hat
-        ctx.fillRect(mx + 8, my - 16, 16, 16); // Shirt
+        ctx.fillRect(mx + 6, my - 30, 20, 8);
+        ctx.fillRect(mx + 8, my - 16, 16, 16);
 
-        // Head (Peach)
         ctx.fillStyle = '#ffb703';
         ctx.fillRect(mx + 8, my - 22, 16, 8);
 
-        // Overalls (Blue)
         ctx.fillStyle = '#1d3557';
         ctx.fillRect(mx + 6, my - 8, 20, 14);
 
-        // Shoes (Brown)
         ctx.fillStyle = '#4a2810';
         let legOffset = Math.sin(this.state.bgOffset * 0.2) * 4;
         ctx.fillRect(mx + 4 + legOffset, my + 6, 10, 6);
@@ -264,7 +269,6 @@ window.GameEngine = {
             this.renderMarioModalQuestion();
             modal.show();
         } else {
-            // Fallback to in-page quiz box
             const quizBox = document.getElementById('quizBoxContainer');
             if (quizBox) quizBox.classList.remove('d-none');
             this.renderQuestion();
@@ -323,7 +327,6 @@ window.GameEngine = {
             if (this.state.combo > this.state.maxCombo) this.state.maxCombo = this.state.combo;
             this.state.correctCount++;
 
-            // ⚡ EXACT USER SPEC: STAMINA REFILLS BACK TO FULL 100%!
             this.state.stamina = 100;
             this.updateStaminaHUD(100);
 
@@ -336,7 +339,7 @@ window.GameEngine = {
             this.playSound('wrong');
             this.state.combo = 0;
             this.state.lives--;
-            this.state.stamina = 25; // Stamina stays low on wrong answer
+            this.state.stamina = 25;
             this.updateStaminaHUD(25);
             this.updateHUD();
 
@@ -356,10 +359,201 @@ window.GameEngine = {
             if (this.state.currentIdx >= this.data.questions.length || this.state.lives <= 0) {
                 this.endGame();
             } else {
-                // Resume Mario running!
                 this.startMarioRun();
             }
         }, 1500);
+    },
+
+    // 🎡 MODE 3: SPIN WHEEL QUIZ ENGINE
+    initSpinWheelCanvas: function() {
+        const canvas = document.getElementById('wheelCanvas');
+        if (!canvas) return;
+        this.wheelCtx = canvas.getContext('2d');
+        this.drawSpinWheel();
+    },
+
+    drawSpinWheel: function() {
+        const ctx = this.wheelCtx;
+        if (!ctx) return;
+
+        const cx = 200;
+        const cy = 200;
+        const radius = 170;
+        const slices = [
+            { label: '🎯 Soal Utama', color: '#ff4d6d' },
+            { label: '🔥 2x Skor', color: '#7209b7' },
+            { label: '💡 Kuis Santai', color: '#4cc9f0' },
+            { label: '⚡ Kuis Cepat', color: '#38b000' },
+            { label: '🎁 Bonus Free', color: '#ffb703' },
+            { label: '🌟 Jackpot 3x', color: '#f72585' }
+        ];
+
+        ctx.clearRect(0, 0, 400, 400);
+
+        const sliceAngle = (Math.PI * 2) / slices.length;
+
+        for (let i = 0; i < slices.length; i++) {
+            const angle = this.state.wheelAngle + i * sliceAngle;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.arc(cx, cy, radius, angle, angle + sliceAngle);
+            ctx.closePath();
+
+            ctx.fillStyle = slices[i].color;
+            ctx.fill();
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            // Text Label inside Slice
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(angle + sliceAngle / 2);
+            ctx.textAlign = 'right';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 14px system-ui';
+            ctx.fillText(slices[i].label, radius - 18, 5);
+            ctx.restore();
+        }
+
+        // Center Pin Cap
+        ctx.beginPath();
+        ctx.arc(cx, cy, 28, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e1b4b';
+        ctx.fill();
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#ffb703';
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('SPIN', cx, cy + 4);
+
+        // Top Pointer Needle
+        ctx.beginPath();
+        ctx.moveTo(cx - 12, 10);
+        ctx.lineTo(cx + 12, 10);
+        ctx.lineTo(cx, 34);
+        ctx.closePath();
+        ctx.fillStyle = '#ffb703';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#000000';
+        ctx.stroke();
+    },
+
+    spinWheel: function() {
+        if (this.state.isWheelSpinning || this.state.isEnded) return;
+        if (this.state.currentIdx >= this.data.questions.length || this.state.lives <= 0) {
+            this.endGame();
+            return;
+        }
+
+        this.state.isWheelSpinning = true;
+        this.playSound('jump');
+
+        let spinTime = 0;
+        const totalSpinTime = 2500;
+        const startSpeed = Math.random() * 0.3 + 0.4;
+
+        const spinInterval = setInterval(() => {
+            spinTime += 40;
+            const progress = spinTime / totalSpinTime;
+            const easeOutSpeed = startSpeed * Math.pow(1 - progress, 2);
+            this.state.wheelAngle += easeOutSpeed;
+
+            this.drawSpinWheel();
+
+            if (spinTime >= totalSpinTime) {
+                clearInterval(spinInterval);
+                this.state.isWheelSpinning = false;
+                
+                // Trigger quiz modal after spin stops
+                setTimeout(() => {
+                    const quizBox = document.getElementById('quizBoxContainer');
+                    if (quizBox) quizBox.classList.remove('d-none');
+                    this.renderQuestion();
+                }, 300);
+            }
+        }, 40);
+    },
+
+    // 🧩 MODE 4: MEMORY MATCH CARDS ENGINE
+    initMemoryGrid: function() {
+        const gridContainer = document.getElementById('memoryGrid');
+        if (!gridContainer) return;
+
+        const totalQ = Math.min(6, this.data.questions.length);
+        let cardsData = [];
+
+        for (let i = 0; i < totalQ; i++) {
+            const q = this.data.questions[i];
+            cardsData.push({ id: i, type: 'q', text: `Pertanyaan #${i+1}: ${q.pertanyaan.substring(0, 45)}...` });
+            cardsData.push({ id: i, type: 'a', text: `Jawaban #${i+1}: Opsi ${q.kunci_jawaban.toUpperCase()}` });
+        }
+
+        // Shuffle cards
+        cardsData.sort(() => Math.random() - 0.5);
+
+        gridContainer.innerHTML = cardsData.map((c, idx) => `
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="memory-card bg-dark border border-warning rounded-4 p-3 text-center cursor-pointer shadow-sm hover-scale" onclick="window.GameEngine.flipMemoryCard(this, ${idx}, ${c.id})">
+                    <div class="card-inner py-4">
+                        <div class="card-front text-warning fs-1 mb-1">🧩</div>
+                        <div class="card-back text-white small d-none font-monospace">${c.text}</div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    flipMemoryCard: function(cardElem, idx, qId) {
+        if (this.state.flippedCards.length >= 2 || cardElem.classList.contains('matched')) return;
+
+        const backElem = cardElem.querySelector('.card-back');
+        const frontElem = cardElem.querySelector('.card-front');
+
+        if (frontElem) frontElem.classList.add('d-none');
+        if (backElem) backElem.classList.remove('d-none');
+        cardElem.classList.add('border-primary', 'bg-primary', 'bg-opacity-25');
+
+        this.playSound('jump');
+        this.state.flippedCards.push({ elem: cardElem, qId: qId });
+
+        if (this.state.flippedCards.length === 2) {
+            const c1 = this.state.flippedCards[0];
+            const c2 = this.state.flippedCards[1];
+
+            if (c1.qId === c2.qId) {
+                // Match found! Unlock Question Challenge
+                this.playSound('correct');
+                c1.elem.classList.add('matched', 'border-success', 'bg-success', 'bg-opacity-25');
+                c2.elem.classList.add('matched', 'border-success', 'bg-success', 'bg-opacity-25');
+
+                this.state.flippedCards = [];
+                this.state.currentIdx = qId;
+
+                setTimeout(() => {
+                    const quizBox = document.getElementById('quizBoxContainer');
+                    if (quizBox) quizBox.classList.remove('d-none');
+                    this.renderQuestion();
+                }, 600);
+            } else {
+                // Not match! Flip back
+                this.playSound('wrong');
+                setTimeout(() => {
+                    [c1, c2].forEach(c => {
+                        const b = c.elem.querySelector('.card-back');
+                        const f = c.elem.querySelector('.card-front');
+                        if (b) b.classList.add('d-none');
+                        if (f) f.classList.remove('d-none');
+                        c.elem.classList.remove('border-primary', 'bg-primary', 'bg-opacity-25');
+                    });
+                    this.state.flippedCards = [];
+                }, 1000);
+            }
+        }
     },
 
     updateStaminaHUD: function(val) {
@@ -386,8 +580,8 @@ window.GameEngine = {
             gain.connect(ctx.destination);
 
             if (type === 'correct') {
-                osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
                 gain.gain.setValueAtTime(0.2, ctx.currentTime);
                 osc.start();
                 osc.stop(ctx.currentTime + 0.25);
@@ -655,6 +849,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         <i class="bi bi-controller text-danger"></i> <?= htmlspecialchars($game['judul']) ?>
                         <?php if ($gameType === 'mario_run'): ?>
                             <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 fs-6">🍄 Super Mario</span>
+                        <?php elseif ($gameType === 'spin_wheel'): ?>
+                            <span class="badge bg-success text-white rounded-pill px-2.5 py-1 fs-6">🎡 Spin Wheel</span>
+                        <?php elseif ($gameType === 'memory_match'): ?>
+                            <span class="badge bg-primary text-white rounded-pill px-2.5 py-1 fs-6">🧩 Memory Match</span>
+                        <?php else: ?>
+                            <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 fs-6">⚡ Quiz Speed</span>
                         <?php endif; ?>
                     </h4>
                     <small class="text-white-50 fs-6"><?= htmlspecialchars($game['nama_mapel']) ?> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong></small>
@@ -698,9 +898,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="row g-3 justify-content-center max-w-2xl mx-auto mb-4 text-start">
                     <div class="col-12 col-md-4">
                         <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
-                            <div class="fs-3 mb-1">🍄 ⚡ 100%</div>
-                            <small class="text-white-50 d-block">Aturan Stamina</small>
-                            <span class="fw-bold text-warning">Isi Stamina (Jawaban Benar)</span>
+                            <?php if ($gameType === 'mario_run'): ?>
+                                <div class="fs-3 mb-1">🍄 ⚡ 100%</div>
+                                <small class="text-white-50 d-block">Aturan Stamina</small>
+                                <span class="fw-bold text-warning">Isi Stamina (Jawaban Benar)</span>
+                            <?php elseif ($gameType === 'spin_wheel'): ?>
+                                <div class="fs-3 mb-1">🎡 🌟</div>
+                                <small class="text-white-50 d-block">Roda Keberuntungan</small>
+                                <span class="fw-bold text-warning">Spin Wheel Challenge</span>
+                            <?php elseif ($gameType === 'memory_match'): ?>
+                                <div class="fs-3 mb-1">🧩 🎴</div>
+                                <small class="text-white-50 d-block">Pencocokan Kartu</small>
+                                <span class="fw-bold text-warning">Memory Flip Cards</span>
+                            <?php else: ?>
+                                <div class="fs-3 mb-1">⚡ ⏱️</div>
+                                <small class="text-white-50 d-block">Kecepatan Kuis</small>
+                                <span class="fw-bold text-warning">Arcade Speed Battle</span>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="col-12 col-md-4">
@@ -724,9 +938,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
             </div>
 
-            <!-- 🍄 SUPER MARIO CANVASES & HUD STAGE (Hidden Initially) -->
+            <!-- 🍄 MODE 1: SUPER MARIO CANVASES & HUD STAGE (Hidden Initially) -->
             <div id="marioStageContainer" class="d-none text-center py-2">
-                <!-- Mario HUD Controls Bar -->
                 <div class="row align-items-center g-2 mb-3 px-2">
                     <div class="col-12 col-md-5">
                         <div class="progress rounded-pill bg-dark border border-warning shadow-sm" style="height: 24px;">
@@ -746,12 +959,38 @@ document.addEventListener('DOMContentLoaded', function() {
                         </button>
                     </div>
                 </div>
-
-                <!-- 2D Canvas Screen -->
                 <div class="position-relative overflow-hidden rounded-4 border border-secondary shadow-lg">
                     <canvas id="marioCanvas" width="800" height="320" class="w-100 h-auto rounded-4" style="background:#5c94fc; max-height:360px;"></canvas>
                 </div>
             </div>
+
+            <!-- 🎡 MODE 3: SPIN WHEEL STAGE (Hidden Initially) -->
+            <div id="spinWheelStageContainer" class="d-none text-center py-2">
+                <div class="mb-3">
+                    <h4 class="fw-bold text-warning mb-1">🎡 RODA KEBERUNTUNGAN KUIS</h4>
+                    <p class="text-white-50 small mb-3">Putar roda untuk menentukan kategori pertanyaan kuis!</p>
+                </div>
+                <div class="d-flex flex-column align-items-center justify-content-center mb-3">
+                    <canvas id="wheelCanvas" width="400" height="400" class="rounded-circle shadow-lg mb-3" style="max-width: 320px; max-height: 320px;"></canvas>
+                    <button type="button" class="btn btn-warning btn-lg rounded-pill px-5 py-3 fw-bold text-dark shadow-lg hover-scale fs-5" onclick="window.GameEngine.spinWheel()">
+                        <i class="bi bi-arrow-repeat me-2"></i> PUTAR RODA HOKI!
+                    </button>
+                </div>
+            </div>
+
+            <!-- 🧩 MODE 4: MEMORY MATCH CARDS STAGE (Hidden Initially) -->
+            <div id="memoryStageContainer" class="d-none text-center py-2">
+                <div class="mb-3">
+                    <h4 class="fw-bold text-info mb-1">🧩 ARENA PENCOCOKAN KARTU MEMORI</h4>
+                    <p class="text-white-50 small mb-3">Buka 2 kartu pasangan untuk membuka tantangan kuis!</p>
+                </div>
+                <div class="row g-3 justify-content-center max-w-4xl mx-auto" id="memoryGrid">
+                    <!-- Dynamic Flip Cards -->
+                </div>
+            </div>
+
+            <!-- ⚡ MODE 2: QUIZ SPEED STAGE (Hidden Initially) -->
+            <div id="speedStageContainer" class="d-none"></div>
 
             <!-- Timer Progress Bar Box (For Quiz Speed Mode) -->
             <div id="timerBarContainer" class="progress bg-secondary bg-opacity-25 rounded-pill mb-4 d-none" style="height: 14px;">
