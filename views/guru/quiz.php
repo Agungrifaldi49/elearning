@@ -164,15 +164,26 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
         $pendingEssayCount = 0;
         if (!empty($hasilQuizSubmissions)) {
             foreach ($hasilQuizSubmissions as $hqItem) {
-                if (($hqItem['ungraded_essay_count'] ?? 0) > 0) {
+                $tEssay = (int)($hqItem['total_essay_count'] ?? 0);
+                $uEssay = (int)($hqItem['ungraded_essay_count'] ?? 0);
+                $isBanned = (!empty($hqItem['status_banned']) || !empty($hqItem['pelanggaran_count']));
+                if (($tEssay > 0 && $uEssay > 0) || $isBanned) {
                     $pendingEssayCount++;
                 }
             }
 
-            // Sort so pending essay items appear first
+            // Sort so pending items appear first
             usort($hasilQuizSubmissions, function($a, $b) {
-                $aPending = ($a['ungraded_essay_count'] ?? 0) > 0 ? 1 : 0;
-                $bPending = ($b['ungraded_essay_count'] ?? 0) > 0 ? 1 : 0;
+                $aTEssay = (int)($a['total_essay_count'] ?? 0);
+                $aUEssay = (int)($a['ungraded_essay_count'] ?? 0);
+                $aBanned = (!empty($a['status_banned']) || !empty($a['pelanggaran_count']));
+                $aPending = (($aTEssay > 0 && $aUEssay > 0) || $aBanned) ? 1 : 0;
+
+                $bTEssay = (int)($b['total_essay_count'] ?? 0);
+                $bUEssay = (int)($b['ungraded_essay_count'] ?? 0);
+                $bBanned = (!empty($b['status_banned']) || !empty($b['pelanggaran_count']));
+                $bPending = (($bTEssay > 0 && $bUEssay > 0) || $bBanned) ? 1 : 0;
+
                 return $bPending <=> $aPending;
             });
         }
