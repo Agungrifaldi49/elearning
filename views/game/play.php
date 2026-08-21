@@ -9,6 +9,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
 $csrfTokenVal = (class_exists('Security') && method_exists('Security', 'generateCsrfToken')) ? Security::generateCsrfToken() : ($_SESSION['csrf_token'] ?? '');
 $soalJsonData = json_encode($soalList ?: [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
 if (!$soalJsonData) $soalJsonData = '[]';
+$gameType = $game['tipe_game'] ?? 'mario_run';
 ?>
 
 <!-- Declare Game Engine & Window Helpers BEFORE HTML elements render -->
@@ -42,6 +43,7 @@ window.toggleArenaFullscreen = toggleArenaFullscreen;
 window.GameEngine = {
     data: {
         gameId: <?= (int)$game['id'] ?>,
+        gameType: '<?= htmlspecialchars($gameType) ?>',
         kkm: <?= (int)$game['kkm'] ?>,
         timerDuration: <?= (int)$game['durasi_per_soal'] ?>,
         questions: <?= $soalJsonData ?>,
@@ -55,29 +57,43 @@ window.GameEngine = {
         maxCombo: 0,
         lives: 3,
         correctCount: 0,
+        coins: 0,
+        stamina: 100,
         startTime: 0,
         timerInterval: null,
+        marioLoopInterval: null,
         timeLeft: 0,
         isAnswered: false,
         isEnded: false,
-        isStarted: false
+        isStarted: false,
+        isMarioRunning: false,
+        marioX: 50,
+        marioY: 210,
+        marioVy: 0,
+        isJumping: false,
+        bgOffset: 0
     },
 
     startArena: function() {
         if (this.state.isStarted) return;
         this.state.isStarted = true;
 
-        // Trigger Fullscreen
         window.toggleArenaFullscreen();
 
-        // Switch screens
         const overlay = document.getElementById('startScreenOverlay');
         const timerBox = document.getElementById('timerBarContainer');
         const quizBox = document.getElementById('quizBoxContainer');
+        const marioBox = document.getElementById('marioStageContainer');
 
         if (overlay) overlay.classList.add('d-none');
-        if (timerBox) timerBox.classList.remove('d-none');
-        if (quizBox) quizBox.classList.remove('d-none');
+
+        if (this.data.gameType === 'mario_run') {
+            if (marioBox) marioBox.classList.remove('d-none');
+            this.initMarioCanvas();
+        } else {
+            if (timerBox) timerBox.classList.remove('d-none');
+            if (quizBox) quizBox.classList.remove('d-none');
+        }
 
         this.init();
     },
@@ -85,12 +101,278 @@ window.GameEngine = {
     init: function() {
         try {
             this.state.startTime = Date.now();
-            this.renderQuestion();
+            if (this.data.gameType === 'mario_run') {
+                this.startMarioRun();
+            } else {
+                this.renderQuestion();
+            }
         } catch (err) {
             console.error('GameEngine Init Error:', err);
             const textEl = document.getElementById('questionText');
             if (textEl) textEl.textContent = 'Memulai arena permainan...';
             setTimeout(() => { this.renderQuestion(); }, 150);
+        }
+    },
+
+    // 🍄 SUPER MARIO PLATFORM RUNNER ENGINE
+    initMarioCanvas: function() {
+        const canvas = document.getElementById('marioCanvas');
+        if (!canvas) return;
+        this.canvasCtx = canvas.getContext('2d');
+
+        // Keyboard jump controls (Spacebar or Up Arrow)
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                this.marioJump();
+            }
+        });
+    },
+
+    startMarioRun: function() {
+        this.state.isMarioRunning = true;
+        this.updateStaminaHUD(100);
+
+        if (this.state.marioLoopInterval) clearInterval(this.state.marioLoopInterval);
+
+        this.state.marioLoopInterval = setInterval(() => {
+            if (!this.state.isMarioRunning || this.state.isEnded) return;
+
+            // Deplete stamina as Mario runs forward
+            this.state.stamina -= 0.35;
+            if (this.state.stamina <= 0) {
+                this.state.stamina = 0;
+                this.triggerMarioQuestionCheckpoint('stamina_empty');
+            }
+
+            this.updateStaminaHUD(this.state.stamina);
+            this.drawMarioCanvas();
+        }, 1000 / 30);
+    },
+
+    marioJump: function() {
+        if (!this.state.isStarted || this.state.isEnded) return;
+        if (!this.state.isJumping) {
+            this.state.isJumping = true;
+            this.state.marioVy = -13;
+            this.playSound('jump');
+
+            // Collect coins bonus
+            this.state.coins += 1;
+            this.state.score += 5;
+            this.updateHUD();
+        }
+    },
+
+    drawMarioCanvas: function() {
+        const ctx = this.canvasCtx;
+        if (!ctx) return;
+
+        const w = 800;
+        const h = 320;
+
+        // Background Sky
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+        skyGrad.addColorStop(0, '#5c94fc');
+        skyGrad.addColorStop(1, '#89cff0');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Moving Parallax Clouds
+        this.state.bgOffset += 2;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        for (let i = 0; i < 4; i++) {
+            let cx = ((i * 240) - (this.state.bgOffset * 0.5)) % (w + 100);
+            if (cx < -100) cx += w + 200;
+            ctx.beginPath();
+            ctx.arc(cx, 50, 22, 0, Math.PI * 2);
+            ctx.arc(cx + 20, 45, 28, 0, Math.PI * 2);
+            ctx.arc(cx + 42, 50, 22, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Green Hills
+        ctx.fillStyle = '#38b000';
+        for (let i = 0; i < 3; i++) {
+            let hx = ((i * 350) - (this.state.bgOffset * 0.8)) % (w + 150);
+            if (hx < -150) hx += w + 300;
+            ctx.beginPath();
+            ctx.arc(hx, 250, 70, Math.PI, 0);
+            ctx.fill();
+        }
+
+        // Brick Floor
+        const groundY = 240;
+        ctx.fillStyle = '#d04648';
+        ctx.fillRect(0, groundY, w, h - groundY);
+        ctx.fillStyle = '#e56b6f';
+        ctx.fillRect(0, groundY, w, 8);
+
+        // Mystery Boxes & Checkpoint Flag
+        const currentQNum = this.state.currentIdx + 1;
+        const totalQ = this.data.questions.length;
+        ctx.fillStyle = '#ffb703';
+        let boxX = ((w * 0.7) - (this.state.bgOffset % w));
+        if (boxX < -50) boxX += w;
+        ctx.fillRect(boxX, 150, 36, 36);
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 20px monospace';
+        ctx.fillText('?', boxX + 12, 175);
+
+        // Mario Physics (Jump & Gravity)
+        if (this.state.isJumping) {
+            this.state.marioY += this.state.marioVy;
+            this.state.marioVy += 0.85; // Gravity
+            if (this.state.marioY >= 210) {
+                this.state.marioY = 210;
+                this.state.isJumping = false;
+                this.state.marioVy = 0;
+            }
+        }
+
+        // Draw Super Mario Character (Pixel Style)
+        const mx = this.state.marioX;
+        const my = this.state.marioY;
+
+        // Hat & Shirt (Red)
+        ctx.fillStyle = '#e63946';
+        ctx.fillRect(mx + 6, my - 30, 20, 8); // Hat
+        ctx.fillRect(mx + 8, my - 16, 16, 16); // Shirt
+
+        // Head (Peach)
+        ctx.fillStyle = '#ffb703';
+        ctx.fillRect(mx + 8, my - 22, 16, 8);
+
+        // Overalls (Blue)
+        ctx.fillStyle = '#1d3557';
+        ctx.fillRect(mx + 6, my - 8, 20, 14);
+
+        // Shoes (Brown)
+        ctx.fillStyle = '#4a2810';
+        let legOffset = Math.sin(this.state.bgOffset * 0.2) * 4;
+        ctx.fillRect(mx + 4 + legOffset, my + 6, 10, 6);
+        ctx.fillRect(mx + 16 - legOffset, my + 6, 10, 6);
+    },
+
+    triggerMarioQuestionCheckpoint: function(reason) {
+        if (!this.state.isMarioRunning) return;
+        this.state.isMarioRunning = false;
+
+        const quizModalEl = document.getElementById('modalMarioQuiz');
+        if (quizModalEl) {
+            const modal = new bootstrap.Modal(quizModalEl);
+            this.renderMarioModalQuestion();
+            modal.show();
+        } else {
+            // Fallback to in-page quiz box
+            const quizBox = document.getElementById('quizBoxContainer');
+            if (quizBox) quizBox.classList.remove('d-none');
+            this.renderQuestion();
+        }
+    },
+
+    renderMarioModalQuestion: function() {
+        if (this.state.currentIdx >= this.data.questions.length || this.state.lives <= 0) {
+            const modalEl = document.getElementById('modalMarioQuiz');
+            if (modalEl) {
+                const instance = bootstrap.Modal.getInstance(modalEl);
+                if (instance) instance.hide();
+            }
+            this.endGame();
+            return;
+        }
+
+        const q = this.data.questions[this.state.currentIdx];
+        const counterEl = document.getElementById('marioModalCounter');
+        const questionEl = document.getElementById('marioModalQuestion');
+        const optionsEl = document.getElementById('marioModalOptions');
+
+        if (counterEl) counterEl.textContent = `Tantangan Kuis Checkpoint #${this.state.currentIdx + 1} dari ${this.data.questions.length}`;
+        if (questionEl) questionEl.textContent = q.pertanyaan;
+
+        if (optionsEl) {
+            optionsEl.innerHTML = ['a', 'b', 'c', 'd'].map(opt => {
+                const text = q['opsi_' + opt];
+                if (!text) return '';
+                const safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                return `
+                    <div class="col-12 col-md-6">
+                        <button type="button" class="btn btn-outline-warning w-100 p-3 rounded-4 text-start d-flex align-items-center gap-3 option-btn shadow-sm text-white" onclick="window.GameEngine.submitMarioAnswer('${opt}')">
+                            <span class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold fs-6" style="width: 38px; height: 38px; min-width: 38px;">
+                                ${opt.toUpperCase()}
+                            </span>
+                            <span class="fw-semibold text-white fs-6 flex-grow-1">${safeText}</span>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+    },
+
+    submitMarioAnswer: function(selectedOpt) {
+        if (this.state.isAnswered) return;
+        this.state.isAnswered = true;
+
+        const q = this.data.questions[this.state.currentIdx];
+        const keyAnswer = (q.kunci_jawaban || 'a').toString().trim().toLowerCase();
+        const isCorrect = (selectedOpt.toLowerCase() === keyAnswer);
+
+        if (isCorrect) {
+            this.playSound('correct');
+            this.state.combo++;
+            if (this.state.combo > this.state.maxCombo) this.state.maxCombo = this.state.combo;
+            this.state.correctCount++;
+
+            // ⚡ EXACT USER SPEC: STAMINA REFILLS BACK TO FULL 100%!
+            this.state.stamina = 100;
+            this.updateStaminaHUD(100);
+
+            const pointsGained = (parseInt(q.poin) || 10) + 20;
+            this.state.score += pointsGained;
+            this.updateHUD();
+
+            this.showFeedback(true, '🎉 JAWABAN BENAR!', '⚡ STAMINA REFILLED 100% FULL! MARIO KEMBALI BERLARI! 🚀');
+        } else {
+            this.playSound('wrong');
+            this.state.combo = 0;
+            this.state.lives--;
+            this.state.stamina = 25; // Stamina stays low on wrong answer
+            this.updateStaminaHUD(25);
+            this.updateHUD();
+
+            this.showFeedback(false, '❌ JAWABAN SALAH', `Kunci Jawaban: Opsi ${q.kunci_jawaban.toUpperCase()}`);
+        }
+
+        setTimeout(() => {
+            this.state.currentIdx++;
+            this.state.isAnswered = false;
+
+            const modalEl = document.getElementById('modalMarioQuiz');
+            if (modalEl) {
+                const instance = bootstrap.Modal.getInstance(modalEl);
+                if (instance) instance.hide();
+            }
+
+            if (this.state.currentIdx >= this.data.questions.length || this.state.lives <= 0) {
+                this.endGame();
+            } else {
+                // Resume Mario running!
+                this.startMarioRun();
+            }
+        }, 1500);
+    },
+
+    updateStaminaHUD: function(val) {
+        const pct = Math.max(0, Math.min(100, Math.round(val)));
+        const bar = document.getElementById('marioStaminaBar');
+        if (bar) {
+            bar.style.width = pct + '%';
+            bar.textContent = `⚡ STAMINA ${pct}%`;
+            if (pct < 30) {
+                bar.className = 'progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated';
+            } else {
+                bar.className = 'progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated';
+            }
         }
     },
 
@@ -110,11 +392,17 @@ window.GameEngine = {
                 osc.start();
                 osc.stop(ctx.currentTime + 0.25);
             } else if (type === 'wrong') {
-                osc.frequency.setValueAtTime(220, ctx.currentTime); // A3
-                osc.frequency.setValueAtTime(164.81, ctx.currentTime + 0.1); // E3
+                osc.frequency.setValueAtTime(220, ctx.currentTime);
+                osc.frequency.setValueAtTime(164.81, ctx.currentTime + 0.1);
                 gain.gain.setValueAtTime(0.25, ctx.currentTime);
                 osc.start();
                 osc.stop(ctx.currentTime + 0.3);
+            } else if (type === 'jump') {
+                osc.frequency.setValueAtTime(150, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
             }
         } catch(e) {}
     },
@@ -236,9 +524,11 @@ window.GameEngine = {
         const scoreEl = document.getElementById('currentScore');
         const comboEl = document.getElementById('comboBadge');
         const livesEl = document.getElementById('livesContainer');
+        const marioCoinEl = document.getElementById('marioCoinVal');
 
         if (scoreEl) scoreEl.textContent = this.state.score;
         if (comboEl) comboEl.textContent = `${this.state.combo}x 🔥`;
+        if (marioCoinEl) marioCoinEl.textContent = this.state.coins;
 
         let hearts = '';
         for (let i = 0; i < 3; i++) {
@@ -261,15 +551,15 @@ window.GameEngine = {
         descElem.textContent = desc;
 
         banner.classList.remove('d-none');
-        setTimeout(() => banner.classList.add('d-none'), 1200);
+        setTimeout(() => banner.classList.add('d-none'), 1400);
     },
 
     endGame: function() {
         if (this.state.isEnded) return;
         this.state.isEnded = true;
         clearInterval(this.state.timerInterval);
+        if (this.state.marioLoopInterval) clearInterval(this.state.marioLoopInterval);
 
-        // Auto exit fullscreen on game completion
         try {
             if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
                 if (document.exitFullscreen) {
@@ -298,7 +588,6 @@ window.GameEngine = {
         else if (isPassed) stars = '⭐⭐';
         document.getElementById('endGameStars').textContent = stars;
 
-        // Save Score via AJAX
         const formData = new FormData();
         formData.append('game_id', this.data.gameId);
         formData.append('skor_akhir', this.state.score);
@@ -364,6 +653,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <?php endif; ?>
                     <h4 class="fw-bold mb-0 text-warning d-flex align-items-center gap-2">
                         <i class="bi bi-controller text-danger"></i> <?= htmlspecialchars($game['judul']) ?>
+                        <?php if ($gameType === 'mario_run'): ?>
+                            <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 fs-6">🍄 Super Mario</span>
+                        <?php endif; ?>
                     </h4>
                     <small class="text-white-50 fs-6"><?= htmlspecialchars($game['nama_mapel']) ?> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong></small>
                 </div>
@@ -406,9 +698,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="row g-3 justify-content-center max-w-2xl mx-auto mb-4 text-start">
                     <div class="col-12 col-md-4">
                         <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
-                            <div class="fs-3 mb-1">❤️❤️❤️</div>
-                            <small class="text-white-50 d-block">Kesempatan</small>
-                            <span class="fw-bold text-white">3 Nyawa Permainan</span>
+                            <div class="fs-3 mb-1">🍄 ⚡ 100%</div>
+                            <small class="text-white-50 d-block">Aturan Stamina</small>
+                            <span class="fw-bold text-warning">Isi Stamina (Jawaban Benar)</span>
                         </div>
                     </div>
                     <div class="col-12 col-md-4">
@@ -432,7 +724,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
             </div>
 
-            <!-- Timer Progress Bar Box (Hidden Initially) -->
+            <!-- 🍄 SUPER MARIO CANVASES & HUD STAGE (Hidden Initially) -->
+            <div id="marioStageContainer" class="d-none text-center py-2">
+                <!-- Mario HUD Controls Bar -->
+                <div class="row align-items-center g-2 mb-3 px-2">
+                    <div class="col-12 col-md-5">
+                        <div class="progress rounded-pill bg-dark border border-warning shadow-sm" style="height: 24px;">
+                            <div id="marioStaminaBar" class="progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%; font-size:0.85rem;">
+                                ⚡ STAMINA 100%
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3 text-start text-md-center">
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold fs-6 shadow-sm">
+                            🪙 <span id="marioCoinVal">0</span> Coins
+                        </span>
+                    </div>
+                    <div class="col-6 col-md-4 text-end">
+                        <button type="button" class="btn btn-warning rounded-pill px-4 py-2 fw-bold text-dark fs-6 shadow hover-scale" onclick="window.GameEngine.marioJump()">
+                            🦘 LOMPAT (SPASI)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2D Canvas Screen -->
+                <div class="position-relative overflow-hidden rounded-4 border border-secondary shadow-lg">
+                    <canvas id="marioCanvas" width="800" height="320" class="w-100 h-auto rounded-4" style="background:#5c94fc; max-height:360px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Timer Progress Bar Box (For Quiz Speed Mode) -->
             <div id="timerBarContainer" class="progress bg-secondary bg-opacity-25 rounded-pill mb-4 d-none" style="height: 14px;">
                 <div id="gameTimerBar" class="progress-bar bg-warning progress-bar-striped progress-bar-animated rounded-pill" role="progressbar" style="width: 100%;"></div>
             </div>
@@ -462,6 +783,32 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </main>
+
+<!-- 🍄 MODAL MARIO QUIZ CHECKPOINT POPUP -->
+<div class="modal fade" id="modalMarioQuiz" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow-lg text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);">
+            <div class="modal-header border-0 bg-warning text-dark p-3.5">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="fs-3">🍄</span>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0">TANTANGAN KUIS CHECKPOINT MARIO</h5>
+                        <small class="fw-semibold text-muted" id="marioModalCounter">Jawab Pertanyaan Untuk Isi Ulang Stamina!</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <h4 class="fw-bold text-white mb-4 px-md-3" id="marioModalQuestion" style="line-height: 1.4;">
+                    Loading Pertanyaan Checkpoint...
+                </h4>
+
+                <div class="row g-3 text-start" id="marioModalOptions">
+                    <!-- Options -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal End Game Victory / Defeat -->
 <div class="modal fade" id="modalEndGame" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">

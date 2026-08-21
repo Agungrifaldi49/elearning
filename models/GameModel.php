@@ -22,12 +22,15 @@ class GameModel extends BaseModel {
                     kelas_id INT NULL,
                     judul VARCHAR(255) NOT NULL,
                     deskripsi TEXT NULL,
-                    tipe_game ENUM('quiz_speed', 'spin_wheel', 'memory_match') DEFAULT 'quiz_speed',
+                    tipe_game VARCHAR(50) DEFAULT 'mario_run',
                     durasi_per_soal INT DEFAULT 15,
                     kkm INT DEFAULT 75,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+            try {
+                $this->db->exec("ALTER TABLE game_edukasi MODIFY COLUMN tipe_game VARCHAR(50) DEFAULT 'mario_run'");
+            } catch(Exception $ex) {}
 
             $this->db->exec("
                 CREATE TABLE IF NOT EXISTS game_soal (

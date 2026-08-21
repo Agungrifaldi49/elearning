@@ -64,6 +64,58 @@
                     </div>
                 </div>
 
+                <!-- Choice of Game Mode / Tipe Game Edukasi -->
+                <div class="mb-4">
+                    <label class="form-label small fw-bold d-block text-dark">
+                        <i class="bi bi-controller text-danger me-1"></i> Pilih Mode / Tipe Game Edukasi <span class="text-danger">*</span>
+                    </label>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <input type="radio" class="btn-check" name="tipe_game" id="tipeMario" value="mario_run" checked>
+                            <label class="btn btn-outline-warning p-3 w-100 text-start rounded-4 h-100 shadow-xs border-2" for="tipeMario">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="fs-2">🍄</span>
+                                    <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.68rem;">⭐ SUPER MARIO</span>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">Super Mario Runner</h6>
+                                <small class="text-muted d-block" style="font-size:0.78rem;">
+                                    Karakter berlari & melompati rintangan. Saat stamina habis, jawab kuis untuk isi ulang stamina (Full 100%)!
+                                </small>
+                            </label>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <input type="radio" class="btn-check" name="tipe_game" id="tipeSpeed" value="quiz_speed">
+                            <label class="btn btn-outline-primary p-3 w-100 text-start rounded-4 h-100 shadow-xs border-2" for="tipeSpeed">
+                                <div class="fs-2 mb-2">⚡</div>
+                                <h6 class="fw-bold text-dark mb-1">Quiz Speed Battle</h6>
+                                <small class="text-muted d-block" style="font-size:0.78rem;">
+                                    Pertarungan kuis cepat berkejaran dengan timer countdown dan streak bonus multiplier.
+                                </small>
+                            </label>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <input type="radio" class="btn-check" name="tipe_game" id="tipeWheel" value="spin_wheel">
+                            <label class="btn btn-outline-success p-3 w-100 text-start rounded-4 h-100 shadow-xs border-2" for="tipeWheel">
+                                <div class="fs-2 mb-2">🎡</div>
+                                <h6 class="fw-bold text-dark mb-1">Spin Wheel Quiz</h6>
+                                <small class="text-muted d-block" style="font-size:0.78rem;">
+                                    Roda keberuntungan berputar acak untuk memilih kategori pertanyaan kuis siswa.
+                                </small>
+                            </label>
+                        </div>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <input type="radio" class="btn-check" name="tipe_game" id="tipeMemory" value="memory_match">
+                            <label class="btn btn-outline-danger p-3 w-100 text-start rounded-4 h-100 shadow-xs border-2" for="tipeMemory">
+                                <div class="fs-2 mb-2">🧩</div>
+                                <h6 class="fw-bold text-dark mb-1">Memory Match Cards</h6>
+                                <small class="text-muted d-block" style="font-size:0.78rem;">
+                                    Pencocokan kartu pasangan istilah dan jawaban kuis interaktif.
+                                </small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Section Input Soal Game -->
                 <div class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top">
                     <h5 class="fw-bold text-dark mb-0"><i class="bi bi-question-square-fill text-primary me-2"></i>Daftar Soal Pertanyaan</h5>
