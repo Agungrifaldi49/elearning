@@ -1,6 +1,10 @@
-<?php require_once ROOT_PATH . 'views/layouts/header.php'; ?>
-<?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
-<?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
+<?php 
+require_once ROOT_PATH . 'views/layouts/header.php'; 
+require_once ROOT_PATH . 'views/layouts/navbar.php'; 
+require_once ROOT_PATH . 'views/layouts/sidebar.php'; 
+
+$currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
+?>
 
 <main class="main-content px-3 px-md-4">
 <div class="container-fluid">
@@ -22,27 +26,27 @@
     <!-- Settings Nav Tabs -->
     <ul class="nav nav-tabs border-bottom mb-4" id="settingsTab" role="tablist">
         <li class="nav-item">
-            <button class="nav-link active fw-bold" id="sekolah-tab" data-bs-toggle="tab" data-bs-target="#sekolahTab" type="button">
+            <button class="nav-link <?= $currentTab === 'sekolah' ? 'active' : '' ?> fw-bold" id="sekolah-tab" data-bs-toggle="tab" data-bs-target="#sekolahTab" type="button">
                 <i class="bi bi-building me-1"></i> Profil Sekolah & Logo
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link fw-bold" id="landing-tab" data-bs-toggle="tab" data-bs-target="#landingTab" type="button">
+            <button class="nav-link <?= $currentTab === 'landing' ? 'active' : '' ?> fw-bold" id="landing-tab" data-bs-toggle="tab" data-bs-target="#landingTab" type="button">
                 <i class="bi bi-window-stack me-1"></i> Halaman Landing & Visi Misi
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link fw-bold" id="smtp-tab" data-bs-toggle="tab" data-bs-target="#smtpTab" type="button">
+            <button class="nav-link <?= $currentTab === 'smtp' ? 'active' : '' ?> fw-bold" id="smtp-tab" data-bs-toggle="tab" data-bs-target="#smtpTab" type="button">
                 <i class="bi bi-envelope-at me-1"></i> Pengaturan SMTP Email
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link fw-bold" id="tema-tab" data-bs-toggle="tab" data-bs-target="#temaTab" type="button">
+            <button class="nav-link <?= $currentTab === 'tema' ? 'active' : '' ?> fw-bold" id="tema-tab" data-bs-toggle="tab" data-bs-target="#temaTab" type="button">
                 <i class="bi bi-palette me-1"></i> Tampilan & Dark Mode
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link fw-bold" id="api-tab" data-bs-toggle="tab" data-bs-target="#apiTab" type="button">
+            <button class="nav-link <?= $currentTab === 'api' ? 'active' : '' ?> fw-bold" id="api-tab" data-bs-toggle="tab" data-bs-target="#apiTab" type="button">
                 <i class="bi bi-code-slash me-1"></i> API & Token Key
             </button>
         </li>
@@ -50,7 +54,7 @@
 
     <div class="tab-content" id="settingsTabContent">
         <!-- Tab 1: Profil Sekolah -->
-        <div class="tab-pane fade show active" id="sekolahTab" role="tabpanel">
+        <div class="tab-pane fade <?= $currentTab === 'sekolah' ? 'show active' : '' ?>" id="sekolahTab" role="tabpanel">
             <div class="card-custom p-4 p-md-5">
                 <form action="<?= BASE_URL ?>index.php?url=admin/pengaturan" method="POST" enctype="multipart/form-data">
                     <?= Security::csrfField() ?>
@@ -197,7 +201,7 @@
         </div>
 
         <!-- Tab 5: Landing Page & Visi Misi -->
-        <div class="tab-pane fade" id="landingTab" role="tabpanel">
+        <div class="tab-pane fade <?= $currentTab === 'landing' ? 'show active' : '' ?>" id="landingTab" role="tabpanel">
             <div class="card-custom p-4 p-md-5">
                 <form action="<?= BASE_URL ?>index.php?url=admin/pengaturan" method="POST">
                     <?= Security::csrfField() ?>

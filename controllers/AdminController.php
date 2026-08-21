@@ -391,11 +391,17 @@ class AdminController {
                 ];
                 $settingsModel->saveBatch($updateData);
                 $flashSuccess = 'Pengaturan Halaman Landing & Visi Misi berhasil disimpan!';
+                $_GET['tab'] = 'landing';
             }
         }
 
         $settings = $settingsModel->getAll();
         require_once ROOT_PATH . 'views/admin/pengaturan.php';
+    }
+
+    public function landingPage() {
+        $_GET['tab'] = 'landing';
+        $this->pengaturan();
     }
 
     public function laporan() {

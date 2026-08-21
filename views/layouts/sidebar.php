@@ -111,6 +111,9 @@ if (!empty($sidebarRawLogo)) {
             </a></li>
 
             <li class="nav-section-title">Konten & Komunikasi</li>
+            <li><a class="nav-link <?= isActive($currentUrl,'admin/landingPage') ?>" href="<?= BASE_URL ?>index.php?url=admin/landingPage">
+                <i class="bi bi-window-stack text-warning"></i> Kelola Landing Page & Visi Misi
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'admin/pengumuman') ?>" href="<?= BASE_URL ?>index.php?url=admin/pengumuman">
                 <i class="bi bi-megaphone-fill text-danger"></i> Kelola Pengumuman & Informasi
             </a></li>
