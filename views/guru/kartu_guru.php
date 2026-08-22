@@ -66,13 +66,17 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
 
 <style>
 @media print {
+    @page {
+        size: A4 landscape;
+        margin: 10mm;
+    }
     body {
         background-color: #ffffff !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         color-adjust: exact !important;
     }
-    .no-print, header, navbar, sidebar, footer, .sidebar, .navbar, .btn, .info-box-print {
+    .no-print, header, navbar, sidebar, footer, .sidebar, .navbar, .btn, .info-box-print, .alert {
         display: none !important;
     }
     .main-content {
@@ -86,8 +90,8 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
         flex-direction: row !important;
         justify-content: center !important;
         align-items: center !important;
-        gap: 30px !important;
-        margin-top: 20px !important;
+        gap: 24px !important;
+        margin-top: 15px !important;
         page-break-inside: avoid !important;
     }
     .kartu-front-side, .kartu-back-side {
@@ -97,15 +101,16 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
         print-color-adjust: exact !important;
         border: 2px solid #059669 !important;
         box-shadow: none !important;
-        height: 315px !important;
-        width: 500px !important;
+        height: 310px !important;
+        width: 480px !important;
+        page-break-inside: avoid !important;
     }
 }
 
 .kartu-front-side, .kartu-back-side {
     width: 100%;
     max-width: 480px;
-    height: 300px;
+    height: 310px;
     border-radius: 18px;
     background: linear-gradient(135deg, #064e3b 0%, #022c22 50%, #0f172a 100%);
     color: #ffffff;
@@ -114,6 +119,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
     border: 2px solid #059669;
     box-shadow: 0 15px 35px rgba(6, 78, 59, 0.35);
     transition: all 0.3s ease;
+    padding: 14px 16px !important;
 }
 
 .kartu-front-side:hover, .kartu-back-side:hover {
@@ -136,17 +142,18 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     color: #ffffff;
     font-weight: 800;
-    font-size: 0.68rem;
-    letter-spacing: 0.5px;
-    padding: 3px 10px;
+    font-size: 0.62rem;
+    letter-spacing: 0.4px;
+    padding: 3px 9px;
     border-radius: 20px;
     text-transform: uppercase;
     box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+    white-space: nowrap;
 }
 
 .teacher-photo-frame {
-    width: 92px;
-    height: 110px;
+    width: 90px;
+    height: 108px;
     border-radius: 12px;
     border: 3px solid #10b981;
     object-fit: cover;
@@ -156,7 +163,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
 
 .qr-code-box {
     background: #ffffff;
-    padding: 6px;
+    padding: 5px;
     border-radius: 12px;
     border: 2px solid #10b981;
     box-shadow: 0 6px 16px rgba(0,0,0,0.3);
@@ -182,6 +189,9 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                 <p class="text-muted small mb-0">Kartu Identitas Resmi Tenaga Pendidik SMK Muthia Harapan Cicalengka dilengkapi Kode QR Presensi Digital.</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
+                <button onclick="downloadKartuPDF()" class="btn btn-danger px-4 py-2 rounded-3 fw-bold shadow-sm">
+                    <i class="bi bi-file-earmark-pdf-fill me-1"></i> Unduh PDF Kartu
+                </button>
                 <button onclick="window.print()" class="btn btn-success px-4 py-2 rounded-3 fw-bold shadow-sm">
                     <i class="bi bi-printer-fill me-1"></i> Cetak Kartu Guru
                 </button>
@@ -201,29 +211,29 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
         </div>
 
         <!-- Printable Cards Container -->
-        <div class="print-card-container row g-4 justify-content-center mb-5">
+        <div id="printableCardArea" class="print-card-container row g-4 justify-content-center mb-5">
             
             <!-- SISI DEPAN (FRONT SIDE) -->
             <div class="col-12 col-lg-6 d-flex justify-content-center">
-                <div class="kartu-front-side p-3 d-flex flex-column justify-content-between">
+                <div class="kartu-front-side d-flex flex-column justify-content-between">
                     <div class="kartu-bg-pattern"></div>
                     
                     <!-- Header Kop Sekolah -->
-                    <div class="d-flex align-items-center justify-content-between border-bottom border-secondary pb-2 mb-2" style="border-color: rgba(255,255,255,0.15) !important;">
-                        <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-1" style="border-color: rgba(255,255,255,0.18) !important;">
+                        <div class="d-flex align-items-center gap-2 overflow-hidden me-2" style="max-width: 76%;">
                             <?php if ($schoolLogoUrl): ?>
-                                <img src="<?= $schoolLogoUrl ?>" alt="Logo Sekolah" style="height: 38px; width: auto; object-fit: contain;">
+                                <img src="<?= $schoolLogoUrl ?>" alt="Logo Sekolah" style="height: 36px; width: auto; object-fit: contain; flex-shrink: 0;">
                             <?php else: ?>
-                                <div class="bg-success rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                                    <i class="bi bi-building fs-5 text-white"></i>
+                                <div class="bg-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 34px; height: 34px;">
+                                    <i class="bi bi-building fs-6 text-white"></i>
                                 </div>
                             <?php endif; ?>
-                            <div>
-                                <h6 class="fw-bold mb-0 text-white" style="font-size: 0.85rem; letter-spacing: 0.3px;"><?= htmlspecialchars($schoolName) ?></h6>
-                                <small class="text-white-50 d-block" style="font-size: 0.65rem;"><?= htmlspecialchars($schoolAddress) ?></small>
+                            <div style="line-height: 1.15;">
+                                <h6 class="fw-bold mb-0 text-white text-truncate" style="font-size: 0.8rem; letter-spacing: 0.2px;"><?= htmlspecialchars($schoolName) ?></h6>
+                                <small class="text-white-50 d-block text-truncate" style="font-size: 0.6rem;"><?= htmlspecialchars($schoolAddress) ?></small>
                             </div>
                         </div>
-                        <span class="gold-badge">GURU / GTK</span>
+                        <span class="gold-badge flex-shrink-0">GURU / GTK</span>
                     </div>
 
                     <!-- Body Content: Photo & Info -->
@@ -238,12 +248,12 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                             <?php endif; ?>
                         </div>
                         <div class="col ps-2">
-                            <h6 class="fw-bold text-white mb-1" style="font-size: 1rem; line-height: 1.2;"><?= htmlspecialchars($guru['nama_lengkap'] ?? $user['full_name']) ?></h6>
-                            <p class="text-success mb-2 fw-semibold" style="font-size: 0.75rem;">Tenaga Pendidik / Guru Pengajar</p>
+                            <h6 class="fw-bold text-white mb-0" style="font-size: 0.95rem; line-height: 1.25;"><?= htmlspecialchars($guru['nama_lengkap'] ?? $user['full_name']) ?></h6>
+                            <p class="text-success mb-1.5 fw-semibold" style="font-size: 0.72rem;">Tenaga Pendidik / Guru Pengajar</p>
                             
-                            <table class="text-white-50 small w-100" style="font-size: 0.72rem; line-height: 1.4;">
+                            <table class="text-white-50 small w-100" style="font-size: 0.7rem; line-height: 1.45;">
                                 <tr>
-                                    <td style="width: 70px;">NIP/NUPTK</td>
+                                    <td style="width: 72px;">NIP/NUPTK</td>
                                     <td>: <strong class="text-white"><code><?= htmlspecialchars($nipVal) ?></code></strong></td>
                                 </tr>
                                 <tr>
@@ -252,20 +262,20 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                                 </tr>
                                 <tr>
                                     <td>Status GTK</td>
-                                    <td>: <span class="badge bg-success text-white py-0 px-2" style="font-size: 0.65rem;">Aktif Mengajar</span></td>
+                                    <td>: <span class="badge bg-success text-white py-0 px-2" style="font-size: 0.62rem;">Aktif Mengajar</span></td>
                                 </tr>
                             </table>
                         </div>
                         <div class="col-auto text-end">
                             <div class="qr-code-box">
-                                <img src="<?= $qrCodeApiUrl ?>" alt="QR Code Guru" style="width: 78px; height: 78px; display: block;">
+                                <img src="<?= $qrCodeApiUrl ?>" alt="QR Code Guru" style="width: 76px; height: 76px; display: block;">
                             </div>
-                            <small class="text-white-50 d-block mt-1 text-center" style="font-size: 0.6rem;">ID PRESENSI</small>
+                            <small class="text-white-50 d-block mt-1 text-center" style="font-size: 0.58rem; letter-spacing: 0.3px;">ID PRESENSI</small>
                         </div>
                     </div>
 
                     <!-- Footer Side -->
-                    <div class="d-flex justify-content-between align-items-center border-top pt-1 text-white-50" style="border-color: rgba(255,255,255,0.15) !important; font-size: 0.65rem;">
+                    <div class="d-flex justify-content-between align-items-center border-top pt-1 text-white-50" style="border-color: rgba(255,255,255,0.18) !important; font-size: 0.63rem;">
                         <span>Tahun Ajaran <?= htmlspecialchars($academicYear) ?></span>
                         <span class="fw-bold text-success"><i class="bi bi-patch-check-fill me-1"></i>KARTU RESMI DIGITAL</span>
                     </div>
@@ -276,34 +286,34 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
 
             <!-- SISI BELAKANG (BACK SIDE) -->
             <div class="col-12 col-lg-6 d-flex justify-content-center">
-                <div class="kartu-back-side p-3 d-flex flex-column justify-content-between">
+                <div class="kartu-back-side d-flex flex-column justify-content-between">
                     <div class="kartu-bg-pattern"></div>
 
                     <!-- Header Kop Belakang -->
-                    <div class="text-center border-bottom pb-2" style="border-color: rgba(255,255,255,0.15) !important;">
+                    <div class="text-center border-bottom pb-1.5" style="border-color: rgba(255,255,255,0.18) !important;">
                         <h6 class="fw-bold text-white mb-0" style="font-size: 0.8rem; letter-spacing: 0.5px;">KETENTUAN PENGGUNAAN KARTU GURU</h6>
-                        <small class="text-white-50" style="font-size: 0.65rem;">SMK MUTHIA HARAPAN CICALENGKA</small>
+                        <small class="text-white-50" style="font-size: 0.62rem;"><?= htmlspecialchars($schoolName) ?></small>
                     </div>
 
                     <!-- List Ketentuan -->
-                    <ol class="text-white-50 small my-auto ps-3 mb-0" style="font-size: 0.68rem; line-height: 1.45;">
+                    <ol class="text-white-50 small my-auto ps-3 mb-0" style="font-size: 0.65rem; line-height: 1.38;">
                         <li class="mb-1">Kartu ini merupakan bukti identitas resmi Tenaga Pendidik SMK Muthia Harapan Cicalengka.</li>
-                        <li class="mb-1">Pegang kartu ini saat melakukan pemindaian presensi harian pada mesin/kamera scanner sekolah.</li>
+                        <li class="mb-1">Gunakan Kode QR kartu ini untuk pemindaian presensi harian pada scanner sekolah.</li>
                         <li class="mb-1">Dilarang menyerahkan atau meminjamkan Kode QR presensi kepada orang lain.</li>
-                        <li class="mb-1">Apabila terjadi kegagalan pemindaian, silakan hubungi bagian Administrasi/TIM IT Sekolah.</li>
-                        <li class="mb-0">Kartu ini berlaku selama Guru/Tenaga Pendidik aktif mengajar pada Tahun Ajaran <?= htmlspecialchars($academicYear) ?>.</li>
+                        <li class="mb-1">Apabila terjadi kendala pemindaian, silakan hubungi bagian Administrasi/TIM IT Sekolah.</li>
+                        <li class="mb-0">Kartu ini berlaku selama Guru/Tenaga Pendidik aktif mengajar pada TA <?= htmlspecialchars($academicYear) ?>.</li>
                     </ol>
 
                     <!-- Tanda Tangan Kepala Sekolah -->
-                    <div class="d-flex justify-content-between align-items-end border-top pt-2" style="border-color: rgba(255,255,255,0.15) !important;">
-                        <div class="text-start text-white-50" style="font-size: 0.6rem;">
-                            <span>Cicalengka, Kabupaten Bandung</span><br>
+                    <div class="d-flex justify-content-between align-items-end border-top pt-1.5 mt-1" style="border-color: rgba(255,255,255,0.18) !important;">
+                        <div class="text-start text-white-50" style="font-size: 0.58rem; line-height: 1.3;">
+                            <span>Cicalengka, Kab. Bandung</span><br>
                             <span>Diterbitkan Oleh: Kepala Sekolah</span>
                         </div>
-                        <div class="text-end text-white">
-                            <small class="text-white-50 d-block" style="font-size: 0.6rem;">Mengetahui,</small>
-                            <strong class="d-block text-white border-bottom border-white pb-1" style="font-size: 0.72rem; margin-top: 15px;"><?= htmlspecialchars($headmasterName) ?></strong>
-                            <small class="text-white-50" style="font-size: 0.6rem;">NIP. 19750812 200212 1 003</small>
+                        <div class="text-end text-white" style="line-height: 1.2;">
+                            <small class="text-white-50 d-block" style="font-size: 0.58rem;">Mengetahui,</small>
+                            <strong class="d-block text-white border-bottom border-white pb-0.5" style="font-size: 0.7rem; margin-top: 10px; margin-bottom: 2px;"><?= htmlspecialchars($headmasterName) ?></strong>
+                            <small class="text-white-50 d-block" style="font-size: 0.58rem;">NIP. 19750812 200212 1 003</small>
                         </div>
                     </div>
                 </div>
@@ -313,5 +323,43 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
 
     </div>
 </main>
+
+<!-- html2pdf JS Library for Export PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+function downloadKartuPDF() {
+    const element = document.getElementById('printableCardArea');
+    const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     'Kartu_Guru_<?= preg_replace("/[^a-zA-Z0-9]/", "_", $guru['nama_lengkap'] ?? $user['full_name']) ?>.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+    };
+
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Mengunduh Kartu PDF...',
+            text: 'Mohon tunggu sebentar, sistem sedang memproses PDF...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+    }
+
+    html2pdf().set(opt).from(element).save().then(() => {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil Unduh PDF!',
+                text: 'Kartu Guru Digital berhasil disimpan sebagai file PDF.',
+                timer: 2500,
+                showConfirmButton: false
+            });
+        }
+    }).catch(() => {
+        window.print();
+    });
+}
+</script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
