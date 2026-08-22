@@ -2,6 +2,12 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+$currentModuleUrl = $_GET['url'] ?? '';
+$isAdminRoute = (strpos($currentModuleUrl, 'admin/') === 0 || strtolower(AuthHelper::user()['role_name'] ?? '') === 'administrator');
+$scanQrUrl = $isAdminRoute ? BASE_URL . 'index.php?url=admin/scanQr' : BASE_URL . 'index.php?url=guru/scanQr';
+$formAbsensiUrl = $isAdminRoute ? BASE_URL . 'index.php?url=admin/absensi' : BASE_URL . 'index.php?url=guru/absensi';
+?>
 <main class="main-content px-3 px-md-4">
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
@@ -10,15 +16,15 @@
                 <p class="text-muted small mb-0">Data presensi otomatis terhubung secara langsung dengan hasil Scan QR Code siswa.</p>
             </div>
             <div>
-                <a href="<?= BASE_URL ?>index.php?url=guru/scanQr" class="btn btn-success text-white rounded-pill px-4 fw-bold shadow-sm">
+                <a href="<?= $scanQrUrl ?>" class="btn btn-success text-white rounded-pill px-4 fw-bold shadow-sm">
                     <i class="bi bi-qr-code-scan me-1"></i> Buka QR Code Scanner
                 </a>
             </div>
         </div>
 
         <div class="card card-custom p-4 mb-4 border-0 rounded-4 shadow-sm bg-white">
-            <form action="<?= BASE_URL ?>index.php?url=guru/absensi" method="GET" class="row g-3 align-items-end mb-4">
-                <input type="hidden" name="url" value="guru/absensi">
+            <form action="<?= $formAbsensiUrl ?>" method="GET" class="row g-3 align-items-end mb-4">
+                <input type="hidden" name="url" value="<?= $isAdminRoute ? 'admin/absensi' : 'guru/absensi' ?>">
                 <div class="col-md-5">
                     <label class="form-label small fw-semibold text-dark">Pilih Jadwal Mengajar</label>
                     <select name="jadwal_id" class="form-select rounded-3">
@@ -38,7 +44,7 @@
                 </div>
             </form>
 
-            <form action="<?= BASE_URL ?>index.php?url=guru/absensi&jadwal_id=<?= $selectedJadwal ?>&tanggal=<?= $tanggal ?>" method="POST">
+            <form action="<?= $formAbsensiUrl ?>&jadwal_id=<?= $selectedJadwal ?>&tanggal=<?= $tanggal ?>" method="POST">
                 <?= Security::csrfField() ?>
 
                 <?php if (!empty($recap)): ?>

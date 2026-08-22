@@ -109,6 +109,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'admin/absensi') ?>" href="<?= BASE_URL ?>index.php?url=admin/absensi">
                 <i class="bi bi-calendar-check-fill"></i> Presensi Guru & Siswa
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'admin/scanQr') ?>" href="<?= BASE_URL ?>index.php?url=admin/scanQr">
+                <i class="bi bi-qr-code-scan text-success"></i> Scan QR Code Hadir
+            </a></li>
 
             <li class="nav-section-title">Konten & Komunikasi</li>
             <li><a class="nav-link <?= isActive($currentUrl,'admin/landingPage') ?>" href="<?= BASE_URL ?>index.php?url=admin/landingPage">

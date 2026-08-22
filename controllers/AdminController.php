@@ -619,6 +619,39 @@ class AdminController {
         require_once ROOT_PATH . 'views/guru/absensi.php';
     }
 
+    public function scanQr() {
+        $absensiModel = new AbsensiModel();
+        $presensiHariIni = $absensiModel->getPresensiHariIniByGuru(null);
+        require_once ROOT_PATH . 'views/guru/scan_qr.php';
+    }
+
+    public function processScan() {
+        header('Content-Type: application/json');
+
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                echo json_encode(['success' => false, 'message' => 'Metode request tidak diizinkan.']);
+                exit();
+            }
+
+            if (!Security::verifyCsrfToken()) {
+                echo json_encode(['success' => false, 'message' => 'Sesi / CSRF token telah kedaluwarsa. Silakan refresh halaman.']);
+                exit();
+            }
+
+            $identifier = $_POST['identifier'] ?? '';
+
+            $absensiModel = new AbsensiModel();
+            $result = $absensiModel->processQrScan($identifier, null);
+
+            echo json_encode($result);
+            exit();
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()]);
+            exit();
+        }
+    }
+
     public function exportLogs() {
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=audit_logs_' . date('Ymd_His') . '.csv');

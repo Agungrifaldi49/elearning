@@ -189,7 +189,12 @@ function submitScan(identifier) {
     resultEl.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div> Memproses presensi...';
     resultEl.classList.remove('d-none');
 
-    fetch('<?= BASE_URL ?>index.php?url=guru/processScan', {
+<?php
+$currentScanModuleUrl = $_GET['url'] ?? '';
+$isAdminScanRoute = (strpos($currentScanModuleUrl, 'admin/') === 0 || strtolower(AuthHelper::user()['role_name'] ?? '') === 'administrator');
+$processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/processScan' : BASE_URL . 'index.php?url=guru/processScan';
+?>
+    fetch('<?= $processScanEndpoint ?>', {
         method: 'POST',
         headers: {'Content-Type':'application/x-www-form-urlencoded'},
         body: `identifier=${encodeURIComponent(identifier)}&csrf_token=<?= Security::csrfToken() ?>`
