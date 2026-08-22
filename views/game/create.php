@@ -154,39 +154,39 @@
                             </button>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small fw-semibold">Teks Pertanyaan <span class="text-danger">*</span></label>
-                            <textarea name="soal[0][pertanyaan]" class="form-control rounded-3" rows="2" placeholder="Tuliskan soal pertanyaan game..." required></textarea>
+                            <label class="form-label small fw-semibold">Teks Pertanyaan <span class="text-muted">(Diisi jika buat manual)</span></label>
+                            <textarea name="soal[0][pertanyaan]" class="form-control rounded-3" rows="2" placeholder="Tuliskan soal pertanyaan game..."></textarea>
                         </div>
                         <div class="row g-2 mb-3">
                             <div class="col-md-6 col-12">
                                 <div class="input-group">
                                     <span class="input-group-text bg-white fw-bold">A</span>
-                                    <input type="text" name="soal[0][opsi_a]" class="form-control" placeholder="Pilihan Jawaban A" required>
+                                    <input type="text" name="soal[0][opsi_a]" class="form-control" placeholder="Pilihan Jawaban A">
                                 </div>
                             </div>
                             <div class="col-md-6 col-12">
                                 <div class="input-group">
                                     <span class="input-group-text bg-white fw-bold">B</span>
-                                    <input type="text" name="soal[0][opsi_b]" class="form-control" placeholder="Pilihan Jawaban B" required>
+                                    <input type="text" name="soal[0][opsi_b]" class="form-control" placeholder="Pilihan Jawaban B">
                                 </div>
                             </div>
                             <div class="col-md-6 col-12">
                                 <div class="input-group">
                                     <span class="input-group-text bg-white fw-bold">C</span>
-                                    <input type="text" name="soal[0][opsi_c]" class="form-control" placeholder="Pilihan Jawaban C" required>
+                                    <input type="text" name="soal[0][opsi_c]" class="form-control" placeholder="Pilihan Jawaban C">
                                 </div>
                             </div>
                             <div class="col-md-6 col-12">
                                 <div class="input-group">
                                     <span class="input-group-text bg-white fw-bold">D</span>
-                                    <input type="text" name="soal[0][opsi_d]" class="form-control" placeholder="Pilihan Jawaban D" required>
+                                    <input type="text" name="soal[0][opsi_d]" class="form-control" placeholder="Pilihan Jawaban D">
                                 </div>
                             </div>
                         </div>
                         <div class="row g-2">
                             <div class="col-md-6 col-12">
-                                <label class="form-label small fw-semibold">Kunci Jawaban Benar <span class="text-danger">*</span></label>
-                                <select name="soal[0][kunci_jawaban]" class="form-select rounded-3" required>
+                                <label class="form-label small fw-semibold">Kunci Jawaban Benar</label>
+                                <select name="soal[0][kunci_jawaban]" class="form-select rounded-3">
                                     <option value="a">A</option>
                                     <option value="b">B</option>
                                     <option value="c">C</option>
@@ -195,16 +195,15 @@
                             </div>
                             <div class="col-md-6 col-12">
                                 <label class="form-label small fw-semibold">Bobot Poin Soal</label>
-                                <input type="number" name="soal[0][poin]" class="form-control rounded-3" value="10" min="5" max="100" required>
+                                <input type="number" name="soal[0][poin]" class="form-control rounded-3" value="10" min="5" max="100">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-                    <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-light rounded-pill px-4">Batal</a>
-                    <button type="submit" class="btn btn-danger rounded-pill px-5 fw-bold shadow">
-                        <i class="bi bi-check-circle me-1"></i> Simpan & Publikasikan Game
+                <div class="text-end">
+                    <button type="submit" class="btn btn-warning text-dark px-5 py-3 rounded-pill fw-bold shadow-lg fs-6">
+                        <i class="bi bi-cloud-check-fill me-2"></i> Simpan Game Edukasi Baru
                     </button>
                 </div>
             </form>
@@ -214,57 +213,79 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    let soalCount = 1;
     const container = document.getElementById('soalContainer');
     const btnAdd = document.getElementById('btnAddSoal');
+    const formCreateGame = document.getElementById('formCreateGame');
 
-    if (!container || !btnAdd) return;
+    if (formCreateGame) {
+        formCreateGame.addEventListener('submit', function(e) {
+            const fileInput = formCreateGame.querySelector('input[name="file_excel"]');
+            const hasExcelFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+            let hasValidManualSoal = false;
+            const questions = formCreateGame.querySelectorAll('.soal-item');
+            questions.forEach(q => {
+                const tanya = q.querySelector('textarea[name*="[pertanyaan]"]');
+                const opsiA = q.querySelector('input[name*="[opsi_a]"]');
+                const opsiB = q.querySelector('input[name*="[opsi_b]"]');
+                if (tanya && tanya.value.trim() !== '' && opsiA && opsiA.value.trim() !== '' && opsiB && opsiB.value.trim() !== '') {
+                    hasValidManualSoal = true;
+                }
+            });
+
+            if (!hasExcelFile && !hasValidManualSoal) {
+                alert('Silakan masukkan minimal 1 soal manual atau pilih berkas Excel/CSV template soal.');
+                e.preventDefault();
+            }
+        });
+    }
+
+    if (!btnAdd || !container) return;
 
     btnAdd.addEventListener('click', function() {
-        soalCount++;
-        const idx = soalCount - 1;
+        const idx = container.querySelectorAll('.soal-item').length;
         const html = `
             <div class="card p-4 rounded-4 border bg-light position-relative soal-item" data-index="${idx}">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold fs-6">Soal #${soalCount}</span>
+                    <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold fs-6">Soal #${idx + 1}</span>
                     <button type="button" class="btn btn-sm btn-outline-danger border-0 rounded-circle btn-remove-soal" title="Hapus Soal">
                         <i class="bi bi-trash3 fs-5"></i>
                     </button>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold">Teks Pertanyaan <span class="text-danger">*</span></label>
-                    <textarea name="soal[${idx}][pertanyaan]" class="form-control rounded-3" rows="2" placeholder="Tuliskan soal pertanyaan game..." required></textarea>
+                    <label class="form-label small fw-semibold">Teks Pertanyaan</label>
+                    <textarea name="soal[${idx}][pertanyaan]" class="form-control rounded-3" rows="2" placeholder="Tuliskan soal pertanyaan game..."></textarea>
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-md-6 col-12">
                         <div class="input-group">
                             <span class="input-group-text bg-white fw-bold">A</span>
-                            <input type="text" name="soal[${idx}][opsi_a]" class="form-control" placeholder="Pilihan Jawaban A" required>
+                            <input type="text" name="soal[${idx}][opsi_a]" class="form-control" placeholder="Pilihan Jawaban A">
                         </div>
                     </div>
                     <div class="col-md-6 col-12">
                         <div class="input-group">
                             <span class="input-group-text bg-white fw-bold">B</span>
-                            <input type="text" name="soal[${idx}][opsi_b]" class="form-control" placeholder="Pilihan Jawaban B" required>
+                            <input type="text" name="soal[${idx}][opsi_b]" class="form-control" placeholder="Pilihan Jawaban B">
                         </div>
                     </div>
                     <div class="col-md-6 col-12">
                         <div class="input-group">
                             <span class="input-group-text bg-white fw-bold">C</span>
-                            <input type="text" name="soal[${idx}][opsi_c]" class="form-control" placeholder="Pilihan Jawaban C" required>
+                            <input type="text" name="soal[${idx}][opsi_c]" class="form-control" placeholder="Pilihan Jawaban C">
                         </div>
                     </div>
                     <div class="col-md-6 col-12">
                         <div class="input-group">
                             <span class="input-group-text bg-white fw-bold">D</span>
-                            <input type="text" name="soal[${idx}][opsi_d]" class="form-control" placeholder="Pilihan Jawaban D" required>
+                            <input type="text" name="soal[${idx}][opsi_d]" class="form-control" placeholder="Pilihan Jawaban D">
                         </div>
                     </div>
                 </div>
                 <div class="row g-2">
                     <div class="col-md-6 col-12">
-                        <label class="form-label small fw-semibold">Kunci Jawaban Benar <span class="text-danger">*</span></label>
-                        <select name="soal[${idx}][kunci_jawaban]" class="form-select rounded-3" required>
+                        <label class="form-label small fw-semibold">Kunci Jawaban Benar</label>
+                        <select name="soal[${idx}][kunci_jawaban]" class="form-select rounded-3">
                             <option value="a">A</option>
                             <option value="b">B</option>
                             <option value="c">C</option>
@@ -273,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="col-md-6 col-12">
                         <label class="form-label small fw-semibold">Bobot Poin Soal</label>
-                        <input type="number" name="soal[${idx}][poin]" class="form-control rounded-3" value="10" min="5" max="100" required>
+                        <input type="number" name="soal[${idx}][poin]" class="form-control rounded-3" value="10" min="5" max="100">
                     </div>
                 </div>
             </div>
@@ -286,8 +307,11 @@ document.addEventListener('DOMContentLoaded', function() {
         container.querySelectorAll('.btn-remove-soal').forEach(btn => {
             btn.onclick = function() {
                 const items = container.querySelectorAll('.soal-item');
-                if (items.length <= 1) {
-                    alert('Game Edukasi harus memiliki minimal 1 soal.');
+                const fileInput = formCreateGame ? formCreateGame.querySelector('input[name="file_excel"]') : null;
+                const hasExcelFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+                if (items.length <= 1 && !hasExcelFile) {
+                    alert('Game Edukasi harus memiliki minimal 1 soal (manual atau dari Excel).');
                     return;
                 }
                 btn.closest('.soal-item').remove();

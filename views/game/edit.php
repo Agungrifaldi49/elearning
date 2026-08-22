@@ -160,39 +160,39 @@
                                 </button>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label small fw-semibold">Teks Pertanyaan <span class="text-danger">*</span></label>
-                                <textarea name="soal[<?= $idx ?>][pertanyaan]" class="form-control rounded-3" rows="2" required><?= htmlspecialchars($s['pertanyaan']) ?></textarea>
+                                <label class="form-label small fw-semibold">Teks Pertanyaan</label>
+                                <textarea name="soal[<?= $idx ?>][pertanyaan]" class="form-control rounded-3" rows="2"><?= htmlspecialchars($s['pertanyaan']) ?></textarea>
                             </div>
                             <div class="row g-2 mb-3">
                                 <div class="col-md-6 col-12">
                                     <div class="input-group">
                                         <span class="input-group-text bg-white fw-bold">A</span>
-                                        <input type="text" name="soal[<?= $idx ?>][opsi_a]" class="form-control" value="<?= htmlspecialchars($s['opsi_a']) ?>" required>
+                                        <input type="text" name="soal[<?= $idx ?>][opsi_a]" class="form-control" value="<?= htmlspecialchars($s['opsi_a']) ?>">
                                     </div>
                                 </div>
                                 <div class="col-md-6 col-12">
                                     <div class="input-group">
                                         <span class="input-group-text bg-white fw-bold">B</span>
-                                        <input type="text" name="soal[<?= $idx ?>][opsi_b]" class="form-control" value="<?= htmlspecialchars($s['opsi_b']) ?>" required>
+                                        <input type="text" name="soal[<?= $idx ?>][opsi_b]" class="form-control" value="<?= htmlspecialchars($s['opsi_b']) ?>">
                                     </div>
                                 </div>
                                 <div class="col-md-6 col-12">
                                     <div class="input-group">
                                         <span class="input-group-text bg-white fw-bold">C</span>
-                                        <input type="text" name="soal[<?= $idx ?>][opsi_c]" class="form-control" value="<?= htmlspecialchars($s['opsi_c']) ?>" required>
+                                        <input type="text" name="soal[<?= $idx ?>][opsi_c]" class="form-control" value="<?= htmlspecialchars($s['opsi_c']) ?>">
                                     </div>
                                 </div>
                                 <div class="col-md-6 col-12">
                                     <div class="input-group">
                                         <span class="input-group-text bg-white fw-bold">D</span>
-                                        <input type="text" name="soal[<?= $idx ?>][opsi_d]" class="form-control" value="<?= htmlspecialchars($s['opsi_d']) ?>" required>
+                                        <input type="text" name="soal[<?= $idx ?>][opsi_d]" class="form-control" value="<?= htmlspecialchars($s['opsi_d']) ?>">
                                     </div>
                                 </div>
                             </div>
                             <div class="row g-2">
                                 <div class="col-md-6 col-12">
-                                    <label class="form-label small fw-semibold">Kunci Jawaban Benar <span class="text-danger">*</span></label>
-                                    <select name="soal[<?= $idx ?>][kunci_jawaban]" class="form-select rounded-3" required>
+                                    <label class="form-label small fw-semibold">Kunci Jawaban Benar</label>
+                                    <select name="soal[<?= $idx ?>][kunci_jawaban]" class="form-select rounded-3">
                                         <option value="a" <?= (strtolower($s['kunci_jawaban']) === 'a') ? 'selected' : '' ?>>A</option>
                                         <option value="b" <?= (strtolower($s['kunci_jawaban']) === 'b') ? 'selected' : '' ?>>B</option>
                                         <option value="c" <?= (strtolower($s['kunci_jawaban']) === 'c') ? 'selected' : '' ?>>C</option>
@@ -201,7 +201,7 @@
                                 </div>
                                 <div class="col-md-6 col-12">
                                     <label class="form-label small fw-semibold">Bobot Poin Soal</label>
-                                    <input type="number" name="soal[<?= $idx ?>][poin]" class="form-control rounded-3" value="<?= $s['poin'] ?? 10 ?>" min="5" max="100" required>
+                                    <input type="number" name="soal[<?= $idx ?>][poin]" class="form-control rounded-3" value="<?= $s['poin'] ?? 10 ?>" min="5" max="100">
                                 </div>
                             </div>
                         </div>
@@ -211,7 +211,7 @@
                 <div class="d-flex justify-content-end gap-2 pt-3 border-top">
                     <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-light rounded-pill px-4">Batal</a>
                     <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow">
-                        <i class="bi bi-save me-1"></i> Simpan Perubahan Game
+                        <i class="bi bi-check-circle me-1"></i> Simpan Perubahan Game
                     </button>
                 </div>
             </form>
@@ -221,9 +221,33 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    let soalCount = <?= count($soalList) ?>;
     const container = document.getElementById('soalContainer');
     const btnAdd = document.getElementById('btnAddSoal');
-    let soalCount = container ? container.querySelectorAll('.soal-item').length : 0;
+    const formEditGame = document.getElementById('formEditGame');
+
+    if (formEditGame) {
+        formEditGame.addEventListener('submit', function(e) {
+            const fileInput = formEditGame.querySelector('input[name="file_excel"]');
+            const hasExcelFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+            let hasValidManualSoal = false;
+            const questions = formEditGame.querySelectorAll('.soal-item');
+            questions.forEach(q => {
+                const tanya = q.querySelector('textarea[name*="[pertanyaan]"]');
+                const opsiA = q.querySelector('input[name*="[opsi_a]"]');
+                const opsiB = q.querySelector('input[name*="[opsi_b]"]');
+                if (tanya && tanya.value.trim() !== '' && opsiA && opsiA.value.trim() !== '' && opsiB && opsiB.value.trim() !== '') {
+                    hasValidManualSoal = true;
+                }
+            });
+
+            if (!hasExcelFile && !hasValidManualSoal) {
+                alert('Silakan masukkan minimal 1 soal manual atau pilih berkas Excel/CSV template soal.');
+                e.preventDefault();
+            }
+        });
+    }
 
     if (!container || !btnAdd) return;
 
@@ -239,39 +263,39 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold">Teks Pertanyaan <span class="text-danger">*</span></label>
-                    <textarea name="soal[${idx}][pertanyaan]" class="form-control rounded-3" rows="2" placeholder="Tuliskan soal pertanyaan game..." required></textarea>
+                    <label class="form-label small fw-semibold">Teks Pertanyaan</label>
+                    <textarea name="soal[${idx}][pertanyaan]" class="form-control rounded-3" rows="2" placeholder="Tuliskan soal pertanyaan game..."></textarea>
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-md-6 col-12">
                         <div class="input-group">
                             <span class="input-group-text bg-white fw-bold">A</span>
-                            <input type="text" name="soal[${idx}][opsi_a]" class="form-control" placeholder="Pilihan Jawaban A" required>
+                            <input type="text" name="soal[${idx}][opsi_a]" class="form-control" placeholder="Pilihan Jawaban A">
                         </div>
                     </div>
                     <div class="col-md-6 col-12">
                         <div class="input-group">
                             <span class="input-group-text bg-white fw-bold">B</span>
-                            <input type="text" name="soal[${idx}][opsi_b]" class="form-control" placeholder="Pilihan Jawaban B" required>
+                            <input type="text" name="soal[${idx}][opsi_b]" class="form-control" placeholder="Pilihan Jawaban B">
                         </div>
                     </div>
                     <div class="col-md-6 col-12">
                         <div class="input-group">
                             <span class="input-group-text bg-white fw-bold">C</span>
-                            <input type="text" name="soal[${idx}][opsi_c]" class="form-control" placeholder="Pilihan Jawaban C" required>
+                            <input type="text" name="soal[${idx}][opsi_c]" class="form-control" placeholder="Pilihan Jawaban C">
                         </div>
                     </div>
                     <div class="col-md-6 col-12">
                         <div class="input-group">
                             <span class="input-group-text bg-white fw-bold">D</span>
-                            <input type="text" name="soal[${idx}][opsi_d]" class="form-control" placeholder="Pilihan Jawaban D" required>
+                            <input type="text" name="soal[${idx}][opsi_d]" class="form-control" placeholder="Pilihan Jawaban D">
                         </div>
                     </div>
                 </div>
                 <div class="row g-2">
                     <div class="col-md-6 col-12">
-                        <label class="form-label small fw-semibold">Kunci Jawaban Benar <span class="text-danger">*</span></label>
-                        <select name="soal[${idx}][kunci_jawaban]" class="form-select rounded-3" required>
+                        <label class="form-label small fw-semibold">Kunci Jawaban Benar</label>
+                        <select name="soal[${idx}][kunci_jawaban]" class="form-select rounded-3">
                             <option value="a">A</option>
                             <option value="b">B</option>
                             <option value="c">C</option>
@@ -280,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="col-md-6 col-12">
                         <label class="form-label small fw-semibold">Bobot Poin Soal</label>
-                        <input type="number" name="soal[${idx}][poin]" class="form-control rounded-3" value="10" min="5" max="100" required>
+                        <input type="number" name="soal[${idx}][poin]" class="form-control rounded-3" value="10" min="5" max="100">
                     </div>
                 </div>
             </div>
@@ -293,7 +317,10 @@ document.addEventListener('DOMContentLoaded', function() {
         container.querySelectorAll('.btn-remove-soal').forEach(btn => {
             btn.onclick = function() {
                 const items = container.querySelectorAll('.soal-item');
-                if (items.length <= 1) {
+                const fileInput = formEditGame ? formEditGame.querySelector('input[name="file_excel"]') : null;
+                const hasExcelFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+                if (items.length <= 1 && !hasExcelFile) {
                     alert('Game Edukasi harus memiliki minimal 1 soal.');
                     return;
                 }
