@@ -78,27 +78,45 @@
                                 <th>Nama Siswa</th>
                                 <th>NIS / NISN</th>
                                 <th>Kelas</th>
-                                <th>Waktu Hadir</th>
-                                <th>Status</th>
+                                <th>Jam Masuk</th>
+                                <th>Jam Pulang</th>
+                                <th>Status Presensi</th>
                             </tr>
                         </thead>
                         <tbody id="presensiTbody">
                             <?php if (empty($presensiHariIni)): ?>
                                 <tr id="emptyRow">
-                                    <td colspan="6" class="text-center py-5 text-muted">
+                                    <td colspan="7" class="text-center py-5 text-muted">
                                         <i class="bi bi-qr-code fs-1 d-block mb-2 text-secondary"></i>
                                         <small class="fw-semibold">Belum ada presensi hari ini. Silakan mulai scan QR Code siswa.</small>
                                     </td>
                                 </tr>
                             <?php else: ?>
-                                <?php foreach ($presensiHariIni as $i => $p): ?>
+                                <?php foreach ($presensiHariIni as $i => $p): 
+                                    $jamMasukStr = !empty($p['waktu_masuk']) ? date('H:i', strtotime($p['waktu_masuk'])) : (!empty($p['waktu_hadir']) ? date('H:i', strtotime($p['waktu_hadir'])) : '-');
+                                    $jamPulangStr = !empty($p['waktu_pulang']) ? date('H:i', strtotime($p['waktu_pulang'])) : '-';
+                                    $isPulang = !empty($p['waktu_pulang']);
+                                ?>
                                     <tr class="border-bottom">
                                         <td><span class="badge bg-secondary rounded-circle py-1 px-2"><?= $i + 1 ?></span></td>
                                         <td class="fw-bold text-dark"><?= htmlspecialchars($p['nama_lengkap']) ?></td>
                                         <td><code><?= htmlspecialchars($p['nis'] ?: ($p['nisn'] ?: '-')) ?></code></td>
                                         <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($p['nama_kelas'] ?: 'Tanpa Kelas') ?></span></td>
-                                        <td class="fw-bold text-success"><?= date('H:i', strtotime($p['waktu_hadir'] ?? $p['created_at'])) ?> WIB</td>
-                                        <td><span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Hadir</span></td>
+                                        <td class="fw-bold text-success"><i class="bi bi-box-arrow-in-right me-1"></i><?= $jamMasukStr ?> WIB</td>
+                                        <td class="fw-bold text-primary">
+                                            <?php if ($isPulang): ?>
+                                                <i class="bi bi-box-arrow-right me-1"></i><?= $jamPulangStr ?> WIB
+                                            <?php else: ?>
+                                                <span class="text-muted fw-normal small">Belum Scan Pulang</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if ($isPulang): ?>
+                                                <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1"><i class="bi bi-check-all me-1"></i>Lengkap (Masuk & Pulang)</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Hadir (KBM All Mapel)</span>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -181,45 +199,38 @@ function submitScan(identifier) {
         isProcessing = false;
         if (d.success) {
             playAudioBeep();
-            resultEl.className = 'alert alert-success border-0 rounded-3 shadow-sm mb-3';
-            resultEl.innerHTML = '<i class="bi bi-check-circle-fill me-1 fs-5 align-middle"></i> <strong>' + d.nama + '</strong> (' + d.kelas + ') — ' + d.jam;
+            
+            const isPulang = d.type === 'pulang';
+            resultEl.className = isPulang ? 'alert alert-primary border-0 rounded-3 shadow-sm mb-3' : 'alert alert-success border-0 rounded-3 shadow-sm mb-3';
+            resultEl.innerHTML = '<i class="bi bi-check-circle-fill me-1 fs-5 align-middle"></i> <strong>' + d.nama + '</strong> (' + d.kelas + ') — ' + (isPulang ? 'Pulang: ' + d.jam : 'Masuk: ' + d.jam);
 
-            scanCount++;
-            const countEl = document.getElementById('totalHadir');
-            if (countEl) countEl.textContent = scanCount;
+            if (!isPulang) {
+                scanCount++;
+                const countEl = document.getElementById('totalHadir');
+                if (countEl) countEl.textContent = scanCount;
+            }
 
             const tbody = document.getElementById('presensiTbody');
             const emptyRow = document.getElementById('emptyRow');
             if (emptyRow) emptyRow.remove();
 
-            if (tbody) {
-                const newRow = `
-                    <tr class="table-success border-bottom">
-                        <td><span class="badge bg-success rounded-circle py-1 px-2">${scanCount}</span></td>
-                        <td class="fw-bold text-dark">${d.nama}</td>
-                        <td><code>${d.nis}</code></td>
-                        <td><span class="badge bg-light text-dark border">${d.kelas}</span></td>
-                        <td class="fw-bold text-success">${d.jam}</td>
-                        <td><span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Hadir</span></td>
-                    </tr>
-                `;
-                tbody.insertAdjacentHTML('afterbegin', newRow);
-            }
-
             document.getElementById('manualNis').value = '';
+
             Swal.fire({ 
                 icon: 'success', 
-                title: 'Presensi Terekam!', 
-                html: `<b>${d.nama}</b> (${d.kelas}) berhasil hadir pukul ${d.jam}.`, 
-                timer: 2500, 
+                title: isPulang ? 'Presensi PULANG Terekam!' : 'Presensi MASUK Terekam!', 
+                html: isPulang ? `<b>${d.nama}</b> (${d.kelas}) berhasil presensi PULANG pukul ${d.jam_pulang}. (Masuk: ${d.jam_masuk}).` : `<b>${d.nama}</b> (${d.kelas}) berhasil presensi MASUK pukul ${d.jam_masuk}. Otomatis HADIR di seluruh KBM mapel hari ini.`, 
+                timer: 3000, 
                 showConfirmButton: false 
+            }).then(() => {
+                window.location.reload();
             });
         } else {
             resultEl.className = d.already_attended ? 'alert alert-warning border-0 rounded-3 shadow-sm mb-3' : 'alert alert-danger border-0 rounded-3 shadow-sm mb-3';
             resultEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + (d.message || 'Siswa tidak ditemukan.');
             Swal.fire({ 
                 icon: d.already_attended ? 'info' : 'error', 
-                title: d.already_attended ? 'Presensi Sudah Tercatat' : 'Gagal!', 
+                title: d.already_attended ? 'Presensi Sudah Lengkap' : 'Gagal!', 
                 text: d.message || 'Siswa tidak ditemukan.' 
             });
         }

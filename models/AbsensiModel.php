@@ -19,6 +19,8 @@ class AbsensiModel extends BaseModel {
                 siswa_id INT NOT NULL,
                 guru_id INT NULL,
                 tanggal DATE NOT NULL,
+                waktu_masuk DATETIME NULL,
+                waktu_pulang DATETIME NULL,
                 waktu_hadir DATETIME DEFAULT CURRENT_TIMESTAMP,
                 status VARCHAR(20) DEFAULT 'Hadir',
                 qr_code VARCHAR(100) NULL,
@@ -30,7 +32,6 @@ class AbsensiModel extends BaseModel {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
             $this->db->exec($sql);
 
-            // Ensure jadwal_id column allows NULL for general daily QR presensi
             $this->db->exec("ALTER TABLE absensi MODIFY COLUMN jadwal_id INT NULL");
 
             $stmt = $this->db->query("SHOW COLUMNS FROM absensi");
@@ -43,8 +44,14 @@ class AbsensiModel extends BaseModel {
                 if (!in_array('guru_id', $cols)) {
                     $this->db->exec("ALTER TABLE absensi ADD COLUMN guru_id INT NULL AFTER siswa_id");
                 }
+                if (!in_array('waktu_masuk', $cols)) {
+                    $this->db->exec("ALTER TABLE absensi ADD COLUMN waktu_masuk DATETIME NULL AFTER tanggal");
+                }
+                if (!in_array('waktu_pulang', $cols)) {
+                    $this->db->exec("ALTER TABLE absensi ADD COLUMN waktu_pulang DATETIME NULL AFTER waktu_masuk");
+                }
                 if (!in_array('waktu_hadir', $cols)) {
-                    $this->db->exec("ALTER TABLE absensi ADD COLUMN waktu_hadir DATETIME DEFAULT CURRENT_TIMESTAMP AFTER tanggal");
+                    $this->db->exec("ALTER TABLE absensi ADD COLUMN waktu_hadir DATETIME DEFAULT CURRENT_TIMESTAMP AFTER waktu_pulang");
                 }
             }
         } catch (Throwable $e) {}
@@ -65,7 +72,7 @@ class AbsensiModel extends BaseModel {
                 $params[] = (int)$guruId;
             }
 
-            $sql .= " ORDER BY a.waktu_hadir DESC, a.id DESC";
+            $sql .= " ORDER BY COALESCE(a.waktu_pulang, a.waktu_masuk, a.waktu_hadir) DESC, a.id DESC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
             return $stmt->fetchAll();
@@ -116,34 +123,64 @@ class AbsensiModel extends BaseModel {
             $exist = $stmtExist->fetch();
 
             if ($exist) {
-                $jamHadir = date('H:i', strtotime($exist['waktu_hadir'] ?? $exist['created_at']));
-                return [
-                    'success' => false,
-                    'already_attended' => true,
-                    'nama' => $siswa['nama_lengkap'],
-                    'nis' => $siswa['nis'] ?: ($siswa['nisn'] ?: '-'),
-                    'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
-                    'jam' => $jamHadir . ' WIB',
-                    'message' => "Siswa {$siswa['nama_lengkap']} sudah dicatat HADIR hari ini pada pukul {$jamHadir} WIB."
-                ];
+                if (!empty($exist['waktu_pulang'])) {
+                    $jamMasuk = date('H:i', strtotime($exist['waktu_masuk'] ?? $exist['waktu_hadir'] ?? $exist['created_at']));
+                    $jamPulang = date('H:i', strtotime($exist['waktu_pulang']));
+                    return [
+                        'success' => false,
+                        'already_attended' => true,
+                        'nama' => $siswa['nama_lengkap'],
+                        'nis' => $siswa['nis'] ?: ($siswa['nisn'] ?: '-'),
+                        'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
+                        'jam_masuk' => $jamMasuk . ' WIB',
+                        'jam_pulang' => $jamPulang . ' WIB',
+                        'message' => "Presensi siswa {$siswa['nama_lengkap']} sudah LENGKAP hari ini (Masuk: {$jamMasuk} WIB, Pulang: {$jamPulang} WIB)."
+                    ];
+                } else {
+                    // Record Presensi Pulang
+                    $stmtUpd = $this->db->prepare("
+                        UPDATE absensi 
+                        SET waktu_pulang = ?, keterangan = 'Presensi Masuk & Pulang Digital' 
+                        WHERE id = ?
+                    ");
+                    $stmtUpd->execute([$now, $exist['id']]);
+
+                    $jamMasuk = date('H:i', strtotime($exist['waktu_masuk'] ?? $exist['waktu_hadir'] ?? $exist['created_at']));
+                    $jamPulang = date('H:i', strtotime($now));
+
+                    return [
+                        'success' => true,
+                        'type' => 'pulang',
+                        'nama' => $siswa['nama_lengkap'],
+                        'nis' => $siswa['nis'] ?: ($siswa['nisn'] ?: '-'),
+                        'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
+                        'jam' => $jamPulang . ' WIB',
+                        'jam_masuk' => $jamMasuk . ' WIB',
+                        'jam_pulang' => $jamPulang . ' WIB',
+                        'message' => "Presensi PULANG {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat pukul {$jamPulang} WIB! (Jam Masuk: {$jamMasuk} WIB)."
+                    ];
+                }
             }
 
+            // New Presensi Masuk
             $qrCodeVal = "QR_" . $siswa['id'] . "_" . date('YmdHis');
             $stmtIns = $this->db->prepare("
-                INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_hadir, status, qr_code, keterangan) 
-                VALUES (NULL, ?, ?, ?, ?, 'Hadir', ?, 'Hadir via Scan QR Code Digital')
+                INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_hadir, status, qr_code, keterangan) 
+                VALUES (NULL, ?, ?, ?, ?, ?, 'Hadir', ?, 'Presensi Masuk Digital')
             ");
-            $res = $stmtIns->execute([$siswa['id'], $guruId ? (int)$guruId : null, $today, $now, $qrCodeVal]);
+            $res = $stmtIns->execute([$siswa['id'], $guruId ? (int)$guruId : null, $today, $now, $now, $qrCodeVal]);
 
             if ($res) {
-                $jamHadir = date('H:i', strtotime($now));
+                $jamMasuk = date('H:i', strtotime($now));
                 return [
                     'success' => true,
+                    'type' => 'masuk',
                     'nama' => $siswa['nama_lengkap'],
                     'nis' => $siswa['nis'] ?: ($siswa['nisn'] ?: '-'),
                     'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
-                    'jam' => $jamHadir . ' WIB',
-                    'message' => "Presensi {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat!"
+                    'jam' => $jamMasuk . ' WIB',
+                    'jam_masuk' => $jamMasuk . ' WIB',
+                    'message' => "Presensi MASUK {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat pukul {$jamMasuk} WIB! Otomatis HADIR di seluruh KBM mapel hari ini."
                 ];
             } else {
                 return ['success' => false, 'message' => 'Gagal menyimpan data presensi ke database.'];
@@ -154,17 +191,25 @@ class AbsensiModel extends BaseModel {
     }
 
     public function recordAttendance($jadwal_id, $siswa_id, $tanggal, $status, $keterangan = '') {
-        $qrCode = "ATT_" . $jadwal_id . "_" . $siswa_id . "_" . date('Ymd');
-        $stmtExist = $this->db->prepare("SELECT id FROM absensi WHERE jadwal_id = ? AND siswa_id = ? AND tanggal = ?");
-        $stmtExist->execute([$jadwal_id, $siswa_id, $tanggal]);
+        $jadwal_id = (int)$jadwal_id;
+        $siswa_id = (int)$siswa_id;
+
+        $stmtExist = $this->db->prepare("
+            SELECT id FROM absensi 
+            WHERE siswa_id = ? AND tanggal = ? AND (jadwal_id = ? OR jadwal_id IS NULL)
+            ORDER BY (jadwal_id IS NOT NULL) DESC, id DESC LIMIT 1
+        ");
+        $stmtExist->execute([$siswa_id, $tanggal, $jadwal_id]);
         $exist = $stmtExist->fetch();
 
         if ($exist) {
-            $stmt = $this->db->prepare("UPDATE absensi SET status = ?, keterangan = ? WHERE id = ?");
-            return $stmt->execute([$status, $keterangan, $exist['id']]);
+            $stmt = $this->db->prepare("UPDATE absensi SET jadwal_id = ?, status = ?, keterangan = ? WHERE id = ?");
+            return $stmt->execute([$jadwal_id, $status, $keterangan, $exist['id']]);
         } else {
-            $stmt = $this->db->prepare("INSERT INTO absensi (jadwal_id, siswa_id, tanggal, status, qr_code, keterangan) VALUES (?, ?, ?, ?, ?, ?)");
-            return $stmt->execute([$jadwal_id, $siswa_id, $tanggal, $status, $qrCode, $keterangan]);
+            $now = date('Y-m-d H:i:s');
+            $qrCode = "ATT_" . $jadwal_id . "_" . $siswa_id . "_" . date('Ymd');
+            $stmt = $this->db->prepare("INSERT INTO absensi (jadwal_id, siswa_id, tanggal, waktu_masuk, waktu_hadir, status, qr_code, keterangan) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            return $stmt->execute([$jadwal_id, $siswa_id, $tanggal, $now, $now, $status, $qrCode, $keterangan]);
         }
     }
 
@@ -174,7 +219,7 @@ class AbsensiModel extends BaseModel {
         $guruId = null;
 
         $stmtJ = $this->db->prepare("SELECT kelas_id, mapel_id, guru_id FROM jadwal WHERE id = ?");
-        $stmtJ->execute([$jadwal_id]);
+        $stmtJ->execute([(int)$jadwal_id]);
         $jData = $stmtJ->fetch();
 
         if ($jData) {
@@ -183,7 +228,7 @@ class AbsensiModel extends BaseModel {
             $guruId = $jData['guru_id'];
         } else {
             $stmtK = $this->db->prepare("SELECT mapel_id, guru_id, kelas_id FROM mapel_enrollment_keys WHERE id = ?");
-            $stmtK->execute([$jadwal_id]);
+            $stmtK->execute([(int)$jadwal_id]);
             $kData = $stmtK->fetch();
             if ($kData) {
                 $kelasId = $kData['kelas_id'];
@@ -194,33 +239,39 @@ class AbsensiModel extends BaseModel {
 
         if ($kelasId) {
             $stmt = $this->db->prepare("
-                SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, a.status, a.keterangan, a.created_at
+                SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, 
+                       a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                 FROM siswa s
-                LEFT JOIN absensi a ON s.id = a.siswa_id AND a.jadwal_id = ? AND a.tanggal = ?
+                LEFT JOIN absensi a ON s.id = a.siswa_id AND a.tanggal = ?
                 WHERE s.kelas_id = ?
+                GROUP BY s.id
                 ORDER BY s.nama_lengkap ASC
             ");
-            $stmt->execute([$jadwal_id, $tanggal, $kelasId]);
+            $stmt->execute([$tanggal, $kelasId]);
             return $stmt->fetchAll();
         } elseif ($mapelId && $guruId) {
             $stmt = $this->db->prepare("
-                SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, a.status, a.keterangan, a.created_at
+                SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, 
+                       a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                 FROM siswa s
                 JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id AND sme.mapel_id = ? AND sme.guru_id = ?
-                LEFT JOIN absensi a ON s.id = a.siswa_id AND a.jadwal_id = ? AND a.tanggal = ?
+                LEFT JOIN absensi a ON s.id = a.siswa_id AND a.tanggal = ?
+                GROUP BY s.id
                 ORDER BY s.nama_lengkap ASC
             ");
-            $stmt->execute([$mapelId, $guruId, $jadwal_id, $tanggal]);
+            $stmt->execute([$mapelId, $guruId, $tanggal]);
             return $stmt->fetchAll();
         } else {
             $stmt = $this->db->prepare("
-                SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, a.status, a.keterangan, a.created_at
+                SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, 
+                       a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                 FROM siswa s
-                LEFT JOIN absensi a ON s.id = a.siswa_id AND a.jadwal_id = ? AND a.tanggal = ?
+                LEFT JOIN absensi a ON s.id = a.siswa_id AND a.tanggal = ?
                 WHERE s.kelas_id IS NOT NULL
+                GROUP BY s.id
                 ORDER BY s.nama_lengkap ASC
             ");
-            $stmt->execute([$jadwal_id, $tanggal]);
+            $stmt->execute([$tanggal]);
             return $stmt->fetchAll();
         }
     }
