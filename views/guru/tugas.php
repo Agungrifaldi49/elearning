@@ -307,32 +307,53 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-center">
-                                                <div class="d-inline-flex gap-1 flex-wrap justify-content-center">
-                                                    <button class="btn btn-sm btn-info text-white px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalPreviewTugas<?= $t['id'] ?>" title="Detail / Petunjuk Tugas">
-                                                        <i class="bi bi-eye me-1"></i> Detail
-                                                    </button>
+                                                 <div class="d-inline-flex gap-1.5 align-items-center justify-content-center">
+                                                     <button class="btn btn-sm btn-primary px-3 rounded-pill shadow-xs fw-bold" style="font-size:0.78rem;" data-bs-toggle="modal" data-bs-target="#modalGrade<?= $t['id'] ?>" title="Lihat Pengumpulan & Nilai Siswa">
+                                                         <i class="bi bi-award-fill me-1"></i> <?= $isAdminMonitoring ? 'Pengumpulan' : 'Nilai Siswa' ?> (<?= $subCount ?>)
+                                                     </button>
 
-                                                    <?php if (!$isAdminMonitoring): ?>
-                                                        <button class="btn btn-sm btn-warning text-dark px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalEditTugas<?= $t['id'] ?>" title="Edit Tugas">
-                                                            <i class="bi bi-pencil-square me-1"></i> Edit
-                                                        </button>
-                                                    <?php endif; ?>
+                                                     <button class="btn btn-sm btn-info text-white px-2.5 rounded-pill shadow-xs fw-bold" style="font-size:0.78rem;" data-bs-toggle="modal" data-bs-target="#modalPreviewTugas<?= $t['id'] ?>" title="Detail / Petunjuk Tugas">
+                                                         <i class="bi bi-eye-fill me-1"></i> Detail
+                                                     </button>
 
-                                                    <button class="btn btn-sm btn-primary px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalGrade<?= $t['id'] ?>" title="Lihat Pengumpulan & Nilai">
-                                                        <i class="bi bi-award me-1"></i> <?= $isAdminMonitoring ? 'Lihat Pengumpulan' : 'Nilai Siswa' ?> (<?= $subCount ?>)
-                                                    </button>
-
-                                                    <?php if (!$isAdminMonitoring): ?>
-                                                        <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" onsubmit="return confirm('Hapus tugas ini beserta seluruh hasil pengumpulan siswa?');" class="d-inline">
-                                                            <?= Security::csrfField() ?>
-                                                            <input type="hidden" name="action" value="delete">
-                                                            <input type="hidden" name="id" value="<?= $t['id'] ?>">
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" title="Hapus Tugas">
-                                                                <i class="bi bi-trash"></i>
-                                                            </button>
-                                                        </form>
-                                                    <?php endif; ?>
-                                                </div>
+                                                     <?php if (!$isAdminMonitoring): ?>
+                                                         <div class="dropdown d-inline">
+                                                             <button class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 shadow-xs fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size:0.78rem;">
+                                                                 <i class="bi bi-gear-fill me-1 text-primary"></i> Kelola ▾
+                                                             </button>
+                                                             <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 200px; font-size:0.85rem;">
+                                                                 <li><h6 class="dropdown-header text-uppercase fw-bold text-muted px-2 py-1 mb-1" style="font-size:0.68rem;">Aksi & Evaluasi</h6></li>
+                                                                 <li>
+                                                                     <a class="dropdown-item rounded-2 py-1.5 text-primary fw-semibold" href="#" data-bs-toggle="modal" data-bs-target="#modalGrade<?= $t['id'] ?>">
+                                                                         <i class="bi bi-award-fill me-2 text-primary"></i> Periksa & Nilai Siswa
+                                                                     </a>
+                                                                 </li>
+                                                                 <li>
+                                                                     <a class="dropdown-item rounded-2 py-1.5 text-dark fw-semibold" href="#" data-bs-toggle="modal" data-bs-target="#modalPreviewTugas<?= $t['id'] ?>">
+                                                                         <i class="bi bi-eye-fill text-info me-2"></i> Lihat Petunjuk Tugas
+                                                                     </a>
+                                                                 </li>
+                                                                 <li><hr class="dropdown-divider my-1"></li>
+                                                                 <li><h6 class="dropdown-header text-uppercase fw-bold text-muted px-2 py-1 mb-1" style="font-size:0.68rem;">Pengaturan Tugas</h6></li>
+                                                                 <li>
+                                                                     <a class="dropdown-item rounded-2 py-1.5 text-dark fw-semibold" href="#" data-bs-toggle="modal" data-bs-target="#modalEditTugas<?= $t['id'] ?>">
+                                                                         <i class="bi bi-pencil-square text-warning me-2"></i> Edit Tugas
+                                                                     </a>
+                                                                 </li>
+                                                                 <li>
+                                                                     <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus tugas ini beserta seluruh hasil pengumpulan siswa?');">
+                                                                         <?= Security::csrfField() ?>
+                                                                         <input type="hidden" name="action" value="delete">
+                                                                         <input type="hidden" name="id" value="<?= $t['id'] ?>">
+                                                                         <button type="submit" class="dropdown-item rounded-2 py-1.5 text-danger fw-semibold w-100 text-start">
+                                                                             <i class="bi bi-trash-fill me-2"></i> Hapus Tugas
+                                                                         </button>
+                                                                     </form>
+                                                                 </li>
+                                                             </ul>
+                                                         </div>
+                                                     <?php endif; ?>
+                                                 </div>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
