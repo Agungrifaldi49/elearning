@@ -118,7 +118,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
 .kartu-front-side, .kartu-back-side {
     width: 100%;
     max-width: 490px;
-    height: 310px;
+    height: 315px;
     border-radius: 20px;
     background: linear-gradient(135deg, #022c22 0%, #064e3b 45%, #0f172a 100%);
     color: #ffffff;
@@ -127,7 +127,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
     border: 2px solid rgba(16, 185, 129, 0.6);
     box-shadow: 0 20px 45px rgba(2, 44, 34, 0.45);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 14px 18px !important;
+    padding: 16px 18px !important;
 }
 
 .kartu-front-side:hover, .kartu-back-side:hover {
@@ -268,10 +268,10 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                     <div class="kartu-grid-overlay"></div>
                     
                     <!-- Header Kop Sekolah -->
-                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-1.5" style="border-color: rgba(255,255,255,0.18) !important;">
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-2" style="border-color: rgba(255,255,255,0.18) !important;">
                         <div class="d-flex align-items-center gap-2 overflow-hidden me-2" style="max-width: 76%;">
                             <?php if ($schoolLogoUrl): ?>
-                                <img src="<?= $schoolLogoUrl ?>" alt="Logo Sekolah" style="height: 38px; width: auto; object-fit: contain; flex-shrink: 0;">
+                                <img src="<?= $schoolLogoUrl ?>" alt="Logo Sekolah" style="height: 36px; width: auto; object-fit: contain; flex-shrink: 0;">
                             <?php else: ?>
                                 <div class="bg-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
                                     <i class="bi bi-building fs-6 text-white"></i>
@@ -285,8 +285,8 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                         <span class="gold-badge flex-shrink-0">GTK / PENDIDIK</span>
                     </div>
 
-                    <!-- Judul Kartu Banner -->
-                    <div class="card-title-banner text-center py-1 mb-1.5 fw-bold text-uppercase">
+                    <!-- Judul Kartu Banner (Posisi Diturunkan Agak Kebawah & Lebih Seimbang) -->
+                    <div class="card-title-banner text-center py-1 mt-1 mb-2.5 fw-bold text-uppercase">
                         <i class="bi bi-person-badge me-1"></i>KARTU TENAGA PENDIDIK DIGITAL
                     </div>
 
@@ -347,21 +347,36 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                     <div class="kartu-grid-overlay"></div>
 
                     <!-- Header Kop Belakang -->
-                    <div class="card-title-banner text-center py-1 mb-1.5 fw-bold text-uppercase">
+                    <div class="card-title-banner text-center py-1 mb-2 fw-bold text-uppercase">
                         <i class="bi bi-shield-check me-1"></i>KETENTUAN PENGGUNAAN KARTU GURU
                     </div>
 
-                    <!-- List Ketentuan -->
-                    <ol class="text-white-50 small my-auto ps-3 mb-0 position-relative" style="font-size: 0.65rem; line-height: 1.4; z-index: 2;">
-                        <li class="mb-1">Kartu ini merupakan bukti identitas resmi Tenaga Pendidik SMK Muthia Harapan Cicalengka.</li>
-                        <li class="mb-1">Gunakan Kode QR kartu ini untuk pemindaian presensi harian pada scanner sekolah.</li>
-                        <li class="mb-1">Dilarang menyerahkan atau meminjamkan Kode QR presensi kepada orang lain.</li>
-                        <li class="mb-1">Apabila terjadi kendala pemindaian, silakan hubungi bagian Administrasi/TIM IT Sekolah.</li>
-                        <li class="mb-0">Kartu ini berlaku selama Guru/Tenaga Pendidik aktif mengajar pada TA <?= htmlspecialchars($academicYear) ?>.</li>
-                    </ol>
+                    <!-- List Ketentuan (Tersusun Rapi Mengisi Celah Tanpa Celah Kosong) -->
+                    <ul class="list-unstyled text-white-50 my-auto mb-0 position-relative" style="font-size: 0.66rem; line-height: 1.48; z-index: 2;">
+                        <li class="mb-2 d-flex align-items-start gap-1.5">
+                            <span class="badge rounded-circle px-1.5 py-0.5 fw-bold" style="font-size: 0.6rem; color:#34d399; background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3);">1</span>
+                            <span>Kartu ini merupakan bukti identitas resmi Tenaga Pendidik SMK Muthia Harapan Cicalengka.</span>
+                        </li>
+                        <li class="mb-2 d-flex align-items-start gap-1.5">
+                            <span class="badge rounded-circle px-1.5 py-0.5 fw-bold" style="font-size: 0.6rem; color:#34d399; background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3);">2</span>
+                            <span>Gunakan Kode QR kartu ini untuk pemindaian presensi harian pada scanner sekolah.</span>
+                        </li>
+                        <li class="mb-2 d-flex align-items-start gap-1.5">
+                            <span class="badge rounded-circle px-1.5 py-0.5 fw-bold" style="font-size: 0.6rem; color:#34d399; background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3);">3</span>
+                            <span>Dilarang menyerahkan atau meminjamkan Kode QR presensi kepada orang lain.</span>
+                        </li>
+                        <li class="mb-2 d-flex align-items-start gap-1.5">
+                            <span class="badge rounded-circle px-1.5 py-0.5 fw-bold" style="font-size: 0.6rem; color:#34d399; background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3);">4</span>
+                            <span>Apabila terjadi kendala pemindaian, silakan hubungi bagian Administrasi/TIM IT Sekolah.</span>
+                        </li>
+                        <li class="mb-0 d-flex align-items-start gap-1.5">
+                            <span class="badge rounded-circle px-1.5 py-0.5 fw-bold" style="font-size: 0.6rem; color:#34d399; background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3);">5</span>
+                            <span>Kartu berlaku selama Guru/GTK aktif mengajar pada TA <?= htmlspecialchars($academicYear) ?>.</span>
+                        </li>
+                    </ul>
 
                     <!-- Tanda Tangan Kepala Sekolah -->
-                    <div class="d-flex justify-content-between align-items-center border-top pt-1.5 mt-1 position-relative" style="border-color: rgba(255,255,255,0.18) !important; z-index: 2;">
+                    <div class="d-flex justify-content-between align-items-center border-top pt-1.5 mt-2 position-relative" style="border-color: rgba(255,255,255,0.18) !important; z-index: 2;">
                         <div class="text-start text-white-50" style="font-size: 0.58rem; line-height: 1.3;">
                             <span>Cicalengka, Kab. Bandung</span><br>
                             <span>Diterbitkan Oleh: Kepala Sekolah</span>
