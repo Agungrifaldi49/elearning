@@ -81,6 +81,120 @@ class AbsensiModel extends BaseModel {
         }
     }
 
+    public function verifySchoolScheduleToday($siswaId = null, $todayDate = null, $nowTime = null) {
+        if (!$todayDate) $todayDate = date('Y-m-d');
+        if (!$nowTime) $nowTime = date('H:i:s');
+
+        // 1. Check Kalender Akademik Holidays (kalender.json)
+        $kalenderPath = ROOT_PATH . 'config/kalender.json';
+        if (file_exists($kalenderPath)) {
+            $events = json_decode(file_get_contents($kalenderPath), true) ?: [];
+            foreach ($events as $ev) {
+                $type = strtolower($ev['type'] ?? '');
+                $tglMulai = $ev['tanggal'] ?? '';
+                $tglAkhir = !empty($ev['tanggal_akhir']) ? $ev['tanggal_akhir'] : $tglMulai;
+
+                if ($todayDate >= $tglMulai && $todayDate <= $tglAkhir) {
+                    if ($type === 'libur' || strpos(strtolower($ev['title'] ?? ''), 'libur') !== false || strpos(strtolower($ev['title'] ?? ''), 'tanggal merah') !== false) {
+                        return [
+                            'allowed' => false,
+                            'reason' => 'holiday',
+                            'message' => "Bukan jadwal masuk sekolah! Hari ini ({$ev['title']}) dinyatakan LIBUR pada Kalender Akademik Sekolah. Pemindaian QR Code presensi tidak dapat dilakukan."
+                        ];
+                    }
+                }
+            }
+        }
+
+        // 2. Map day number to Indonesian day name
+        $daysMap = [
+            1 => 'Senin',
+            2 => 'Selasa',
+            3 => 'Rabu',
+            4 => 'Kamis',
+            5 => 'Jumat',
+            6 => 'Sabtu',
+            7 => 'Minggu'
+        ];
+        $dayNum = date('N', strtotime($todayDate));
+        $todayDayName = $daysMap[$dayNum] ?? 'Senin';
+
+        // 3. Query if there is ANY active schedule in `jadwal` table for $todayDayName
+        $stmtJ = $this->db->prepare("
+            SELECT COUNT(*) as total_jadwal, MIN(jam_mulai) as min_start, MAX(jam_selesai) as max_end 
+            FROM jadwal 
+            WHERE hari = ?
+        ");
+        $stmtJ->execute([$todayDayName]);
+        $jStat = $stmtJ->fetch();
+
+        $studentClassHasSchedule = true;
+        if ($siswaId) {
+            $stmtSiswaClass = $this->db->prepare("
+                SELECT s.kelas_id, k.nama_kelas 
+                FROM siswa s 
+                LEFT JOIN kelas k ON s.kelas_id = k.id 
+                WHERE s.id = ?
+            ");
+            $stmtSiswaClass->execute([(int)$siswaId]);
+            $sData = $stmtSiswaClass->fetch();
+
+            if ($sData && !empty($sData['kelas_id'])) {
+                $stmtClassJadwal = $this->db->prepare("
+                    SELECT COUNT(*) as cnt 
+                    FROM jadwal 
+                    WHERE kelas_id = ? AND hari = ?
+                ");
+                $stmtClassJadwal->execute([(int)$sData['kelas_id'], $todayDayName]);
+                $cStat = $stmtClassJadwal->fetch();
+
+                if ((int)($cStat['cnt'] ?? 0) === 0 && (int)($jStat['total_jadwal'] ?? 0) > 0) {
+                    $studentClassHasSchedule = false;
+                }
+            }
+        }
+
+        if ((int)($jStat['total_jadwal'] ?? 0) === 0) {
+            return [
+                'allowed' => false,
+                'reason' => 'no_schedule_day',
+                'message' => "Bukan jadwal masuk sekolah! Tidak ada jadwal KBM sekolah pada hari $todayDayName ($todayDate). Kemungkinan hari libur sekolah atau akhir pekan."
+            ];
+        }
+
+        if (!$studentClassHasSchedule) {
+            return [
+                'allowed' => false,
+                'reason' => 'no_class_schedule',
+                'message' => "Bukan jadwal KBM rombel! Kelas siswa tidak memiliki jadwal mata pelajaran pada hari $todayDayName ($todayDate)."
+            ];
+        }
+
+        // 4. Operating Hours Buffer Check (05:30 WIB to 18:30 WIB or based on min/max schedule time with buffer)
+        $minStart = $jStat['min_start'] ? date('H:i:s', strtotime($jStat['min_start'] . ' -60 minutes')) : '06:00:00';
+        $maxEnd = $jStat['max_end'] ? date('H:i:s', strtotime($jStat['max_end'] . ' +120 minutes')) : '18:00:00';
+
+        if (strtotime($minStart) > strtotime('06:00:00')) $minStart = '06:00:00';
+        if (strtotime($maxEnd) < strtotime('18:00:00')) $maxEnd = '18:00:00';
+
+        if ($nowTime < $minStart || $nowTime > $maxEnd) {
+            $formatStart = date('H:i', strtotime($minStart));
+            $formatEnd = date('H:i', strtotime($maxEnd));
+            return [
+                'allowed' => false,
+                'reason' => 'out_of_hours',
+                'message' => "Bukan jam masuk sekolah! Pemindaian di luar jam operasional presensi resmi ($formatStart s/d $formatEnd WIB)."
+            ];
+        }
+
+        return [
+            'allowed' => true,
+            'day_name' => $todayDayName,
+            'min_start' => $minStart,
+            'max_end' => $maxEnd
+        ];
+    }
+
     public function processQrScan($identifier, $guruId = null) {
         try {
             $cleanId = trim($identifier);
@@ -113,6 +227,18 @@ class AbsensiModel extends BaseModel {
 
             $today = date('Y-m-d');
             $now = date('Y-m-d H:i:s');
+            $currentTime = date('H:i:s');
+
+            // Strict Academic Schedule & Holiday Verification
+            $schedCheck = $this->verifySchoolScheduleToday($siswa['id'], $today, $currentTime);
+            if (!$schedCheck['allowed']) {
+                return [
+                    'success' => false,
+                    'is_not_scheduled' => true,
+                    'reason' => $schedCheck['reason'],
+                    'message' => $schedCheck['message']
+                ];
+            }
 
             $stmtExist = $this->db->prepare("
                 SELECT * FROM absensi 

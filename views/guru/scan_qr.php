@@ -226,11 +226,23 @@ function submitScan(identifier) {
                 window.location.reload();
             });
         } else {
-            resultEl.className = d.already_attended ? 'alert alert-warning border-0 rounded-3 shadow-sm mb-3' : 'alert alert-danger border-0 rounded-3 shadow-sm mb-3';
+            const isNotScheduled = d.is_not_scheduled;
+            resultEl.className = (d.already_attended || isNotScheduled) ? 'alert alert-warning border-0 rounded-3 shadow-sm mb-3' : 'alert alert-danger border-0 rounded-3 shadow-sm mb-3';
             resultEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + (d.message || 'Siswa tidak ditemukan.');
+            
+            let swalTitle = 'Gagal!';
+            let swalIcon = 'error';
+            if (d.already_attended) {
+                swalTitle = 'Presensi Sudah Lengkap';
+                swalIcon = 'info';
+            } else if (isNotScheduled) {
+                swalTitle = 'Bukan Jadwal Masuk Sekolah';
+                swalIcon = 'warning';
+            }
+
             Swal.fire({ 
-                icon: d.already_attended ? 'info' : 'error', 
-                title: d.already_attended ? 'Presensi Sudah Lengkap' : 'Gagal!', 
+                icon: swalIcon, 
+                title: swalTitle, 
                 text: d.message || 'Siswa tidak ditemukan.' 
             });
         }
