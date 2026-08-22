@@ -621,7 +621,7 @@ class AdminController {
 
     public function scanQr() {
         $absensiModel = new AbsensiModel();
-        $presensiHariIni = $absensiModel->getPresensiHariIniByGuru(null);
+        $presensiHariIni = $absensiModel->getPresensiHariIniAll();
         require_once ROOT_PATH . 'views/guru/scan_qr.php';
     }
 
@@ -642,7 +642,7 @@ class AdminController {
             $identifier = $_POST['identifier'] ?? '';
 
             $absensiModel = new AbsensiModel();
-            $result = $absensiModel->processQrScan($identifier, null);
+            $result = $absensiModel->processQrScan($identifier, null, true);
 
             echo json_encode($result);
             exit();

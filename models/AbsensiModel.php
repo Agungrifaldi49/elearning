@@ -195,21 +195,168 @@ class AbsensiModel extends BaseModel {
         ];
     }
 
-    public function processQrScan($identifier, $guruId = null) {
+    public function getPresensiHariIniAll() {
+        try {
+            $today = date('Y-m-d');
+
+            $stmtS = $this->db->prepare("
+                SELECT a.id, 'Siswa' as role_label, a.tanggal, a.waktu_masuk, a.waktu_pulang, a.waktu_hadir, a.status, a.keterangan,
+                       s.nama_lengkap, s.nis, s.nisn, k.nama_kelas
+                FROM absensi a
+                JOIN siswa s ON a.siswa_id = s.id
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                WHERE a.tanggal = ?
+            ");
+            $stmtS->execute([$today]);
+            $sLogs = $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $stmtG = $this->db->prepare("
+                SELECT ag.id, 'Guru' as role_label, ag.tanggal, ag.waktu_masuk, ag.waktu_pulang, ag.waktu_hadir, ag.status, ag.keterangan,
+                       g.nama_lengkap, g.nip as nis, g.nip as nisn, 'GTK / Pendidik' as nama_kelas
+                FROM absensi_guru ag
+                JOIN guru g ON ag.guru_id = g.id
+                WHERE ag.tanggal = ?
+            ");
+            $stmtG->execute([$today]);
+            $gLogs = $stmtG->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $logs = array_merge($sLogs, $gLogs);
+            usort($logs, function($a, $b) {
+                $tA = strtotime($a['waktu_pulang'] ?? $a['waktu_masuk'] ?? $a['waktu_hadir'] ?? $a['tanggal']);
+                $tB = strtotime($b['waktu_pulang'] ?? $b['waktu_masuk'] ?? $b['waktu_hadir'] ?? $b['tanggal']);
+                return $tB <=> $tA;
+            });
+
+            return $logs;
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    public function processQrScan($identifier, $guruId = null, $allowGuruScan = false) {
         try {
             $cleanId = trim($identifier);
-            
-            if (strpos($cleanId, 'SMKMH-SISWA-') === 0) {
+            $rawId = $cleanId;
+
+            $isGuruPrefix = (strpos(strtoupper($cleanId), 'SMKMH-GURU-') === 0 || strpos(strtoupper($cleanId), 'GURU-') === 0);
+
+            if (strpos(strtoupper($cleanId), 'SMKMH-SISWA-') === 0) {
                 $cleanId = substr($cleanId, 12);
-            } elseif (strpos($cleanId, 'SISWA-') === 0) {
+            } elseif (strpos(strtoupper($cleanId), 'SISWA-') === 0) {
                 $cleanId = substr($cleanId, 6);
+            } elseif (strpos(strtoupper($cleanId), 'SMKMH-GURU-') === 0) {
+                $cleanId = substr($cleanId, 11);
+            } elseif (strpos(strtoupper($cleanId), 'GURU-') === 0) {
+                $cleanId = substr($cleanId, 5);
             }
 
             $cleanId = trim($cleanId);
             if (empty($cleanId)) {
-                return ['success' => false, 'message' => 'Kode QR atau NIS/NISN tidak valid.'];
+                return ['success' => false, 'message' => 'Kode QR atau Identitas tidak valid.'];
             }
 
+            // Check if scanning a Guru/GTK
+            $guru = null;
+            if ($isGuruPrefix || $allowGuruScan) {
+                $numericId = ctype_digit($cleanId) ? (int)$cleanId : -1;
+                $stmtG = $this->db->prepare("
+                    SELECT g.*, u.full_name
+                    FROM guru g
+                    LEFT JOIN users u ON g.user_id = u.id
+                    WHERE g.nip = ? OR g.id = ? OR g.nama_lengkap LIKE ?
+                    LIMIT 1
+                ");
+                $stmtG->execute([$cleanId, $numericId, '%' . $cleanId . '%']);
+                $guru = $stmtG->fetch();
+            }
+
+            if ($guru) {
+                if (!$allowGuruScan) {
+                    return [
+                        'success' => false,
+                        'message' => "Pemindaian QR Code Guru ({$guru['nama_lengkap']}) tidak diizinkan pada scanner Guru. Presensi Guru hanya dapat dipindai melalui Scanner Admin Sekolah."
+                    ];
+                }
+
+                // Process Teacher Presensi in absensi_guru
+                $today = date('Y-m-d');
+                $now = date('Y-m-d H:i:s');
+
+                $stmtExistG = $this->db->prepare("
+                    SELECT * FROM absensi_guru 
+                    WHERE guru_id = ? AND tanggal = ? 
+                    LIMIT 1
+                ");
+                $stmtExistG->execute([$guru['id'], $today]);
+                $existG = $stmtExistG->fetch();
+
+                if ($existG) {
+                    if (!empty($existG['waktu_pulang'])) {
+                        $jamMasuk = date('H:i', strtotime($existG['waktu_masuk'] ?? $existG['waktu_hadir'] ?? $existG['created_at']));
+                        $jamPulang = date('H:i', strtotime($existG['waktu_pulang']));
+                        return [
+                            'success' => false,
+                            'already_attended' => true,
+                            'role' => 'Guru',
+                            'nama' => $guru['nama_lengkap'],
+                            'nis' => $guru['nip'] ?: '-',
+                            'kelas' => 'GTK / Pendidik',
+                            'jam_masuk' => $jamMasuk . ' WIB',
+                            'jam_pulang' => $jamPulang . ' WIB',
+                            'message' => "Presensi Guru {$guru['nama_lengkap']} sudah LENGKAP hari ini (Masuk: {$jamMasuk} WIB, Pulang: {$jamPulang} WIB)."
+                        ];
+                    } else {
+                        // Record Guru Pulang
+                        $stmtUpdG = $this->db->prepare("
+                            UPDATE absensi_guru 
+                            SET waktu_pulang = ?, keterangan = 'Presensi Guru Masuk & Pulang Digital' 
+                            WHERE id = ?
+                        ");
+                        $stmtUpdG->execute([$now, $existG['id']]);
+
+                        $jamMasuk = date('H:i', strtotime($existG['waktu_masuk'] ?? $existG['waktu_hadir'] ?? $existG['created_at']));
+                        $jamPulang = date('H:i', strtotime($now));
+
+                        return [
+                            'success' => true,
+                            'type' => 'pulang',
+                            'role' => 'Guru',
+                            'nama' => $guru['nama_lengkap'],
+                            'nis' => $guru['nip'] ?: '-',
+                            'kelas' => 'GTK / Pendidik',
+                            'jam' => $jamPulang . ' WIB',
+                            'jam_masuk' => $jamMasuk . ' WIB',
+                            'jam_pulang' => $jamPulang . ' WIB',
+                            'message' => "Presensi PULANG GURU/GTK ({$guru['nama_lengkap']}) berhasil dicatat pukul {$jamPulang} WIB! (Masuk: {$jamMasuk} WIB)."
+                        ];
+                    }
+                }
+
+                // New Guru Presensi Masuk
+                $qrCodeVal = "QR_GURU_" . $guru['id'] . "_" . date('YmdHis');
+                $stmtInsG = $this->db->prepare("
+                    INSERT INTO absensi_guru (guru_id, tanggal, waktu_masuk, waktu_hadir, status, qr_code, keterangan) 
+                    VALUES (?, ?, ?, ?, 'Hadir', ?, 'Presensi Guru Masuk Digital')
+                ");
+                $resG = $stmtInsG->execute([$guru['id'], $today, $now, $now, $qrCodeVal]);
+
+                if ($resG) {
+                    $jamMasuk = date('H:i', strtotime($now));
+                    return [
+                        'success' => true,
+                        'type' => 'masuk',
+                        'role' => 'Guru',
+                        'nama' => $guru['nama_lengkap'],
+                        'nis' => $guru['nip'] ?: '-',
+                        'kelas' => 'GTK / Pendidik',
+                        'jam' => $jamMasuk . ' WIB',
+                        'jam_masuk' => $jamMasuk . ' WIB',
+                        'message' => "Presensi MASUK GURU/GTK ({$guru['nama_lengkap']}) berhasil dicatat pukul {$jamMasuk} WIB!"
+                    ];
+                }
+            }
+
+            // Otherwise, search for Siswa
             $numericId = ctype_digit($cleanId) ? (int)$cleanId : -1;
             $stmtS = $this->db->prepare("
                 SELECT s.*, k.nama_kelas 
@@ -222,7 +369,7 @@ class AbsensiModel extends BaseModel {
             $siswa = $stmtS->fetch();
 
             if (!$siswa) {
-                return ['success' => false, 'message' => "Siswa dengan NISN/NIS '$cleanId' tidak ditemukan di sistem."];
+                return ['success' => false, 'message' => "Siswa / Guru dengan NISN/NIS/NIP '$cleanId' tidak ditemukan di sistem."];
             }
 
             $today = date('Y-m-d');

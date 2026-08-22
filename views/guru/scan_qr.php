@@ -75,9 +75,9 @@
                         <thead class="table-light">
                             <tr>
                                 <th>No</th>
-                                <th>Nama Siswa</th>
-                                <th>NIS / NISN</th>
-                                <th>Kelas</th>
+                                <th>Nama Lengkap</th>
+                                <th>NIP / NIS</th>
+                                <th>Rombel / Peran</th>
                                 <th>Jam Masuk</th>
                                 <th>Jam Pulang</th>
                                 <th>Status Presensi</th>
@@ -88,7 +88,7 @@
                                 <tr id="emptyRow">
                                     <td colspan="7" class="text-center py-5 text-muted">
                                         <i class="bi bi-qr-code fs-1 d-block mb-2 text-secondary"></i>
-                                        <small class="fw-semibold">Belum ada presensi hari ini. Silakan mulai scan QR Code siswa.</small>
+                                        <small class="fw-semibold">Belum ada presensi hari ini. Silakan mulai scan QR Code.</small>
                                     </td>
                                 </tr>
                             <?php else: ?>
@@ -96,12 +96,19 @@
                                     $jamMasukStr = !empty($p['waktu_masuk']) ? date('H:i', strtotime($p['waktu_masuk'])) : (!empty($p['waktu_hadir']) ? date('H:i', strtotime($p['waktu_hadir'])) : '-');
                                     $jamPulangStr = !empty($p['waktu_pulang']) ? date('H:i', strtotime($p['waktu_pulang'])) : '-';
                                     $isPulang = !empty($p['waktu_pulang']);
+                                    $isGuru = ($p['role_label'] ?? '') === 'Guru' || ($p['nama_kelas'] ?? '') === 'GTK / Pendidik';
                                 ?>
                                     <tr class="border-bottom">
                                         <td><span class="badge bg-secondary rounded-circle py-1 px-2"><?= $i + 1 ?></span></td>
                                         <td class="fw-bold text-dark"><?= htmlspecialchars($p['nama_lengkap']) ?></td>
                                         <td><code><?= htmlspecialchars($p['nis'] ?: ($p['nisn'] ?: '-')) ?></code></td>
-                                        <td><span class="badge bg-light text-dark border"><?= htmlspecialchars($p['nama_kelas'] ?: 'Tanpa Kelas') ?></span></td>
+                                        <td>
+                                            <?php if ($isGuru): ?>
+                                                <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1"><i class="bi bi-person-workspace me-1 text-warning"></i>Guru / GTK</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-light text-dark border"><?= htmlspecialchars($p['nama_kelas'] ?: 'Tanpa Kelas') ?></span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="fw-bold text-success"><i class="bi bi-box-arrow-in-right me-1"></i><?= $jamMasukStr ?> WIB</td>
                                         <td class="fw-bold text-primary">
                                             <?php if ($isPulang): ?>
@@ -114,7 +121,7 @@
                                             <?php if ($isPulang): ?>
                                                 <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1"><i class="bi bi-check-all me-1"></i>Lengkap (Masuk & Pulang)</span>
                                             <?php else: ?>
-                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Hadir (KBM All Mapel)</span>
+                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Hadir</span>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
