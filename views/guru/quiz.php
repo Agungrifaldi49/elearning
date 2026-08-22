@@ -379,31 +379,52 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                                 </span>
                                             </td>
                                             <td class="text-center">
-                                                <div class="d-inline-flex gap-1 flex-wrap justify-content-center">
-                                                    <button class="btn btn-sm btn-info text-white px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalPreviewQuiz<?= $q['id'] ?>" title="Detail & Bank Soal">
-                                                        <i class="bi bi-eye me-1"></i> Soal (<?= count($soalList) ?>)
+                                                <div class="d-inline-flex gap-1.5 align-items-center justify-content-center">
+                                                    <button class="btn btn-sm btn-info text-white px-3 rounded-pill shadow-xs fw-bold" style="font-size:0.78rem;" data-bs-toggle="modal" data-bs-target="#modalPreviewQuiz<?= $q['id'] ?>" title="Detail & Bank Soal">
+                                                        <i class="bi bi-eye-fill me-1"></i> Soal (<?= count($soalList) ?>)
                                                     </button>
+
                                                     <?php if (!$isAdminMonitoring): ?>
-                                                        <button class="btn btn-sm btn-success px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalAddSoal<?= $q['id'] ?>" title="Tambah Soal Manual">
-                                                            <i class="bi bi-plus-circle me-1"></i> +Soal Manual
-                                                        </button>
-                                                        <button class="btn btn-sm btn-outline-success px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalImportSoal<?= $q['id'] ?>" title="Import Soal Excel">
-                                                            <i class="bi bi-file-earmark-excel me-1"></i> Import Excel
-                                                        </button>
-                                                        <button class="btn btn-sm btn-outline-primary px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalBatchGambarQuiz<?= $q['id'] ?>" title="Upload Gambar Soal Sekaligus (Batch)">
-                                                            <i class="bi bi-images me-1"></i> Gambar Massal
-                                                        </button>
-                                                        <button class="btn btn-sm btn-warning text-dark px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalEditQuiz<?= $q['id'] ?>" title="Edit Info Quiz">
-                                                            <i class="bi bi-pencil-square me-1"></i> Edit
-                                                        </button>
-                                                        <form action="<?= BASE_URL ?>index.php?url=guru/quiz" method="POST" onsubmit="return confirm('Hapus paket quiz ini beserta seluruh soalnya?');" class="d-inline">
-                                                            <?= Security::csrfField() ?>
-                                                            <input type="hidden" name="action" value="delete">
-                                                            <input type="hidden" name="id" value="<?= $q['id'] ?>">
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" title="Hapus Quiz">
-                                                                <i class="bi bi-trash"></i>
+                                                        <div class="dropdown d-inline">
+                                                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 shadow-xs fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size:0.78rem;">
+                                                                <i class="bi bi-gear-fill me-1 text-primary"></i> Kelola ▾
                                                             </button>
-                                                        </form>
+                                                            <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 210px; font-size:0.85rem;">
+                                                                <li><h6 class="dropdown-header text-uppercase fw-bold text-muted px-2 py-1 mb-1" style="font-size:0.68rem;">Input & Kelola Soal</h6></li>
+                                                                <li>
+                                                                    <a class="dropdown-item rounded-2 py-1.5 text-success fw-semibold" href="#" data-bs-toggle="modal" data-bs-target="#modalAddSoal<?= $q['id'] ?>">
+                                                                        <i class="bi bi-plus-circle-fill me-2"></i> + Soal Manual
+                                                                    </a>
+                                                                </li>
+                                                                <li>
+                                                                    <a class="dropdown-item rounded-2 py-1.5 text-dark fw-semibold" href="#" data-bs-toggle="modal" data-bs-target="#modalImportSoal<?= $q['id'] ?>">
+                                                                        <i class="bi bi-file-earmark-excel-fill text-success me-2"></i> Import Soal Excel
+                                                                    </a>
+                                                                </li>
+                                                                <li>
+                                                                    <a class="dropdown-item rounded-2 py-1.5 text-primary fw-semibold" href="#" data-bs-toggle="modal" data-bs-target="#modalBatchGambarQuiz<?= $q['id'] ?>">
+                                                                        <i class="bi bi-images me-2"></i> Upload Gambar Massal
+                                                                    </a>
+                                                                </li>
+                                                                <li><hr class="dropdown-divider my-1"></li>
+                                                                <li><h6 class="dropdown-header text-uppercase fw-bold text-muted px-2 py-1 mb-1" style="font-size:0.68rem;">Pengaturan Paket</h6></li>
+                                                                <li>
+                                                                    <a class="dropdown-item rounded-2 py-1.5 text-dark fw-semibold" href="#" data-bs-toggle="modal" data-bs-target="#modalEditQuiz<?= $q['id'] ?>">
+                                                                        <i class="bi bi-pencil-square text-warning me-2"></i> Edit Info Kuis
+                                                                    </a>
+                                                                </li>
+                                                                <li>
+                                                                    <form action="<?= BASE_URL ?>index.php?url=guru/quiz" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus paket kuis ini beserta seluruh soalnya?');">
+                                                                        <?= Security::csrfField() ?>
+                                                                        <input type="hidden" name="action" value="delete">
+                                                                        <input type="hidden" name="id" value="<?= $q['id'] ?>">
+                                                                        <button type="submit" class="dropdown-item rounded-2 py-1.5 text-danger fw-semibold w-100 text-start">
+                                                                            <i class="bi bi-trash-fill me-2"></i> Hapus Paket Kuis
+                                                                        </button>
+                                                                    </form>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
                                                     <?php endif; ?>
                                                 </div>
                                             </td>
@@ -1454,11 +1475,21 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                         </div>
                     <?php endif; ?>
                 </div>
-                <div class="modal-footer border-0 pt-0 p-4 justify-content-between">
+                <div class="modal-footer border-0 pt-0 p-4 justify-content-between flex-wrap gap-2">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Tutup</button>
-                    <button class="btn btn-success rounded-pill px-4 fw-bold shadow-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalAddSoal<?= $q['id'] ?>">
-                        <i class="bi bi-plus-circle me-1"></i> Tambah Soal Baru
-                    </button>
+                    <?php if (!$isAdminMonitoring): ?>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalImportSoal<?= $q['id'] ?>">
+                                <i class="bi bi-file-earmark-excel-fill text-success me-1"></i> Import Excel
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalBatchGambarQuiz<?= $q['id'] ?>">
+                                <i class="bi bi-images me-1"></i> Upload Gambar Massal
+                            </button>
+                            <button class="btn btn-sm btn-success rounded-pill px-4 fw-bold shadow-sm" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalAddSoal<?= $q['id'] ?>">
+                                <i class="bi bi-plus-circle me-1"></i> + Soal Manual
+                            </button>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
