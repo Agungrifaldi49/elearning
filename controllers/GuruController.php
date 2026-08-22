@@ -1168,7 +1168,7 @@ class GuruController {
             foreach ($hasilQuizSubmissions as $hqItem) {
                 $tEssay = (int)($hqItem['total_essay_count'] ?? 0);
                 $uEssay = (int)($hqItem['ungraded_essay_count'] ?? 0);
-                $isBanned = (!empty($hqItem['status_banned']) || !empty($hqItem['pelanggaran_count']));
+                $isBanned = (!empty($hqItem['status_banned']) && (string)$hqItem['status_banned'] !== '0');
                 if (($tEssay > 0 && $uEssay > 0) || $isBanned) {
                     $pendingEssayCount++;
                 }

@@ -427,7 +427,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                         foreach ($hasilQuizSubmissions as $hqItem) {
                             $tCount = (int)($hqItem['total_essay_count'] ?? 0);
                             $uCount = (int)($hqItem['ungraded_essay_count'] ?? 0);
-                            $isBannedItem = (!empty($hqItem['status_banned']) || !empty($hqItem['pelanggaran_count']));
+                            $isBannedItem = (!empty($hqItem['status_banned']) && (string)$hqItem['status_banned'] !== '0');
 
                             if ($tCount > 0) {
                                 if ($uCount > 0 || $isBannedItem) {
