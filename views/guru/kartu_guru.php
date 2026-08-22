@@ -64,7 +64,7 @@ $qrData = "SMKMH-GURU-" . $nipVal;
 $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=" . urlencode($qrData);
 ?>
 
-<!-- Google Fonts: Plus Jakarta Sans for Modern Typography -->
+<!-- Google Fonts: Plus Jakarta Sans for Ultra-Modern Typography -->
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
@@ -76,7 +76,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
 @media print {
     @page {
         size: A4 landscape;
-        margin: 10mm;
+        margin: 8mm;
     }
     body {
         background-color: #ffffff !important;
@@ -109,7 +109,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
         print-color-adjust: exact !important;
         border: 2px solid #10b981 !important;
         box-shadow: none !important;
-        height: 310px !important;
+        height: 315px !important;
         width: 490px !important;
         page-break-inside: avoid !important;
     }
@@ -238,7 +238,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <button onclick="downloadKartuPDF()" class="btn btn-danger px-4 py-2.5 rounded-3 fw-bold shadow-sm d-flex align-items-center gap-1.5">
-                    <i class="bi bi-file-earmark-pdf-fill fs-5"></i> Unduh PDF Kartu
+                    <i class="bi bi-file-earmark-pdf-fill fs-5"></i> Unduh PDF High-Res
                 </button>
                 <button onclick="window.print()" class="btn btn-success px-4 py-2.5 rounded-3 fw-bold shadow-sm d-flex align-items-center gap-1.5">
                     <i class="bi bi-printer-fill fs-5"></i> Cetak Kartu Physical
@@ -401,23 +401,23 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
     </div>
 </main>
 
-<!-- html2pdf JS Library for Export PDF -->
+<!-- html2pdf JS Library for High-Res Export PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 function downloadKartuPDF() {
     const element = document.getElementById('printableCardArea');
     const opt = {
-        margin:       [10, 10, 10, 10],
+        margin:       [8, 8, 8, 8],
         filename:     'Kartu_Guru_<?= preg_replace("/[^a-zA-Z0-9]/", "_", $guru['nama_lengkap'] ?? $user['full_name']) ?>.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        image:        { type: 'jpeg', quality: 1.0 },
+        html2canvas:  { scale: 3, useCORS: true, allowTaint: true, logging: false },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
     };
 
     if (typeof Swal !== 'undefined') {
         Swal.fire({
-            title: 'Mengunduh Kartu PDF...',
-            text: 'Mohon tunggu sebentar, sistem sedang memproses PDF...',
+            title: 'Mengunduh PDF High-Res...',
+            text: 'Mohon tunggu sebentar, sedang memproses dokumen PDF 300 DPI...',
             allowOutsideClick: false,
             didOpen: () => { Swal.showLoading(); }
         });
@@ -428,7 +428,7 @@ function downloadKartuPDF() {
             Swal.fire({
                 icon: 'success',
                 title: 'Berhasil Unduh PDF!',
-                text: 'Kartu Guru Digital berhasil disimpan sebagai file PDF.',
+                text: 'Kartu Guru Digital 100% presisi berhasil disimpan sebagai file PDF.',
                 timer: 2500,
                 showConfirmButton: false
             });
