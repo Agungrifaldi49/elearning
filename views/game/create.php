@@ -19,7 +19,7 @@
                 </div>
             </div>
 
-            <form action="<?= BASE_URL ?>index.php?url=game/create" method="POST" id="formCreateGame">
+            <form action="<?= BASE_URL ?>index.php?url=game/create" method="POST" enctype="multipart/form-data" id="formCreateGame">
                 <?= Security::csrfField() ?>
 
                 <div class="row g-3 mb-4">
@@ -117,10 +117,30 @@
                 </div>
 
                 <!-- Section Input Soal Game -->
+                <!-- 📄 EXCEL / CSV TEMPLATE & IMPORT SECTION -->
+                <div class="card p-3.5 bg-success-subtle border border-success-subtle rounded-4 mb-4 shadow-xs">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                        <div class="fw-bold text-success-emphasis d-flex align-items-center gap-2">
+                            <i class="bi bi-file-earmark-excel-fill fs-4 text-success"></i>
+                            <span>Import Soal Game Edukasi dari Excel / CSV (Sekaligus)</span>
+                        </div>
+                        <a href="<?= BASE_URL ?>index.php?url=game/downloadTemplate" class="btn btn-sm btn-success rounded-pill fw-bold px-3">
+                            <i class="bi bi-download me-1"></i> Download Template Excel (.csv)
+                        </a>
+                    </div>
+                    <small class="text-secondary mb-2 d-block" style="font-size:0.82rem;">
+                        Ingin memasukkan banyak soal sekaligus tanpa mengetik satu per satu? Download template Excel di atas, isi soal Anda, lalu unggah berkasnya di bawah ini:
+                    </small>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white text-muted"><i class="bi bi-file-earmark-arrow-up-fill text-success"></i></span>
+                        <input type="file" name="file_excel" class="form-control rounded-end-3" accept=".csv, .xlsx, .xls">
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top">
                     <h5 class="fw-bold text-dark mb-0"><i class="bi bi-question-square-fill text-primary me-2"></i>Daftar Soal Pertanyaan</h5>
                     <button type="button" id="btnAddSoal" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
-                        <i class="bi bi-plus-lg me-1"></i> Tambah Soal
+                        <i class="bi bi-plus-lg me-1"></i> Tambah Soal Manual
                     </button>
                 </div>
 

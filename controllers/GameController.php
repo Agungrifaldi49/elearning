@@ -111,15 +111,23 @@ class GameController {
                 ];
             }
 
+            // Check if Excel/CSV file was uploaded for questions
+            if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] === UPLOAD_ERR_OK) {
+                $excelSoal = $gameModel->parseGameSoalFromExcel($_FILES['file_excel']['tmp_name']);
+                if (!empty($excelSoal)) {
+                    $soalList = array_merge($soalList, $excelSoal);
+                }
+            }
+
             if (empty($soalList)) {
-                FlashHelper::setError('Game Edukasi harus memiliki minimal 1 soal pertanyaan.');
+                FlashHelper::setError('Game Edukasi harus memiliki minimal 1 soal pertanyaan. Anda dapat menginput manual atau mengunggah file Excel/CSV template soal.');
                 header('Location: ' . BASE_URL . 'index.php?url=game/create');
                 exit();
             }
 
             $res = $gameModel->createGame($gameData, $soalList);
             if ($res) {
-                FlashHelper::setSuccess('Game Edukasi baru berhasil dibuat!');
+                FlashHelper::setSuccess('Game Edukasi baru berhasil dibuat beserta ' . count($soalList) . ' soal!');
                 header('Location: ' . BASE_URL . 'index.php?url=game');
                 exit();
             } else {
@@ -196,6 +204,14 @@ class GameController {
                     'poin' => (int)($s['poin'] ?? 10),
                     'penjelasan' => Security::sanitize($s['penjelasan'] ?? '')
                 ];
+            }
+
+            // Check if Excel/CSV file was uploaded for questions during edit
+            if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] === UPLOAD_ERR_OK) {
+                $excelSoal = $gameModel->parseGameSoalFromExcel($_FILES['file_excel']['tmp_name']);
+                if (!empty($excelSoal)) {
+                    $newSoalList = array_merge($newSoalList, $excelSoal);
+                }
             }
 
             if (empty($newSoalList)) {
@@ -341,6 +357,100 @@ class GameController {
                 FlashHelper::setSuccess('Game Edukasi berhasil dihapus.');
             } else {
                 FlashHelper::setError('Gagal menghapus Game Edukasi. Anda hanya dapat menghapus game buatan Anda sendiri.');
+            }
+        }
+
+        header('Location: ' . BASE_URL . 'index.php?url=game');
+        exit();
+    }
+
+    public function downloadTemplate() {
+        AuthHelper::requireLogin();
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="template_soal_game_edukasi.csv"');
+
+        $output = fopen('php://output', 'w');
+        // Output UTF-8 BOM for Excel compatibility
+        fputs($output, "\xEF\xBB\xBF");
+
+        fputcsv($output, ['pertanyaan', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'kunci_jawaban', 'poin', 'penjelasan']);
+        fputcsv($output, ['Berikut ini yang termasuk perangkat keras input adalah...', 'Mouse', 'Monitor', 'Printer', 'Speaker', 'A', '10', 'Mouse merupakan perangkat keras masukan pointer.']);
+        fputcsv($output, ['Prosesor sering disebut sebagai apa dalam sistem komputer?', 'Otak Komputer', 'Jantung Komputer', 'Layar Utama', 'Penyimpanan Utama', 'A', '10', 'CPU bertindak sebagai pusat instruksi dan pemrosesan data.']);
+        fputcsv($output, ['Satuan terkecil dari penyimpanan data digital adalah...', 'Bit', 'Byte', 'Megabyte', 'Gigabyte', 'A', '10', 'Bit singkatan dari Binary Digit (0 atau 1).']);
+
+        fclose($output);
+        exit();
+    }
+
+    public function exportSoal() {
+        AuthHelper::requireLogin();
+        $id = (int)($_GET['id'] ?? 0);
+        $gameModel = new GameModel();
+        $game = $gameModel->getGameDetail($id);
+
+        if (!$game) {
+            FlashHelper::setError('Game Edukasi tidak ditemukan.');
+            header('Location: ' . BASE_URL . 'index.php?url=game');
+            exit();
+        }
+
+        $soalList = $gameModel->getGameSoal($id);
+        $cleanTitle = preg_replace('/[^a-zA-Z0-9_-]/', '_', strtolower($game['judul']));
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="soal_game_' . $cleanTitle . '.csv"');
+
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF");
+
+        fputcsv($output, ['pertanyaan', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'kunci_jawaban', 'poin', 'penjelasan']);
+
+        foreach ($soalList as $s) {
+            fputcsv($output, [
+                $s['pertanyaan'],
+                $s['opsi_a'],
+                $s['opsi_b'],
+                $s['opsi_c'] ?? '',
+                $s['opsi_d'] ?? '',
+                strtoupper($s['kunci_jawaban'] ?? 'A'),
+                $s['poin'] ?? 10,
+                $s['penjelasan'] ?? ''
+            ]);
+        }
+
+        fclose($output);
+        exit();
+    }
+
+    public function importSoalExcel() {
+        AuthHelper::requireLogin();
+        $user = AuthHelper::user();
+        $roleName = strtolower(trim($user['role_name'] ?? ''));
+
+        if ($roleName !== 'guru') {
+            FlashHelper::setError('Import Soal Game Edukasi hanya dapat dilakukan oleh Guru.');
+            header('Location: ' . BASE_URL . 'index.php?url=game');
+            exit();
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('CSRF Token Invalid');
+                header('Location: ' . BASE_URL . 'index.php?url=game');
+                exit();
+            }
+
+            $gameId = (int)($_POST['game_id'] ?? 0);
+            if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] === UPLOAD_ERR_OK) {
+                $gameModel = new GameModel();
+                $res = $gameModel->importGameSoalFromExcel($gameId, $_FILES['file_excel']['tmp_name']);
+                if ($res['status']) {
+                    FlashHelper::setSuccess($res['message']);
+                } else {
+                    FlashHelper::setError($res['message']);
+                }
+            } else {
+                FlashHelper::setError('Silakan pilih berkas Excel/CSV template soal.');
             }
         }
 

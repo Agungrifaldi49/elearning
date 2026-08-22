@@ -95,6 +95,162 @@ class GameModel extends BaseModel {
         return $stmt->fetchAll();
     }
 
+    public function importGameSoalFromExcel($gameId, $filePath) {
+        if (!file_exists($filePath)) {
+            return ['status' => false, 'message' => 'Berkas Excel/CSV tidak ditemukan.', 'imported' => 0];
+        }
+
+        $handle = fopen($filePath, 'r');
+        if (!$handle) {
+            return ['status' => false, 'message' => 'Gagal membaca berkas Excel/CSV.', 'imported' => 0];
+        }
+
+        $headerRow = fgetcsv($handle, 0, ',');
+        $delimiter = ',';
+        if ($headerRow && count($headerRow) == 1 && strpos($headerRow[0], ';') !== false) {
+            $delimiter = ';';
+            $headerRow = explode(';', $headerRow[0]);
+        }
+
+        $colIndexes = [];
+        if ($headerRow) {
+            foreach ($headerRow as $idx => $colName) {
+                $cleanCol = strtolower(trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $colName)));
+                $colIndexes[$cleanCol] = $idx;
+            }
+        }
+
+        $tanyaIdx  = $colIndexes['pertanyaan'] ?? 0;
+        $opsiA_Idx = $colIndexes['opsi_a'] ?? 1;
+        $opsiB_Idx = $colIndexes['opsi_b'] ?? 2;
+        $opsiC_Idx = $colIndexes['opsi_c'] ?? 3;
+        $opsiD_Idx = $colIndexes['opsi_d'] ?? 4;
+        $jawabIdx  = $colIndexes['kunci_jawaban'] ?? 5;
+        $poinIdx   = $colIndexes['poin'] ?? 6;
+        $penjelasanIdx = $colIndexes['penjelasan'] ?? 7;
+
+        $importedCount = 0;
+
+        $stmtS = $this->db->prepare("
+            INSERT INTO game_soal (game_id, pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, kunci_jawaban, poin, penjelasan)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        while (($data = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if (empty($data) || count($data) < 2) continue;
+
+            $pertanyaan = trim($data[$tanyaIdx] ?? '');
+            if (empty($pertanyaan) || strtolower($pertanyaan) === 'pertanyaan' || strpos($pertanyaan, '#') === 0) continue;
+
+            $opsiA = trim($data[$opsiA_Idx] ?? '');
+            $opsiB = trim($data[$opsiB_Idx] ?? '');
+            $opsiC = trim($data[$opsiC_Idx] ?? '');
+            $opsiD = trim($data[$opsiD_Idx] ?? '');
+            $kunci = strtolower(trim($data[$jawabIdx] ?? 'a'));
+            if (!in_array($kunci, ['a', 'b', 'c', 'd'])) {
+                if (strtolower($kunci) === strtolower($opsiA)) $kunci = 'a';
+                elseif (strtolower($kunci) === strtolower($opsiB)) $kunci = 'b';
+                elseif (strtolower($kunci) === strtolower($opsiC)) $kunci = 'c';
+                elseif (strtolower($kunci) === strtolower($opsiD)) $kunci = 'd';
+                else $kunci = 'a';
+            }
+
+            $poin = (int)($data[$poinIdx] ?? 10);
+            if ($poin <= 0) $poin = 10;
+            $penjelasan = trim($data[$penjelasanIdx] ?? '');
+
+            if (!empty($opsiA) && !empty($opsiB)) {
+                $stmtS->execute([
+                    (int)$gameId,
+                    $pertanyaan,
+                    $opsiA,
+                    $opsiB,
+                    $opsiC,
+                    $opsiD,
+                    $kunci,
+                    $poin,
+                    $penjelasan
+                ]);
+                $importedCount++;
+            }
+        }
+
+        fclose($handle);
+
+        return [
+            'status' => true,
+            'message' => "Berhasil meng-import {$importedCount} soal dari Excel/CSV ke Game Edukasi ini.",
+            'imported' => $importedCount
+        ];
+    }
+
+    public function parseGameSoalFromExcel($filePath) {
+        if (!file_exists($filePath)) return [];
+
+        $handle = fopen($filePath, 'r');
+        if (!$handle) return [];
+
+        $headerRow = fgetcsv($handle, 0, ',');
+        $delimiter = ',';
+        if ($headerRow && count($headerRow) == 1 && strpos($headerRow[0], ';') !== false) {
+            $delimiter = ';';
+            $headerRow = explode(';', $headerRow[0]);
+        }
+
+        $colIndexes = [];
+        if ($headerRow) {
+            foreach ($headerRow as $idx => $colName) {
+                $cleanCol = strtolower(trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $colName)));
+                $colIndexes[$cleanCol] = $idx;
+            }
+        }
+
+        $tanyaIdx  = $colIndexes['pertanyaan'] ?? 0;
+        $opsiA_Idx = $colIndexes['opsi_a'] ?? 1;
+        $opsiB_Idx = $colIndexes['opsi_b'] ?? 2;
+        $opsiC_Idx = $colIndexes['opsi_c'] ?? 3;
+        $opsiD_Idx = $colIndexes['opsi_d'] ?? 4;
+        $jawabIdx  = $colIndexes['kunci_jawaban'] ?? 5;
+        $poinIdx   = $colIndexes['poin'] ?? 6;
+        $penjelasanIdx = $colIndexes['penjelasan'] ?? 7;
+
+        $parsedSoal = [];
+
+        while (($data = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if (empty($data) || count($data) < 2) continue;
+
+            $pertanyaan = trim($data[$tanyaIdx] ?? '');
+            if (empty($pertanyaan) || strtolower($pertanyaan) === 'pertanyaan' || strpos($pertanyaan, '#') === 0) continue;
+
+            $opsiA = trim($data[$opsiA_Idx] ?? '');
+            $opsiB = trim($data[$opsiB_Idx] ?? '');
+            $opsiC = trim($data[$opsiC_Idx] ?? '');
+            $opsiD = trim($data[$opsiD_Idx] ?? '');
+            $kunci = strtolower(trim($data[$jawabIdx] ?? 'a'));
+            if (!in_array($kunci, ['a', 'b', 'c', 'd'])) $kunci = 'a';
+
+            $poin = (int)($data[$poinIdx] ?? 10);
+            if ($poin <= 0) $poin = 10;
+            $penjelasan = trim($data[$penjelasanIdx] ?? '');
+
+            if (!empty($opsiA) && !empty($opsiB)) {
+                $parsedSoal[] = [
+                    'pertanyaan' => $pertanyaan,
+                    'opsi_a' => $opsiA,
+                    'opsi_b' => $opsiB,
+                    'opsi_c' => $opsiC,
+                    'opsi_d' => $opsiD,
+                    'kunci_jawaban' => $kunci,
+                    'poin' => $poin,
+                    'penjelasan' => $penjelasan
+                ];
+            }
+        }
+
+        fclose($handle);
+        return $parsedSoal;
+    }
+
     public function getGameDetail($id) {
         $stmt = $this->db->prepare("
             SELECT g.*, m.nama_mapel, k.nama_kelas, gr.nama_lengkap as nama_guru

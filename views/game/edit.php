@@ -19,7 +19,7 @@
                 </div>
             </div>
 
-            <form action="<?= BASE_URL ?>index.php?url=game/edit&id=<?= $game['id'] ?>" method="POST" id="formEditGame">
+            <form action="<?= BASE_URL ?>index.php?url=game/edit&id=<?= $game['id'] ?>" method="POST" enctype="multipart/form-data" id="formEditGame">
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="id" value="<?= $game['id'] ?>">
 
@@ -118,11 +118,35 @@
                     </div>
                 </div>
 
-                <!-- Section Input Soal Game -->
+                <!-- 📄 EXCEL / CSV TEMPLATE & IMPORT SECTION -->
+                <div class="card p-3.5 bg-success-subtle border border-success-subtle rounded-4 mb-4 shadow-xs">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                        <div class="fw-bold text-success-emphasis d-flex align-items-center gap-2">
+                            <i class="bi bi-file-earmark-excel-fill fs-4 text-success"></i>
+                            <span>Tambah / Gabungkan Soal dari Excel / CSV</span>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="<?= BASE_URL ?>index.php?url=game/exportSoal&id=<?= $game['id'] ?>" class="btn btn-sm btn-outline-success rounded-pill fw-bold px-3">
+                                <i class="bi bi-file-earmark-arrow-down-fill me-1"></i> Export Soal Game Ini (.csv)
+                            </a>
+                            <a href="<?= BASE_URL ?>index.php?url=game/downloadTemplate" class="btn btn-sm btn-success rounded-pill fw-bold px-3">
+                                <i class="bi bi-download me-1"></i> Download Template (.csv)
+                            </a>
+                        </div>
+                    </div>
+                    <small class="text-secondary mb-2 d-block" style="font-size:0.82rem;">
+                        Punya soal baru dari berkas Excel? Unggah berkas CSV/Excel Anda di sini untuk menambahkan soal baru secara serentak ke game ini:
+                    </small>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white text-muted"><i class="bi bi-file-earmark-arrow-up-fill text-success"></i></span>
+                        <input type="file" name="file_excel" class="form-control rounded-end-3" accept=".csv, .xlsx, .xls">
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top">
-                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-question-square-fill text-primary me-2"></i>Daftar Soal Pertanyaan</h5>
+                    <h5 class="fw-bold text-dark mb-0"><i class="bi bi-question-square-fill text-primary me-2"></i>Daftar Soal Pertanyaan (<?= count($soalList) ?> Soal)</h5>
                     <button type="button" id="btnAddSoal" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
-                        <i class="bi bi-plus-lg me-1"></i> Tambah Soal
+                        <i class="bi bi-plus-lg me-1"></i> Tambah Soal Manual
                     </button>
                 </div>
 

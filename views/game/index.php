@@ -176,7 +176,13 @@ foreach ($games as $gm) {
                                     </a>
 
                                     <?php if ($isTeacher): ?>
-                                        <div class="d-flex align-items-center gap-1">
+                                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                                            <button class="btn btn-sm btn-outline-success rounded-pill px-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalImportGameExcel<?= $g['id'] ?>" title="Import Soal dari Excel/CSV">
+                                                <i class="bi bi-file-earmark-excel-fill text-success me-1"></i> Import
+                                            </button>
+                                            <a href="<?= BASE_URL ?>index.php?url=game/exportSoal&id=<?= $g['id'] ?>" class="btn btn-sm btn-outline-secondary rounded-pill px-2 fw-semibold" title="Export Bank Soal Ke Excel (.csv)">
+                                                <i class="bi bi-file-earmark-arrow-down me-1"></i> Export
+                                            </a>
                                             <a href="<?= BASE_URL ?>index.php?url=game/edit&id=<?= $g['id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill px-2 fw-semibold" title="Edit Game Edukasi">
                                                 <i class="bi bi-pencil-square me-1"></i> Edit
                                             </a>
@@ -200,6 +206,50 @@ foreach ($games as $gm) {
                                             <i class="bi bi-eye me-1"></i> Monitoring Read-Only
                                         </span>
                                     <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Import Soal Game Edukasi dari Excel/CSV -->
+                        <div class="modal fade" id="modalImportGameExcel<?= $g['id'] ?>" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+                                    <div class="modal-header bg-success text-white p-3.5">
+                                        <h5 class="modal-title fw-bold">
+                                            <i class="bi bi-file-earmark-excel me-2"></i> Import Soal Game Edukasi dari Excel / CSV
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form action="<?= BASE_URL ?>index.php?url=game/importSoalExcel" method="POST" enctype="multipart/form-data">
+                                        <?= Security::csrfField() ?>
+                                        <input type="hidden" name="game_id" value="<?= $g['id'] ?>">
+
+                                        <div class="modal-body p-4">
+                                            <div class="alert alert-success border-0 rounded-4 mb-3">
+                                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                                    <div class="fw-bold text-success-emphasis"><i class="bi bi-file-earmark-arrow-down-fill me-1"></i> Template Excel Game Soal</div>
+                                                    <a href="<?= BASE_URL ?>index.php?url=game/downloadTemplate" class="btn btn-sm btn-success text-white fw-bold rounded-pill px-3">
+                                                        <i class="bi bi-download me-1"></i> Template (.csv)
+                                                    </a>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label small fw-bold text-dark">Pilih Berkas Excel / CSV <span class="text-danger">*</span></label>
+                                                <input type="file" name="file_excel" class="form-control rounded-3" accept=".csv, .xlsx, .xls" required>
+                                                <small class="text-muted d-block mt-1" style="font-size:0.75rem;">
+                                                    Format kolom: <code>pertanyaan, opsi_a, opsi_b, opsi_c, opsi_d, kunci_jawaban, poin, penjelasan</code>.
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <div class="modal-footer border-0 p-3 bg-light rounded-bottom-4 justify-content-between">
+                                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                                            <button type="submit" class="btn btn-success text-white rounded-pill px-4 fw-bold shadow-sm">
+                                                <i class="bi bi-file-earmark-arrow-up-fill me-1"></i> Upload & Import Soal
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
