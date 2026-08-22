@@ -1033,7 +1033,36 @@ class GuruController {
 
     public function scanQr() {
         $guru = $this->getGuruInfo();
+        $guruId = $guru['id'] ?? 0;
+
+        $absensiModel = new AbsensiModel();
+        $presensiHariIni = $absensiModel->getPresensiHariIniByGuru($guruId);
+
         require_once ROOT_PATH . 'views/guru/scan_qr.php';
+    }
+
+    public function processScan() {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Metode request tidak diizinkan.']);
+            exit();
+        }
+
+        if (!Security::verifyCsrfToken()) {
+            echo json_encode(['success' => false, 'message' => 'Sesi / CSRF token telah kedaluwarsa. Silakan refresh halaman.']);
+            exit();
+        }
+
+        $guru = $this->getGuruInfo();
+        $guruId = $guru['id'] ?? null;
+        $identifier = $_POST['identifier'] ?? '';
+
+        $absensiModel = new AbsensiModel();
+        $result = $absensiModel->processQrScan($identifier, $guruId);
+
+        echo json_encode($result);
+        exit();
     }
 
     public function liveClass() {
