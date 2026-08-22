@@ -414,6 +414,78 @@ class GuruController {
                 }
                 header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
                 exit();
+
+            } elseif ($action === 'batch_upload_gambar_soal') {
+                $quizId = (int)$_POST['quiz_id'];
+                $db = Database::getConnection();
+                $examModel = new ExamModel();
+                $soalList = $examModel->getSoalByQuiz($quizId);
+                $uploadDir = ROOT_PATH . 'assets/uploads/soal/';
+                if (!is_dir($uploadDir)) @mkdir($uploadDir, 0777, true);
+
+                $updatedCount = 0;
+
+                // Mode 1: Individual File Picker Matrix (gambar_soal_batch[soal_id])
+                if (isset($_FILES['gambar_soal_batch']) && is_array($_FILES['gambar_soal_batch']['name'])) {
+                    foreach ($_FILES['gambar_soal_batch']['name'] as $soalId => $fileName) {
+                        if (empty($fileName)) continue;
+                        $err = $_FILES['gambar_soal_batch']['error'][$soalId] ?? UPLOAD_ERR_NO_FILE;
+                        if ($err === UPLOAD_ERR_OK) {
+                            $tmpName = $_FILES['gambar_soal_batch']['tmp_name'][$soalId];
+                            $ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                                $newName = 'soal_' . time() . '_' . uniqid() . '.' . $ext;
+                                if (move_uploaded_file($tmpName, $uploadDir . $newName)) {
+                                    $db->prepare("UPDATE soal SET gambar = ? WHERE id = ? AND quiz_id = ?")->execute([$newName, (int)$soalId, $quizId]);
+                                    $updatedCount++;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Mode 2: Multi-File Automatic Matcher (batch_images[])
+                if (isset($_FILES['batch_images']) && is_array($_FILES['batch_images']['name'])) {
+                    $totalFiles = count($_FILES['batch_images']['name']);
+                    for ($i = 0; $i < $totalFiles; $i++) {
+                        $fName = $_FILES['batch_images']['name'][$i] ?? '';
+                        $err = $_FILES['batch_images']['error'][$i] ?? UPLOAD_ERR_NO_FILE;
+                        if (empty($fName) || $err !== UPLOAD_ERR_OK) continue;
+
+                        $tmpName = $_FILES['batch_images']['tmp_name'][$i];
+                        $ext = strtolower(pathinfo($fName, PATHINFO_EXTENSION));
+                        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) continue;
+
+                        $targetSoalId = null;
+                        if (preg_match('/(?:soal[_-]?|gambar[_-]?|num[_-]?)?(\d+)/i', pathinfo($fName, PATHINFO_FILENAME), $matches)) {
+                            $qNum = (int)$matches[1];
+                            if (isset($soalList[$qNum - 1])) {
+                                $targetSoalId = $soalList[$qNum - 1]['id'];
+                            }
+                        }
+
+                        if (!$targetSoalId && isset($soalList[$i])) {
+                            $targetSoalId = $soalList[$i]['id'];
+                        }
+
+                        if ($targetSoalId) {
+                            $newName = 'soal_batch_' . time() . '_' . uniqid() . '.' . $ext;
+                            if (move_uploaded_file($tmpName, $uploadDir . $newName)) {
+                                $db->prepare("UPDATE soal SET gambar = ? WHERE id = ? AND quiz_id = ?")->execute([$newName, $targetSoalId, $quizId]);
+                                $updatedCount++;
+                            }
+                        }
+                    }
+                }
+
+                if ($updatedCount > 0) {
+                    FlashHelper::setSuccess("Berhasil mengunggah {$updatedCount} gambar soal sekaligus!");
+                } else {
+                    FlashHelper::setWarning("Tidak ada berkas gambar valid yang diunggah.");
+                }
+
+                header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                exit();
             } elseif ($action === 'create') {
                 $durasi = (int)$_POST['durasi_menit'];
                 $pertanyaanArr = $_POST['pertanyaan'] ?? [];

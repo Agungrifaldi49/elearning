@@ -388,7 +388,10 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                                             <i class="bi bi-plus-circle me-1"></i> +Soal Manual
                                                         </button>
                                                         <button class="btn btn-sm btn-outline-success px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalImportSoal<?= $q['id'] ?>" title="Import Soal Excel">
-                                                            <i class="bi bi-file-earmark-excel-fill me-1"></i> Excel
+                                                            <i class="bi bi-file-earmark-excel me-1"></i> Import Excel
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-primary px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalBatchGambarQuiz<?= $q['id'] ?>" title="Upload Gambar Soal Sekaligus (Batch)">
+                                                            <i class="bi bi-images me-1"></i> Gambar Massal
                                                         </button>
                                                         <button class="btn btn-sm btn-warning text-dark px-2.5 rounded-pill shadow-xs" style="font-size:0.76rem;" data-bs-toggle="modal" data-bs-target="#modalEditQuiz<?= $q['id'] ?>" title="Edit Info Quiz">
                                                             <i class="bi bi-pencil-square me-1"></i> Edit
@@ -1586,6 +1589,98 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                         <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
                         <button type="submit" class="btn btn-success text-white rounded-pill px-4 fw-bold shadow-sm">
                             <i class="bi bi-file-earmark-arrow-up-fill me-1.5"></i> Upload & Import Soal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Batch Upload Gambar Soal Sekaligus -->
+    <div class="modal fade" id="modalBatchGambarQuiz<?= $q['id'] ?>" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+                <div class="modal-header bg-primary text-white p-3.5">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-images me-2"></i> Upload Gambar Soal Sekaligus (Batch / Massal)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="<?= BASE_URL ?>index.php?url=guru/quiz" method="POST" enctype="multipart/form-data">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="action" value="batch_upload_gambar_soal">
+                    <input type="hidden" name="quiz_id" value="<?= $q['id'] ?>">
+
+                    <div class="modal-body p-4">
+                        <div class="alert alert-primary border-0 rounded-4 mb-4">
+                            <div class="fw-bold mb-1"><i class="bi bi-info-circle-fill me-1"></i> Petunjuk Upload Gambar Massal / Sekaligus:</div>
+                            <ul class="mb-0 small ps-3">
+                                <li><strong>Metode 1 (Multi-File Otomatis):</strong> Pilih / drop banyak berkas gambar sekaligus di bawah. File bermaterial nama nomor seperti <code>soal1.png</code>, <code>2.jpg</code>, <code>soal_3.webp</code> otomatis dicocokkan ke Soal #1, Soal #2, Soal #3.</li>
+                                <li><strong>Metode 2 (Matrix Per-Soal 1 Layar):</strong> Anda dapat memilih file gambar untuk masing-masing soal pada tabel di bawah sekaligus, lalu klik <strong>Simpan Semua Gambar (Batch Save)</strong> 1 kali!</li>
+                            </ul>
+                        </div>
+
+                        <!-- MODE 1: MULTI-FILE MASS SELECTOR -->
+                        <div class="card p-3 bg-light rounded-4 border mb-4 shadow-xs">
+                            <label class="form-label fw-bold text-dark mb-1">
+                                <i class="bi bi-cloud-arrow-up-fill text-primary me-1"></i> Upload Banyak Berkas Gambar Sekaligus (Multi-File Dropzone)
+                            </label>
+                            <input type="file" name="batch_images[]" class="form-control rounded-3" accept="image/*" multiple>
+                            <small class="text-muted mt-1 d-block" style="font-size:0.78rem;">
+                                Tahan tombol <code>Ctrl</code> / <code>Shift</code> untuk memilih banyak file gambar sekaligus dari komputer Anda.
+                            </small>
+                        </div>
+
+                        <!-- MODE 2: MATRIX PER-SOAL IN ONE SINGLE SCREEN -->
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-list-task me-1"></i> Atau Pilih Gambar Per-Soal (Matrix Dalam 1 Layar):</h6>
+                        <div class="table-responsive rounded-3 border mb-2" style="max-height:350px; overflow-y:auto;">
+                            <table class="table table-hover table-sm align-middle mb-0" style="font-size:0.85rem;">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th style="width:60px;" class="text-center">No.</th>
+                                        <th>Pertanyaan Soal</th>
+                                        <th style="width:130px;" class="text-center">Status Gambar</th>
+                                        <th style="width:260px;">Pilih Berkas Gambar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($soalList)): ?>
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">Belum ada soal pada paket kuis ini.</td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($soalList as $sIdx => $sItem): ?>
+                                            <tr>
+                                                <td class="fw-bold text-center"><?= $sIdx + 1 ?></td>
+                                                <td>
+                                                    <div class="text-truncate" style="max-width:280px;" title="<?= htmlspecialchars($sItem['pertanyaan']) ?>">
+                                                        <?= htmlspecialchars($sItem['pertanyaan']) ?>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    <?php if (!empty($sItem['gambar'])): ?>
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1" style="font-size:0.7rem;">
+                                                            <i class="bi bi-image me-1"></i>Ada Gambar
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-light text-muted border rounded-pill px-2.5 py-1" style="font-size:0.7rem;">Kosong</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <input type="file" name="gambar_soal_batch[<?= $sItem['id'] ?>]" class="form-control form-control-sm rounded-3" accept="image/*">
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-0 p-3 bg-white border-top justify-content-between">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-bold shadow">
+                            <i class="bi bi-cloud-check-fill me-1"></i> Simpan Semua Gambar (Batch Save)
                         </button>
                     </div>
                 </form>
