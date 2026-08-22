@@ -1026,9 +1026,16 @@ class GuruController {
         $guruId = $guru['id'];
 
         $examModel = new ExamModel();
-        $quizList = $examModel->getQuizList(null, $guruId);
-
         require_once ROOT_PATH . 'views/guru/bank_soal.php';
+    }
+
+    public function kartuGuru() {
+        $guru = $this->getGuruInfo();
+        require_once ROOT_PATH . 'views/guru/kartu_guru.php';
+    }
+
+    public function kartuPendidik() {
+        $this->kartuGuru();
     }
 
     public function scanQr() {

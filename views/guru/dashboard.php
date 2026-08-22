@@ -28,6 +28,9 @@
                     <a href="<?= BASE_URL ?>index.php?url=guru/scanQr" class="btn btn-light text-primary fw-bold shadow-sm">
                         <i class="bi bi-qr-code-scan me-1"></i> Scan QR Hadir
                     </a>
+                    <a href="<?= BASE_URL ?>index.php?url=guru/kartuGuru" class="btn btn-success text-white fw-bold shadow-sm">
+                        <i class="bi bi-person-badge-fill me-1"></i> Kartu Guru Digital
+                    </a>
                     <a href="https://meet.google.com" target="_blank" class="btn btn-outline-light fw-bold">
                         <i class="bi bi-camera-reels-fill me-1"></i> Live Class
                     </a>

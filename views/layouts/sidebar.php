@@ -217,6 +217,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'guru/profil') ?>" href="<?= BASE_URL ?>index.php?url=guru/profil">
                 <i class="bi bi-person-circle"></i> Profil Saya
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'guru/kartuGuru') ?>" href="<?= BASE_URL ?>index.php?url=guru/kartuGuru">
+                <i class="bi bi-person-badge-fill text-warning"></i> Kartu Guru Digital (QR)
+            </a></li>
 
         <!-- ====================================================================================
              3. SISWA
