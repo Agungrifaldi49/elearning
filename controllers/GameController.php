@@ -370,13 +370,29 @@ class GameController {
         header('Content-Disposition: attachment; filename="template_soal_game_edukasi.csv"');
 
         $output = fopen('php://output', 'w');
-        // Output UTF-8 BOM for Excel compatibility
-        fputs($output, "\xEF\xBB\xBF");
+        // UTF-8 BOM for Microsoft Excel compatibility
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+        // Explicit Excel Column Separator Directive so Excel opens directly per column A - I
+        fwrite($output, "sep=;\n");
 
-        fputcsv($output, ['pertanyaan', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'kunci_jawaban', 'poin', 'penjelasan']);
-        fputcsv($output, ['Berikut ini yang termasuk perangkat keras input adalah...', 'Mouse', 'Monitor', 'Printer', 'Speaker', 'A', '10', 'Mouse merupakan perangkat keras masukan pointer.']);
-        fputcsv($output, ['Prosesor sering disebut sebagai apa dalam sistem komputer?', 'Otak Komputer', 'Jantung Komputer', 'Layar Utama', 'Penyimpanan Utama', 'A', '10', 'CPU bertindak sebagai pusat instruksi dan pemrosesan data.']);
-        fputcsv($output, ['Satuan terkecil dari penyimpanan data digital adalah...', 'Bit', 'Byte', 'Megabyte', 'Gigabyte', 'A', '10', 'Bit singkatan dari Binary Digit (0 atau 1).']);
+        // Embedded User Guidance & Instructions Header inside the file
+        fputcsv($output, ['# ========================================================================================================================'], ';');
+        fputcsv($output, ['# PANDUAN PENGISIAN TEMPLATE BANK SOAL GAME EDUKASI INTERAKTIF (E-LEARNING)'], ';');
+        fputcsv($output, ['# 1. no_soal        : Nomor urut soal (contoh: 1, 2, 3, dst.)'], ';');
+        fputcsv($output, ['# 2. pertanyaan     : Teks pertanyaan soal game kuis interaktif.'], ';');
+        fputcsv($output, ['# 3. opsi_a - d     : Pilihan jawaban A, B, C, dan D (opsi D opsional).'], ';');
+        fputcsv($output, ['# 4. kunci_jawaban  : Huruf pilihan kunci jawaban yang benar (Isi: A, B, C, atau D).'], ';');
+        fputcsv($output, ['# 5. poin           : Nilai/poin yang didapatkan siswa jika menjawab benar (contoh: 10, 20, 25).'], ';');
+        fputcsv($output, ['# 6. penjelasan     : Pembahasan / Uraian singkat alasan jawaban benar yang tampil saat kuis dijawab.'], ';');
+        fputcsv($output, ['# ========================================================================================================================'], ';');
+
+        // Header columns (Kolom A s/d Kolom I)
+        fputcsv($output, ['no_soal', 'pertanyaan', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'kunci_jawaban', 'poin', 'penjelasan'], ';');
+
+        // Sample Data Rows
+        fputcsv($output, [1, 'Berikut ini yang termasuk perangkat keras masukan (input device) komputer adalah...', 'Mouse', 'Monitor', 'Printer', 'Speaker', 'A', 10, 'Mouse merupakan perangkat keras masukan penunjuk (pointer).'], ';');
+        fputcsv($output, [2, 'Prosesor sering disebut sebagai apa dalam sistem komputer?', 'Otak Komputer', 'Jantung Komputer', 'Layar Utama', 'Penyimpanan Utama', 'A', 10, 'CPU/Prosesor bertindak sebagai pusat instruksi pemrosesan data.'], ';');
+        fputcsv($output, [3, 'Satuan terkecil dari penyimpanan data digital adalah...', 'Bit', 'Byte', 'Megabyte', 'Gigabyte', 'A', 10, 'Bit (Binary Digit) adalah unit data terkecil berangka 0 atau 1.'], ';');
 
         fclose($output);
         exit();

@@ -105,29 +105,40 @@ class GameModel extends BaseModel {
             return ['status' => false, 'message' => 'Gagal membaca berkas Excel/CSV.', 'imported' => 0];
         }
 
-        $headerRow = fgetcsv($handle, 0, ',');
-        $delimiter = ',';
-        if ($headerRow && count($headerRow) == 1 && strpos($headerRow[0], ';') !== false) {
-            $delimiter = ';';
-            $headerRow = explode(';', $headerRow[0]);
+        // Auto-detect delimiter
+        $firstLine = fgets($handle);
+        rewind($handle);
+        $delimiter = (strpos($firstLine, ';') !== false) ? ';' : ',';
+
+        $headerRow = null;
+        while (($line = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if (empty($line)) continue;
+            $firstCell = strtolower(trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $line[0] ?? '')));
+            if ($firstCell === 'sep=' || strpos($firstCell, '#') === 0 || strpos($firstCell, '//') === 0) continue;
+
+            $headerRow = $line;
+            break;
+        }
+
+        if (!$headerRow) {
+            fclose($handle);
+            return ['status' => false, 'message' => 'Format header berkas Excel/CSV tidak valid.', 'imported' => 0];
         }
 
         $colIndexes = [];
-        if ($headerRow) {
-            foreach ($headerRow as $idx => $colName) {
-                $cleanCol = strtolower(trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $colName)));
-                $colIndexes[$cleanCol] = $idx;
-            }
+        foreach ($headerRow as $idx => $colName) {
+            $cleanCol = strtolower(trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $colName)));
+            $colIndexes[$cleanCol] = $idx;
         }
 
-        $tanyaIdx  = $colIndexes['pertanyaan'] ?? 0;
-        $opsiA_Idx = $colIndexes['opsi_a'] ?? 1;
-        $opsiB_Idx = $colIndexes['opsi_b'] ?? 2;
-        $opsiC_Idx = $colIndexes['opsi_c'] ?? 3;
-        $opsiD_Idx = $colIndexes['opsi_d'] ?? 4;
-        $jawabIdx  = $colIndexes['kunci_jawaban'] ?? 5;
-        $poinIdx   = $colIndexes['poin'] ?? 6;
-        $penjelasanIdx = $colIndexes['penjelasan'] ?? 7;
+        $tanyaIdx  = $colIndexes['pertanyaan'] ?? 1;
+        $opsiA_Idx = $colIndexes['opsi_a'] ?? 2;
+        $opsiB_Idx = $colIndexes['opsi_b'] ?? 3;
+        $opsiC_Idx = $colIndexes['opsi_c'] ?? 4;
+        $opsiD_Idx = $colIndexes['opsi_d'] ?? 5;
+        $jawabIdx  = $colIndexes['kunci_jawaban'] ?? 6;
+        $poinIdx   = $colIndexes['poin'] ?? 7;
+        $penjelasanIdx = $colIndexes['penjelasan'] ?? 8;
 
         $importedCount = 0;
 
@@ -140,7 +151,7 @@ class GameModel extends BaseModel {
             if (empty($data) || count($data) < 2) continue;
 
             $pertanyaan = trim($data[$tanyaIdx] ?? '');
-            if (empty($pertanyaan) || strtolower($pertanyaan) === 'pertanyaan' || strpos($pertanyaan, '#') === 0) continue;
+            if (empty($pertanyaan) || strtolower($pertanyaan) === 'pertanyaan' || strtolower($pertanyaan) === 'no_soal' || strpos($pertanyaan, '#') === 0 || strpos($pertanyaan, 'sep=') === 0) continue;
 
             $opsiA = trim($data[$opsiA_Idx] ?? '');
             $opsiB = trim($data[$opsiB_Idx] ?? '');
@@ -190,29 +201,39 @@ class GameModel extends BaseModel {
         $handle = fopen($filePath, 'r');
         if (!$handle) return [];
 
-        $headerRow = fgetcsv($handle, 0, ',');
-        $delimiter = ',';
-        if ($headerRow && count($headerRow) == 1 && strpos($headerRow[0], ';') !== false) {
-            $delimiter = ';';
-            $headerRow = explode(';', $headerRow[0]);
+        $firstLine = fgets($handle);
+        rewind($handle);
+        $delimiter = (strpos($firstLine, ';') !== false) ? ';' : ',';
+
+        $headerRow = null;
+        while (($line = fgetcsv($handle, 0, $delimiter)) !== false) {
+            if (empty($line)) continue;
+            $firstCell = strtolower(trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $line[0] ?? '')));
+            if ($firstCell === 'sep=' || strpos($firstCell, '#') === 0 || strpos($firstCell, '//') === 0) continue;
+
+            $headerRow = $line;
+            break;
+        }
+
+        if (!$headerRow) {
+            fclose($handle);
+            return [];
         }
 
         $colIndexes = [];
-        if ($headerRow) {
-            foreach ($headerRow as $idx => $colName) {
-                $cleanCol = strtolower(trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $colName)));
-                $colIndexes[$cleanCol] = $idx;
-            }
+        foreach ($headerRow as $idx => $colName) {
+            $cleanCol = strtolower(trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $colName)));
+            $colIndexes[$cleanCol] = $idx;
         }
 
-        $tanyaIdx  = $colIndexes['pertanyaan'] ?? 0;
-        $opsiA_Idx = $colIndexes['opsi_a'] ?? 1;
-        $opsiB_Idx = $colIndexes['opsi_b'] ?? 2;
-        $opsiC_Idx = $colIndexes['opsi_c'] ?? 3;
-        $opsiD_Idx = $colIndexes['opsi_d'] ?? 4;
-        $jawabIdx  = $colIndexes['kunci_jawaban'] ?? 5;
-        $poinIdx   = $colIndexes['poin'] ?? 6;
-        $penjelasanIdx = $colIndexes['penjelasan'] ?? 7;
+        $tanyaIdx  = $colIndexes['pertanyaan'] ?? 1;
+        $opsiA_Idx = $colIndexes['opsi_a'] ?? 2;
+        $opsiB_Idx = $colIndexes['opsi_b'] ?? 3;
+        $opsiC_Idx = $colIndexes['opsi_c'] ?? 4;
+        $opsiD_Idx = $colIndexes['opsi_d'] ?? 5;
+        $jawabIdx  = $colIndexes['kunci_jawaban'] ?? 6;
+        $poinIdx   = $colIndexes['poin'] ?? 7;
+        $penjelasanIdx = $colIndexes['penjelasan'] ?? 8;
 
         $parsedSoal = [];
 
@@ -220,7 +241,7 @@ class GameModel extends BaseModel {
             if (empty($data) || count($data) < 2) continue;
 
             $pertanyaan = trim($data[$tanyaIdx] ?? '');
-            if (empty($pertanyaan) || strtolower($pertanyaan) === 'pertanyaan' || strpos($pertanyaan, '#') === 0) continue;
+            if (empty($pertanyaan) || strtolower($pertanyaan) === 'pertanyaan' || strtolower($pertanyaan) === 'no_soal' || strpos($pertanyaan, '#') === 0 || strpos($pertanyaan, 'sep=') === 0) continue;
 
             $opsiA = trim($data[$opsiA_Idx] ?? '');
             $opsiB = trim($data[$opsiB_Idx] ?? '');

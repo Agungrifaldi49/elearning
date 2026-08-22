@@ -1237,17 +1237,17 @@ class GuruController {
         fputcsv($output, ['#    - Untuk Essay    : Biarkan kosong.'], ';');
         fputcsv($output, ['# =========================================================================================='], ';');
 
-        // Header columns (Kolom A s/d Kolom J)
-        fputcsv($output, ['jenis_soal', 'pertanyaan', 'bobot', 'gambar', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'opsi_e', 'jawaban_benar'], ';');
+        // Header columns (Kolom A s/d Kolom K)
+        fputcsv($output, ['no_soal', 'jenis_soal', 'pertanyaan', 'bobot', 'gambar', 'opsi_a', 'opsi_b', 'opsi_c', 'opsi_d', 'opsi_e', 'jawaban_benar'], ';');
 
         // Sample Row 1: Pilihan Ganda dengan Gambar
-        fputcsv($output, ['pg', 'Perhatikan gambar diagram HTML berikut! Tag manakah yang digunakan untuk membuat judul utama?', 10, 'diagram_html.png', '<h1>', '<body>', '<head>', '<div>', '', 'A'], ';');
+        fputcsv($output, [1, 'pg', 'Perhatikan gambar diagram HTML berikut! Tag manakah yang digunakan untuk membuat judul utama?', 10, 'diagram_html.png', '<h1>', '<body>', '<head>', '<div>', '', 'A'], ';');
 
         // Sample Row 2: True / False tanpa Gambar
-        fputcsv($output, ['tf', 'PHP adalah bahasa pemrograman server-side.', 10, '', 'Benar', 'Salah', '', '', '', 'A'], ';');
+        fputcsv($output, [2, 'tf', 'PHP adalah bahasa pemrograman server-side.', 10, '', 'Benar', 'Salah', '', '', '', 'A'], ';');
 
         // Sample Row 3: Essay dengan URL Gambar
-        fputcsv($output, ['essay', 'Jelaskan fungsi utama dari arsitektur jaringan pada gambar berikut!', 20, 'https://raw.githubusercontent.com/placeholder/image.png', '', '', '', '', '', ''], ';');
+        fputcsv($output, [3, 'essay', 'Jelaskan fungsi utama dari arsitektur jaringan pada gambar berikut!', 20, 'https://raw.githubusercontent.com/placeholder/image.png', '', '', '', '', '', ''], ';');
 
         fclose($output);
         exit();
