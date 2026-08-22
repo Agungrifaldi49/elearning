@@ -101,7 +101,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
         print-color-adjust: exact !important;
         border: 2px solid #059669 !important;
         box-shadow: none !important;
-        height: 310px !important;
+        height: 315px !important;
         width: 480px !important;
         page-break-inside: avoid !important;
     }
@@ -110,7 +110,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
 .kartu-front-side, .kartu-back-side {
     width: 100%;
     max-width: 480px;
-    height: 310px;
+    height: 315px;
     border-radius: 18px;
     background: linear-gradient(135deg, #064e3b 0%, #022c22 50%, #0f172a 100%);
     color: #ffffff;
@@ -151,9 +151,18 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
     white-space: nowrap;
 }
 
+.card-title-banner {
+    background: rgba(16, 185, 129, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    border-radius: 6px;
+    letter-spacing: 1.5px;
+    font-size: 0.68rem;
+    color: #6ee7b7;
+}
+
 .teacher-photo-frame {
-    width: 90px;
-    height: 108px;
+    width: 86px;
+    height: 104px;
     border-radius: 12px;
     border: 3px solid #10b981;
     object-fit: cover;
@@ -179,7 +188,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
 }
 </style>
 
-<main class="main-content px-3 px-md-4" style="padding-top: 20px !important;">
+<main class="main-content px-3 px-md-4" style="padding-top: 90px !important;">
     <div class="container-fluid">
         
         <!-- Header & Action Bar -->
@@ -219,7 +228,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                     <div class="kartu-bg-pattern"></div>
                     
                     <!-- Header Kop Sekolah -->
-                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-1" style="border-color: rgba(255,255,255,0.18) !important;">
+                    <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-1.5" style="border-color: rgba(255,255,255,0.18) !important;">
                         <div class="d-flex align-items-center gap-2 overflow-hidden me-2" style="max-width: 76%;">
                             <?php if ($schoolLogoUrl): ?>
                                 <img src="<?= $schoolLogoUrl ?>" alt="Logo Sekolah" style="height: 36px; width: auto; object-fit: contain; flex-shrink: 0;">
@@ -236,6 +245,11 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                         <span class="gold-badge flex-shrink-0">GURU / GTK</span>
                     </div>
 
+                    <!-- Judul Kartu Banner -->
+                    <div class="card-title-banner text-center py-0.5 mb-1.5 fw-bold text-uppercase">
+                        <i class="bi bi-person-badge-fill me-1"></i>KARTU TENAGA PENDIDIK
+                    </div>
+
                     <!-- Body Content: Photo & Info -->
                     <div class="row g-2 align-items-center my-auto">
                         <div class="col-auto">
@@ -248,12 +262,12 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                             <?php endif; ?>
                         </div>
                         <div class="col ps-2">
-                            <h6 class="fw-bold text-white mb-0" style="font-size: 0.95rem; line-height: 1.25;"><?= htmlspecialchars($guru['nama_lengkap'] ?? $user['full_name']) ?></h6>
-                            <p class="text-success mb-1.5 fw-semibold" style="font-size: 0.72rem;">Tenaga Pendidik / Guru Pengajar</p>
+                            <h6 class="fw-bold text-white mb-0" style="font-size: 0.92rem; line-height: 1.25;"><?= htmlspecialchars($guru['nama_lengkap'] ?? $user['full_name']) ?></h6>
+                            <p class="text-success mb-1 fw-semibold" style="font-size: 0.7rem;">Tenaga Pendidik / Guru Pengajar</p>
                             
-                            <table class="text-white-50 small w-100" style="font-size: 0.7rem; line-height: 1.45;">
+                            <table class="text-white-50 small w-100" style="font-size: 0.68rem; line-height: 1.4;">
                                 <tr>
-                                    <td style="width: 72px;">NIP/NUPTK</td>
+                                    <td style="width: 70px;">NIP/NUPTK</td>
                                     <td>: <strong class="text-white"><code><?= htmlspecialchars($nipVal) ?></code></strong></td>
                                 </tr>
                                 <tr>
@@ -262,20 +276,20 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                                 </tr>
                                 <tr>
                                     <td>Status GTK</td>
-                                    <td>: <span class="badge bg-success text-white py-0 px-2" style="font-size: 0.62rem;">Aktif Mengajar</span></td>
+                                    <td>: <span class="badge bg-success text-white py-0 px-2" style="font-size: 0.6rem;">Aktif Mengajar</span></td>
                                 </tr>
                             </table>
                         </div>
                         <div class="col-auto text-end">
                             <div class="qr-code-box">
-                                <img src="<?= $qrCodeApiUrl ?>" alt="QR Code Guru" style="width: 76px; height: 76px; display: block;">
+                                <img src="<?= $qrCodeApiUrl ?>" alt="QR Code Guru" style="width: 72px; height: 72px; display: block;">
                             </div>
                             <small class="text-white-50 d-block mt-1 text-center" style="font-size: 0.58rem; letter-spacing: 0.3px;">ID PRESENSI</small>
                         </div>
                     </div>
 
                     <!-- Footer Side -->
-                    <div class="d-flex justify-content-between align-items-center border-top pt-1 text-white-50" style="border-color: rgba(255,255,255,0.18) !important; font-size: 0.63rem;">
+                    <div class="d-flex justify-content-between align-items-center border-top pt-1 text-white-50" style="border-color: rgba(255,255,255,0.18) !important; font-size: 0.62rem;">
                         <span>Tahun Ajaran <?= htmlspecialchars($academicYear) ?></span>
                         <span class="fw-bold text-success"><i class="bi bi-patch-check-fill me-1"></i>KARTU RESMI DIGITAL</span>
                     </div>
@@ -290,9 +304,8 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                     <div class="kartu-bg-pattern"></div>
 
                     <!-- Header Kop Belakang -->
-                    <div class="text-center border-bottom pb-1.5" style="border-color: rgba(255,255,255,0.18) !important;">
-                        <h6 class="fw-bold text-white mb-0" style="font-size: 0.8rem; letter-spacing: 0.5px;">KETENTUAN PENGGUNAAN KARTU GURU</h6>
-                        <small class="text-white-50" style="font-size: 0.62rem;"><?= htmlspecialchars($schoolName) ?></small>
+                    <div class="card-title-banner text-center py-0.5 mb-1.5 fw-bold text-uppercase">
+                        <i class="bi bi-shield-check me-1"></i>KETENTUAN KARTU TENAGA PENDIDIK
                     </div>
 
                     <!-- List Ketentuan -->
