@@ -30,107 +30,126 @@ class AbsensiModel extends BaseModel {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
             $this->db->exec($sql);
 
-            $cols = $this->db->query("SHOW COLUMNS FROM absensi")->fetchAll(PDO::FETCH_COLUMN);
-            if (!in_array('guru_id', $cols)) {
-                $this->db->exec("ALTER TABLE absensi ADD COLUMN guru_id INT NULL AFTER siswa_id");
+            // Ensure jadwal_id column allows NULL for general daily QR presensi
+            $this->db->exec("ALTER TABLE absensi MODIFY COLUMN jadwal_id INT NULL");
+
+            $stmt = $this->db->query("SHOW COLUMNS FROM absensi");
+            if ($stmt) {
+                $rawCols = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $cols = array_map(function($c) {
+                    return strtolower($c['Field'] ?? ($c['field'] ?? ''));
+                }, $rawCols);
+
+                if (!in_array('guru_id', $cols)) {
+                    $this->db->exec("ALTER TABLE absensi ADD COLUMN guru_id INT NULL AFTER siswa_id");
+                }
+                if (!in_array('waktu_hadir', $cols)) {
+                    $this->db->exec("ALTER TABLE absensi ADD COLUMN waktu_hadir DATETIME DEFAULT CURRENT_TIMESTAMP AFTER tanggal");
+                }
             }
-            if (!in_array('waktu_hadir', $cols)) {
-                $this->db->exec("ALTER TABLE absensi ADD COLUMN waktu_hadir DATETIME DEFAULT CURRENT_TIMESTAMP AFTER tanggal");
-            }
-        } catch (Exception $e) {}
+        } catch (Throwable $e) {}
     }
 
     public function getPresensiHariIniByGuru($guruId = null) {
-        $today = date('Y-m-d');
-        $sql = "SELECT a.*, s.nama_lengkap, s.nis, s.nisn, k.nama_kelas
-                FROM absensi a
-                JOIN siswa s ON a.siswa_id = s.id
-                LEFT JOIN kelas k ON s.kelas_id = k.id
-                WHERE a.tanggal = ?";
-        $params = [$today];
+        try {
+            $today = date('Y-m-d');
+            $sql = "SELECT a.*, s.nama_lengkap, s.nis, s.nisn, k.nama_kelas
+                    FROM absensi a
+                    JOIN siswa s ON a.siswa_id = s.id
+                    LEFT JOIN kelas k ON s.kelas_id = k.id
+                    WHERE a.tanggal = ?";
+            $params = [$today];
 
-        if ($guruId) {
-            $sql .= " AND (a.guru_id = ? OR a.guru_id IS NULL)";
-            $params[] = (int)$guruId;
+            if ($guruId) {
+                $sql .= " AND (a.guru_id = ? OR a.guru_id IS NULL)";
+                $params[] = (int)$guruId;
+            }
+
+            $sql .= " ORDER BY a.waktu_hadir DESC, a.id DESC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll();
+        } catch (Throwable $e) {
+            return [];
         }
-
-        $sql .= " ORDER BY a.waktu_hadir DESC, a.id DESC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
     }
 
     public function processQrScan($identifier, $guruId = null) {
-        $cleanId = trim($identifier);
-        
-        if (strpos($cleanId, 'SMKMH-SISWA-') === 0) {
-            $cleanId = substr($cleanId, 12);
-        } elseif (strpos($cleanId, 'SISWA-') === 0) {
-            $cleanId = substr($cleanId, 6);
-        }
+        try {
+            $cleanId = trim($identifier);
+            
+            if (strpos($cleanId, 'SMKMH-SISWA-') === 0) {
+                $cleanId = substr($cleanId, 12);
+            } elseif (strpos($cleanId, 'SISWA-') === 0) {
+                $cleanId = substr($cleanId, 6);
+            }
 
-        $cleanId = trim($cleanId);
-        if (empty($cleanId)) {
-            return ['success' => false, 'message' => 'Kode QR atau NIS/NISN tidak valid.'];
-        }
+            $cleanId = trim($cleanId);
+            if (empty($cleanId)) {
+                return ['success' => false, 'message' => 'Kode QR atau NIS/NISN tidak valid.'];
+            }
 
-        $stmtS = $this->db->prepare("
-            SELECT s.*, k.nama_kelas 
-            FROM siswa s 
-            LEFT JOIN kelas k ON s.kelas_id = k.id 
-            WHERE s.nisn = ? OR s.nis = ? OR s.id = ? OR s.nama_lengkap LIKE ?
-            LIMIT 1
-        ");
-        $stmtS->execute([$cleanId, $cleanId, (int)$cleanId, '%' . $cleanId . '%']);
-        $siswa = $stmtS->fetch();
+            $numericId = ctype_digit($cleanId) ? (int)$cleanId : -1;
+            $stmtS = $this->db->prepare("
+                SELECT s.*, k.nama_kelas 
+                FROM siswa s 
+                LEFT JOIN kelas k ON s.kelas_id = k.id 
+                WHERE s.nisn = ? OR s.nis = ? OR s.id = ? OR s.nama_lengkap LIKE ?
+                LIMIT 1
+            ");
+            $stmtS->execute([$cleanId, $cleanId, $numericId, '%' . $cleanId . '%']);
+            $siswa = $stmtS->fetch();
 
-        if (!$siswa) {
-            return ['success' => false, 'message' => "Siswa dengan NISN/NIS '$cleanId' tidak ditemukan di sistem."];
-        }
+            if (!$siswa) {
+                return ['success' => false, 'message' => "Siswa dengan NISN/NIS '$cleanId' tidak ditemukan di sistem."];
+            }
 
-        $today = date('Y-m-d');
-        $now = date('Y-m-d H:i:s');
+            $today = date('Y-m-d');
+            $now = date('Y-m-d H:i:s');
 
-        $stmtExist = $this->db->prepare("
-            SELECT * FROM absensi 
-            WHERE siswa_id = ? AND tanggal = ? 
-            LIMIT 1
-        ");
-        $stmtExist->execute([$siswa['id'], $today]);
-        $exist = $stmtExist->fetch();
+            $stmtExist = $this->db->prepare("
+                SELECT * FROM absensi 
+                WHERE siswa_id = ? AND tanggal = ? 
+                LIMIT 1
+            ");
+            $stmtExist->execute([$siswa['id'], $today]);
+            $exist = $stmtExist->fetch();
 
-        if ($exist) {
-            $jamHadir = date('H:i', strtotime($exist['waktu_hadir'] ?? $exist['created_at']));
-            return [
-                'success' => false,
-                'already_attended' => true,
-                'nama' => $siswa['nama_lengkap'],
-                'nis' => $siswa['nis'] ?: ($siswa['nisn'] ?: '-'),
-                'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
-                'jam' => $jamHadir . ' WIB',
-                'message' => "Siswa {$siswa['nama_lengkap']} sudah dicatat HADIR hari ini pada pukul {$jamHadir} WIB."
-            ];
-        }
+            if ($exist) {
+                $jamHadir = date('H:i', strtotime($exist['waktu_hadir'] ?? $exist['created_at']));
+                return [
+                    'success' => false,
+                    'already_attended' => true,
+                    'nama' => $siswa['nama_lengkap'],
+                    'nis' => $siswa['nis'] ?: ($siswa['nisn'] ?: '-'),
+                    'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
+                    'jam' => $jamHadir . ' WIB',
+                    'message' => "Siswa {$siswa['nama_lengkap']} sudah dicatat HADIR hari ini pada pukul {$jamHadir} WIB."
+                ];
+            }
 
-        $qrCodeVal = "QR_" . $siswa['id'] . "_" . date('YmdHis');
-        $stmtIns = $this->db->prepare("
-            INSERT INTO absensi (siswa_id, guru_id, tanggal, waktu_hadir, status, qr_code, keterangan) 
-            VALUES (?, ?, ?, ?, 'Hadir', ?, 'Hadir via Scan QR Code Digital')
-        ");
-        $res = $stmtIns->execute([$siswa['id'], $guruId ? (int)$guruId : null, $today, $now, $qrCodeVal]);
+            $qrCodeVal = "QR_" . $siswa['id'] . "_" . date('YmdHis');
+            $stmtIns = $this->db->prepare("
+                INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_hadir, status, qr_code, keterangan) 
+                VALUES (NULL, ?, ?, ?, ?, 'Hadir', ?, 'Hadir via Scan QR Code Digital')
+            ");
+            $res = $stmtIns->execute([$siswa['id'], $guruId ? (int)$guruId : null, $today, $now, $qrCodeVal]);
 
-        if ($res) {
-            $jamHadir = date('H:i', strtotime($now));
-            return [
-                'success' => true,
-                'nama' => $siswa['nama_lengkap'],
-                'nis' => $siswa['nis'] ?: ($siswa['nisn'] ?: '-'),
-                'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
-                'jam' => $jamHadir . ' WIB',
-                'message' => "Presensi {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat!"
-            ];
-        } else {
-            return ['success' => false, 'message' => 'Gagal menyimpan data presensi ke database.'];
+            if ($res) {
+                $jamHadir = date('H:i', strtotime($now));
+                return [
+                    'success' => true,
+                    'nama' => $siswa['nama_lengkap'],
+                    'nis' => $siswa['nis'] ?: ($siswa['nisn'] ?: '-'),
+                    'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
+                    'jam' => $jamHadir . ' WIB',
+                    'message' => "Presensi {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat!"
+                ];
+            } else {
+                return ['success' => false, 'message' => 'Gagal menyimpan data presensi ke database.'];
+            }
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => 'Terjadi kesalahan sistem database: ' . $e->getMessage()];
         }
     }
 
@@ -163,7 +182,6 @@ class AbsensiModel extends BaseModel {
             $mapelId = $jData['mapel_id'];
             $guruId = $jData['guru_id'];
         } else {
-            // Check in mapel_enrollment_keys
             $stmtK = $this->db->prepare("SELECT mapel_id, guru_id, kelas_id FROM mapel_enrollment_keys WHERE id = ?");
             $stmtK->execute([$jadwal_id]);
             $kData = $stmtK->fetch();
@@ -195,7 +213,6 @@ class AbsensiModel extends BaseModel {
             $stmt->execute([$mapelId, $guruId, $jadwal_id, $tanggal]);
             return $stmt->fetchAll();
         } else {
-            // Fallback to active class students if no schedule linked
             $stmt = $this->db->prepare("
                 SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, a.status, a.keterangan, a.created_at
                 FROM siswa s
