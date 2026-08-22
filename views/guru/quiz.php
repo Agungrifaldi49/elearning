@@ -1405,19 +1405,31 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                     <?php endif; ?>
 
                                     <?php if (!$isAdminMonitoring): ?>
-                                        <!-- Quick Upload / Replace Image Form for Question -->
-                                        <form action="<?= BASE_URL ?>index.php?url=guru/quiz" method="POST" enctype="multipart/form-data" class="my-2">
-                                            <?= Security::csrfField() ?>
-                                            <input type="hidden" name="action" value="update_gambar_soal">
-                                            <input type="hidden" name="soal_id" value="<?= $s['id'] ?>">
-                                            <div class="input-group input-group-sm" style="max-width: 400px;">
-                                                <span class="input-group-text bg-white text-muted"><i class="bi bi-image text-primary"></i></span>
-                                                <input type="file" name="gambar_soal" class="form-control" accept="image/*" required>
-                                                <button type="submit" class="btn btn-outline-primary fw-semibold" style="font-size:0.75rem;">
-                                                    <i class="bi bi-upload me-1"></i><?= empty($s['gambar']) ? 'Upload Gambar' : 'Ganti Gambar' ?>
-                                                </button>
-                                            </div>
-                                        </form>
+                                        <!-- Quick Upload / Replace / Delete Image Form for Question -->
+                                        <div class="d-flex align-items-center gap-2 flex-wrap my-2">
+                                            <form action="<?= BASE_URL ?>index.php?url=guru/quiz" method="POST" enctype="multipart/form-data" class="d-inline">
+                                                <?= Security::csrfField() ?>
+                                                <input type="hidden" name="action" value="update_gambar_soal">
+                                                <input type="hidden" name="soal_id" value="<?= $s['id'] ?>">
+                                                <div class="input-group input-group-sm" style="max-width: 380px;">
+                                                    <span class="input-group-text bg-white text-muted"><i class="bi bi-image text-primary"></i></span>
+                                                    <input type="file" name="gambar_soal" class="form-control" accept="image/*" required>
+                                                    <button type="submit" class="btn btn-outline-primary fw-semibold" style="font-size:0.75rem;">
+                                                        <i class="bi bi-upload me-1"></i><?= empty($s['gambar']) ? 'Upload Gambar' : 'Ganti Gambar' ?>
+                                                    </button>
+                                                </div>
+                                            </form>
+                                            <?php if (!empty($s['gambar'])): ?>
+                                                <form action="<?= BASE_URL ?>index.php?url=guru/quiz" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus gambar dari soal ini?');">
+                                                    <?= Security::csrfField() ?>
+                                                    <input type="hidden" name="action" value="delete_gambar_soal">
+                                                    <input type="hidden" name="soal_id" value="<?= $s['id'] ?>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold px-3 py-1" style="font-size:0.75rem;" title="Hapus Gambar Soal Ini">
+                                                        <i class="bi bi-trash3-fill me-1"></i> Hapus Gambar
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
 
                                     <?php if (!empty($s['pilihan'])): ?>
@@ -1659,9 +1671,15 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                                 </td>
                                                 <td class="text-center">
                                                     <?php if (!empty($sItem['gambar'])): ?>
-                                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1" style="font-size:0.7rem;">
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 mb-1 d-inline-block" style="font-size:0.7rem;">
                                                             <i class="bi bi-image me-1"></i>Ada Gambar
                                                         </span>
+                                                        <div class="form-check justify-content-center d-flex align-items-center gap-1">
+                                                            <input class="form-check-input" type="checkbox" name="hapus_gambar_ids[]" value="<?= $sItem['id'] ?>" id="delBatchImg<?= $sItem['id'] ?>">
+                                                            <label class="form-check-label text-danger fw-bold" for="delBatchImg<?= $sItem['id'] ?>" style="font-size:0.72rem;">
+                                                                Hapus Gambar
+                                                            </label>
+                                                        </div>
                                                     <?php else: ?>
                                                         <span class="badge bg-light text-muted border rounded-pill px-2.5 py-1" style="font-size:0.7rem;">Kosong</span>
                                                     <?php endif; ?>

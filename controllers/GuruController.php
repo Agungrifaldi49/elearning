@@ -415,6 +415,22 @@ class GuruController {
                 header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
                 exit();
 
+            } elseif ($action === 'delete_gambar_soal') {
+                $soalId = (int)$_POST['soal_id'];
+                $db = Database::getConnection();
+                $stmtImg = $db->prepare("SELECT gambar FROM soal WHERE id = ?");
+                $stmtImg->execute([$soalId]);
+                $imgPath = $stmtImg->fetchColumn();
+
+                if ($imgPath && file_exists(ROOT_PATH . 'assets/uploads/soal/' . $imgPath)) {
+                    @unlink(ROOT_PATH . 'assets/uploads/soal/' . $imgPath);
+                }
+
+                $db->prepare("UPDATE soal SET gambar = NULL WHERE id = ?")->execute([$soalId]);
+                FlashHelper::setSuccess('Gambar soal berhasil dihapus!');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                exit();
+
             } elseif ($action === 'batch_upload_gambar_soal') {
                 $quizId = (int)$_POST['quiz_id'];
                 $db = Database::getConnection();
@@ -424,6 +440,23 @@ class GuruController {
                 if (!is_dir($uploadDir)) @mkdir($uploadDir, 0777, true);
 
                 $updatedCount = 0;
+
+                // Process image deletions requested via checkboxes
+                if (!empty($_POST['hapus_gambar_ids']) && is_array($_POST['hapus_gambar_ids'])) {
+                    foreach ($_POST['hapus_gambar_ids'] as $delSoalId) {
+                        $delSoalId = (int)$delSoalId;
+                        $stmtImg = $db->prepare("SELECT gambar FROM soal WHERE id = ? AND quiz_id = ?");
+                        $stmtImg->execute([$delSoalId, $quizId]);
+                        $imgPath = $stmtImg->fetchColumn();
+
+                        if ($imgPath && file_exists($uploadDir . $imgPath)) {
+                            @unlink($uploadDir . $imgPath);
+                        }
+
+                        $db->prepare("UPDATE soal SET gambar = NULL WHERE id = ? AND quiz_id = ?")->execute([$delSoalId, $quizId]);
+                        $updatedCount++;
+                    }
+                }
 
                 // Mode 1: Individual File Picker Matrix (gambar_soal_batch[soal_id])
                 if (isset($_FILES['gambar_soal_batch']) && is_array($_FILES['gambar_soal_batch']['name'])) {
