@@ -288,7 +288,7 @@
 
                                 <div class="d-flex gap-2">
                                     <?php if ($canReattempt && $canAccess): ?>
-                                        <a href="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $q['id'] ?>" class="btn btn-primary flex-grow-1 fw-bold rounded-pill shadow-sm py-2 text-white small" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                                        <a href="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $q['id'] ?>" onclick="localStorage.removeItem('cbt_violation_locked_<?= $q['id'] ?>'); sessionStorage.removeItem('cbt_warning_count_<?= $q['id'] ?>'); sessionStorage.removeItem('cbt_remaining_time_<?= $q['id'] ?>');" class="btn btn-primary flex-grow-1 fw-bold rounded-pill shadow-sm py-2 text-white small" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
                                             <i class="bi bi-arrow-repeat me-1"></i> Kerjakan Ulang
                                         </a>
                                     <?php endif; ?>
@@ -299,7 +299,7 @@
 
                             <?php else: ?>
                                 <?php if ($canAccess): ?>
-                                    <a href="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $q['id'] ?>" class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm py-2.5 text-white" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                                    <a href="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $q['id'] ?>" onclick="localStorage.removeItem('cbt_violation_locked_<?= $q['id'] ?>'); sessionStorage.removeItem('cbt_warning_count_<?= $q['id'] ?>'); sessionStorage.removeItem('cbt_remaining_time_<?= $q['id'] ?>');" class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm py-2.5 text-white" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
                                         <i class="bi bi-pencil-square me-1"></i> Kerjakan Ujian Sekarang
                                     </a>
                                 <?php else: ?>

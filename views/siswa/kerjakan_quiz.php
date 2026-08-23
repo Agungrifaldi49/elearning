@@ -532,6 +532,14 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function startCBTEngine() {
+    // Clear any previous violation locks for fresh new attempt session
+    localStorage.removeItem('cbt_violation_locked_' + quizId);
+    sessionStorage.removeItem('cbt_warning_count_' + quizId);
+    warningCount = 0;
+    if (document.getElementById('violationCount')) {
+        document.getElementById('violationCount').textContent = 0;
+    }
+
     isExamActive = true;
     const startModalElem = document.getElementById('startExamModal');
     const bsModal = bootstrap.Modal.getInstance(startModalElem);

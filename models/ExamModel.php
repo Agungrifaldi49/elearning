@@ -151,100 +151,118 @@ class ExamModel extends BaseModel {
         $stmt->execute([$quizId, $siswaId]);
         $susulan = $stmt->fetch();
 
-        if ($susulan) {
-            if ($susulan['status'] === 'disetujui') {
-                return [
-                    'access' => true,
-                    'is_expired' => $isExpired,
-                    'status' => 'disetujui_susulan',
-                    'susulan' => $susulan,
-                    'quiz' => $quiz
-                ];
-            } else {
-                return [
-                    'access' => false,
-                    'is_expired' => $isExpired,
-                    'status' => $susulan['status'],
-                    'susulan' => $susulan,
-                    'quiz' => $quiz
-                ];
-            }
-        }
-
-        // Disqualification check
-        $stmtHQ = $this->db->prepare("SELECT is_disqualified, pelanggaran_count FROM hasil_quiz WHERE quiz_id = ? AND siswa_id = ?");
-        $stmtHQ->execute([$quizId, $siswaId]);
-        $hqRow = $stmtHQ->fetch();
-        if ($hqRow && ($hqRow['is_disqualified'] == 1 || $hqRow['pelanggaran_count'] >= 2)) {
+        if ($susulan && $susulan['status'] === 'disetujui') {
             return [
-                'access' => false,
+                'access' => true,
                 'is_expired' => $isExpired,
-                'status' => 'diskualifikasi',
-                'susulan' => null,
-                'quiz' => $quiz,
-                'pelanggaran_count' => $hqRow['pelanggaran_count']
+                'status' => 'disetujui_susulan',
+                'susulan' => $susulan,
+                'quiz' => $quiz
             ];
         }
 
+        // Fetch student's attempt & disqualification state
+        $maxAttempts = isset($quiz['max_attempts']) ? (int)$quiz['max_attempts'] : 1;
+        $stmtHQ = $this->db->prepare("SELECT is_disqualified, pelanggaran_count, attempt_count, total_nilai, nilai_tertinggi FROM hasil_quiz WHERE quiz_id = ? AND siswa_id = ?");
+        $stmtHQ->execute([$quizId, $siswaId]);
+        $hqRow = $stmtHQ->fetch();
+
+        $attemptCount = 0;
+        if ($hqRow) {
+            $attemptCount = (int)($hqRow['attempt_count'] ?? 0);
+            $stmtHistCount = $this->db->prepare("SELECT COUNT(*) FROM hasil_quiz_history WHERE siswa_id = ? AND quiz_id = ?");
+            $stmtHistCount->execute([$quizId, $siswaId]);
+            $histCount = (int)$stmtHistCount->fetchColumn();
+            if ($histCount > $attemptCount) {
+                $attemptCount = $histCount;
+            }
+        }
+
+        // Max Attempts Check: If attempts count >= max_attempts, enforce strict block
+        if ($maxAttempts > 0 && $attemptCount >= $maxAttempts) {
+            if (($hqRow && ($hqRow['is_disqualified'] == 1 || $hqRow['pelanggaran_count'] >= 2)) || ($susulan && $susulan['status'] === 'didiskualifikasi')) {
+                return [
+                    'access' => false,
+                    'is_expired' => $isExpired,
+                    'status' => 'diskualifikasi',
+                    'susulan' => $susulan,
+                    'quiz' => $quiz,
+                    'pelanggaran_count' => $hqRow['pelanggaran_count'] ?? 2
+                ];
+            }
+            return [
+                'access' => false,
+                'is_expired' => false,
+                'status' => 'max_attempts_reached',
+                'susulan' => $susulan,
+                'quiz' => $quiz,
+                'attempt_count' => $attemptCount,
+                'max_attempts' => $maxAttempts,
+                'nilai_tertinggi' => $hqRow['nilai_tertinggi'] ?? $hqRow['total_nilai'] ?? 0
+            ];
+        }
+
+        // Deadline check
         if ($isExpired) {
             return [
                 'access' => false,
                 'is_expired' => true,
                 'status' => 'terkunci',
-                'susulan' => null,
+                'susulan' => $susulan,
                 'quiz' => $quiz
             ];
         }
 
-        // Max Attempts Check
-        $maxAttempts = isset($quiz['max_attempts']) ? (int)$quiz['max_attempts'] : 1;
-        if ($maxAttempts > 0) {
-            $stmtH = $this->db->prepare("SELECT attempt_count, total_nilai, nilai_tertinggi FROM hasil_quiz WHERE quiz_id = ? AND siswa_id = ?");
-            $stmtH->execute([$quizId, $siswaId]);
-            $hRow = $stmtH->fetch();
-            $attemptCount = $hRow ? (int)$hRow['attempt_count'] : 0;
-
-            if ($attemptCount >= $maxAttempts) {
-                return [
-                    'access' => false,
-                    'is_expired' => false,
-                    'status' => 'max_attempts_reached',
-                    'susulan' => null,
-                    'quiz' => $quiz,
-                    'attempt_count' => $attemptCount,
-                    'max_attempts' => $maxAttempts,
-                    'nilai_tertinggi' => $hRow['nilai_tertinggi'] ?? $hRow['total_nilai'] ?? 0
-                ];
-            }
-        }
-
+        // If attemptCount < maxAttempts (or maxAttempts == 0 unlimited), allow access for a new attempt!
         return [
             'access' => true,
             'is_expired' => false,
             'status' => 'terbuka',
-            'susulan' => null,
-            'quiz' => $quiz
+            'susulan' => $susulan,
+            'quiz' => $quiz,
+            'attempt_count' => $attemptCount,
+            'max_attempts' => $maxAttempts
         ];
     }
 
+    public function resetAttemptViolationState($quizId, $siswaId) {
+        $stmt = $this->db->prepare("UPDATE hasil_quiz SET is_disqualified = 0, pelanggaran_count = 0 WHERE quiz_id = ? AND siswa_id = ?");
+        $stmt->execute([$quizId, $siswaId]);
+
+        $stmtS = $this->db->prepare("UPDATE quiz_susulan SET status = 'reset' WHERE quiz_id = ? AND siswa_id = ? AND status = 'didiskualifikasi'");
+        $stmtS->execute([$quizId, $siswaId]);
+    }
+
     public function recordPelanggaran($siswaId, $quizId) {
-        $stmt = $this->db->prepare("SELECT id, pelanggaran_count FROM hasil_quiz WHERE quiz_id = ? AND siswa_id = ?");
+        $stmt = $this->db->prepare("SELECT id, pelanggaran_count, attempt_count FROM hasil_quiz WHERE quiz_id = ? AND siswa_id = ?");
         $stmt->execute([$quizId, $siswaId]);
         $row = $stmt->fetch();
 
         if ($row) {
             $newCount = $row['pelanggaran_count'] + 1;
             $isDisq = ($newCount >= 2) ? 1 : 0;
+            $curAttempts = max(1, (int)($row['attempt_count'] ?? 1));
+            $newAttemptCount = $isDisq ? ($curAttempts + 1) : $curAttempts;
 
-            $up = $this->db->prepare("UPDATE hasil_quiz SET pelanggaran_count = ?, is_disqualified = ?, status_lulus = IF(? = 1, 'diskualifikasi', status_lulus) WHERE id = ?");
-            $up->execute([$newCount, $isDisq, $isDisq, $row['id']]);
+            $up = $this->db->prepare("UPDATE hasil_quiz SET pelanggaran_count = ?, is_disqualified = ?, attempt_count = ?, status_lulus = IF(? = 1, 'diskualifikasi', status_lulus) WHERE id = ?");
+            $up->execute([$newCount, $isDisq, $newAttemptCount, $isDisq, $row['id']]);
+
+            if ($isDisq) {
+                // Log this cancelled attempt in history
+                $stmtHistCount = $this->db->prepare("SELECT COUNT(*) FROM hasil_quiz_history WHERE siswa_id = ? AND quiz_id = ?");
+                $stmtHistCount->execute([$siswaId, $quizId]);
+                $attemptNum = ((int)$stmtHistCount->fetchColumn()) + 1;
+
+                $stmtHist = $this->db->prepare("INSERT INTO hasil_quiz_history (siswa_id, quiz_id, attempt_number, total_nilai, status_lulus) VALUES (?, ?, ?, 0.00, 'diskualifikasi')");
+                $stmtHist->execute([$siswaId, $quizId, $attemptNum]);
+            }
 
             return [
                 'pelanggaran_count' => $newCount,
                 'is_disqualified' => ($newCount >= 2)
             ];
         } else {
-            $ins = $this->db->prepare("INSERT INTO hasil_quiz (siswa_id, quiz_id, total_nilai, status_lulus, started_at, pelanggaran_count, is_disqualified) VALUES (?, ?, 0, 'menunggu', NOW(), 1, 0)");
+            $ins = $this->db->prepare("INSERT INTO hasil_quiz (siswa_id, quiz_id, total_nilai, status_lulus, started_at, pelanggaran_count, is_disqualified, attempt_count) VALUES (?, ?, 0, 'menunggu', NOW(), 1, 0, 1)");
             $ins->execute([$siswaId, $quizId]);
             return [
                 'pelanggaran_count' => 1,

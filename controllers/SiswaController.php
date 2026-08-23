@@ -343,6 +343,9 @@ class SiswaController {
                 exit();
             }
 
+            // Reset violation state for new allowed attempt
+            $examModel->resetAttemptViolationState($quiz_id, $siswaId);
+
             // Strict Enrollment & Class Isolation Check before taking quiz
             $db = Database::getConnection();
             $stmtQ = $db->prepare("SELECT mapel_id, guru_id, kelas_id FROM quiz WHERE id = ?");
