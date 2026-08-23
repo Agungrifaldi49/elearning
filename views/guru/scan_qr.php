@@ -404,59 +404,128 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
     });
 }
 
+let currentCameraMode = 'environment';
+let isScannerActive = false;
+
+function initCameraScanner() {
+    const config = { 
+        fps: 10, 
+        qrbox: function(viewfinderWidth, viewfinderHeight) {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const qrboxSize = Math.floor(minEdge * 0.7);
+            return { width: Math.max(qrboxSize, 180), height: Math.max(qrboxSize, 180) };
+        },
+        aspectRatio: 1.0
+    };
+
+    const qrContainer = document.getElementById('qr-reader');
+    if (!qrContainer) return;
+
+    // Helper to safely start camera
+    const safeStart = (cameraConstraint) => {
+        return html5QrCode.start(cameraConstraint, config, onScanSuccess, (err) => {});
+    };
+
+    // Strategy 1: Try Environment (Back Camera - Gold Standard for Mobile)
+    safeStart({ facingMode: "environment" })
+    .then(() => {
+        isScannerActive = true;
+        populateCameraList();
+    })
+    .catch(err1 => {
+        console.warn("FacingMode environment failed, trying getCameras...", err1);
+        // Strategy 2: Try getCameras device ID
+        Html5Qrcode.getCameras().then(devices => {
+            if (devices && devices.length) {
+                populateCameraList(devices);
+                // Prefer back camera in device list if label mentions back/rear/environment
+                let backCam = devices.find(d => /back|rear|belakang|environment/i.test(d.label)) || devices[devices.length - 1];
+                return safeStart(backCam.id);
+            } else {
+                return safeStart({ facingMode: "user" });
+            }
+        })
+        .then(() => {
+            isScannerActive = true;
+        })
+        .catch(err2 => {
+            console.error("All camera start strategies failed:", err2);
+            showCameraErrorUI();
+        });
+    });
+}
+
+function populateCameraList(devicesList) {
+    const select = document.getElementById('cameraSelect');
+    if (!select) return;
+
+    const fillSelect = (devices) => {
+        if (!devices || !devices.length) return;
+        select.innerHTML = '<option value="">-- Pilih Kamera Input --</option>';
+        devices.forEach((device, index) => {
+            const opt = document.createElement('option');
+            opt.value = device.id;
+            opt.text = device.label || `Kamera ${index + 1}`;
+            select.appendChild(opt);
+        });
+        select.classList.remove('d-none');
+    };
+
+    if (devicesList) {
+        fillSelect(devicesList);
+    } else {
+        Html5Qrcode.getCameras().then(devices => fillSelect(devices)).catch(() => {});
+    }
+}
+
 function switchCamera(cameraId) {
     if (!cameraId) return;
-    html5QrCode.stop().then(() => {
-        startScanner(cameraId);
-    }).catch(() => {
-        startScanner(cameraId);
-    });
-}
-
-function startScanner(cameraId) {
-    html5QrCode.start(
-        cameraId,
-        { fps: 10, qrbox: { width: 240, height: 240 } },
-        onScanSuccess,
-        (err) => {}
-    ).catch(err => {
-        startScannerWithFacingMode();
-    });
-}
-
-function startScannerWithFacingMode() {
-    html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 240, height: 240 } },
-        onScanSuccess,
-        (err) => {}
-    ).catch(err => {
-        document.getElementById('qr-reader').innerHTML = '<div class="alert alert-warning m-2 rounded-3"><i class="bi bi-exclamation-triangle-fill me-1"></i> Tidak dapat mengakses kamera peramban. Silakan beri izin kamera atau gunakan input manual NIS/NISN di bawah.</div>';
-    });
-}
-
-// Camera initialization
-Html5Qrcode.getCameras().then(devices => {
-    if (devices && devices.length) {
-        const select = document.getElementById('cameraSelect');
-        if (select) {
-            select.innerHTML = '<option value="">-- Pilih Kamera Input --</option>';
-            devices.forEach((device, index) => {
-                const opt = document.createElement('option');
-                opt.value = device.id;
-                opt.text = device.label || `Kamera ${index + 1}`;
-                if (index === 0) opt.selected = true;
-                select.appendChild(opt);
-            });
-            select.classList.remove('d-none');
-        }
-        startScanner(devices[0].id);
+    if (html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+            html5QrCode.start(cameraId, { fps: 10, qrbox: { width: 220, height: 220 } }, onScanSuccess, (err) => {});
+        }).catch(() => {
+            html5QrCode.start(cameraId, { fps: 10, qrbox: { width: 220, height: 220 } }, onScanSuccess, (err) => {});
+        });
     } else {
-        startScannerWithFacingMode();
+        html5QrCode.start(cameraId, { fps: 10, qrbox: { width: 220, height: 220 } }, onScanSuccess, (err) => {});
     }
-}).catch(err => {
-    startScannerWithFacingMode();
-});
+}
+
+function retryCameraAccess() {
+    const qrContainer = document.getElementById('qr-reader');
+    qrContainer.innerHTML = '';
+    if (html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => initCameraScanner()).catch(() => initCameraScanner());
+    } else {
+        initCameraScanner();
+    }
+}
+
+function showCameraErrorUI() {
+    const isHttps = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    let httpsNotice = '';
+    if (!isHttps) {
+        httpsNotice = '<br><small class="text-danger fw-bold mt-1 d-block"><i class="bi bi-shield-lock-fill me-1"></i> Perhatian: Peramban HP/Mobile membutuhkan jaringan aman (HTTPS) untuk mengizinkan akses kamera HP.</small>';
+    }
+
+    const qrContainer = document.getElementById('qr-reader');
+    qrContainer.innerHTML = `
+        <div class="alert alert-warning m-3 rounded-4 p-3 text-center shadow-xs">
+            <i class="bi bi-camera-video-off-fill fs-2 text-warning d-block mb-2"></i>
+            <strong class="d-block text-dark mb-1">Kamera Belum Terhubung / Terkunci</strong>
+            <small class="text-muted d-block mb-3">Klik tombol di bawah untuk membuka kamera atau periksa izin browser HP Anda.</small>
+            ${httpsNotice}
+            <div class="mt-3">
+                <button type="button" onclick="retryCameraAccess()" class="btn btn-sm btn-success rounded-pill px-4 fw-bold shadow-xs">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Buka Kamera HP
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// Start camera scanner on page load
+initCameraScanner();
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
