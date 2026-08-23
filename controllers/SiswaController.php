@@ -415,7 +415,10 @@ class SiswaController {
         $db = Database::getConnection();
         $stmtH = $db->prepare("
             SELECT quiz_id, total_nilai, nilai_tertinggi, 
-            COALESCE(NULLIF(attempt_count, 0), (SELECT COUNT(*) FROM hasil_quiz_history hqh WHERE hqh.siswa_id = hasil_quiz.siswa_id AND hqh.quiz_id = hasil_quiz.quiz_id), 1) AS attempt_count, 
+            GREATEST(
+                COALESCE(attempt_count, 0),
+                (SELECT COUNT(*) FROM hasil_quiz_history hqh WHERE hqh.siswa_id = hasil_quiz.siswa_id AND hqh.quiz_id = hasil_quiz.quiz_id)
+            ) AS attempt_count, 
             status_lulus 
             FROM hasil_quiz 
             WHERE siswa_id = ?

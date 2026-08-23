@@ -238,11 +238,6 @@ class ExamModel extends BaseModel {
         if ($row) {
             $newCount = $row['pelanggaran_count'] + 1;
             $isDisq = ($newCount >= 2) ? 1 : 0;
-            $curAttempts = max(1, (int)($row['attempt_count'] ?? 1));
-            $newAttemptCount = $isDisq ? ($curAttempts + 1) : $curAttempts;
-
-            $up = $this->db->prepare("UPDATE hasil_quiz SET pelanggaran_count = ?, is_disqualified = ?, attempt_count = ?, status_lulus = IF(? = 1, 'diskualifikasi', status_lulus) WHERE id = ?");
-            $up->execute([$newCount, $isDisq, $newAttemptCount, $isDisq, $row['id']]);
 
             if ($isDisq) {
                 // Log this cancelled attempt in history
@@ -252,6 +247,12 @@ class ExamModel extends BaseModel {
 
                 $stmtHist = $this->db->prepare("INSERT INTO hasil_quiz_history (siswa_id, quiz_id, attempt_number, total_nilai, status_lulus) VALUES (?, ?, ?, 0.00, 'diskualifikasi')");
                 $stmtHist->execute([$siswaId, $quizId, $attemptNum]);
+
+                $up = $this->db->prepare("UPDATE hasil_quiz SET pelanggaran_count = ?, is_disqualified = 1, attempt_count = ?, status_lulus = 'diskualifikasi' WHERE id = ?");
+                $up->execute([$newCount, $attemptNum, $row['id']]);
+            } else {
+                $up = $this->db->prepare("UPDATE hasil_quiz SET pelanggaran_count = ? WHERE id = ?");
+                $up->execute([$newCount, $row['id']]);
             }
 
             return [
@@ -259,7 +260,7 @@ class ExamModel extends BaseModel {
                 'is_disqualified' => ($newCount >= 2)
             ];
         } else {
-            $ins = $this->db->prepare("INSERT INTO hasil_quiz (siswa_id, quiz_id, total_nilai, status_lulus, started_at, pelanggaran_count, is_disqualified, attempt_count) VALUES (?, ?, 0, 'menunggu', NOW(), 1, 0, 1)");
+            $ins = $this->db->prepare("INSERT INTO hasil_quiz (siswa_id, quiz_id, total_nilai, status_lulus, started_at, pelanggaran_count, is_disqualified, attempt_count) VALUES (?, ?, 0, 'menunggu', NOW(), 1, 0, 0)");
             $ins->execute([$siswaId, $quizId]);
             return [
                 'pelanggaran_count' => 1,
