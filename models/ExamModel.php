@@ -147,20 +147,6 @@ class ExamModel extends BaseModel {
         $now = date('Y-m-d H:i:s');
         $isExpired = (!empty($quiz['deadline']) && $now > $quiz['deadline']);
 
-        $stmt = $this->db->prepare("SELECT * FROM quiz_susulan WHERE quiz_id = ? AND siswa_id = ? ORDER BY id DESC LIMIT 1");
-        $stmt->execute([$quizId, $siswaId]);
-        $susulan = $stmt->fetch();
-
-        if ($susulan && $susulan['status'] === 'disetujui') {
-            return [
-                'access' => true,
-                'is_expired' => $isExpired,
-                'status' => 'disetujui_susulan',
-                'susulan' => $susulan,
-                'quiz' => $quiz
-            ];
-        }
-
         // Fetch student's attempt & disqualification state
         $maxAttempts = isset($quiz['max_attempts']) ? (int)$quiz['max_attempts'] : 1;
         $stmtHQ = $this->db->prepare("SELECT is_disqualified, pelanggaran_count, attempt_count, total_nilai, nilai_tertinggi FROM hasil_quiz WHERE quiz_id = ? AND siswa_id = ?");
@@ -178,8 +164,15 @@ class ExamModel extends BaseModel {
             }
         }
 
-        // Max Attempts Check: If attempts count >= max_attempts, enforce strict block
-        if ($maxAttempts > 0 && $attemptCount >= $maxAttempts) {
+        // Check susulan status
+        $stmtS = $this->db->prepare("SELECT * FROM quiz_susulan WHERE quiz_id = ? AND siswa_id = ? ORDER BY id DESC LIMIT 1");
+        $stmtS->execute([$quizId, $siswaId]);
+        $susulan = $stmtS->fetch();
+        $hasApprovedSusulan = ($susulan && $susulan['status'] === 'disetujui');
+
+        // STRICT MAX ATTEMPTS CHECK:
+        // If maxAttempts > 0 AND attemptCount >= maxAttempts AND no approved susulan -> STRICTLY LOCK OUT!
+        if ($maxAttempts > 0 && $attemptCount >= $maxAttempts && !$hasApprovedSusulan) {
             if (($hqRow && ($hqRow['is_disqualified'] == 1 || $hqRow['pelanggaran_count'] >= 2)) || ($susulan && $susulan['status'] === 'didiskualifikasi')) {
                 return [
                     'access' => false,
@@ -202,8 +195,8 @@ class ExamModel extends BaseModel {
             ];
         }
 
-        // Deadline check
-        if ($isExpired) {
+        // Deadline check (only blocks if no approved susulan)
+        if ($isExpired && !$hasApprovedSusulan) {
             return [
                 'access' => false,
                 'is_expired' => true,
@@ -213,11 +206,11 @@ class ExamModel extends BaseModel {
             ];
         }
 
-        // If attemptCount < maxAttempts (or maxAttempts == 0 unlimited), allow access for a new attempt!
+        // If approved susulan or attemptCount < maxAttempts (or maxAttempts == 0), allow access!
         return [
             'access' => true,
             'is_expired' => false,
-            'status' => 'terbuka',
+            'status' => $hasApprovedSusulan ? 'disetujui_susulan' : 'terbuka',
             'susulan' => $susulan,
             'quiz' => $quiz,
             'attempt_count' => $attemptCount,
@@ -229,8 +222,12 @@ class ExamModel extends BaseModel {
         $stmt = $this->db->prepare("UPDATE hasil_quiz SET is_disqualified = 0, pelanggaran_count = 0 WHERE quiz_id = ? AND siswa_id = ?");
         $stmt->execute([$quizId, $siswaId]);
 
-        $stmtS = $this->db->prepare("UPDATE quiz_susulan SET status = 'reset' WHERE quiz_id = ? AND siswa_id = ? AND status = 'didiskualifikasi'");
+        // Consume approved susulan request when used so it cannot be reused endlessly
+        $stmtS = $this->db->prepare("UPDATE quiz_susulan SET status = 'digunakan' WHERE quiz_id = ? AND siswa_id = ? AND status = 'disetujui'");
         $stmtS->execute([$quizId, $siswaId]);
+
+        $stmtD = $this->db->prepare("UPDATE quiz_susulan SET status = 'reset' WHERE quiz_id = ? AND siswa_id = ? AND status = 'didiskualifikasi'");
+        $stmtD->execute([$quizId, $siswaId]);
     }
 
     public function recordPelanggaran($siswaId, $quizId) {

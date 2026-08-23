@@ -291,8 +291,12 @@
                                         <a href="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $q['id'] ?>" onclick="localStorage.removeItem('cbt_violation_locked_<?= $q['id'] ?>'); sessionStorage.removeItem('cbt_warning_count_<?= $q['id'] ?>'); sessionStorage.removeItem('cbt_remaining_time_<?= $q['id'] ?>');" class="btn btn-primary flex-grow-1 fw-bold rounded-pill shadow-sm py-2 text-white small" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
                                             <i class="bi bi-arrow-repeat me-1"></i> Kerjakan Ulang
                                         </a>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-outline-secondary flex-grow-1 fw-bold rounded-pill shadow-xs py-2 small" disabled style="font-size:0.75rem;">
+                                            <i class="bi bi-lock-fill me-1"></i> Batas Percobaan Habis (<?= $attCount ?>/<?= $maxAtt > 0 ? $maxAtt.'x' : '∞' ?>)
+                                        </button>
                                     <?php endif; ?>
-                                    <a href="<?= BASE_URL ?>index.php?url=siswa/reviewQuiz&id=<?= $q['id'] ?>" class="btn btn-outline-secondary <?= ($canReattempt && $canAccess) ? '' : 'w-100' ?> fw-bold rounded-pill py-2 small">
+                                    <a href="<?= BASE_URL ?>index.php?url=siswa/reviewQuiz&id=<?= $q['id'] ?>" class="btn btn-outline-secondary fw-bold rounded-pill py-2 small" style="min-width:75px;">
                                         <i class="bi bi-file-earmark-check-fill me-1"></i> Review
                                     </a>
                                 </div>
