@@ -893,6 +893,7 @@ class GuruController {
         }
 
         $recap = $absensiModel->getRecap($selectedJadwal, $tanggal);
+        $recapGuru = $absensiModel->getRecapGuru($tanggal);
         require_once ROOT_PATH . 'views/guru/absensi.php';
     }
 

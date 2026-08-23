@@ -615,6 +615,7 @@ class AdminController {
         $selectedJadwal = (int)($_GET['jadwal_id'] ?? ($jadwalList[0]['id'] ?? 1));
         $tanggal = $_GET['tanggal'] ?? date('Y-m-d');
         $recap = $absensiModel->getRecap($selectedJadwal, $tanggal);
+        $recapGuru = $absensiModel->getRecapGuru($tanggal);
 
         require_once ROOT_PATH . 'views/guru/absensi.php';
     }

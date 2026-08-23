@@ -75,27 +75,7 @@ class AbsensiModel extends BaseModel {
     }
 
     public function getPresensiHariIniByGuru($guruId = null) {
-        try {
-            $today = date('Y-m-d');
-            $sql = "SELECT a.*, s.nama_lengkap, s.nis, s.nisn, k.nama_kelas
-                    FROM absensi a
-                    JOIN siswa s ON a.siswa_id = s.id
-                    LEFT JOIN kelas k ON s.kelas_id = k.id
-                    WHERE a.tanggal = ?";
-            $params = [$today];
-
-            if ($guruId) {
-                $sql .= " AND (a.guru_id = ? OR a.guru_id IS NULL)";
-                $params[] = (int)$guruId;
-            }
-
-            $sql .= " ORDER BY COALESCE(a.waktu_pulang, a.waktu_masuk, a.waktu_hadir) DESC, a.id DESC";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute($params);
-            return $stmt->fetchAll();
-        } catch (Throwable $e) {
-            return [];
-        }
+        return $this->getPresensiHariIniAll();
     }
 
     public function verifySchoolScheduleToday($siswaId = null, $todayDate = null, $nowTime = null) {
@@ -563,6 +543,24 @@ class AbsensiModel extends BaseModel {
             ");
             $stmt->execute([$tanggal]);
             return $stmt->fetchAll();
+        }
+    }
+
+    public function getRecapGuru($tanggal = null) {
+        if (!$tanggal) $tanggal = date('Y-m-d');
+        try {
+            $stmt = $this->db->prepare("
+                SELECT g.id as guru_id, g.nip, g.nama_lengkap, g.status as status_guru,
+                       ag.id as absensi_id, ag.tanggal, ag.waktu_masuk, ag.waktu_pulang, ag.waktu_hadir, ag.status, ag.qr_code, ag.keterangan
+                FROM guru g
+                LEFT JOIN absensi_guru ag ON g.id = ag.guru_id AND ag.tanggal = ?
+                WHERE g.status = 'aktif'
+                ORDER BY g.nama_lengkap ASC
+            ");
+            $stmt->execute([$tanggal]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            return [];
         }
     }
 }
