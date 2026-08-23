@@ -49,8 +49,8 @@
 .custom-nav-pills .nav-link {
     border-radius: 30px !important;
     font-weight: 700;
-    font-size: 0.88rem;
-    padding: 10px 20px;
+    font-size: 0.85rem;
+    padding: 8px 18px;
     transition: all 0.2s ease;
 }
 .custom-nav-pills .nav-link.active {
@@ -65,6 +65,16 @@
         padding: 1.25rem !important;
         border-radius: 16px !important;
     }
+    .hero-btn-group {
+        width: 100% !important;
+    }
+    .hero-btn-group .btn {
+        flex: 1 1 100% !important;
+        text-align: center;
+    }
+    table.datatable {
+        min-width: 650px !important;
+    }
 }
 </style>
 
@@ -75,7 +85,7 @@
     <div class="guru-virtual-hero text-white p-4 p-md-5 mb-4">
         <div class="d-flex justify-content-between align-items-start align-items-md-center flex-column flex-md-row gap-3 position-relative z-1">
             <div class="d-flex align-items-center gap-3">
-                <div class="bg-primary bg-gradient p-3.5 rounded-4 text-white shadow-sm d-flex align-items-center justify-content-center flex-shrink-0" style="width: 58px; height: 58px; background: #2563eb;">
+                <div class="bg-primary bg-gradient p-3.5 rounded-4 text-white shadow-sm d-flex align-items-center justify-content-center flex-shrink-0" style="width: 54px; height: 54px; background: #2563eb;">
                     <i class="bi bi-bounding-box-circles fs-2"></i>
                 </div>
                 <div>
@@ -84,14 +94,14 @@
                 </div>
             </div>
 
-            <div class="d-flex gap-2 flex-wrap">
-                <button type="button" class="btn btn-warning text-dark fw-bold rounded-pill shadow-sm px-3.5 py-2.5" data-bs-toggle="modal" data-bs-target="#modalGuruSetKey" style="font-size: 0.85rem;">
+            <div class="d-flex gap-2 flex-wrap hero-btn-group">
+                <button type="button" class="btn btn-warning text-dark fw-bold rounded-pill shadow-sm px-3.5 py-2" data-bs-toggle="modal" data-bs-target="#modalGuruSetKey" style="font-size: 0.83rem;">
                     <i class="bi bi-key-fill me-1"></i> Set Key Mapel
                 </button>
-                <a href="<?= BASE_URL ?>index.php?url=guru/materi" class="btn btn-light fw-bold rounded-pill shadow-sm px-3.5 py-2.5 text-primary" style="font-size: 0.85rem;">
+                <a href="<?= BASE_URL ?>index.php?url=guru/materi" class="btn btn-light fw-bold rounded-pill shadow-sm px-3.5 py-2 text-primary" style="font-size: 0.83rem;">
                     <i class="bi bi-cloud-upload me-1"></i> Upload Materi
                 </a>
-                <a href="<?= BASE_URL ?>index.php?url=guru/tugas" class="btn btn-success fw-bold rounded-pill shadow-sm px-3.5 py-2.5 text-white" style="font-size: 0.85rem;">
+                <a href="<?= BASE_URL ?>index.php?url=guru/tugas" class="btn btn-success fw-bold rounded-pill shadow-sm px-3.5 py-2 text-white" style="font-size: 0.83rem;">
                     <i class="bi bi-plus-circle me-1"></i> Buat Tugas Baru
                 </a>
             </div>
@@ -109,7 +119,7 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link text-nowrap <?= $activeTab === 'kelas' ? 'active' : 'text-secondary' ?>" 
                         id="tab-kelas-btn" data-bs-toggle="pill" data-bs-target="#pane-kelas" type="button" role="tab" aria-controls="pane-kelas" aria-selected="<?= $activeTab === 'kelas' ? 'true' : 'false' ?>">
-                    <i class="bi bi-grid-3x3-gap-fill me-1.5 text-primary"></i>1. Rombel Kelas Virtual Saya
+                    <i class="bi bi-grid-3x3-gap-fill me-1.5 text-primary"></i>1. Rombel Kelas Saya
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -121,7 +131,7 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link text-nowrap <?= $activeTab === 'siswa' ? 'active' : 'text-secondary' ?>" 
                         id="tab-siswa-btn" data-bs-toggle="pill" data-bs-target="#pane-siswa" type="button" role="tab" aria-controls="pane-siswa" aria-selected="<?= $activeTab === 'siswa' ? 'true' : 'false' ?>">
-                    <i class="bi bi-people-fill me-1.5 text-success"></i>3. Data Siswa Terdaftar Mapel (<?= count($siswaEnrolledList) ?>)
+                    <i class="bi bi-people-fill me-1.5 text-success"></i>3. Siswa Terdaftar (<?= count($siswaEnrolledList) ?>)
                 </button>
             </li>
         </ul>
@@ -146,17 +156,17 @@
                         $isMyWaliKelas = ($k['wali_kelas_id'] ?? 0) == ($guru['id'] ?? 0);
                     ?>
                     <div class="col-12 col-md-6 col-xl-4">
-                        <div class="guru-class-card p-4 h-100 position-relative border-top border-4 <?= $isMyWaliKelas ? 'border-success' : 'border-primary' ?> shadow-sm d-flex flex-column justify-content-between">
+                        <div class="guru-class-card p-3.5 p-sm-4 h-100 position-relative border-top border-4 <?= $isMyWaliKelas ? 'border-success' : 'border-primary' ?> shadow-sm d-flex flex-column justify-content-between">
                             <div>
-                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex justify-content-between align-items-start mb-2 gap-1">
                                     <div>
                                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill mb-1 fw-bold" style="font-size:0.7rem;">Tingkat <?= htmlspecialchars($k['tingkat'] ?? 'X') ?></span>
                                         <h5 class="fw-bold mb-0 text-dark"><?= htmlspecialchars($k['nama_kelas']) ?></h5>
                                     </div>
                                     <?php if ($isMyWaliKelas): ?>
-                                        <span class="badge bg-success text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.7rem;"><i class="bi bi-check-circle-fill me-1"></i>Saya Wali Kelas</span>
+                                        <span class="badge bg-success text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.68rem;"><i class="bi bi-check-circle-fill me-1"></i>Saya Wali Kelas</span>
                                     <?php else: ?>
-                                        <span class="badge bg-light text-dark border rounded-pill px-2.5 py-1 fw-medium" style="font-size:0.7rem;">Rombel Ajar</span>
+                                        <span class="badge bg-light text-dark border rounded-pill px-2.5 py-1 fw-medium" style="font-size:0.68rem;">Rombel Ajar</span>
                                     <?php endif; ?>
                                 </div>
 
@@ -164,32 +174,32 @@
 
                                 <div class="p-3 rounded-3 mb-3 border small" style="background: #f8fafc; border-color: #e2e8f0 !important;">
                                     <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                                        <span class="text-muted" style="font-size:0.75rem;"><i class="bi bi-person-badge me-1 text-primary"></i>Wali Kelas:</span>
-                                        <strong class="text-dark" style="font-size:0.78rem;"><?= htmlspecialchars($k['nama_walikelas'] ?? 'Belum Ditentukan') ?></strong>
+                                        <span class="text-muted" style="font-size:0.73rem;"><i class="bi bi-person-badge me-1 text-primary"></i>Wali Kelas:</span>
+                                        <strong class="text-dark" style="font-size:0.76rem;"><?= htmlspecialchars($k['nama_walikelas'] ?? 'Belum Ditentukan') ?></strong>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="text-muted" style="font-size:0.75rem;">Kode Gabung Rombel:</span>
+                                        <span class="text-muted" style="font-size:0.73rem;">Kode Gabung Rombel:</span>
                                         <code class="fw-bold text-primary fs-6">MH-<?= strtoupper(substr(md5($k['id']), 0, 6)) ?></code>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <span class="text-muted" style="font-size:0.75rem;">Total Siswa Rombel:</span>
-                                        <strong class="text-success" style="font-size:0.78rem;"><?= $k['total_siswa'] ?> Siswa</strong>
+                                        <span class="text-muted" style="font-size:0.73rem;">Total Siswa Rombel:</span>
+                                        <strong class="text-success" style="font-size:0.76rem;"><?= $k['total_siswa'] ?> Siswa</strong>
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center">
-                                        <span class="text-muted" style="font-size:0.75rem;">Modul Unggahan Saya:</span>
-                                        <strong class="text-info" style="font-size:0.78rem;"><?= $k['total_materi_guru'] ?> Modul</strong>
+                                        <span class="text-muted" style="font-size:0.73rem;">Modul Unggahan Saya:</span>
+                                        <strong class="text-info" style="font-size:0.76rem;"><?= $k['total_materi_guru'] ?> Modul</strong>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-center gap-1.5 pt-2 border-top">
-                                <a href="<?= BASE_URL ?>index.php?url=guru/absensi&kelas_id=<?= $k['id'] ?>" class="btn btn-sm btn-outline-success rounded-pill flex-grow-1 fw-bold py-1.5" style="font-size:0.78rem;">
+                            <div class="d-flex justify-content-between align-items-center gap-1.5 pt-2 border-top flex-wrap">
+                                <a href="<?= BASE_URL ?>index.php?url=guru/absensi&kelas_id=<?= $k['id'] ?>" class="btn btn-sm btn-outline-success rounded-pill flex-grow-1 fw-bold py-1.5 px-2 text-nowrap" style="font-size:0.75rem;">
                                     <i class="bi bi-calendar-check me-1"></i> Presensi
                                 </a>
-                                <a href="<?= BASE_URL ?>index.php?url=guru/materi&kelas_id=<?= $k['id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill flex-grow-1 fw-bold py-1.5" style="font-size:0.78rem;">
+                                <a href="<?= BASE_URL ?>index.php?url=guru/materi&kelas_id=<?= $k['id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill flex-grow-1 fw-bold py-1.5 px-2 text-nowrap" style="font-size:0.75rem;">
                                     <i class="bi bi-book me-1"></i> Materi
                                 </a>
-                                <a href="<?= BASE_URL ?>index.php?url=guru/tugas&kelas_id=<?= $k['id'] ?>" class="btn btn-sm btn-outline-warning text-dark rounded-pill flex-grow-1 fw-bold py-1.5" style="font-size:0.78rem;">
+                                <a href="<?= BASE_URL ?>index.php?url=guru/tugas&kelas_id=<?= $k['id'] ?>" class="btn btn-sm btn-outline-warning text-dark rounded-pill flex-grow-1 fw-bold py-1.5 px-2 text-nowrap" style="font-size:0.75rem;">
                                     <i class="bi bi-card-checklist me-1"></i> Tugas
                                 </a>
                             </div>
@@ -202,15 +212,15 @@
 
         <!-- PANE 2: KODE AKSES (KEY / PASSCODE) MAPEL SAYA -->
         <div class="tab-pane fade <?= $activeTab === 'key' ? 'show active' : '' ?>" id="pane-key" role="tabpanel" aria-labelledby="tab-key-btn">
-            <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 bg-white border-start border-4 border-warning">
+            <div class="card border-0 rounded-4 shadow-sm p-3.5 p-md-4 mb-4 bg-white border-start border-4 border-warning">
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-3 border-bottom">
                     <div>
                         <h5 class="fw-bold mb-0 text-dark">
-                            <i class="bi bi-shield-lock-fill text-warning me-2 fs-5"></i>Kode Akses (Key / Passcode) Pendaftaran Mapel Saya
+                            <i class="bi bi-shield-lock-fill text-warning me-2 fs-5"></i>Kode Akses (Key / Passcode) Mapel Saya
                         </h5>
                         <small class="text-muted">Bagikan Key ini kepada siswa agar mereka terdaftar pada mata pelajaran pengampuan Anda.</small>
                     </div>
-                    <button type="button" class="btn btn-warning text-dark fw-bold rounded-pill shadow-sm px-3.5 py-2" data-bs-toggle="modal" data-bs-target="#modalGuruSetKey" style="font-size:0.85rem;">
+                    <button type="button" class="btn btn-warning text-dark fw-bold rounded-pill shadow-sm px-3.5 py-2 text-nowrap" data-bs-toggle="modal" data-bs-target="#modalGuruSetKey" style="font-size:0.83rem;">
                         <i class="bi bi-plus-circle me-1"></i> Buat / Edit Key Mapel
                     </button>
                 </div>
@@ -230,8 +240,8 @@
                                 <div class="p-3.5 rounded-4 border h-100 d-flex flex-column justify-content-between" style="background: #f8fafc; border-color: #e2e8f0 !important;">
                                     <div>
                                         <div class="d-flex justify-content-between align-items-center mb-1 gap-1">
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold fs-6 text-truncate" style="max-width: 70%;"><?= htmlspecialchars($mk['nama_mapel']) ?></span>
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold" style="font-size:0.7rem;">
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold fs-6 text-truncate" style="max-width: 68%;"><?= htmlspecialchars($mk['nama_mapel']) ?></span>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill fw-bold flex-shrink-0" style="font-size:0.7rem;">
                                                 <i class="bi bi-people-fill me-1"></i><?= (int)$mk['total_siswa'] ?> Siswa
                                             </span>
                                         </div>
@@ -239,7 +249,7 @@
                                     </div>
                                     <div class="d-flex align-items-center justify-content-between bg-white p-2.5 rounded-3 border">
                                         <code class="fs-6 fw-bold text-danger mb-0" style="letter-spacing:1px;"><?= htmlspecialchars($mk['enrollment_key']) ?></code>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-3 fw-bold" style="font-size:0.75rem;" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($mk['enrollment_key'], ENT_QUOTES) ?>'); alert('Key <?= htmlspecialchars($mk['enrollment_key'], ENT_QUOTES) ?> berhasil disalin!')">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-3 fw-bold flex-shrink-0" style="font-size:0.75rem;" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($mk['enrollment_key'], ENT_QUOTES) ?>'); alert('Key <?= htmlspecialchars($mk['enrollment_key'], ENT_QUOTES) ?> berhasil disalin!')">
                                             <i class="bi bi-clipboard me-1"></i> Salin
                                         </button>
                                     </div>
@@ -253,7 +263,7 @@
 
         <!-- PANE 3: DATA SISWA TERDAFTAR MAPEL SAYA -->
         <div class="tab-pane fade <?= $activeTab === 'siswa' ? 'show active' : '' ?>" id="pane-siswa" role="tabpanel" aria-labelledby="tab-siswa-btn">
-            <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 bg-white border-start border-4 border-success">
+            <div class="card border-0 rounded-4 shadow-sm p-3.5 p-md-4 mb-4 bg-white border-start border-4 border-success">
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-3 border-bottom">
                     <div>
                         <h5 class="fw-bold mb-0 text-dark">
@@ -312,7 +322,7 @@
 
                     <div class="col-12 col-sm-6 col-md-3 d-flex gap-1.5">
                         <input type="text" name="search" class="form-control rounded-pill ps-3" placeholder="Cari Nama / NISN..." value="<?= htmlspecialchars($filterSearch ?? '') ?>" style="font-size:0.83rem;">
-                        <button type="submit" class="btn btn-primary rounded-circle p-2 flex-shrink-0" style="width:36px; height:36px;">
+                        <button type="submit" class="btn btn-primary rounded-circle p-2 flex-shrink-0 d-flex align-items-center justify-content-center" style="width:36px; height:36px;">
                             <i class="bi bi-search"></i>
                         </button>
                         <?php if (!empty($filterMapelId) || !empty($filterKelasId) || !empty($filterJurusanId) || !empty($filterSearch)): ?>
@@ -321,7 +331,36 @@
                     </div>
                 </form>
 
-                <!-- Table Enrolled Students -->
+                <!-- MOBILE STUDENT ENROLLED CARDS VIEW (Screen Only < 768px) -->
+                <?php if (!empty($siswaEnrolledList)): ?>
+                    <div class="d-block d-md-none mb-3">
+                        <div class="row g-2.5">
+                            <?php foreach ($siswaEnrolledList as $mse): ?>
+                                <div class="col-12">
+                                    <div class="p-3 bg-white rounded-3 border shadow-xs">
+                                        <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
+                                            <div>
+                                                <h6 class="fw-bold text-dark mb-0 fs-6"><i class="bi bi-person-circle text-primary me-1.5"></i><?= htmlspecialchars($mse['nama_lengkap']) ?></h6>
+                                                <code class="small text-muted">NISN: <?= htmlspecialchars($mse['nisn'] ?? ($mse['nis'] ?? '-')) ?></code>
+                                            </div>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size:0.7rem;">
+                                                <?= htmlspecialchars($mse['nama_kelas'] ?? 'Umum') ?>
+                                            </span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center pt-2 border-top gap-1 flex-wrap" style="font-size:0.75rem;">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                                                <i class="bi bi-book-fill me-1"></i><?= htmlspecialchars($mse['nama_mapel']) ?>
+                                            </span>
+                                            <span class="text-muted" style="font-size:0.7rem;">Enrolled: <?= date('d M Y', strtotime($mse['enrolled_at'])) ?></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- DESKTOP / TABLET STUDENT ENROLLED TABLE -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 <?= !empty($siswaEnrolledList) ? 'datatable' : '' ?>">
                         <thead class="table-light">
