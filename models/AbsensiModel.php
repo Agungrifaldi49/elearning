@@ -192,6 +192,89 @@ class AbsensiModel extends BaseModel {
         ];
     }
 
+    public function verifyTeacherScheduleToday($guruId, $todayDate = null, $nowTime = null) {
+        if (!$todayDate) $todayDate = date('Y-m-d');
+        if (!$nowTime) $nowTime = date('H:i:s');
+
+        // 1. Kalender Akademik Holiday Check
+        $kalenderPath = ROOT_PATH . 'config/kalender.json';
+        if (file_exists($kalenderPath)) {
+            $events = json_decode(file_get_contents($kalenderPath), true) ?: [];
+            foreach ($events as $ev) {
+                $type = strtolower($ev['type'] ?? '');
+                $tglMulai = $ev['tanggal'] ?? '';
+                $tglAkhir = !empty($ev['tanggal_akhir']) ? $ev['tanggal_akhir'] : $tglMulai;
+
+                if ($todayDate >= $tglMulai && $todayDate <= $tglAkhir) {
+                    if ($type === 'libur' || strpos(strtolower($ev['title'] ?? ''), 'libur') !== false || strpos(strtolower($ev['title'] ?? ''), 'tanggal merah') !== false) {
+                        return [
+                            'allowed' => false,
+                            'reason' => 'holiday',
+                            'message' => "Bukan jadwal mengajar! Hari ini ({$ev['title']}) dinyatakan LIBUR pada Kalender Akademik Sekolah."
+                        ];
+                    }
+                }
+            }
+        }
+
+        // 2. Day Mapping
+        $daysMap = [
+            1 => 'Senin',
+            2 => 'Selasa',
+            3 => 'Rabu',
+            4 => 'Kamis',
+            5 => 'Jumat',
+            6 => 'Sabtu',
+            7 => 'Minggu'
+        ];
+        $dayNum = date('N', strtotime($todayDate));
+        $todayDayName = $daysMap[$dayNum] ?? 'Senin';
+
+        // 3. Query teacher's teaching schedule for today from `jadwal`
+        $stmtJ = $this->db->prepare("
+            SELECT COUNT(*) as total_jadwal, MIN(jam_mulai) as min_start, MAX(jam_selesai) as max_end 
+            FROM jadwal 
+            WHERE guru_id = ? AND hari = ?
+        ");
+        $stmtJ->execute([(int)$guruId, $todayDayName]);
+        $gStat = $stmtJ->fetch();
+
+        // Check if teacher has teaching schedule on other days in system
+        $stmtAllJ = $this->db->prepare("SELECT COUNT(*) as total_all FROM jadwal WHERE guru_id = ?");
+        $stmtAllJ->execute([(int)$guruId]);
+        $allStat = $stmtAllJ->fetch();
+        $hasAnyTeachingScheduleInSystem = ((int)($allStat['total_all'] ?? 0) > 0);
+
+        if ((int)($gStat['total_jadwal'] ?? 0) === 0 && $hasAnyTeachingScheduleInSystem) {
+            return [
+                'allowed' => false,
+                'reason' => 'no_schedule_today',
+                'message' => "Bukan jadwal mengajar! Bpk/Ibu Guru tidak memiliki jadwal KBM mengajar pada hari $todayDayName ($todayDate)."
+            ];
+        }
+
+        // Determine schedule bounds
+        $minStart = (!empty($gStat['min_start'])) ? date('H:i:s', strtotime($gStat['min_start'])) : '07:00:00';
+        $maxEnd = (!empty($gStat['max_end'])) ? date('H:i:s', strtotime($gStat['max_end'])) : '15:00:00';
+
+        // Buffer: Allowed to scan entry 60 mins before first class (or min 06:00 WIB)
+        $allowEntryStart = date('H:i:s', strtotime($minStart . ' -60 minutes'));
+        if (strtotime($allowEntryStart) > strtotime('06:00:00')) $allowEntryStart = '06:00:00';
+
+        // Exit buffer: Allowed to scan exit 10 mins before last class ends (or after last class ends)
+        $allowExitStart = date('H:i:s', strtotime($maxEnd . ' -10 minutes'));
+
+        return [
+            'allowed' => true,
+            'day_name' => $todayDayName,
+            'total_jadwal' => (int)($gStat['total_jadwal'] ?? 0),
+            'min_start' => $minStart,
+            'max_end' => $maxEnd,
+            'allow_entry_start' => $allowEntryStart,
+            'allow_exit_start' => $allowExitStart
+        ];
+    }
+
     public function getPresensiHariIniAll() {
         try {
             $today = date('Y-m-d');
@@ -289,6 +372,18 @@ class AbsensiModel extends BaseModel {
                 // Process Teacher Presensi in absensi_guru
                 $today = date('Y-m-d');
                 $now = date('Y-m-d H:i:s');
+                $currentTime = date('H:i:s');
+
+                // Verify Teacher Schedule & Operating Hours
+                $gSched = $this->verifyTeacherScheduleToday($guru['id'], $today, $currentTime);
+                if (!$gSched['allowed']) {
+                    return [
+                        'success' => false,
+                        'is_not_scheduled' => true,
+                        'reason' => $gSched['reason'],
+                        'message' => $gSched['message']
+                    ];
+                }
 
                 $stmtExistG = $this->db->prepare("
                     SELECT * FROM absensi_guru 
@@ -314,6 +409,19 @@ class AbsensiModel extends BaseModel {
                             'message' => "Presensi Guru {$guru['nama_lengkap']} sudah LENGKAP hari ini (Masuk: {$jamMasuk} WIB, Pulang: {$jamPulang} WIB)."
                         ];
                     } else {
+                        // Check if teacher is allowed to exit (must reach allow_exit_start / max_end)
+                        if ($currentTime < $gSched['allow_exit_start']) {
+                            $formatMaxEnd = date('H:i', strtotime($gSched['max_end']));
+                            return [
+                                'success' => false,
+                                'already_attended' => false,
+                                'is_not_scheduled' => true,
+                                'role' => 'Guru',
+                                'nama' => $guru['nama_lengkap'],
+                                'message' => "Presensi Pulang Belum Diizinkan! Jadwal KBM mengajar Bpk/Ibu {$guru['nama_lengkap']} pada hari ini ({$gSched['day_name']}) berakhir pukul {$formatMaxEnd} WIB."
+                            ];
+                        }
+
                         // Record Guru Pulang
                         $stmtUpdG = $this->db->prepare("
                             UPDATE absensi_guru 
@@ -340,6 +448,16 @@ class AbsensiModel extends BaseModel {
                     }
                 }
 
+                // Check entry start time buffer
+                if ($currentTime < $gSched['allow_entry_start']) {
+                    $formatMinStart = date('H:i', strtotime($gSched['allow_entry_start']));
+                    return [
+                        'success' => false,
+                        'is_not_scheduled' => true,
+                        'message' => "Presensi Masuk Belum Dibuka! Presensi masuk Bpk/Ibu {$guru['nama_lengkap']} baru dapat dilakukan mulai pukul {$formatMinStart} WIB."
+                    ];
+                }
+
                 // New Guru Presensi Masuk
                 $qrCodeVal = "QR_GURU_" . $guru['id'] . "_" . date('YmdHis');
                 $stmtInsG = $this->db->prepare("
@@ -350,6 +468,7 @@ class AbsensiModel extends BaseModel {
 
                 if ($resG) {
                     $jamMasuk = date('H:i', strtotime($now));
+                    $jamSelesaiKbm = date('H:i', strtotime($gSched['max_end']));
                     return [
                         'success' => true,
                         'type' => 'masuk',
@@ -359,7 +478,7 @@ class AbsensiModel extends BaseModel {
                         'kelas' => 'GTK / Pendidik',
                         'jam' => $jamMasuk . ' WIB',
                         'jam_masuk' => $jamMasuk . ' WIB',
-                        'message' => "Presensi MASUK GURU/GTK ({$guru['nama_lengkap']}) berhasil dicatat pukul {$jamMasuk} WIB!"
+                        'message' => "Presensi MASUK GURU/GTK ({$guru['nama_lengkap']}) berhasil dicatat pukul {$jamMasuk} WIB! (Jadwal KBM Selesai: {$jamSelesaiKbm} WIB)."
                     ];
                 }
             }
