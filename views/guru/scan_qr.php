@@ -7,8 +7,8 @@
 
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-            <h4 class="fw-bold mb-1"><i class="bi bi-qr-code-scan text-success me-2"></i>Scan QR Code Presensi Siswa</h4>
-            <p class="text-muted small mb-0">Arahkan kamera ke QR Code pada Kartu Pelajar Digital siswa untuk mencatat presensi otomatis.</p>
+            <h4 class="fw-bold mb-1"><i class="bi bi-qr-code-scan text-success me-2"></i>Scan QR Code Presensi</h4>
+            <p class="text-muted small mb-0">Arahkan kamera ke QR Code pada Kartu Digital Siswa / Guru untuk mencatat presensi otomatis.</p>
         </div>
         <div>
             <a href="<?= BASE_URL ?>index.php?url=guru/dashboard" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-semibold">
@@ -46,10 +46,10 @@
                 <!-- Manual Input Fallback -->
                 <div class="mt-3 pt-3 border-top">
                     <label class="form-label small fw-semibold text-dark mb-1">
-                        <i class="bi bi-keyboard-fill text-primary me-1"></i> Input NIS / NISN Manual:
+                        <i class="bi bi-keyboard-fill text-primary me-1"></i> Input NIS / NIP / ID Manual:
                     </label>
                     <div class="input-group">
-                        <input type="text" id="manualNis" class="form-control rounded-start-3" placeholder="Ketik NIS/NISN siswa..." onkeypress="if(event.key === 'Enter') processManualScan();">
+                        <input type="text" id="manualNis" class="form-control rounded-start-3" placeholder="Ketik NIS/NISN siswa atau NIP guru..." onkeypress="if(event.key === 'Enter') processManualScan();">
                         <button class="btn btn-success rounded-end-3 px-3 fw-bold" onclick="processManualScan()">
                             <i class="bi bi-check2-circle me-1"></i> Rekam
                         </button>

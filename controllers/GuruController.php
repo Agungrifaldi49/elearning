@@ -1067,7 +1067,7 @@ class GuruController {
             $identifier = $_POST['identifier'] ?? '';
 
             $absensiModel = new AbsensiModel();
-            $result = $absensiModel->processQrScan($identifier, $guruId, false);
+            $result = $absensiModel->processQrScan($identifier, $guruId, true);
 
             echo json_encode($result);
             exit();
