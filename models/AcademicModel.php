@@ -295,6 +295,24 @@ class AcademicModel extends BaseModel {
         ];
     }
 
+    public function isGenericRoom($ruangan) {
+        if (empty($ruangan)) return true;
+        $r = strtolower(trim($ruangan));
+        $generics = [
+            'ruang kelas',
+            'ruang kelas masing-masing',
+            'ruang kbm',
+            'kelas',
+            '-',
+            'rg. kelas',
+            'ruangan kelas',
+            'ruang kelas / rombel'
+        ];
+        if (in_array($r, $generics)) return true;
+        if (strpos($r, 'ruang kelas') !== false) return true;
+        return false;
+    }
+
     public function checkJadwalConflict($hari, $jam_mulai, $jam_selesai, $guru_id, $kelas_id, $ruangan, $ignoreId = null) {
         $sql = "
             SELECT j.*, k.nama_kelas, m.nama_mapel, g.nama_lengkap as nama_guru
@@ -336,7 +354,7 @@ class AcademicModel extends BaseModel {
                 ];
             }
 
-            if (!empty($ruangan) && strcasecmp(trim($c['ruangan'] ?? ''), trim($ruangan)) === 0) {
+            if (!$this->isGenericRoom($ruangan) && !$this->isGenericRoom($c['ruangan'] ?? '') && strcasecmp(trim($c['ruangan'] ?? ''), trim($ruangan)) === 0) {
                 return [
                     'conflict' => true,
                     'type' => 'ruangan',
@@ -355,10 +373,13 @@ class AcademicModel extends BaseModel {
             $jadwalList[$i]['conflict_reasons'] = [];
         }
 
+        $allJadwal = $this->getJadwal();
+
         for ($i = 0; $i < $count; $i++) {
-            for ($j = $i + 1; $j < $count; $j++) {
-                $a = $jadwalList[$i];
-                $b = $jadwalList[$j];
+            $a = $jadwalList[$i];
+
+            foreach ($allJadwal as $b) {
+                if ((int)$a['id'] === (int)$b['id']) continue;
 
                 if (strcasecmp($a['hari'], $b['hari']) === 0) {
                     $startA = strtotime("1970-01-01 " . $a['jam_mulai']);
@@ -368,21 +389,19 @@ class AcademicModel extends BaseModel {
 
                     if ($startA < $endB && $endA > $startB) {
                         $reasons = [];
-                        if ($a['guru_id'] == $b['guru_id']) {
+                        if ((int)$a['guru_id'] === (int)$b['guru_id']) {
                             $reasons[] = "Guru {$a['nama_guru']} mengajar 2 kelas bersamaan ({$a['nama_kelas']} & {$b['nama_kelas']})";
                         }
-                        if ($a['kelas_id'] == $b['kelas_id']) {
+                        if ((int)$a['kelas_id'] === (int)$b['kelas_id']) {
                             $reasons[] = "Kelas {$a['nama_kelas']} mempunyai 2 mapel bersamaan ({$a['nama_mapel']} & {$b['nama_mapel']})";
                         }
-                        if (!empty($a['ruangan']) && !empty($b['ruangan']) && strcasecmp(trim($a['ruangan']), trim($b['ruangan'])) === 0) {
+                        if (!$this->isGenericRoom($a['ruangan'] ?? '') && !$this->isGenericRoom($b['ruangan'] ?? '') && strcasecmp(trim($a['ruangan']), trim($b['ruangan'])) === 0) {
                             $reasons[] = "Ruangan '{$a['ruangan']}' dipakai 2 kelas bersamaan ({$a['nama_kelas']} & {$b['nama_kelas']})";
                         }
 
                         if (!empty($reasons)) {
                             $jadwalList[$i]['is_conflict'] = true;
-                            $jadwalList[$j]['is_conflict'] = true;
                             $jadwalList[$i]['conflict_reasons'] = array_unique(array_merge($jadwalList[$i]['conflict_reasons'], $reasons));
-                            $jadwalList[$j]['conflict_reasons'] = array_unique(array_merge($jadwalList[$j]['conflict_reasons'], $reasons));
                         }
                     }
                 }

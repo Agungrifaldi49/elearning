@@ -551,6 +551,15 @@ function attachLiveCheckerToRow(tr) {
     validateBatchRow(tr);
 }
 
+function isGenericRoomJS(ruangan) {
+    if (!ruangan) return true;
+    const r = ruangan.trim().toLowerCase();
+    const generics = ['ruang kelas', 'ruang kelas masing-masing', 'ruang kbm', 'kelas', '-', 'rg. kelas', 'ruangan kelas', 'ruang kelas / rombel'];
+    if (generics.includes(r)) return true;
+    if (r.includes('ruang kelas')) return true;
+    return false;
+}
+
 function validateBatchRow(tr) {
     const batchTarget = document.getElementById('batchKelasTarget');
     const kelasId = tr.querySelector('.batch-kelas-hidden') ? tr.querySelector('.batch-kelas-hidden').value : (batchTarget ? batchTarget.value : '');
@@ -575,6 +584,49 @@ function validateBatchRow(tr) {
     if (!kelasId || !guruId || !mapelId || !hari || !jamMulai || !jamSelesai) {
         tr.classList.remove('table-danger', 'table-success');
         if (statusTd) statusTd.innerHTML = '<span class="badge bg-light text-muted border">Lengkapi Form</span>';
+        updateBatchSummary();
+        return;
+    }
+
+    // Intra-batch conflict check
+    const allRows = Array.from(document.querySelectorAll('#tbodyBatchJadwal tr'));
+    let localConflict = null;
+
+    for (const otherTr of allRows) {
+        if (otherTr === tr) continue;
+        const oHari = otherTr.querySelector('select[name*="[hari]"]')?.value;
+        const oJamMulai = otherTr.querySelector('input[name*="[jam_mulai]"]')?.value;
+        const oJamSelesai = otherTr.querySelector('input[name*="[jam_selesai]"]')?.value;
+        const oKelasId = otherTr.querySelector('.batch-kelas-hidden')?.value || batchTarget?.value;
+        const oGuruId = otherTr.querySelector('select[name*="[guru_id]"]')?.value;
+        const oRuangan = otherTr.querySelector('input[name*="[ruangan]"]')?.value || '';
+
+        if (!oHari || !oJamMulai || !oJamSelesai || !oGuruId) continue;
+
+        if (hari.toLowerCase() === oHari.toLowerCase()) {
+            if (jamMulai < oJamSelesai && jamSelesai > oJamMulai) {
+                if (guruId && guruId === oGuruId) {
+                    localConflict = { type: 'guru', message: 'Bentrok Guru: Guru ini mengajar 2 sesi bersamaan dalam baris batch!' };
+                    break;
+                }
+                if (kelasId && kelasId === oKelasId) {
+                    localConflict = { type: 'kelas', message: 'Bentrok Kelas: Kelas ini memiliki 2 mapel bersamaan dalam baris batch!' };
+                    break;
+                }
+                if (!isGenericRoomJS(ruangan) && !isGenericRoomJS(oRuangan) && ruangan.trim().toLowerCase() === oRuangan.trim().toLowerCase()) {
+                    localConflict = { type: 'ruangan', message: 'Bentrok Ruangan: Ruangan ini dipakai 2 sesi bersamaan dalam baris batch!' };
+                    break;
+                }
+            }
+        }
+    }
+
+    if (localConflict) {
+        tr.classList.add('table-danger');
+        tr.classList.remove('table-success');
+        if (statusTd) {
+            statusTd.innerHTML = `<span class="badge bg-danger text-white fw-bold px-2 py-1" title="${localConflict.message}" data-bs-toggle="tooltip"><i class="bi bi-exclamation-triangle-fill me-1"></i>BENTROK: ${localConflict.type.toUpperCase()}</span>`;
+        }
         updateBatchSummary();
         return;
     }
