@@ -34,6 +34,9 @@ $dashboardUrl = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/dashboard' :
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-camera-video-fill text-success me-2"></i>Kamera QR Scanner</h6>
                     <div class="d-flex align-items-center gap-1">
+                        <button type="button" onclick="toggleCameraFacing()" class="btn btn-sm btn-light border text-primary rounded-pill px-2 py-0 fw-semibold" style="font-size: 0.78rem;" title="Beralih Kamera Depan / Belakang HP">
+                            <i class="bi bi-camera-fill me-1"></i> Ganti Kamera
+                        </button>
                         <button type="button" id="toggleVoiceBtn" onclick="toggleVoiceAnnouncement()" class="btn btn-sm btn-light border text-success rounded-pill px-2 py-0 fw-semibold" style="font-size: 0.78rem;" title="Aktifkan / Matikan Suara Pengumuman Presensi">
                             <i id="voiceIcon" class="bi bi-volume-up-fill me-1"></i><span id="voiceText">Suara ON</span>
                         </button>
@@ -404,69 +407,77 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
     });
 }
 
-let currentCameraMode = 'environment';
-let isScannerActive = false;
+let currentFacingMode = "environment";
 
 function initCameraScanner() {
-    requestCameraPermissionAndStart();
+    startCameraWithFacingMode(currentFacingMode);
 }
 
-function requestCameraPermissionAndStart() {
+function startCameraWithFacingMode(facingMode) {
     const qrContainer = document.getElementById('qr-reader');
     if (!qrContainer) return;
 
-    const isHttps = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showCameraErrorUI("Peramban HP membutuhkan koneksi aman (HTTPS) atau browser modern untuk memicu izin kamera.");
-        return;
-    }
-
+    // Mobile-optimized config without forced aspectRatio (fixes portrait camera black screen)
     const config = { 
         fps: 10, 
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const qrboxSize = Math.floor(minEdge * 0.7);
-            return { width: Math.max(qrboxSize, 180), height: Math.max(qrboxSize, 180) };
-        },
-        aspectRatio: 1.0
+        qrbox: { width: 230, height: 230 },
+        disableFlip: facingMode === "environment"
     };
 
-    // Explicitly call getUserMedia FIRST to force native browser "Allow Camera" permission prompt!
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } })
-    .then(tempStream => {
-        // Permission GRANTED by user! Stop temp stream and start Html5Qrcode
-        tempStream.getTracks().forEach(track => track.stop());
-
-        if (html5QrCode.isScanning) {
-            return html5QrCode.stop().then(() => html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err) => {}));
-        } else {
-            return html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err) => {});
-        }
-    })
-    .then(() => {
-        isScannerActive = true;
-        populateCameraList();
-    })
-    .catch(err1 => {
-        console.warn("Direct facingMode environment request failed, trying device list...", err1);
-        Html5Qrcode.getCameras().then(devices => {
-            if (devices && devices.length) {
-                populateCameraList(devices);
-                let backCam = devices.find(d => /back|rear|belakang|environment/i.test(d.label)) || devices[devices.length - 1];
-                return html5QrCode.start(backCam.id, config, onScanSuccess, (err) => {});
-            } else {
-                return html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, (err) => {});
-            }
-        })
-        .then(() => {
-            isScannerActive = true;
-        })
-        .catch(err2 => {
-            console.error("All camera initialization attempts failed:", err2);
-            showCameraPermissionPromptUI();
+    const runStart = () => {
+        return html5QrCode.start(
+            { facingMode: facingMode }, 
+            config, 
+            onScanSuccess, 
+            (err) => {}
+        ).then(() => {
+            ensureVideoPlaysInline();
+            populateCameraList();
         });
-    });
+    };
+
+    if (html5QrCode.isScanning) {
+        html5QrCode.stop().then(runStart).catch(runStart);
+    } else {
+        runStart().catch(err1 => {
+            console.warn("FacingMode constraint failed, trying getCameras...", err1);
+            Html5Qrcode.getCameras().then(devices => {
+                if (devices && devices.length) {
+                    populateCameraList(devices);
+                    let targetCam = devices.find(d => /back|rear|belakang|environment/i.test(d.label)) || devices[0];
+                    return html5QrCode.start(targetCam.id, config, onScanSuccess, (err) => {});
+                } else {
+                    return html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, (err) => {});
+                }
+            })
+            .then(() => {
+                ensureVideoPlaysInline();
+            })
+            .catch(err2 => {
+                console.error("Camera start failed entirely:", err2);
+                showCameraPermissionPromptUI();
+            });
+        });
+    }
+}
+
+function ensureVideoPlaysInline() {
+    setTimeout(() => {
+        const qrContainer = document.getElementById('qr-reader');
+        if (!qrContainer) return;
+        const videoEl = qrContainer.querySelector('video');
+        if (videoEl) {
+            videoEl.setAttribute('playsinline', 'true');
+            videoEl.setAttribute('webkit-playsinline', 'true');
+            videoEl.setAttribute('muted', 'true');
+            videoEl.play().catch(() => {});
+        }
+    }, 300);
+}
+
+function toggleCameraFacing() {
+    currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
+    startCameraWithFacingMode(currentFacingMode);
 }
 
 function populateCameraList(devicesList) {
@@ -494,14 +505,15 @@ function populateCameraList(devicesList) {
 
 function switchCamera(cameraId) {
     if (!cameraId) return;
+    const config = { fps: 10, qrbox: { width: 220, height: 220 } };
     if (html5QrCode.isScanning) {
         html5QrCode.stop().then(() => {
-            html5QrCode.start(cameraId, { fps: 10, qrbox: { width: 220, height: 220 } }, onScanSuccess, (err) => {});
+            html5QrCode.start(cameraId, config, onScanSuccess, (err) => {}).then(() => ensureVideoPlaysInline());
         }).catch(() => {
-            html5QrCode.start(cameraId, { fps: 10, qrbox: { width: 220, height: 220 } }, onScanSuccess, (err) => {});
+            html5QrCode.start(cameraId, config, onScanSuccess, (err) => {}).then(() => ensureVideoPlaysInline());
         });
     } else {
-        html5QrCode.start(cameraId, { fps: 10, qrbox: { width: 220, height: 220 } }, onScanSuccess, (err) => {});
+        html5QrCode.start(cameraId, config, onScanSuccess, (err) => {}).then(() => ensureVideoPlaysInline());
     }
 }
 
@@ -511,7 +523,7 @@ function showCameraPermissionPromptUI() {
     if (!isHttps) {
         httpsNotice = `
             <div class="alert alert-danger border-0 rounded-3 mt-3 p-2 text-start small">
-                <i class="bi bi-shield-lock-fill me-1 fw-bold"></i> <b>Catatan HTTPS:</b> Peramban HP (Android Chrome / Safari iOS) melarang kamera pada alamat HTTP tanpa SSL. Silakan gunakan domain HTTPS atau periksa Pengaturan Browser &rarr; Site Settings &rarr; Camera &rarr; Allow.
+                <i class="bi bi-shield-lock-fill me-1 fw-bold"></i> <b>Perhatian HTTPS:</b> Browser HP (Android Chrome / Safari iOS) melarang stream kamera jika diakses melalui IP HTTP (tanpa SSL). Silakan akses via HTTPS atau buka di PC/Laptop.
             </div>
         `;
     }
@@ -520,15 +532,15 @@ function showCameraPermissionPromptUI() {
     qrContainer.innerHTML = `
         <div class="card border-0 bg-light rounded-4 p-4 text-center my-2 shadow-xs">
             <div class="mb-3">
-                <span class="bg-success-subtle text-success p-3 rounded-circle d-inline-block shadow-xs">
-                    <i class="bi bi-camera-fill fs-2"></i>
+                <span class="bg-warning-subtle text-warning p-3 rounded-circle d-inline-block shadow-xs">
+                    <i class="bi bi-camera-video-off-fill fs-2"></i>
                 </span>
             </div>
-            <h6 class="fw-bold text-dark mb-1">Izinkan Akses Kamera HP</h6>
-            <p class="text-muted small mb-3">Klik tombol hijau di bawah ini untuk menampilkan notifikasi dialog resmi <b>"Izinkan Kamera"</b> pada HP Anda.</p>
+            <h6 class="fw-bold text-dark mb-1">Kamera Belum Aktif</h6>
+            <p class="text-muted small mb-3">Klik tombol di bawah untuk mencoba membuka kamera HP Anda kembali.</p>
             <div>
-                <button type="button" onclick="requestCameraPermissionAndStart()" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm">
-                    <i class="bi bi-camera-video-fill me-2"></i> Klik Untuk Izinkan & Buka Kamera
+                <button type="button" onclick="startCameraWithFacingMode(currentFacingMode)" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm">
+                    <i class="bi bi-camera-video-fill me-2"></i> Coba Buka Kamera HP
                 </button>
             </div>
             ${httpsNotice}
