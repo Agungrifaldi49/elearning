@@ -59,10 +59,18 @@ class ExamModel extends BaseModel {
                     quiz_id INT NOT NULL,
                     attempt_number INT NOT NULL DEFAULT 1,
                     total_nilai DECIMAL(5,2) DEFAULT 0.00,
-                    status_lulus ENUM('lulus','tidak_lulus','menunggu') DEFAULT 'lulus',
+                    status_lulus VARCHAR(50) DEFAULT 'lulus',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+        } catch (Exception $e) {}
+
+        try {
+            $this->db->exec("ALTER TABLE hasil_quiz_history MODIFY COLUMN status_lulus VARCHAR(50) DEFAULT 'lulus'");
+        } catch (Exception $e) {}
+
+        try {
+            $this->db->exec("ALTER TABLE hasil_quiz MODIFY COLUMN status_lulus VARCHAR(50) DEFAULT 'menunggu'");
         } catch (Exception $e) {}
 
         try {
