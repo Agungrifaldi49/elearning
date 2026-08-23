@@ -282,7 +282,6 @@ class SiswaController {
             $resViolation = $examModel->recordPelanggaran($siswaId, $qId);
 
             if ($resViolation['is_disqualified']) {
-                $examModel->recordViolation($qId, $siswaId);
                 $commModel = new CommunicationModel();
                 $uName = AuthHelper::user()['full_name'] ?? 'Siswa';
                 $commModel->sendNotificationToTeacherByQuiz(
