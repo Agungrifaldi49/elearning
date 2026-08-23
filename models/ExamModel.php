@@ -182,19 +182,22 @@ class ExamModel extends BaseModel {
         $susulan = $stmtS->fetch();
         $hasApprovedSusulan = ($susulan && $susulan['status'] === 'disetujui');
 
-        // STRICT MAX ATTEMPTS CHECK:
+        // 1. DISQUALIFICATION CHECK:
+        // If student is disqualified for anti-cheating violation and has no approved susulan -> STRICTLY LOCK OUT!
+        if ($hqRow && ($hqRow['is_disqualified'] == 1 || $hqRow['pelanggaran_count'] >= 2) && !$hasApprovedSusulan) {
+            return [
+                'access' => false,
+                'is_expired' => $isExpired,
+                'status' => 'diskualifikasi',
+                'susulan' => $susulan,
+                'quiz' => $quiz,
+                'pelanggaran_count' => $hqRow['pelanggaran_count'] ?? 2
+            ];
+        }
+
+        // 2. STRICT MAX ATTEMPTS CHECK:
         // If maxAttempts > 0 AND attemptCount >= maxAttempts AND no approved susulan -> STRICTLY LOCK OUT!
         if ($maxAttempts > 0 && $attemptCount >= $maxAttempts && !$hasApprovedSusulan) {
-            if (($hqRow && ($hqRow['is_disqualified'] == 1 || $hqRow['pelanggaran_count'] >= 2)) || ($susulan && $susulan['status'] === 'didiskualifikasi')) {
-                return [
-                    'access' => false,
-                    'is_expired' => $isExpired,
-                    'status' => 'diskualifikasi',
-                    'susulan' => $susulan,
-                    'quiz' => $quiz,
-                    'pelanggaran_count' => $hqRow['pelanggaran_count'] ?? 2
-                ];
-            }
             return [
                 'access' => false,
                 'is_expired' => false,
