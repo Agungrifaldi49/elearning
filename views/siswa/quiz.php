@@ -38,14 +38,20 @@
     border-radius: 18px;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
-    height: 100%;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+@media (min-width: 768px) {
+    .quiz-card-item {
+        height: 100%;
+    }
 }
 
 .quiz-card-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 14px 28px -5px rgba(15, 23, 42, 0.1) !important;
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.09) !important;
     border-color: #cbd5e1;
 }
 
@@ -60,6 +66,16 @@
     border-top: 4px solid #ef4444 !important;
 }
 
+.quiz-title-clamp {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    font-size: 1.02rem;
+    line-height: 1.35;
+}
+
 /* Custom KPI Stat Cards */
 .student-kpi-card {
     border: 1px solid #e2e8f0;
@@ -70,6 +86,22 @@
 .student-kpi-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+}
+
+@media (max-width: 575.98px) {
+    .student-kpi-card {
+        padding: 0.65rem !important;
+    }
+    .student-kpi-card .fs-4 {
+        font-size: 1.15rem !important;
+    }
+    .student-kpi-card small {
+        font-size: 0.68rem !important;
+    }
+    .quiz-hero-banner {
+        padding: 1.25rem !important;
+        border-radius: 16px !important;
+    }
 }
 
 .badge-mapel-tag {
@@ -247,20 +279,20 @@
                 $statusCardVal = $isDisqualified ? 'didiskualifikasi' : (!$isEnrolled ? 'terkunci' : ($isExpired && !$canAccess ? 'terkunci' : 'terdaftar'));
             ?>
                 <div class="col-12 col-md-6 col-xl-4 quiz-item-col" data-title="<?= htmlspecialchars(strtolower($q['judul'])) ?>" data-mapel="<?= htmlspecialchars($q['nama_mapel']) ?>" data-status="<?= $statusCardVal ?>">
-                    <div class="quiz-card-item <?= $cardStatusClass ?> p-4 shadow-sm border-0 rounded-4 h-100 d-flex flex-column justify-content-between">
+                    <div class="quiz-card-item <?= $cardStatusClass ?> p-3.5 p-sm-4 shadow-sm border-0 rounded-4 d-flex flex-column justify-content-between">
                         <div>
                             <!-- Header Row: Icon, Mapel Badge & Status Badge -->
                             <div class="d-flex align-items-center justify-content-between mb-3 gap-2 flex-wrap">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="rounded-circle <?= !$canAccess ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle' ?> d-flex align-items-center justify-content-center shadow-xs" style="width: 42px; height: 42px; min-width: 42px;">
+                                <div class="d-flex align-items-center gap-2 overflow-hidden" style="max-width: 68%;">
+                                    <div class="rounded-circle <?= !$canAccess ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle' ?> d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 38px; height: 38px;">
                                         <i class="bi <?= !$canAccess ? 'bi-lock-fill' : 'bi-stopwatch-fill' ?> fs-5"></i>
                                     </div>
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.75rem;">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 fw-bold text-truncate" style="font-size:0.75rem;" title="<?= htmlspecialchars($q['nama_mapel']) ?>">
                                         <i class="bi bi-journal-bookmark me-1"></i><?= htmlspecialchars($q['nama_mapel']) ?>
                                     </span>
                                 </div>
 
-                                <div class="d-flex gap-1 align-items-center">
+                                <div class="d-flex gap-1 align-items-center flex-shrink-0">
                                     <?php if (($q['kategori'] ?? '') === 'uts'): ?>
                                         <span class="badge text-white rounded-pill px-2.5 py-1" style="background:#7c3aed; font-size:0.7rem;"><i class="bi bi-trophy-fill me-1"></i>UTS</span>
                                     <?php elseif (($q['kategori'] ?? '') === 'uas'): ?>
@@ -268,15 +300,15 @@
                                     <?php endif; ?>
 
                                     <?php if ($isDisqualified): ?>
-                                        <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 small fw-bold">Didiskualifikasi</span>
+                                        <span class="badge bg-danger text-white rounded-pill px-2 py-1 fw-bold" style="font-size:0.68rem;">Diskualifikasi</span>
                                     <?php elseif ($isExpired): ?>
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 small fw-bold">Expired</span>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1 fw-bold" style="font-size:0.68rem;">Expired</span>
                                     <?php endif; ?>
                                 </div>
                             </div>
 
                             <!-- Quiz Title & Teacher Info -->
-                            <h5 class="fw-bold text-dark mb-1" style="letter-spacing: -0.2px; line-height: 1.35;">
+                            <h5 class="fw-bold text-dark mb-1 quiz-title-clamp" title="<?= htmlspecialchars($q['judul']) ?>">
                                 <?= htmlspecialchars($q['judul']) ?>
                             </h5>
                             <div class="text-muted small mb-3">
