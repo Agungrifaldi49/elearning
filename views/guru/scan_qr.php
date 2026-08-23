@@ -408,6 +408,20 @@ let currentCameraMode = 'environment';
 let isScannerActive = false;
 
 function initCameraScanner() {
+    requestCameraPermissionAndStart();
+}
+
+function requestCameraPermissionAndStart() {
+    const qrContainer = document.getElementById('qr-reader');
+    if (!qrContainer) return;
+
+    const isHttps = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showCameraErrorUI("Peramban HP membutuhkan koneksi aman (HTTPS) atau browser modern untuk memicu izin kamera.");
+        return;
+    }
+
     const config = { 
         fps: 10, 
         qrbox: function(viewfinderWidth, viewfinderHeight) {
@@ -418,39 +432,39 @@ function initCameraScanner() {
         aspectRatio: 1.0
     };
 
-    const qrContainer = document.getElementById('qr-reader');
-    if (!qrContainer) return;
+    // Explicitly call getUserMedia FIRST to force native browser "Allow Camera" permission prompt!
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } })
+    .then(tempStream => {
+        // Permission GRANTED by user! Stop temp stream and start Html5Qrcode
+        tempStream.getTracks().forEach(track => track.stop());
 
-    // Helper to safely start camera
-    const safeStart = (cameraConstraint) => {
-        return html5QrCode.start(cameraConstraint, config, onScanSuccess, (err) => {});
-    };
-
-    // Strategy 1: Try Environment (Back Camera - Gold Standard for Mobile)
-    safeStart({ facingMode: "environment" })
+        if (html5QrCode.isScanning) {
+            return html5QrCode.stop().then(() => html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err) => {}));
+        } else {
+            return html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, (err) => {});
+        }
+    })
     .then(() => {
         isScannerActive = true;
         populateCameraList();
     })
     .catch(err1 => {
-        console.warn("FacingMode environment failed, trying getCameras...", err1);
-        // Strategy 2: Try getCameras device ID
+        console.warn("Direct facingMode environment request failed, trying device list...", err1);
         Html5Qrcode.getCameras().then(devices => {
             if (devices && devices.length) {
                 populateCameraList(devices);
-                // Prefer back camera in device list if label mentions back/rear/environment
                 let backCam = devices.find(d => /back|rear|belakang|environment/i.test(d.label)) || devices[devices.length - 1];
-                return safeStart(backCam.id);
+                return html5QrCode.start(backCam.id, config, onScanSuccess, (err) => {});
             } else {
-                return safeStart({ facingMode: "user" });
+                return html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, (err) => {});
             }
         })
         .then(() => {
             isScannerActive = true;
         })
         .catch(err2 => {
-            console.error("All camera start strategies failed:", err2);
-            showCameraErrorUI();
+            console.error("All camera initialization attempts failed:", err2);
+            showCameraPermissionPromptUI();
         });
     });
 }
@@ -491,35 +505,33 @@ function switchCamera(cameraId) {
     }
 }
 
-function retryCameraAccess() {
-    const qrContainer = document.getElementById('qr-reader');
-    qrContainer.innerHTML = '';
-    if (html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => initCameraScanner()).catch(() => initCameraScanner());
-    } else {
-        initCameraScanner();
-    }
-}
-
-function showCameraErrorUI() {
+function showCameraPermissionPromptUI() {
     const isHttps = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     let httpsNotice = '';
     if (!isHttps) {
-        httpsNotice = '<br><small class="text-danger fw-bold mt-1 d-block"><i class="bi bi-shield-lock-fill me-1"></i> Perhatian: Peramban HP/Mobile membutuhkan jaringan aman (HTTPS) untuk mengizinkan akses kamera HP.</small>';
+        httpsNotice = `
+            <div class="alert alert-danger border-0 rounded-3 mt-3 p-2 text-start small">
+                <i class="bi bi-shield-lock-fill me-1 fw-bold"></i> <b>Catatan HTTPS:</b> Peramban HP (Android Chrome / Safari iOS) melarang kamera pada alamat HTTP tanpa SSL. Silakan gunakan domain HTTPS atau periksa Pengaturan Browser &rarr; Site Settings &rarr; Camera &rarr; Allow.
+            </div>
+        `;
     }
 
     const qrContainer = document.getElementById('qr-reader');
     qrContainer.innerHTML = `
-        <div class="alert alert-warning m-3 rounded-4 p-3 text-center shadow-xs">
-            <i class="bi bi-camera-video-off-fill fs-2 text-warning d-block mb-2"></i>
-            <strong class="d-block text-dark mb-1">Kamera Belum Terhubung / Terkunci</strong>
-            <small class="text-muted d-block mb-3">Klik tombol di bawah untuk membuka kamera atau periksa izin browser HP Anda.</small>
-            ${httpsNotice}
-            <div class="mt-3">
-                <button type="button" onclick="retryCameraAccess()" class="btn btn-sm btn-success rounded-pill px-4 fw-bold shadow-xs">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Buka Kamera HP
+        <div class="card border-0 bg-light rounded-4 p-4 text-center my-2 shadow-xs">
+            <div class="mb-3">
+                <span class="bg-success-subtle text-success p-3 rounded-circle d-inline-block shadow-xs">
+                    <i class="bi bi-camera-fill fs-2"></i>
+                </span>
+            </div>
+            <h6 class="fw-bold text-dark mb-1">Izinkan Akses Kamera HP</h6>
+            <p class="text-muted small mb-3">Klik tombol hijau di bawah ini untuk menampilkan notifikasi dialog resmi <b>"Izinkan Kamera"</b> pada HP Anda.</p>
+            <div>
+                <button type="button" onclick="requestCameraPermissionAndStart()" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm">
+                    <i class="bi bi-camera-video-fill me-2"></i> Klik Untuk Izinkan & Buka Kamera
                 </button>
             </div>
+            ${httpsNotice}
         </div>
     `;
 }
