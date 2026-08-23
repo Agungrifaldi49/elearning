@@ -269,7 +269,19 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
     })
     .then(r => r.json())
     .then(d => {
-        isProcessing = false;
+        // Continuous Kiosk Toast Notification (No OK Button, Auto-Dismiss, Non-blocking)
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+            }
+        });
+
         if (d.success) {
             playAudioBeep();
             
@@ -285,9 +297,40 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
                 if (countEl) countEl.textContent = scanCount;
             }
 
+            // Dynamic Real-time Table Prepend (No Page Reload)
             const tbody = document.getElementById('presensiTbody');
             const emptyRow = document.getElementById('emptyRow');
             if (emptyRow) emptyRow.remove();
+
+            const rowId = 'row-' + (d.role === 'Guru' ? 'g-' + d.nis : 's-' + d.nis);
+            const existingRow = document.getElementById(rowId);
+            if (existingRow) existingRow.remove();
+
+            const tr = document.createElement('tr');
+            tr.className = 'border-bottom bg-success-subtle';
+            tr.id = rowId;
+
+            const roleBadge = (d.role === 'Guru') ? 
+                '<span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1"><i class="bi bi-person-workspace me-1 text-warning"></i>Guru / GTK</span>' : 
+                `<span class="badge bg-light text-dark border">${d.kelas}</span>`;
+
+            const tableStatusBadge = isPulang ?
+                '<span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1"><i class="bi bi-check-all me-1"></i>Lengkap (Masuk & Pulang)</span>' :
+                '<span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Hadir</span>';
+
+            tr.innerHTML = `
+                <td><span class="badge bg-success rounded-circle py-1 px-2">Baru</span></td>
+                <td class="fw-bold text-dark">${d.nama}</td>
+                <td><code>${d.nis}</code></td>
+                <td>${roleBadge}</td>
+                <td class="fw-bold text-success"><i class="bi bi-box-arrow-in-right me-1"></i>${d.jam_masuk || d.jam}</td>
+                <td class="fw-bold text-primary">${isPulang ? '<i class="bi bi-box-arrow-right me-1"></i>' + d.jam_pulang : '<span class="text-muted fw-normal small">Belum Scan Pulang</span>'}</td>
+                <td>${tableStatusBadge}</td>
+            `;
+
+            tbody.insertBefore(tr, tbody.firstChild);
+
+            setTimeout(() => { tr.classList.remove('bg-success-subtle'); }, 2000);
 
             document.getElementById('manualNis').value = '';
 
@@ -304,21 +347,21 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
             }
             speakVoiceMessage(speechText);
 
-            Swal.fire({ 
-                icon: 'success', 
-                title: isPulang ? 'Presensi PULANG Terekam!' : (d.is_late ? 'Presensi MASUK (Terlambat)' : 'Presensi MASUK (Tepat Waktu)'), 
-                html: isPulang ? `<b>${d.nama}</b> (${d.kelas}) berhasil presensi PULANG pukul ${d.jam_pulang}. (Masuk: ${d.jam_masuk}).` : `<b>${d.nama}</b> (${d.kelas}) berhasil presensi MASUK pukul ${d.jam_masuk}. Status: <b>${d.status_keterangan || 'Hadir Tepat Waktu'}</b>.`, 
-                timer: 4000, 
-                showConfirmButton: false 
-            }).then(() => {
-                window.location.reload();
+            // Floating Auto-Dismiss Toast Alert (No OK button)
+            Toast.fire({
+                icon: 'success',
+                title: isPulang ? `Presensi PULANG: ${d.nama}` : `Presensi MASUK: ${d.nama}`,
+                text: isPulang ? `Pulang pukul ${d.jam_pulang}` : `Masuk pukul ${d.jam_masuk} (${d.status_keterangan || 'Tepat Waktu'})`
             });
+
+            // Re-enable fast scanning mode instantly (1.5 seconds delay for duplicate prevention)
+            setTimeout(() => { isProcessing = false; }, 1500);
         } else {
             const isNotScheduled = d.is_not_scheduled;
             resultEl.className = (d.already_attended || isNotScheduled) ? 'alert alert-warning border-0 rounded-3 shadow-sm mb-3' : 'alert alert-danger border-0 rounded-3 shadow-sm mb-3';
             resultEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + (d.message || 'Data tidak ditemukan.');
             
-            let swalTitle = 'Gagal!';
+            let swalTitle = 'Gagal';
             let swalIcon = 'error';
             let speechText = '';
 
@@ -336,11 +379,14 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
 
             speakVoiceMessage(speechText);
 
-            Swal.fire({ 
+            // Non-blocking Auto-Dismiss Toast without OK button
+            Toast.fire({ 
                 icon: swalIcon, 
                 title: swalTitle, 
                 text: d.message || 'Data tidak ditemukan.' 
             });
+
+            setTimeout(() => { isProcessing = false; }, 1500);
         }
     })
     .catch(() => {
