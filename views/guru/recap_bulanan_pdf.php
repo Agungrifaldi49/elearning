@@ -17,14 +17,43 @@ $namaBulan = $namaBulanList[$bulan] ?? $bulan;
 $numDays = $recap['num_days'] ?? 30;
 $recapData = $recap['data'] ?? [];
 
-$sidebarSettingsPath = ROOT_PATH . 'config/settings.json';
-$schoolSettings = [];
-if (file_exists($sidebarSettingsPath)) {
-    $schoolSettings = json_decode(file_get_contents($sidebarSettingsPath), true) ?: [];
+// Load Dynamic Settings from Admin (Logo, School Name, Address, NPSN, Headmaster)
+$appSettings = [];
+$settingsPath = ROOT_PATH . 'config/settings.json';
+if (file_exists($settingsPath)) {
+    $appSettings = json_decode(file_get_contents($settingsPath), true) ?: [];
 }
-$schoolName = $schoolSettings['nama_sekolah'] ?? 'SMK MUTHIA HARAPAN CICALENGKA';
-$schoolAddress = $schoolSettings['alamat'] ?? 'Jl. Raya Cicalengka - Majalaya No. 123, Cicalengka, Kab. Bandung';
-$kepsekName = $schoolSettings['nama_kepsek'] ?? 'Drs. H. Ahmad Sudrajat, M.M.';
+if (empty($appSettings)) {
+    try {
+        $db = Database::getConnection();
+        $stmt = $db->query("SELECT setting_key, setting_value FROM settings");
+        $appSettings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+    } catch (Throwable $e) {}
+}
+
+$schoolName = !empty($appSettings['nama_sekolah']) ? $appSettings['nama_sekolah'] : 'SMK MUTHIA HARAPAN CICALENGKA';
+$schoolAddress = !empty($appSettings['alamat']) ? $appSettings['alamat'] : 'Jalan Babakan Peuteuy No. 300, Cicalengka, Kab. Bandung';
+$schoolPhone = !empty($appSettings['telepon']) ? $appSettings['telepon'] : '(022) 7950123';
+$schoolNpsn = !empty($appSettings['npsn']) ? $appSettings['npsn'] : '69725846';
+$headmasterName = !empty($appSettings['kepala_sekolah']) ? $appSettings['kepala_sekolah'] : ($appSettings['nama_kepsek'] ?? 'H. ASEP SAEPULLOH, S. Ag');
+$headmasterNip = !empty($appSettings['nip_kepala_sekolah']) ? $appSettings['nip_kepala_sekolah'] : ($appSettings['nip_kepsek'] ?? ($appSettings['nip'] ?? ''));
+
+// Resolve Official School Logo
+$rawLogo = $appSettings['logo'] ?? '';
+$schoolLogoUrl = null;
+if (!empty($rawLogo)) {
+    $possibleLogoPaths = [
+        'assets/uploads/logo/' . $rawLogo,
+        'assets/uploads/' . $rawLogo,
+        'assets/images/' . $rawLogo
+    ];
+    foreach ($possibleLogoPaths as $lp) {
+        if (file_exists(ROOT_PATH . $lp)) {
+            $schoolLogoUrl = BASE_URL . $lp;
+            break;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -99,11 +128,16 @@ $kepsekName = $schoolSettings['nama_kepsek'] ?? 'Drs. H. Ahmad Sudrajat, M.M.';
         </div>
     </div>
 
-    <!-- Kop Surat Sekolah -->
-    <div class="kop-surat text-center">
-        <h3 class="fw-bold text-uppercase mb-1" style="font-size: 16pt; letter-spacing: 1px;"><?= htmlspecialchars($schoolName) ?></h3>
-        <p class="mb-0 small text-dark"><?= htmlspecialchars($schoolAddress) ?> | Telp: (022) 7950123 | Website: smkmuthiaharapan.sch.id</p>
-        <p class="mb-0 small text-dark">Email: info@smkmuthiaharapan.sch.id - Akreditasi A (Unggul)</p>
+    <!-- Kop Surat Sekolah Resmi -->
+    <div class="kop-surat d-flex align-items-center justify-content-center gap-3">
+        <?php if ($schoolLogoUrl): ?>
+            <img src="<?= htmlspecialchars($schoolLogoUrl) ?>" alt="Logo Sekolah" style="width: 75px; height: 75px; object-fit: contain;">
+        <?php endif; ?>
+        <div class="text-center flex-grow-1">
+            <h3 class="fw-bold text-uppercase mb-1" style="font-size: 16pt; letter-spacing: 1px;"><?= htmlspecialchars($schoolName) ?></h3>
+            <p class="mb-0 small text-dark"><?= htmlspecialchars($schoolAddress) ?></p>
+            <p class="mb-0 small text-dark">NPSN: <?= htmlspecialchars($schoolNpsn) ?> | Telp: <?= htmlspecialchars($schoolPhone) ?> | Website: smkmuthiaharapan.sch.id</p>
+        </div>
     </div>
 
     <!-- Document Header -->
@@ -179,14 +213,14 @@ $kepsekName = $schoolSettings['nama_kepsek'] ?? 'Drs. H. Ahmad Sudrajat, M.M.';
         <div class="col-6 text-center">
             <p class="mb-1">Mengetahui,</p>
             <p class="fw-bold mb-5">Waka Kesiswaan / Kurikulum</p>
-            <p class="fw-bold mb-0" style="text-decoration: underline;">_________________________</p>
-            <p class="small text-muted mb-0">NIP. 19850312 201001 1 004</p>
+            <p class="fw-bold mb-0">...................................................</p>
+            <p class="small text-muted mb-0">NIP. ...................................................</p>
         </div>
         <div class="col-6 text-center">
             <p class="mb-1">Cicalengka, <?= date('d') ?> <?= $namaBulan ?> <?= $tahun ?></p>
             <p class="fw-bold mb-5">Kepala Sekolah</p>
-            <p class="fw-bold mb-0" style="text-decoration: underline;"><?= htmlspecialchars($kepsekName) ?></p>
-            <p class="small text-muted mb-0">NIP. 19720815 199802 1 002</p>
+            <p class="fw-bold mb-0" style="text-decoration: underline;"><?= htmlspecialchars($headmasterName) ?></p>
+            <p class="small text-muted mb-0"><?= $headmasterNip ? 'NIP. ' . htmlspecialchars($headmasterNip) : 'NIP. ...................................................' ?></p>
         </div>
     </div>
 
