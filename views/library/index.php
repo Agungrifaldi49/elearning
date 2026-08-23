@@ -2,8 +2,25 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+// Calculate KPI Summary Stats
+$totalBooksCount = count($books);
+$pdfCount = 0;
+$videoCount = 0;
+$totalViewsCount = 0;
+
+if (!empty($books)) {
+    foreach ($books as $bItem) {
+        $fType = strtolower($bItem['file_type'] ?? 'pdf');
+        if ($fType === 'pdf') $pdfCount++;
+        if (in_array($fType, ['video','mp4','mkv'])) $videoCount++;
+        $totalViewsCount += (int)($bItem['view_count'] ?? 0);
+    }
+}
+?>
+
 <style>
-/* Modern Digital Library Architecture */
+/* Modern LMS Digital Library Architecture */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 .library-wrapper {
@@ -31,26 +48,50 @@
     pointer-events: none;
 }
 
-/* Book Cover Styling */
+/* KPI Summary Cards */
+.lib-kpi-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+.lib-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+}
+
+/* 3D Glassmorphic Book Card */
 .book-card-item {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 18px;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 20px;
+    transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
+    position: relative;
 }
 .book-card-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 14px 28px -5px rgba(15, 23, 42, 0.09) !important;
+    transform: translateY(-5px);
+    box-shadow: 0 16px 32px -5px rgba(15, 23, 42, 0.12) !important;
     border-color: #cbd5e1;
 }
 
 .book-cover-aspect {
-    height: 160px;
+    height: 165px;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: inset -4px 0 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Book Ribbon Accent */
+.book-ribbon-spine {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    background: rgba(0, 0, 0, 0.25);
 }
 
 .book-title-clamp {
@@ -59,8 +100,28 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     word-break: break-word;
-    font-size: 0.92rem;
+    font-size: 0.93rem;
     line-height: 1.35;
+}
+
+/* Category Filter Pills Bar */
+.cat-pill-btn {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    color: #475569;
+    font-weight: 600;
+    font-size: 0.8rem;
+    border-radius: 30px;
+    padding: 6px 16px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.cat-pill-btn:hover, .cat-pill-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
 }
 
 /* Responsive Overrides */
@@ -70,10 +131,16 @@
         border-radius: 16px !important;
     }
     .book-cover-aspect {
-        height: 130px;
+        height: 135px;
     }
     .book-cover-aspect .fs-1 {
-        font-size: 1.8rem !important;
+        font-size: 1.75rem !important;
+    }
+    .lib-kpi-card {
+        padding: 0.65rem !important;
+    }
+    .lib-kpi-card .fs-4 {
+        font-size: 1.15rem !important;
     }
 }
 </style>
@@ -89,8 +156,8 @@
                     <i class="bi bi-book-fill fs-2"></i>
                 </div>
                 <div>
-                    <h3 class="fw-bold text-white mb-1" style="letter-spacing: -0.4px;">Perpustakaan Digital</h3>
-                    <p class="text-blue-100 small mb-0 fw-medium">Koleksi E-Book, Modul KBM Guru, Referensi Kejuruan, dan Video Pembelajaran Digital.</p>
+                    <h3 class="fw-bold text-white mb-1" style="letter-spacing: -0.4px;">Perpustakaan Digital SMK Muthia Harapan</h3>
+                    <p class="text-blue-100 small mb-0 fw-medium">Pusat Koleksi E-Book, Modul KBM Guru, Referensi Kejuruan, dan Media Pembelajaran Digital.</p>
                 </div>
             </div>
 
@@ -102,10 +169,61 @@
         </div>
     </div>
 
-    <!-- Search & Filter Card -->
+    <!-- KPI Stats Summary Bar -->
+    <div class="row g-2.5 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="lib-kpi-card p-3 d-flex align-items-center gap-2.5">
+                <div class="bg-primary bg-opacity-10 text-primary p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                    <i class="bi bi-bookshelf fs-4"></i>
+                </div>
+                <div>
+                    <small class="text-muted d-block" style="font-size:0.72rem;">Total Koleksi</small>
+                    <strong class="text-dark fs-5 mb-0 fw-extrabold"><?= number_format($totalBooksCount) ?></strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="lib-kpi-card p-3 d-flex align-items-center gap-2.5">
+                <div class="bg-danger bg-opacity-10 text-danger p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                    <i class="bi bi-file-earmark-pdf-fill fs-4"></i>
+                </div>
+                <div>
+                    <small class="text-muted d-block" style="font-size:0.72rem;">E-Book PDF</small>
+                    <strong class="text-dark fs-5 mb-0 fw-extrabold"><?= number_format($pdfCount) ?></strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="lib-kpi-card p-3 d-flex align-items-center gap-2.5">
+                <div class="bg-info bg-opacity-10 text-info p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                    <i class="bi bi-play-circle-fill fs-4"></i>
+                </div>
+                <div>
+                    <small class="text-muted d-block" style="font-size:0.72rem;">Video &amp; Modul</small>
+                    <strong class="text-dark fs-5 mb-0 fw-extrabold"><?= number_format($totalBooksCount - $pdfCount) ?></strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="lib-kpi-card p-3 d-flex align-items-center gap-2.5">
+                <div class="bg-success bg-opacity-10 text-success p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                    <i class="bi bi-eye-fill fs-4"></i>
+                </div>
+                <div>
+                    <small class="text-muted d-block" style="font-size:0.72rem;">Total Dibaca</small>
+                    <strong class="text-dark fs-5 mb-0 fw-extrabold"><?= number_format($totalViewsCount) ?>x</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filters Container -->
     <div class="card border-0 rounded-4 shadow-sm p-3.5 mb-4 bg-white">
-        <div class="row g-2.5 align-items-center">
-            <div class="col-12 col-md-5">
+        <div class="row g-2.5 align-items-center mb-3">
+            <div class="col-12 col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3 text-muted">
                         <i class="bi bi-search"></i>
@@ -125,13 +243,13 @@
                     <option value="Referensi">Referensi Umum</option>
                 </select>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-2">
                 <select id="filterTipe" class="form-select rounded-pill fw-bold text-dark" style="font-size:0.85rem;">
                     <option value="">Semua Format</option>
                     <option value="pdf">PDF E-Book</option>
                     <option value="docx">Word (DOCX)</option>
                     <option value="pptx">PowerPoint (PPTX)</option>
-                    <option value="video">Video Pembelajaran</option>
+                    <option value="video">Video MP4</option>
                 </select>
             </div>
             <div class="col-12 col-md-1 text-end">
@@ -139,6 +257,17 @@
                     <i class="bi bi-arrow-counterclockwise fs-5"></i>
                 </button>
             </div>
+        </div>
+
+        <!-- Quick Category Pills Horizontal Strip -->
+        <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" style="-webkit-overflow-scrolling: touch;">
+            <button type="button" class="cat-pill-btn active" onclick="selectCategoryPill('', this)">Semua Koleksi</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Kejuruan', this)"><i class="bi bi-laptop me-1"></i>Kejuruan / Produktif</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Matematika', this)"><i class="bi bi-calculator me-1"></i>Matematika</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('IPA', this)"><i class="bi bi-virus me-1"></i>IPA &amp; Sains</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('IPS', this)"><i class="bi bi-globe me-1"></i>IPS &amp; Sejarah</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Bahasa', this)"><i class="bi bi-translate me-1"></i>Bahasa</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Modul', this)"><i class="bi bi-journal-check me-1"></i>Modul Guru</button>
         </div>
     </div>
 
@@ -178,9 +307,10 @@
                             ?>
                             <div class="book-cover-aspect text-white p-3 text-center"
                                  style="background: linear-gradient(135deg, <?= $color ?> 0%, <?= $color ?>cc 100%);">
+                                <div class="book-ribbon-spine"></div>
                                 <div class="position-relative z-1">
                                     <i class="bi <?= $tipeIcon ?> fs-1 mb-1 d-block shadow-xs"></i>
-                                    <div class="fw-bold text-truncate" style="font-size:0.78rem; max-width: 140px; margin: 0 auto; opacity: 0.95;"><?= htmlspecialchars($book['judul']) ?></div>
+                                    <div class="fw-bold text-truncate px-2" style="font-size:0.78rem; max-width: 150px; margin: 0 auto; opacity: 0.95;"><?= htmlspecialchars($book['judul']) ?></div>
                                 </div>
                             </div>
                             <div class="position-absolute top-0 end-0 m-2">
@@ -190,12 +320,12 @@
 
                         <!-- Book Content Info -->
                         <div class="p-3">
-                            <h6 class="fw-bold text-dark mb-1 book-title-clamp" title="<?= htmlspecialchars($book['judul']) ?>">
+                            <h6 class="fw-bold text-dark mb-1.5 book-title-clamp" title="<?= htmlspecialchars($book['judul']) ?>">
                                 <?= htmlspecialchars($book['judul']) ?>
                             </h6>
-                            <small class="text-muted d-block mb-2 font-monospace" style="font-size:0.71rem;">
-                                <i class="bi bi-person-circle text-primary me-1"></i><?= htmlspecialchars($book['penulis'] ?: 'Tim Penyusun') ?>
-                            </small>
+                            <div class="mb-2" style="font-size:0.72rem;">
+                                <span class="text-muted"><i class="bi bi-person-fill text-primary me-1"></i><?= htmlspecialchars($book['penulis'] ?: 'Tim Guru') ?></span>
+                            </div>
 
                             <div class="d-flex gap-1 flex-wrap mb-2">
                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size:.65rem;"><?= htmlspecialchars($book['kategori'] ?? 'Umum') ?></span>
@@ -210,9 +340,9 @@
                     <div class="p-3 pt-0">
                         <div class="d-flex align-items-center justify-content-between pt-2 border-top">
                             <div class="text-muted" style="font-size:.7rem;">
-                                <i class="bi bi-eye me-0.5 text-primary"></i><?= number_format($book['view_count'] ?? 0) ?>
+                                <i class="bi bi-eye text-primary me-0.5"></i><?= number_format($book['view_count'] ?? 0) ?>
                                 &nbsp;&bull;&nbsp;
-                                <i class="bi bi-download me-0.5 text-success"></i><?= number_format($book['download_count'] ?? 0) ?>
+                                <i class="bi bi-download text-success me-0.5"></i><?= number_format($book['download_count'] ?? 0) ?>
                             </div>
                             <a href="<?= BASE_URL ?>index.php?url=library/view&id=<?= $book['id'] ?>"
                                class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold text-white shadow-xs" style="font-size:.75rem; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
@@ -230,7 +360,7 @@
 </main>
 
 <script>
-// Real-time catalog filtering
+// Filter functions
 function filterBooks() {
     const q = document.getElementById('searchInput').value.toLowerCase().trim();
     const kategori = document.getElementById('filterKategori').value.toLowerCase();
@@ -245,10 +375,21 @@ function filterBooks() {
     });
 }
 
+function selectCategoryPill(catName, btnEl) {
+    document.querySelectorAll('.cat-pill-btn').forEach(b => b.classList.remove('active'));
+    btnEl.classList.add('active');
+    document.getElementById('filterKategori').value = catName;
+    filterBooks();
+}
+
 function resetFilter() {
     document.getElementById('searchInput').value = '';
     document.getElementById('filterKategori').value = '';
     document.getElementById('filterTipe').value = '';
+    document.querySelectorAll('.cat-pill-btn').forEach(b => b.classList.remove('active'));
+    if (document.querySelector('.cat-pill-btn')) {
+        document.querySelector('.cat-pill-btn').classList.add('active');
+    }
     filterBooks();
 }
 
