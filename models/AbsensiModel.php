@@ -469,6 +469,8 @@ class AbsensiModel extends BaseModel {
                 if ($resG) {
                     $jamMasuk = date('H:i', strtotime($now));
                     $jamSelesaiKbm = date('H:i', strtotime($gSched['max_end']));
+                    $isLate = ($currentTime > '07:15:00');
+                    $statusKet = $isLate ? 'Terlambat' : 'Hadir Tepat Waktu';
                     return [
                         'success' => true,
                         'type' => 'masuk',
@@ -478,7 +480,9 @@ class AbsensiModel extends BaseModel {
                         'kelas' => 'GTK / Pendidik',
                         'jam' => $jamMasuk . ' WIB',
                         'jam_masuk' => $jamMasuk . ' WIB',
-                        'message' => "Presensi MASUK GURU/GTK ({$guru['nama_lengkap']}) berhasil dicatat pukul {$jamMasuk} WIB! (Jadwal KBM Selesai: {$jamSelesaiKbm} WIB)."
+                        'is_late' => $isLate,
+                        'status_keterangan' => $statusKet,
+                        'message' => "Presensi MASUK GURU/GTK ({$guru['nama_lengkap']}) berhasil dicatat pukul {$jamMasuk} WIB! Status: {$statusKet}. (Jadwal KBM Selesai: {$jamSelesaiKbm} WIB)."
                     ];
                 }
             }
@@ -572,6 +576,8 @@ class AbsensiModel extends BaseModel {
 
             if ($res) {
                 $jamMasuk = date('H:i', strtotime($now));
+                $isLate = ($currentTime > '07:15:00');
+                $statusKet = $isLate ? 'Terlambat' : 'Hadir Tepat Waktu';
                 return [
                     'success' => true,
                     'type' => 'masuk',
@@ -580,7 +586,9 @@ class AbsensiModel extends BaseModel {
                     'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
                     'jam' => $jamMasuk . ' WIB',
                     'jam_masuk' => $jamMasuk . ' WIB',
-                    'message' => "Presensi MASUK {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat pukul {$jamMasuk} WIB! Otomatis HADIR di seluruh KBM mapel hari ini."
+                    'is_late' => $isLate,
+                    'status_keterangan' => $statusKet,
+                    'message' => "Presensi MASUK {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat pukul {$jamMasuk} WIB! Status: {$statusKet}."
                 ];
             } else {
                 return ['success' => false, 'message' => 'Gagal menyimpan data presensi ke database.'];

@@ -33,9 +33,14 @@ $dashboardUrl = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/dashboard' :
             <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
                 <div class="d-flex align-items-center justify-content-between mb-3">
                     <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-camera-video-fill text-success me-2"></i>Kamera QR Scanner</h6>
-                    <span class="badge bg-success-subtle text-success border border-success rounded-pill px-2 py-1">
-                        <i class="bi bi-broadcast me-1"></i> Live
-                    </span>
+                    <div class="d-flex align-items-center gap-1">
+                        <button type="button" id="toggleVoiceBtn" onclick="toggleVoiceAnnouncement()" class="btn btn-sm btn-light border text-success rounded-pill px-2 py-0 fw-semibold" style="font-size: 0.78rem;" title="Aktifkan / Matikan Suara Pengumuman Presensi">
+                            <i id="voiceIcon" class="bi bi-volume-up-fill me-1"></i><span id="voiceText">Suara ON</span>
+                        </button>
+                        <span class="badge bg-success-subtle text-success border border-success rounded-pill px-2 py-1">
+                            <i class="bi bi-broadcast me-1"></i> Live
+                        </span>
+                    </div>
                 </div>
 
                 <!-- Camera Selection Dropdown -->
@@ -155,6 +160,52 @@ let scanCount = <?= count($presensiHariIni ?? []) ?>;
 let isProcessing = false;
 let lastScannedText = '';
 let lastScannedTime = 0;
+let voiceEnabled = true;
+
+function toggleVoiceAnnouncement() {
+    voiceEnabled = !voiceEnabled;
+    const icon = document.getElementById('voiceIcon');
+    const text = document.getElementById('voiceText');
+    const btn = document.getElementById('toggleVoiceBtn');
+    if (voiceEnabled) {
+        icon.className = 'bi bi-volume-up-fill me-1';
+        text.textContent = 'Suara ON';
+        btn.className = 'btn btn-sm btn-light border text-success rounded-pill px-2 py-0 fw-semibold';
+        speakVoiceMessage('Suara pengumuman presensi diaktifkan.');
+    } else {
+        icon.className = 'bi bi-volume-mute-fill me-1';
+        text.textContent = 'Suara OFF';
+        btn.className = 'btn btn-sm btn-light border text-muted rounded-pill px-2 py-0 fw-semibold';
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+}
+
+function speakVoiceMessage(textToSpeak) {
+    if (!voiceEnabled || !('speechSynthesis' in window)) return;
+    try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = 'id-ID';
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+
+        const voices = window.speechSynthesis.getVoices();
+        const idVoice = voices.find(v => (v.lang && (v.lang.includes('id') || v.lang.includes('ID'))));
+        if (idVoice) {
+            utterance.voice = idVoice;
+        }
+
+        window.speechSynthesis.speak(utterance);
+    } catch(e) {
+        console.error('Speech synthesis error:', e);
+    }
+}
+
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+    };
+}
 
 function playAudioBeep() {
     try {
@@ -223,8 +274,10 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
             playAudioBeep();
             
             const isPulang = d.type === 'pulang';
+            const statusBadge = d.is_late ? '<span class="badge bg-warning text-dark ms-2"><i class="bi bi-clock-history me-1"></i>Terlambat</span>' : '<span class="badge bg-success ms-2"><i class="bi bi-check-circle me-1"></i>Hadir Tepat Waktu</span>';
+
             resultEl.className = isPulang ? 'alert alert-primary border-0 rounded-3 shadow-sm mb-3' : 'alert alert-success border-0 rounded-3 shadow-sm mb-3';
-            resultEl.innerHTML = '<i class="bi bi-check-circle-fill me-1 fs-5 align-middle"></i> <strong>' + d.nama + '</strong> (' + d.kelas + ') — ' + (isPulang ? 'Pulang: ' + d.jam : 'Masuk: ' + d.jam);
+            resultEl.innerHTML = '<i class="bi bi-check-circle-fill me-1 fs-5 align-middle"></i> <strong>' + d.nama + '</strong> (' + d.kelas + ') — ' + (isPulang ? 'Pulang: ' + d.jam : 'Masuk: ' + d.jam) + (!isPulang ? statusBadge : '');
 
             if (!isPulang) {
                 scanCount++;
@@ -238,11 +291,24 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
 
             document.getElementById('manualNis').value = '';
 
+            // TTS Voice Announcement
+            let speechText = '';
+            if (isPulang) {
+                speechText = `Terima kasih ${d.nama}. Presensi pulang berhasil. Hati-hati di jalan.`;
+            } else {
+                if (d.is_late) {
+                    speechText = `Selamat pagi ${d.nama}. Presensi masuk berhasil, terlambat.`;
+                } else {
+                    speechText = `Selamat pagi ${d.nama}. Presensi masuk berhasil, hadir tepat waktu.`;
+                }
+            }
+            speakVoiceMessage(speechText);
+
             Swal.fire({ 
                 icon: 'success', 
-                title: isPulang ? 'Presensi PULANG Terekam!' : 'Presensi MASUK Terekam!', 
-                html: isPulang ? `<b>${d.nama}</b> (${d.kelas}) berhasil presensi PULANG pukul ${d.jam_pulang}. (Masuk: ${d.jam_masuk}).` : `<b>${d.nama}</b> (${d.kelas}) berhasil presensi MASUK pukul ${d.jam_masuk}. Otomatis HADIR di seluruh KBM mapel hari ini.`, 
-                timer: 3000, 
+                title: isPulang ? 'Presensi PULANG Terekam!' : (d.is_late ? 'Presensi MASUK (Terlambat)' : 'Presensi MASUK (Tepat Waktu)'), 
+                html: isPulang ? `<b>${d.nama}</b> (${d.kelas}) berhasil presensi PULANG pukul ${d.jam_pulang}. (Masuk: ${d.jam_masuk}).` : `<b>${d.nama}</b> (${d.kelas}) berhasil presensi MASUK pukul ${d.jam_masuk}. Status: <b>${d.status_keterangan || 'Hadir Tepat Waktu'}</b>.`, 
+                timer: 4000, 
                 showConfirmButton: false 
             }).then(() => {
                 window.location.reload();
@@ -250,22 +316,30 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
         } else {
             const isNotScheduled = d.is_not_scheduled;
             resultEl.className = (d.already_attended || isNotScheduled) ? 'alert alert-warning border-0 rounded-3 shadow-sm mb-3' : 'alert alert-danger border-0 rounded-3 shadow-sm mb-3';
-            resultEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + (d.message || 'Siswa tidak ditemukan.');
+            resultEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + (d.message || 'Data tidak ditemukan.');
             
             let swalTitle = 'Gagal!';
             let swalIcon = 'error';
+            let speechText = '';
+
             if (d.already_attended) {
                 swalTitle = 'Presensi Sudah Lengkap';
                 swalIcon = 'info';
+                speechText = `Presensi ${d.nama || ''} sudah lengkap hari ini.`;
             } else if (isNotScheduled) {
-                swalTitle = 'Bukan Jadwal Masuk Sekolah';
+                swalTitle = 'Penolakan Presensi';
                 swalIcon = 'warning';
+                speechText = `Maaf, ${d.message || 'Bukan jadwal presensi.'}`;
+            } else {
+                speechText = `Peringatan! ${d.message || 'Data tidak ditemukan.'}`;
             }
+
+            speakVoiceMessage(speechText);
 
             Swal.fire({ 
                 icon: swalIcon, 
                 title: swalTitle, 
-                text: d.message || 'Siswa tidak ditemukan.' 
+                text: d.message || 'Data tidak ditemukan.' 
             });
         }
     })
