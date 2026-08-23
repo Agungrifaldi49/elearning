@@ -25,9 +25,20 @@ if (!empty($quizList)) {
         }
 
         // Fetch questions and analysis for this quiz
-        $stmtSoal = $db->prepare("SELECT s.*, COUNT(js.id) as total_jawaban, SUM(js.is_benar) as total_benar FROM soal s LEFT JOIN jawaban_siswa js ON s.id = js.soal_id WHERE s.quiz_id = ? GROUP BY s.id ORDER BY s.id ASC");
-        $stmtSoal->execute([$q['id']]);
-        $soalList = $stmtSoal->fetchAll();
+        $soalList = [];
+        try {
+            $stmtSoal = $db->prepare("SELECT s.*, COUNT(js.id) as total_jawaban, SUM(COALESCE(js.is_benar, 0)) as total_benar FROM soal s LEFT JOIN jawaban_siswa js ON s.id = js.soal_id WHERE s.quiz_id = ? GROUP BY s.id ORDER BY s.id ASC");
+            $stmtSoal->execute([$q['id']]);
+            $soalList = $stmtSoal->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            try {
+                $stmtSoal = $db->prepare("SELECT s.*, 0 as total_jawaban, 0 as total_benar FROM soal s WHERE s.quiz_id = ? ORDER BY s.id ASC");
+                $stmtSoal->execute([$q['id']]);
+                $soalList = $stmtSoal->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (Throwable $e2) {
+                $soalList = [];
+            }
+        }
 
         $qCount = count($soalList);
         $q['soal_list'] = $soalList;

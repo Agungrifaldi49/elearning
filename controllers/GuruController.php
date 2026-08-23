@@ -1113,9 +1113,23 @@ class GuruController {
 
     public function bankSoal() {
         $guru = $this->getGuruInfo();
-        $guruId = $guru['id'];
+        $guruId = $guru['id'] ?? 0;
 
         $examModel = new ExamModel();
+        
+        $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+
+        if ($isAdmin) {
+            $quizList = $examModel->getQuizList();
+        } else {
+            $quizList = $examModel->getQuizList(null, $guruId);
+            if (empty($quizList)) {
+                // Fallback to all quizzes so teacher can view shared bank soal repositories
+                $quizList = $examModel->getQuizList();
+            }
+        }
+
         require_once ROOT_PATH . 'views/guru/bank_soal.php';
     }
 
