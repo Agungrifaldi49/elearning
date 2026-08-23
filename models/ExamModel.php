@@ -218,6 +218,31 @@ class ExamModel extends BaseModel {
         ];
     }
 
+    public function startQuizAttempt($quizId, $siswaId) {
+        // Reset violation flags for this fresh attempt session
+        $this->resetAttemptViolationState($quizId, $siswaId);
+
+        // Count completed/voided attempts in history
+        $stmtHistCount = $this->db->prepare("SELECT COUNT(*) FROM hasil_quiz_history WHERE siswa_id = ? AND quiz_id = ?");
+        $stmtHistCount->execute([(int)$siswaId, (int)$quizId]);
+        $completedAttempts = (int)$stmtHistCount->fetchColumn();
+
+        // The active attempt number for this session
+        $currentActiveAttempt = $completedAttempts + 1;
+
+        $stmtExist = $this->db->prepare("SELECT id, attempt_count FROM hasil_quiz WHERE siswa_id = ? AND quiz_id = ?");
+        $stmtExist->execute([(int)$siswaId, (int)$quizId]);
+        $exist = $stmtExist->fetch();
+
+        if ($exist) {
+            $stmt = $this->db->prepare("UPDATE hasil_quiz SET attempt_count = GREATEST(COALESCE(attempt_count, 0), ?), started_at = NOW() WHERE id = ?");
+            $stmt->execute([$currentActiveAttempt, $exist['id']]);
+        } else {
+            $stmt = $this->db->prepare("INSERT INTO hasil_quiz (siswa_id, quiz_id, total_nilai, attempt_count, status_lulus, started_at) VALUES (?, ?, 0.00, ?, 'menunggu', NOW())");
+            $stmt->execute([(int)$siswaId, (int)$quizId, $currentActiveAttempt]);
+        }
+    }
+
     public function resetAttemptViolationState($quizId, $siswaId) {
         $stmt = $this->db->prepare("UPDATE hasil_quiz SET is_disqualified = 0, pelanggaran_count = 0 WHERE quiz_id = ? AND siswa_id = ?");
         $stmt->execute([$quizId, $siswaId]);

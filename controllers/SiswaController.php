@@ -343,8 +343,8 @@ class SiswaController {
                 exit();
             }
 
-            // Reset violation state for new allowed attempt
-            $examModel->resetAttemptViolationState($quiz_id, $siswaId);
+            // Start & register active attempt session in DB
+            $examModel->startQuizAttempt($quiz_id, $siswaId);
 
             // Strict Enrollment & Class Isolation Check before taking quiz
             $db = Database::getConnection();
