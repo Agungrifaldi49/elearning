@@ -207,6 +207,7 @@ if (!empty($quizList)) {
                                             </h6>
                                             <small class="text-muted">
                                                 Kelas: <span class="fw-bold text-dark"><?= htmlspecialchars($q['nama_kelas']) ?></span> | 
+                                                Guru Pengampu: <span class="fw-bold text-primary"><i class="bi bi-person-fill me-0.5"></i><?= htmlspecialchars($q['nama_guru'] ?? 'Guru Pengampu') ?></span> | 
                                                 Durasi: <span class="fw-bold text-dark"><?= $q['durasi_menit'] ?> Menit</span> | 
                                                 Batas Kuis: <?= !empty($q['deadline']) ? date('d M Y H:i', strtotime($q['deadline'])) : 'Tanpa Batas' ?>
                                             </small>

@@ -285,18 +285,29 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
         <div class="tab-content" id="quizGuruTabContent">
             
             <!-- TAB 1: PAKET KUIS & BANK SOAL CBT -->
+            <?php
+            $uniqueTeachersMap = [];
+            if ($isAdminMonitoring && !empty($quizList)) {
+                foreach ($quizList as $qItem) {
+                    if (!empty($qItem['guru_id']) && !empty($qItem['nama_guru'])) {
+                        $uniqueTeachersMap[$qItem['guru_id']] = $qItem['nama_guru'];
+                    }
+                }
+                asort($uniqueTeachersMap);
+            }
+            ?>
             <div class="tab-pane fade <?= $activeTab === 'paket' ? 'show active' : '' ?>" id="tab-paket" role="tabpanel">
                 <div class="table-card-custom p-4">
                     
                     <!-- Search & Filter Controls -->
                     <div class="row g-3 mb-4 align-items-center">
-                        <div class="col-12 col-md-5">
+                        <div class="col-12 <?= $isAdminMonitoring ? 'col-md-4' : 'col-md-5' ?>">
                             <div class="input-group">
                                 <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
                                 <input type="text" id="searchQuizInput" class="form-control border-start-0 ps-0" placeholder="Cari judul kuis..." onkeyup="filterGuruQuizTable()">
                             </div>
                         </div>
-                        <div class="col-12 col-sm-6 col-md-3">
+                        <div class="col-12 col-sm-6 <?= $isAdminMonitoring ? 'col-md-4' : 'col-md-3' ?>">
                             <select id="filterQuizMapel" class="form-select" onchange="filterGuruQuizTable()">
                                 <option value="">Semua Mata Pelajaran</option>
                                 <?php foreach ($mapelList as $mp): ?>
@@ -304,7 +315,16 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <?php if (!$isAdminMonitoring): ?>
+                        <?php if ($isAdminMonitoring): ?>
+                            <div class="col-12 col-sm-6 col-md-4">
+                                <select id="filterQuizGuru" class="form-select" onchange="filterGuruQuizTable()">
+                                    <option value="">-- Semua Guru Pengampu --</option>
+                                    <?php foreach ($uniqueTeachersMap as $gId => $gName): ?>
+                                        <option value="<?= $gId ?>"><?= htmlspecialchars($gName) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php else: ?>
                             <div class="col-12 col-sm-6 col-md-4 text-sm-end">
                                 <button class="btn btn-primary px-3 py-2 rounded-pill fw-bold shadow-sm small" data-bs-toggle="modal" data-bs-target="#modalAddQuiz">
                                     <i class="bi bi-plus-circle me-1"></i> Buat Kuis Baru
@@ -340,10 +360,10 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                         $examModel = new ExamModel();
                                         $soalList = $examModel->getSoalByQuiz($q['id']);
                                     ?>
-                                        <tr class="guru-quiz-row" data-title="<?= htmlspecialchars($q['judul']) ?>" data-mapel="<?= $q['mapel_id'] ?>">
+                                        <tr class="guru-quiz-row" data-title="<?= htmlspecialchars(strtolower($q['judul'])) ?>" data-mapel="<?= $q['mapel_id'] ?>" data-guru="<?= $q['guru_id'] ?? '' ?>">
                                             <td class="fw-bold text-muted"><?= $i + 1 ?></td>
                                             <td>
-                                                <div class="fw-bold text-dark fs-6 d-flex align-items-center gap-1.5 flex-wrap">
+                                                <div class="fw-bold text-dark fs-6 d-flex align-items-center gap-1.5 flex-wrap mb-1">
                                                     <?= htmlspecialchars($q['judul']) ?>
                                                     <?php if (($q['kategori'] ?? '') === 'uts'): ?>
                                                         <span class="badge text-white rounded-pill px-2.5 py-1" style="background:#7c3aed; font-size:0.7rem;"><i class="bi bi-trophy-fill me-1"></i>UTS</span>
@@ -357,6 +377,9 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                                         <span class="badge bg-dark text-warning border border-warning rounded-pill px-2.5 py-1 font-monospace" style="font-size:0.7rem;" title="Kunci Akses Token Ujian"><i class="bi bi-key-fill me-1"></i>Token: <?= htmlspecialchars($q['access_key']) ?></span>
                                                     <?php endif; ?>
                                                 </div>
+                                                <?php if ($isAdminMonitoring && !empty($q['nama_guru'])): ?>
+                                                    <span class="badge bg-slate-100 text-slate-700 border me-1 mb-1 font-monospace" style="font-size:0.72rem;"><i class="bi bi-person-fill text-primary me-1"></i>Guru: <?= htmlspecialchars($q['nama_guru']) ?></span>
+                                                <?php endif; ?>
                                                 <small class="text-muted d-block"><?= htmlspecialchars($q['deskripsi'] ?? 'Tanpa deskripsi') ?></small>
                                             </td>
                                             <td><span class="badge-mapel-tag"><i class="bi bi-journal-bookmark me-1"></i><?= htmlspecialchars($q['nama_mapel']) ?></span></td>
@@ -2073,18 +2096,21 @@ function toggleAddSoalType(quizId) {
 }
 
 function filterGuruQuizTable() {
-    const searchVal = document.getElementById('searchQuizInput').value.toLowerCase();
-    const filterMapel = document.getElementById('filterQuizMapel').value;
+    const searchVal = (document.getElementById('searchQuizInput')?.value || '').toLowerCase().trim();
+    const filterMapel = document.getElementById('filterQuizMapel')?.value || '';
+    const filterGuru = document.getElementById('filterQuizGuru')?.value || '';
 
     const rows = document.querySelectorAll('.guru-quiz-row');
     rows.forEach(row => {
         const title = (row.dataset.title || '').toLowerCase();
         const mapelId = row.dataset.mapel || '';
+        const guruId = row.dataset.guru || '';
 
-        const matchSearch = title.includes(searchVal);
+        const matchSearch = !searchVal || title.includes(searchVal);
         const matchMapel = !filterMapel || mapelId === filterMapel;
+        const matchGuru = !filterGuru || guruId === filterGuru;
 
-        if (matchSearch && matchMapel) {
+        if (matchSearch && matchMapel && matchGuru) {
             row.style.display = '';
         } else {
             row.style.display = 'none';
