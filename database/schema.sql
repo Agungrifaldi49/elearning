@@ -340,6 +340,21 @@ CREATE TABLE absensi (
     FOREIGN KEY (siswa_id) REFERENCES siswa(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 23b. Absensi Guru
+CREATE TABLE IF NOT EXISTS absensi_guru (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    guru_id INT NOT NULL,
+    tanggal DATE NOT NULL,
+    waktu_masuk DATETIME NULL,
+    waktu_pulang DATETIME NULL,
+    waktu_hadir DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'Hadir',
+    qr_code VARCHAR(100) NULL,
+    keterangan TEXT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (guru_id) REFERENCES guru(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 24. Pengumuman
 CREATE TABLE pengumuman (
     id INT AUTO_INCREMENT PRIMARY KEY,

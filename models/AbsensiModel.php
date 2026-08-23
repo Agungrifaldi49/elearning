@@ -32,6 +32,23 @@ class AbsensiModel extends BaseModel {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
             $this->db->exec($sql);
 
+            $sqlGuru = "CREATE TABLE IF NOT EXISTS absensi_guru (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                guru_id INT NOT NULL,
+                tanggal DATE NOT NULL,
+                waktu_masuk DATETIME NULL,
+                waktu_pulang DATETIME NULL,
+                waktu_hadir DATETIME DEFAULT CURRENT_TIMESTAMP,
+                status VARCHAR(20) DEFAULT 'Hadir',
+                qr_code VARCHAR(100) NULL,
+                keterangan TEXT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                INDEX (guru_id),
+                INDEX (tanggal),
+                INDEX (qr_code)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+            $this->db->exec($sqlGuru);
+
             $this->db->exec("ALTER TABLE absensi MODIFY COLUMN jadwal_id INT NULL");
 
             $stmt = $this->db->query("SHOW COLUMNS FROM absensi");
