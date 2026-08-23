@@ -223,16 +223,16 @@ if (!empty($books)) {
     <!-- Search & Filters Container -->
     <div class="card border-0 rounded-4 shadow-sm p-3.5 mb-4 bg-white">
         <div class="row g-2.5 align-items-center mb-3">
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-md-4">
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3 text-muted">
                         <i class="bi bi-search"></i>
                     </span>
-                    <input type="text" id="searchInput" class="form-control bg-light border-start-0 rounded-end-pill ps-0" placeholder="Cari judul e-book, penulis, atau kata kunci..." style="font-size:0.88rem;">
+                    <input type="text" id="searchInput" class="form-control bg-light border-start-0 rounded-end-pill ps-0" placeholder="Cari judul e-book, penulis..." style="font-size:0.85rem;">
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <select id="filterKategori" class="form-select rounded-pill fw-bold text-dark" style="font-size:0.85rem;">
+                <select id="filterKategori" class="form-select rounded-pill fw-bold text-dark" style="font-size:0.83rem;">
                     <option value="">Semua Kategori</option>
                     <option value="Kejuruan">Kejuruan / Produktif</option>
                     <option value="Matematika">Matematika</option>
@@ -243,8 +243,8 @@ if (!empty($books)) {
                     <option value="Referensi">Referensi Umum</option>
                 </select>
             </div>
-            <div class="col-6 col-md-2">
-                <select id="filterTipe" class="form-select rounded-pill fw-bold text-dark" style="font-size:0.85rem;">
+            <div class="col-6 col-md-3">
+                <select id="filterTipe" class="form-select rounded-pill fw-bold text-dark" style="font-size:0.83rem;">
                     <option value="">Semua Format</option>
                     <option value="pdf">PDF E-Book</option>
                     <option value="docx">Word (DOCX)</option>
@@ -252,9 +252,9 @@ if (!empty($books)) {
                     <option value="video">Video MP4</option>
                 </select>
             </div>
-            <div class="col-12 col-md-1 text-end">
-                <button class="btn btn-outline-secondary rounded-circle p-2 w-100" onclick="resetFilter()" title="Reset Filter">
-                    <i class="bi bi-arrow-counterclockwise fs-5"></i>
+            <div class="col-12 col-md-2">
+                <button type="button" class="btn btn-outline-danger fw-bold rounded-pill w-100 py-2 d-flex align-items-center justify-content-center gap-1.5 shadow-xs" onclick="resetFilter()" title="Reset Semua Filter" style="font-size:0.82rem;">
+                    <i class="bi bi-arrow-counterclockwise fs-6"></i> Reset Filter
                 </button>
             </div>
         </div>
