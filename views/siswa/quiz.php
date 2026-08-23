@@ -292,8 +292,8 @@
                                             <i class="bi bi-arrow-repeat me-1"></i> Kerjakan Ulang
                                         </a>
                                     <?php else: ?>
-                                        <button type="button" class="btn btn-outline-secondary flex-grow-1 fw-bold rounded-pill shadow-xs py-2 small" disabled style="font-size:0.75rem;">
-                                            <i class="bi bi-lock-fill me-1"></i> Batas Percobaan Habis (<?= $attCount ?>/<?= $maxAtt > 0 ? $maxAtt.'x' : '∞' ?>)
+                                        <button type="button" class="btn btn-outline-danger flex-grow-1 fw-bold rounded-pill shadow-xs py-2 small d-flex align-items-center justify-content-center gap-1" data-bs-toggle="modal" data-bs-target="#modalSusulan<?= $q['id'] ?>" style="font-size:0.75rem;">
+                                            <i class="bi bi-shield-x me-1"></i> Minta Buka Kunci / Susulan
                                         </button>
                                     <?php endif; ?>
                                     <a href="<?= BASE_URL ?>index.php?url=siswa/reviewQuiz&id=<?= $q['id'] ?>" class="btn btn-outline-secondary fw-bold rounded-pill py-2 small" style="min-width:75px;">
