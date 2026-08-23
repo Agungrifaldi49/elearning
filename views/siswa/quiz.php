@@ -279,39 +279,48 @@
                 $statusCardVal = $isDisqualified ? 'didiskualifikasi' : (!$isEnrolled ? 'terkunci' : ($isExpired && !$canAccess ? 'terkunci' : 'terdaftar'));
             ?>
                 <div class="col-12 col-md-6 col-xl-4 quiz-item-col" data-title="<?= htmlspecialchars(strtolower($q['judul'])) ?>" data-mapel="<?= htmlspecialchars($q['nama_mapel']) ?>" data-status="<?= $statusCardVal ?>">
-                    <div class="quiz-card-item <?= $cardStatusClass ?> p-3.5 p-sm-4 shadow-sm border-0 rounded-4 d-flex flex-column justify-content-between">
+                    <div class="quiz-card-item <?= $cardStatusClass ?> p-3.5 p-sm-4 shadow-sm border-0 rounded-4 d-flex flex-column justify-content-between text-center">
                         <div>
-                            <!-- Header Row: Icon, Mapel Badge & Status Badge -->
-                            <div class="d-flex align-items-center justify-content-between mb-3 gap-2 flex-wrap">
-                                <div class="d-flex align-items-center gap-2 overflow-hidden" style="max-width: 68%;">
-                                    <div class="rounded-circle <?= !$canAccess ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle' ?> d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 38px; height: 38px;">
-                                        <i class="bi <?= !$canAccess ? 'bi-lock-fill' : 'bi-stopwatch-fill' ?> fs-5"></i>
-                                    </div>
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 fw-bold text-truncate" style="font-size:0.75rem;" title="<?= htmlspecialchars($q['nama_mapel']) ?>">
-                                        <i class="bi bi-journal-bookmark me-1"></i><?= htmlspecialchars($q['nama_mapel']) ?>
-                                    </span>
+                            <!-- Top Bar: Category Pill & Status Pill -->
+                            <div class="d-flex align-items-center justify-content-between mb-3 gap-2">
+                                <div>
+                                    <?php if (($q['kategori'] ?? '') === 'uts'): ?>
+                                        <span class="badge text-white rounded-pill px-2.5 py-1" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); font-size:0.7rem;"><i class="bi bi-trophy-fill me-1"></i>UTS</span>
+                                    <?php elseif (($q['kategori'] ?? '') === 'uas'): ?>
+                                        <span class="badge bg-danger text-white rounded-pill px-2.5 py-1" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); font-size:0.7rem;"><i class="bi bi-award-fill me-1"></i>UAS</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-primary text-white rounded-pill px-2.5 py-1" style="font-size:0.7rem;"><i class="bi bi-file-text me-1"></i>Kuis Harian</span>
+                                    <?php endif; ?>
                                 </div>
 
-                                <div class="d-flex gap-1 align-items-center flex-shrink-0">
-                                    <?php if (($q['kategori'] ?? '') === 'uts'): ?>
-                                        <span class="badge text-white rounded-pill px-2.5 py-1" style="background:#7c3aed; font-size:0.7rem;"><i class="bi bi-trophy-fill me-1"></i>UTS</span>
-                                    <?php elseif (($q['kategori'] ?? '') === 'uas'): ?>
-                                        <span class="badge bg-danger text-white rounded-pill px-2.5 py-1" style="font-size:0.7rem;"><i class="bi bi-award-fill me-1"></i>UAS</span>
-                                    <?php endif; ?>
-
+                                <div>
                                     <?php if ($isDisqualified): ?>
-                                        <span class="badge bg-danger text-white rounded-pill px-2 py-1 fw-bold" style="font-size:0.68rem;">Diskualifikasi</span>
+                                        <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.68rem;">Diskualifikasi</span>
                                     <?php elseif ($isExpired): ?>
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1 fw-bold" style="font-size:0.68rem;">Expired</span>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.68rem;">Expired</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.68rem;">Aktif</span>
                                     <?php endif; ?>
                                 </div>
                             </div>
 
+                            <!-- CENTER AREA: Icon Avatar & Subject Name -->
+                            <div class="my-2 text-center">
+                                <div class="rounded-circle <?= !$canAccess ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle' ?> d-inline-flex align-items-center justify-content-center shadow-xs mb-2" style="width: 52px; height: 52px;">
+                                    <i class="bi <?= !$canAccess ? 'bi-lock-fill' : 'bi-stopwatch-fill' ?> fs-3"></i>
+                                </div>
+                                <div>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.8rem;" title="<?= htmlspecialchars($q['nama_mapel']) ?>">
+                                        <i class="bi bi-journal-bookmark-fill me-1.5"></i><?= htmlspecialchars($q['nama_mapel']) ?>
+                                    </span>
+                                </div>
+                            </div>
+
                             <!-- Quiz Title & Teacher Info -->
-                            <h5 class="fw-bold text-dark mb-1.5 quiz-title-clamp" title="<?= htmlspecialchars($q['judul']) ?>">
+                            <h5 class="fw-bold text-dark mb-1.5 quiz-title-clamp text-center px-1" title="<?= htmlspecialchars($q['judul']) ?>">
                                 <?= htmlspecialchars($q['judul']) ?>
                             </h5>
-                            <div class="mb-3">
+                            <div class="mb-3 text-center">
                                 <span class="badge rounded-pill px-2.5 py-1 font-monospace border" style="font-size: 0.72rem; background: #f8fafc; color: #475569; border-color: #e2e8f0 !important;">
                                     <i class="bi bi-person-fill text-primary me-1"></i>Guru: <?= htmlspecialchars($q['nama_guru'] ?? 'Guru Pengampu') ?>
                                 </span>
