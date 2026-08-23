@@ -329,7 +329,6 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
             `;
 
             tbody.insertBefore(tr, tbody.firstChild);
-
             setTimeout(() => { tr.classList.remove('bg-success-subtle'); }, 2000);
 
             document.getElementById('manualNis').value = '';
@@ -347,21 +346,25 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
             }
             speakVoiceMessage(speechText);
 
-            // Floating Auto-Dismiss Toast Alert (No OK button)
-            Toast.fire({
-                icon: 'success',
-                title: isPulang ? `Presensi PULANG: ${d.nama}` : `Presensi MASUK: ${d.nama}`,
-                text: isPulang ? `Pulang pukul ${d.jam_pulang}` : `Masuk pukul ${d.jam_masuk} (${d.status_keterangan || 'Tepat Waktu'})`
+            // Centered SweetAlert Modal Popup WITHOUT OK Button (Auto-dismiss in 2.5s)
+            Swal.fire({
+                icon: isPulang ? 'info' : (d.is_late ? 'warning' : 'success'),
+                title: isPulang ? 'Presensi PULANG Terekam!' : (d.is_late ? 'Presensi MASUK (Terlambat)' : 'Presensi MASUK (Tepat Waktu)'),
+                html: isPulang ? `<b>${d.nama}</b> (${d.kelas}) berhasil presensi PULANG pukul <b>${d.jam_pulang}</b>. (Masuk: ${d.jam_masuk}).` : `<b>${d.nama}</b> (${d.kelas}) berhasil presensi MASUK pukul <b>${d.jam_masuk}</b>.<br><span class="badge bg-success-subtle text-success border border-success mt-2 px-3 py-1 fs-6">Status: ${d.status_keterangan || 'Hadir Tepat Waktu'}</span>`,
+                showConfirmButton: false,
+                timer: 2500,
+                timerProgressBar: true
+            }).then(() => {
+                isProcessing = false;
             });
 
-            // Re-enable fast scanning mode instantly (1.5 seconds delay for duplicate prevention)
-            setTimeout(() => { isProcessing = false; }, 1500);
+            setTimeout(() => { isProcessing = false; }, 2500);
         } else {
             const isNotScheduled = d.is_not_scheduled;
             resultEl.className = (d.already_attended || isNotScheduled) ? 'alert alert-warning border-0 rounded-3 shadow-sm mb-3' : 'alert alert-danger border-0 rounded-3 shadow-sm mb-3';
             resultEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> ' + (d.message || 'Data tidak ditemukan.');
             
-            let swalTitle = 'Gagal';
+            let swalTitle = 'Gagal!';
             let swalIcon = 'error';
             let speechText = '';
 
@@ -379,14 +382,19 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
 
             speakVoiceMessage(speechText);
 
-            // Non-blocking Auto-Dismiss Toast without OK button
-            Toast.fire({ 
+            // Centered SweetAlert Modal Popup WITHOUT OK Button for errors (Auto-dismiss in 3s)
+            Swal.fire({ 
                 icon: swalIcon, 
                 title: swalTitle, 
-                text: d.message || 'Data tidak ditemukan.' 
+                text: d.message || 'Data tidak ditemukan.',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            }).then(() => {
+                isProcessing = false;
             });
 
-            setTimeout(() => { isProcessing = false; }, 1500);
+            setTimeout(() => { isProcessing = false; }, 3000);
         }
     })
     .catch(() => {
