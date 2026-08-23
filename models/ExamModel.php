@@ -148,6 +148,19 @@ class ExamModel extends BaseModel {
         return true;
     }
 
+    public function getSiswaAttemptCount($quizId, $siswaId) {
+        $stmtHist = $this->db->prepare("SELECT COUNT(*) FROM hasil_quiz_history WHERE quiz_id = ? AND siswa_id = ?");
+        $stmtHist->execute([(int)$quizId, (int)$siswaId]);
+        $histCount = (int)$stmtHist->fetchColumn();
+
+        $stmtHQ = $this->db->prepare("SELECT attempt_count FROM hasil_quiz WHERE quiz_id = ? AND siswa_id = ?");
+        $stmtHQ->execute([(int)$quizId, (int)$siswaId]);
+        $hqRow = $stmtHQ->fetch();
+        $hqAttempts = (int)($hqRow['attempt_count'] ?? 0);
+
+        return max($histCount, $hqAttempts);
+    }
+
     public function canSiswaAccessQuiz($quizId, $siswaId) {
         $quiz = $this->getQuizById($quizId);
         if (!$quiz) return ['access' => false, 'reason' => 'Quiz tidak ditemukan'];
@@ -157,20 +170,11 @@ class ExamModel extends BaseModel {
 
         // Fetch student's attempt & disqualification state
         $maxAttempts = isset($quiz['max_attempts']) ? (int)$quiz['max_attempts'] : 1;
+        $attemptCount = $this->getSiswaAttemptCount($quizId, $siswaId);
+
         $stmtHQ = $this->db->prepare("SELECT is_disqualified, pelanggaran_count, attempt_count, total_nilai, nilai_tertinggi FROM hasil_quiz WHERE quiz_id = ? AND siswa_id = ?");
         $stmtHQ->execute([$quizId, $siswaId]);
         $hqRow = $stmtHQ->fetch();
-
-        $attemptCount = 0;
-        if ($hqRow) {
-            $attemptCount = (int)($hqRow['attempt_count'] ?? 0);
-            $stmtHistCount = $this->db->prepare("SELECT COUNT(*) FROM hasil_quiz_history WHERE siswa_id = ? AND quiz_id = ?");
-            $stmtHistCount->execute([$quizId, $siswaId]);
-            $histCount = (int)$stmtHistCount->fetchColumn();
-            if ($histCount > $attemptCount) {
-                $attemptCount = $histCount;
-            }
-        }
 
         // Check susulan status
         $stmtS = $this->db->prepare("SELECT * FROM quiz_susulan WHERE quiz_id = ? AND siswa_id = ? ORDER BY id DESC LIMIT 1");
