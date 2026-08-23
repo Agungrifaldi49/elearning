@@ -11,30 +11,41 @@
     padding-top: 28px !important;
 }
 
-/* Premium Hero Banner */
+/* Premium Glassmorphic Hero Banner */
 .quiz-hero-banner {
-    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
-    border-radius: 18px;
-    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0284c7 100%);
+    border-radius: 20px;
+    box-shadow: 0 12px 30px -5px rgba(15, 23, 42, 0.22);
     position: relative;
     overflow: hidden;
+}
+
+.quiz-hero-banner::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
 }
 
 /* Card Architecture */
 .quiz-card-item {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    border-radius: 18px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
     height: 100%;
     display: flex;
     flex-direction: column;
 }
 
 .quiz-card-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 25px -5px rgba(15, 23, 42, 0.08) !important;
+    transform: translateY(-4px);
+    box-shadow: 0 14px 28px -5px rgba(15, 23, 42, 0.1) !important;
     border-color: #cbd5e1;
 }
 
@@ -49,16 +60,18 @@
     border-top: 4px solid #ef4444 !important;
 }
 
-.quiz-icon-badge {
-    width: 58px;
-    height: 58px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+/* Custom KPI Stat Cards */
+.student-kpi-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+.student-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
 }
 
-/* Custom Badges */
 .badge-mapel-tag {
     background-color: #eff6ff;
     color: #1d4ed8;
@@ -74,19 +87,19 @@
 <div class="container-fluid pt-3">
     
     <!-- Hero Banner Header -->
-    <div class="quiz-hero-banner text-white p-4 mb-4">
+    <div class="quiz-hero-banner text-white p-4 p-md-5 mb-4">
         <div class="d-flex justify-content-between align-items-start align-items-md-center flex-column flex-md-row gap-3 position-relative z-1">
             <div class="d-flex align-items-center gap-3">
-                <div class="bg-primary bg-gradient p-3 rounded-4 text-white shadow-sm d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                <div class="bg-primary bg-gradient p-3.5 rounded-4 text-white shadow-sm d-flex align-items-center justify-content-center" style="width: 58px; height: 58px;">
                     <i class="bi bi-patch-question-fill fs-2"></i>
                 </div>
                 <div>
-                    <h4 class="fw-bold text-white mb-1" style="letter-spacing: -0.3px;">Kuis & Ujian CBT Online</h4>
+                    <h3 class="fw-bold text-white mb-1" style="letter-spacing: -0.4px;">Kuis & Ujian CBT Online</h3>
                     <p class="text-info-subtle small mb-0 fw-medium">Pilih kuis atau ujian CBT online aktif pada kelas terdaftar Anda.</p>
                 </div>
             </div>
 
-            <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-warning text-dark fw-bold rounded-pill shadow-sm px-3.5 py-2 text-nowrap" style="font-size: 0.88rem; width: fit-content; max-width: 100%;">
+            <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-warning text-dark fw-bold rounded-pill shadow-sm px-4 py-2.5 text-nowrap" style="font-size: 0.88rem; width: fit-content; max-width: 100%;">
                 <i class="bi bi-key-fill me-1.5"></i> Daftar Mapel Baru (Key)
             </a>
         </div>
@@ -105,6 +118,72 @@
         <small class="text-secondary fw-semibold" style="font-size: 0.8rem;">
             <i class="bi bi-shield-check text-success me-1"></i>Filter khusus kelas & jurusan Anda
         </small>
+    </div>
+
+    <!-- 📊 KPI SUMMARY CARDS FOR STUDENT -->
+    <?php
+    $totalQuizzesStudent = count($quizList ?? []);
+    $completedQuizzesCount = count($completedMap ?? []);
+    $readyQuizzesCount = 0;
+    $sumScores = 0;
+
+    if (!empty($quizList)) {
+        foreach ($quizList as $qItem) {
+            if (isset($completedMap[$qItem['id']])) {
+                $score = (float)($completedMap[$qItem['id']]['nilai_tertinggi'] ?? $completedMap[$qItem['id']]['total_nilai'] ?? 0);
+                $sumScores += $score;
+            } else {
+                $readyQuizzesCount++;
+            }
+        }
+    }
+    $avgScore = $completedQuizzesCount > 0 ? round($sumScores / $completedQuizzesCount, 1) : 0;
+    ?>
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="student-kpi-card p-3 text-center h-100">
+                <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-collection-play-fill fs-5"></i>
+                    </div>
+                    <span class="fw-bold text-primary fs-4"><?= $totalQuizzesStudent ?></span>
+                </div>
+                <small class="text-muted fw-semibold">Total Kuis Tersedia</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="student-kpi-card p-3 text-center h-100">
+                <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                    <div class="bg-success bg-opacity-10 text-success rounded-circle p-2 d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-check-circle-fill fs-5"></i>
+                    </div>
+                    <span class="fw-bold text-success fs-4"><?= $completedQuizzesCount ?></span>
+                </div>
+                <small class="text-muted fw-semibold">Kuis Selesai</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="student-kpi-card p-3 text-center h-100">
+                <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                    <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-play-circle-fill fs-5"></i>
+                    </div>
+                    <span class="fw-bold text-info fs-4"><?= $readyQuizzesCount ?></span>
+                </div>
+                <small class="text-muted fw-semibold">Belum Dikerjakan</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="student-kpi-card p-3 text-center h-100">
+                <div class="d-flex align-items-center justify-content-center gap-2 mb-1">
+                    <div class="bg-warning bg-opacity-15 text-warning-emphasis rounded-circle p-2 d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                        <i class="bi bi-trophy-fill fs-5"></i>
+                    </div>
+                    <span class="fw-bold text-warning-emphasis fs-4"><?= number_format($avgScore, 1) ?></span>
+                </div>
+                <small class="text-muted fw-semibold">Rata-Rata Nilai</small>
+            </div>
+        </div>
     </div>
 
     <!-- Search & Filter Controls Card -->
