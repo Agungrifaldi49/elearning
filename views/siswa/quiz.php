@@ -308,18 +308,20 @@
                             </div>
 
                             <!-- Quiz Title & Teacher Info -->
-                            <h5 class="fw-bold text-dark mb-1 quiz-title-clamp" title="<?= htmlspecialchars($q['judul']) ?>">
+                            <h5 class="fw-bold text-dark mb-1.5 quiz-title-clamp" title="<?= htmlspecialchars($q['judul']) ?>">
                                 <?= htmlspecialchars($q['judul']) ?>
                             </h5>
-                            <div class="text-muted small mb-3">
-                                <i class="bi bi-person-circle text-primary me-1"></i>Guru: <strong><?= htmlspecialchars($q['nama_guru'] ?? 'Guru Pengampu') ?></strong>
+                            <div class="mb-3">
+                                <span class="badge rounded-pill px-2.5 py-1 font-monospace border" style="font-size: 0.72rem; background: #f8fafc; color: #475569; border-color: #e2e8f0 !important;">
+                                    <i class="bi bi-person-fill text-primary me-1"></i>Guru: <?= htmlspecialchars($q['nama_guru'] ?? 'Guru Pengampu') ?>
+                                </span>
                             </div>
 
-                            <!-- Meta Info Bar (Deadline, Durasi, Attempt) -->
-                            <div class="p-3 bg-light rounded-3 mb-3 border border-slate-200">
+                            <!-- Meta Info Specs Box (Duration & Attempts & Deadline) -->
+                            <div class="p-3 rounded-3 mb-3 border" style="background: #f8fafc; border-color: #e2e8f0 !important;">
                                 <div class="row g-2 text-center" style="font-size: 0.78rem;">
                                     <div class="col-6 border-end">
-                                        <span class="text-muted d-block mb-1"><i class="bi bi-clock me-1 text-warning"></i>Durasi</span>
+                                        <span class="text-muted d-block mb-0.5" style="font-size:0.72rem;"><i class="bi bi-clock-history me-1 text-warning"></i>Durasi Ujian</span>
                                         <strong class="text-dark fs-6"><?= $q['durasi_menit'] ?> Menit</strong>
                                     </div>
                                     <div class="col-6">
@@ -328,20 +330,20 @@
                                         $currentAttemptDone = isset($completedMap[$q['id']]) ? (int)($completedMap[$q['id']]['attempt_count'] ?? 1) : 0;
                                         $sisaAttempts = ($maxAttemptsVal == 0) ? '∞' : max(0, $maxAttemptsVal - $currentAttemptDone);
                                         ?>
-                                        <span class="text-muted d-block mb-1"><i class="bi bi-arrow-repeat me-1 text-primary"></i>Sisa Kesempatan</span>
+                                        <span class="text-muted d-block mb-0.5" style="font-size:0.72rem;"><i class="bi bi-arrow-repeat me-1 text-primary"></i>Sisa Kesempatan</span>
                                         <strong class="text-dark fs-6"><?= $sisaAttempts ?>x</strong>
                                     </div>
                                 </div>
                                 <?php if (!empty($q['deadline'])): ?>
-                                    <div class="mt-2 pt-2 border-top text-center text-danger fw-semibold" style="font-size: 0.75rem;">
-                                        <i class="bi bi-calendar-x me-1"></i>Deadline: <?= date('d M Y, H:i', strtotime($q['deadline'])) ?> WIB
+                                    <div class="mt-2 pt-2 border-top text-center text-danger fw-semibold" style="font-size: 0.73rem;">
+                                        <i class="bi bi-calendar-event me-1"></i>Deadline: <?= date('d M Y, H:i', strtotime($q['deadline'])) ?> WIB
                                     </div>
                                 <?php endif; ?>
                             </div>
                         </div>
 
                         <!-- Action Button Area -->
-                        <div class="pt-2">
+                        <div class="pt-1">
                             <?php 
                             $needsToken = in_array($q['kategori'] ?? '', ['uts', 'uas']) && !empty($q['access_key']) && empty($_SESSION['quiz_access_key_' . $q['id']]);
                             $susulanStatus = $accessCheck['status'] ?? '';
@@ -352,7 +354,7 @@
                                 </a>
 
                             <?php elseif ($susulanStatus === 'disetujui_susulan'): ?>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle mb-2 d-block py-2 rounded-pill fw-bold small text-wrap">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle mb-2 d-block py-2 rounded-pill fw-bold small text-wrap text-center">
                                     <i class="bi bi-check-circle-fill me-1"></i>Izin Susulan Disetujui Guru
                                 </span>
                                 <?php if ($needsToken): ?>
@@ -366,12 +368,12 @@
                                 <?php endif; ?>
 
                             <?php elseif ($susulanStatus === 'pending'): ?>
-                                <button type="button" class="btn btn-warning text-dark w-100 fw-bold rounded-pill shadow-xs py-2" disabled>
+                                <button type="button" class="btn btn-warning text-dark w-100 fw-bold rounded-pill shadow-xs py-2 w-100" disabled>
                                     <i class="bi bi-hourglass-split me-1"></i> Permohonan Susulan Terkirim
                                 </button>
 
                             <?php elseif ($susulanStatus === 'ditolak'): ?>
-                                <button type="button" class="btn btn-outline-danger w-100 fw-bold rounded-pill shadow-xs py-2" disabled>
+                                <button type="button" class="btn btn-outline-danger w-100 fw-bold rounded-pill shadow-xs py-2 w-100" disabled>
                                     <i class="bi bi-x-circle-fill me-1"></i> Susulan Ditolak Guru
                                 </button>
 
@@ -392,9 +394,12 @@
                                 $highestScore = (float)($comp['nilai_tertinggi'] ?? $comp['total_nilai'] ?? 0);
                                 $canReattempt = ($maxAtt == 0 || $attCount < $maxAtt);
                             ?>
-                                <div class="bg-success bg-opacity-10 text-success border border-success border-opacity-25 p-2 rounded-3 text-center mb-2">
-                                    <span class="small fw-bold d-block"><i class="bi bi-trophy-fill me-1"></i>Nilai Tertinggi: <?= number_format($highestScore, 1) ?></span>
-                                    <span class="text-muted" style="font-size: 0.72rem;">(Percobaan ke-<?= $attCount ?> dari <?= $maxAtt > 0 ? $maxAtt.'x' : '∞' ?>)</span>
+                                <div class="p-2.5 mb-2 rounded-3 text-center border" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.15) 100%); border-color: rgba(16, 185, 129, 0.3) !important;">
+                                    <div class="d-flex align-items-center justify-content-center gap-1 text-success fw-bold">
+                                        <i class="bi bi-trophy-fill text-warning fs-6"></i>
+                                        <span class="fs-6">Nilai Tertinggi: <?= number_format($highestScore, 1) ?></span>
+                                    </div>
+                                    <span class="text-muted d-block mt-0.5" style="font-size: 0.71rem;">(Percobaan ke-<?= $attCount ?> dari <?= $maxAtt > 0 ? $maxAtt.'x' : '∞' ?>)</span>
                                 </div>
 
                                 <div class="d-flex gap-2">
