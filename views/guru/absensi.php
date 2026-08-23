@@ -7,6 +7,7 @@ $currentModuleUrl = $_GET['url'] ?? '';
 $isAdminRoute = (strpos($currentModuleUrl, 'admin/') === 0 || strtolower(AuthHelper::user()['role_name'] ?? '') === 'administrator');
 $scanQrUrl = $isAdminRoute ? BASE_URL . 'index.php?url=admin/scanQr' : BASE_URL . 'index.php?url=guru/scanQr';
 $formAbsensiUrl = $isAdminRoute ? BASE_URL . 'index.php?url=admin/absensi' : BASE_URL . 'index.php?url=guru/absensi';
+$recapBulananUrl = $isAdminRoute ? BASE_URL . 'index.php?url=admin/recapBulanan' : BASE_URL . 'index.php?url=guru/recapBulanan';
 ?>
 <main class="main-content px-3 px-md-4">
     <div class="container-fluid">
@@ -15,9 +16,12 @@ $formAbsensiUrl = $isAdminRoute ? BASE_URL . 'index.php?url=admin/absensi' : BAS
                 <h4 class="fw-bold mb-1"><i class="bi bi-calendar-check-fill text-primary me-2"></i>Rekap Absensi Presensi & QR Code Scanner</h4>
                 <p class="text-muted small mb-0">Data presensi otomatis terhubung secara langsung dengan hasil Scan QR Code Siswa dan Guru/GTK.</p>
             </div>
-            <div>
-                <a href="<?= $scanQrUrl ?>" class="btn btn-success text-white rounded-pill px-4 fw-bold shadow-sm">
-                    <i class="bi bi-qr-code-scan me-1"></i> Buka QR Code Scanner
+            <div class="d-flex gap-2">
+                <a href="<?= $recapBulananUrl ?>" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold shadow-xs">
+                    <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Rekap Absensi Bulanan
+                </a>
+                <a href="<?= $scanQrUrl ?>" class="btn btn-success text-white rounded-pill px-3 py-2 fw-bold shadow-xs">
+                    <i class="bi bi-qr-code-scan me-1"></i> QR Code Scanner
                 </a>
             </div>
         </div>

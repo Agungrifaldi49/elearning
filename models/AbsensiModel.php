@@ -701,4 +701,216 @@ class AbsensiModel extends BaseModel {
             return [];
         }
     }
+
+    public function getMonthlyRecapSiswa($bulan, $tahun, $kelasId = null) {
+        $bulan = sprintf('%02d', (int)$bulan);
+        $tahun = (int)$tahun;
+        $numDays = (int)date('t', strtotime("$tahun-$bulan-01"));
+        $startDate = "$tahun-$bulan-01";
+        $endDate = "$tahun-$bulan-" . sprintf('%02d', $numDays);
+
+        $params = [];
+        $whereSql = "";
+        if ($kelasId && (int)$kelasId > 0) {
+            $whereSql = " WHERE s.kelas_id = ? ";
+            $params[] = (int)$kelasId;
+        }
+
+        $stmtS = $this->db->prepare("
+            SELECT s.id as siswa_id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas
+            FROM siswa s
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            {$whereSql}
+            ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
+        ");
+        $stmtS->execute($params);
+        $siswaList = $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $stmtA = $this->db->prepare("
+            SELECT siswa_id, tanggal, waktu_masuk, waktu_pulang, status
+            FROM absensi
+            WHERE tanggal >= ? AND tanggal <= ?
+        ");
+        $stmtA->execute([$startDate, $endDate]);
+        $absensiRows = $stmtA->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $absMap = [];
+        foreach ($absensiRows as $row) {
+            $sId = $row['siswa_id'];
+            $dayNum = (int)date('j', strtotime($row['tanggal']));
+            if (!isset($absMap[$sId])) {
+                $absMap[$sId] = [];
+            }
+            $absMap[$sId][$dayNum] = $row;
+        }
+
+        $results = [];
+        foreach ($siswaList as $s) {
+            $sId = $s['siswa_id'];
+            $daily = [];
+            $hadir = 0;
+            $terlambat = 0;
+            $sakit = 0;
+            $izin = 0;
+            $alpa = 0;
+            $pulang = 0;
+
+            for ($d = 1; $d <= $numDays; $d++) {
+                if (isset($absMap[$sId][$d])) {
+                    $rec = $absMap[$sId][$d];
+                    $st = strtolower($rec['status'] ?? 'hadir');
+                    $wktMasuk = $rec['waktu_masuk'] ? date('H:i:s', strtotime($rec['waktu_masuk'])) : null;
+                    $isLate = ($wktMasuk && $wktMasuk > '07:15:00');
+
+                    if ($st === 'sakit') {
+                        $daily[$d] = 'S';
+                        $sakit++;
+                    } elseif ($st === 'izin') {
+                        $daily[$d] = 'I';
+                        $izin++;
+                    } elseif ($st === 'alpa' || $st === 'alpha') {
+                        $daily[$d] = 'A';
+                        $alpa++;
+                    } else {
+                        if ($isLate) {
+                            $daily[$d] = 'TL';
+                            $terlambat++;
+                        } else {
+                            $daily[$d] = 'H';
+                        }
+                        $hadir++;
+                    }
+
+                    if (!empty($rec['waktu_pulang'])) {
+                        $pulang++;
+                    }
+                } else {
+                    $daily[$d] = '-';
+                }
+            }
+
+            $totalRecorded = $hadir + $sakit + $izin + $alpa;
+            $percentage = ($totalRecorded > 0) ? round(($hadir / $totalRecorded) * 100, 1) : 0;
+
+            $results[] = array_merge($s, [
+                'daily' => $daily,
+                'total_hadir' => $hadir,
+                'total_terlambat' => $terlambat,
+                'total_sakit' => $sakit,
+                'total_izin' => $izin,
+                'total_alpa' => $alpa,
+                'total_pulang' => $pulang,
+                'persentase' => $percentage
+            ]);
+        }
+
+        return [
+            'num_days' => $numDays,
+            'bulan' => $bulan,
+            'tahun' => $tahun,
+            'data' => $results
+        ];
+    }
+
+    public function getMonthlyRecapGuru($bulan, $tahun) {
+        $bulan = sprintf('%02d', (int)$bulan);
+        $tahun = (int)$tahun;
+        $numDays = (int)date('t', strtotime("$tahun-$bulan-01"));
+        $startDate = "$tahun-$bulan-01";
+        $endDate = "$tahun-$bulan-" . sprintf('%02d', $numDays);
+
+        $stmtG = $this->db->prepare("
+            SELECT id as guru_id, nip, nama_lengkap, status as status_guru
+            FROM guru
+            WHERE status = 'aktif'
+            ORDER BY nama_lengkap ASC
+        ");
+        $stmtG->execute();
+        $guruList = $stmtG->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $stmtA = $this->db->prepare("
+            SELECT guru_id, tanggal, waktu_masuk, waktu_pulang, status
+            FROM absensi_guru
+            WHERE tanggal >= ? AND tanggal <= ?
+        ");
+        $stmtA->execute([$startDate, $endDate]);
+        $absensiRows = $stmtA->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $absMap = [];
+        foreach ($absensiRows as $row) {
+            $gId = $row['guru_id'];
+            $dayNum = (int)date('j', strtotime($row['tanggal']));
+            if (!isset($absMap[$gId])) {
+                $absMap[$gId] = [];
+            }
+            $absMap[$gId][$dayNum] = $row;
+        }
+
+        $results = [];
+        foreach ($guruList as $g) {
+            $gId = $g['guru_id'];
+            $daily = [];
+            $hadir = 0;
+            $terlambat = 0;
+            $sakit = 0;
+            $izin = 0;
+            $alpa = 0;
+            $pulang = 0;
+
+            for ($d = 1; $d <= $numDays; $d++) {
+                if (isset($absMap[$gId][$d])) {
+                    $rec = $absMap[$gId][$d];
+                    $st = strtolower($rec['status'] ?? 'hadir');
+                    $wktMasuk = $rec['waktu_masuk'] ? date('H:i:s', strtotime($rec['waktu_masuk'])) : null;
+                    $isLate = ($wktMasuk && $wktMasuk > '07:15:00');
+
+                    if ($st === 'sakit') {
+                        $daily[$d] = 'S';
+                        $sakit++;
+                    } elseif ($st === 'izin') {
+                        $daily[$d] = 'I';
+                        $izin++;
+                    } elseif ($st === 'alpa' || $st === 'alpha') {
+                        $daily[$d] = 'A';
+                        $alpa++;
+                    } else {
+                        if ($isLate) {
+                            $daily[$d] = 'TL';
+                            $terlambat++;
+                        } else {
+                            $daily[$d] = 'H';
+                        }
+                        $hadir++;
+                    }
+
+                    if (!empty($rec['waktu_pulang'])) {
+                        $pulang++;
+                    }
+                } else {
+                    $daily[$d] = '-';
+                }
+            }
+
+            $totalRecorded = $hadir + $sakit + $izin + $alpa;
+            $percentage = ($totalRecorded > 0) ? round(($hadir / $totalRecorded) * 100, 1) : 0;
+
+            $results[] = array_merge($g, [
+                'daily' => $daily,
+                'total_hadir' => $hadir,
+                'total_terlambat' => $terlambat,
+                'total_sakit' => $sakit,
+                'total_izin' => $izin,
+                'total_alpa' => $alpa,
+                'total_pulang' => $pulang,
+                'persentase' => $percentage
+            ]);
+        }
+
+        return [
+            'num_days' => $numDays,
+            'bulan' => $bulan,
+            'tahun' => $tahun,
+            'data' => $results
+        ];
+    }
 }

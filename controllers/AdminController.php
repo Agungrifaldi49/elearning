@@ -620,6 +620,109 @@ class AdminController {
         require_once ROOT_PATH . 'views/guru/absensi.php';
     }
 
+    public function recapBulanan() {
+        $absensiModel = new AbsensiModel();
+        $academicModel = new AcademicModel();
+        
+        $bulan = sprintf('%02d', (int)($_GET['bulan'] ?? date('m')));
+        $tahun = (int)($_GET['tahun'] ?? date('Y'));
+        $kelasId = (int)($_GET['kelas_id'] ?? 0);
+        $type = $_GET['type'] ?? 'siswa';
+        
+        $kelasList = $academicModel->getKelas();
+        
+        if ($type === 'guru') {
+            $monthlyRecap = $absensiModel->getMonthlyRecapGuru($bulan, $tahun);
+        } else {
+            $monthlyRecap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId);
+        }
+        
+        require_once ROOT_PATH . 'views/admin/recap_bulanan.php';
+    }
+
+    public function exportRecapBulananCsv() {
+        $absensiModel = new AbsensiModel();
+        
+        $bulan = sprintf('%02d', (int)($_GET['bulan'] ?? date('m')));
+        $tahun = (int)($_GET['tahun'] ?? date('Y'));
+        $kelasId = (int)($_GET['kelas_id'] ?? 0);
+        $type = $_GET['type'] ?? 'siswa';
+        
+        $namaBulan = [
+            '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April',
+            '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus',
+            '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
+        ][$bulan] ?? $bulan;
+
+        if ($type === 'guru') {
+            $recap = $absensiModel->getMonthlyRecapGuru($bulan, $tahun);
+            $filename = "Rekap_Absensi_Guru_{$namaBulan}_{$tahun}.csv";
+        } else {
+            $recap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId);
+            $filename = "Rekap_Absensi_Siswa_{$namaBulan}_{$tahun}.csv";
+        }
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        
+        $output = fopen('php://output', 'w');
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        fputcsv($output, ["REKAP ABSENSI BULANAN " . strtoupper($type === 'guru' ? 'GURU / GTK' : 'SISWA')]);
+        fputcsv($output, ["Bulan: " . $namaBulan . " " . $tahun]);
+        fputcsv($output, []);
+
+        $numDays = $recap['num_days'];
+        $headerRow = ["No", ($type === 'guru' ? "NIP" : "NIS/NISN"), "Nama Lengkap", ($type === 'guru' ? "Role / GTK" : "Kelas")];
+        for ($d = 1; $d <= $numDays; $d++) {
+            $headerRow[] = (string)$d;
+        }
+        $headerRow = array_merge($headerRow, ["Total Hadir", "Terlambat", "Sakit", "Izin", "Alpa", "Scan Pulang", "Persentase Kehadiran (%)"]);
+        fputcsv($output, $headerRow);
+
+        $no = 1;
+        foreach ($recap['data'] as $row) {
+            $dataRow = [
+                $no++,
+                $type === 'guru' ? ($row['nip'] ?: '-') : ($row['nis'] ?: ($row['nisn'] ?: '-')),
+                $row['nama_lengkap'],
+                $type === 'guru' ? 'Guru / GTK' : ($row['nama_kelas'] ?: '-')
+            ];
+            for ($d = 1; $d <= $numDays; $d++) {
+                $dataRow[] = $row['daily'][$d] ?? '-';
+            }
+            $dataRow[] = $row['total_hadir'];
+            $dataRow[] = $row['total_terlambat'];
+            $dataRow[] = $row['total_sakit'];
+            $dataRow[] = $row['total_izin'];
+            $dataRow[] = $row['total_alpa'];
+            $dataRow[] = $row['total_pulang'];
+            $dataRow[] = $row['persentase'] . '%';
+            fputcsv($output, $dataRow);
+        }
+
+        fclose($output);
+        exit();
+    }
+
+    public function exportRecapBulananPdf() {
+        $absensiModel = new AbsensiModel();
+        $academicModel = new AcademicModel();
+        
+        $bulan = sprintf('%02d', (int)($_GET['bulan'] ?? date('m')));
+        $tahun = (int)($_GET['tahun'] ?? date('Y'));
+        $kelasId = (int)($_GET['kelas_id'] ?? 0);
+        $type = $_GET['type'] ?? 'siswa';
+        
+        if ($type === 'guru') {
+            $recap = $absensiModel->getMonthlyRecapGuru($bulan, $tahun);
+        } else {
+            $recap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId);
+        }
+        
+        require_once ROOT_PATH . 'views/admin/recap_bulanan_pdf.php';
+    }
+
     public function scanQr() {
         $absensiModel = new AbsensiModel();
         $presensiHariIni = $absensiModel->getPresensiHariIniAll();

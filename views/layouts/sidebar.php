@@ -109,6 +109,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'admin/absensi') ?>" href="<?= BASE_URL ?>index.php?url=admin/absensi">
                 <i class="bi bi-calendar-check-fill"></i> Presensi Guru & Siswa
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'admin/recapBulanan') ?>" href="<?= BASE_URL ?>index.php?url=admin/recapBulanan">
+                <i class="bi bi-file-earmark-spreadsheet-fill text-success"></i> Rekap Absensi Bulanan
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'admin/scanQr') ?>" href="<?= BASE_URL ?>index.php?url=admin/scanQr">
                 <i class="bi bi-qr-code-scan text-success"></i> Scan QR Code Hadir
             </a></li>
@@ -199,6 +202,9 @@ if (!empty($sidebarRawLogo)) {
             </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'guru/absensi') ?>" href="<?= BASE_URL ?>index.php?url=guru/absensi">
                 <i class="bi bi-calendar-check-fill"></i> Presensi Siswa
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'guru/recapBulanan') ?>" href="<?= BASE_URL ?>index.php?url=guru/recapBulanan">
+                <i class="bi bi-file-earmark-spreadsheet-fill text-success"></i> Rekap Absensi Bulanan
             </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'guru/scanQr') ?>" href="<?= BASE_URL ?>index.php?url=guru/scanQr">
                 <i class="bi bi-qr-code-scan"></i> Scan QR Code Hadir
