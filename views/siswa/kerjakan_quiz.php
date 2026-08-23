@@ -840,9 +840,9 @@ async function handleSecurityViolation() {
 
             Swal.fire({
                 icon: 'error',
-                title: '🚫 UJIAN DIBATALKAN & TERKUNCI PERMANEN!',
-                html: '<strong class="text-danger">Anda telah melanggar aturan ujian online sebanyak 2 kali (keluar fullscreen/berpindah tab).</strong><br><br>Pengerjaan kuis Anda secara otomatis dibatalkan dan <strong>terkunci di database</strong>. Anda TIDAK BISA melanjutkan kuis ini meskipun di-refresh.<br><br>Silakan ajukan permohonan izin Ujian Susulan ke Guru Pengampu.',
-                confirmButtonText: 'Kembali Ke Menu Quiz',
+                title: '🚫 PENGELUARAN PAKSA & KUIS DISELESAIKAN!',
+                html: '<strong class="text-danger">Anda telah melanggar aturan ujian sebanyak 2 kali (berpindah tab / keluar fullscreen).</strong><br><br>Pengerjaan kuis Anda secara otomatis <strong>diberhentikan dan diselesaikan (di-submit)</strong> ke server sebagai 1x percobaan terpakai.<br><br>Silakan kembali ke menu kuis.',
+                confirmButtonText: 'Kembali Ke Menu Kuis',
                 confirmButtonColor: '#e11d48',
                 allowOutsideClick: false
             }).then(() => {
