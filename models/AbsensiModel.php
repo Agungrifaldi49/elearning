@@ -271,8 +271,19 @@ class AbsensiModel extends BaseModel {
                 if (!$allowGuruScan) {
                     return [
                         'success' => false,
-                        'message' => "Pemindaian QR Code Guru ({$guru['nama_lengkap']}) tidak diizinkan pada scanner Guru. Presensi Guru hanya dapat dipindai melalui Scanner Admin Sekolah."
+                        'message' => "Pemindaian QR Code Guru ({$guru['nama_lengkap']}) tidak diizinkan pada scanner Guru. Presensi Guru hanya dapat dipindai oleh Admin / Petugas Piket Sekolah di Kios Gerbang Utama."
                     ];
+                }
+
+                // Anti-Self-Scan Security Check
+                if (class_exists('AuthHelper')) {
+                    $currentUser = AuthHelper::user();
+                    if (!empty($currentUser['id']) && !empty($guru['user_id']) && (int)$currentUser['id'] === (int)$guru['user_id']) {
+                        return [
+                            'success' => false,
+                            'message' => "Kecurangan terdeteksi! Anda tidak diizinkan memindai QR Code milik sendiri."
+                        ];
+                    }
                 }
 
                 // Process Teacher Presensi in absensi_guru

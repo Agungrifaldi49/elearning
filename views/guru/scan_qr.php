@@ -2,16 +2,26 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+$currentScanModuleUrl = $_GET['url'] ?? '';
+$isAdminScanRoute = (strpos($currentScanModuleUrl, 'admin/') === 0 || strtolower(AuthHelper::user()['role_name'] ?? '') === 'administrator');
+$dashboardUrl = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/dashboard' : BASE_URL . 'index.php?url=guru/dashboard';
+?>
 <main class="main-content px-3 px-md-4">
 <div class="container-fluid">
 
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-            <h4 class="fw-bold mb-1"><i class="bi bi-qr-code-scan text-success me-2"></i>Scan QR Code Presensi</h4>
-            <p class="text-muted small mb-0">Arahkan kamera ke QR Code pada Kartu Digital Siswa / Guru untuk mencatat presensi otomatis.</p>
+            <?php if ($isAdminScanRoute): ?>
+                <h4 class="fw-bold mb-1"><i class="bi bi-shield-check text-success me-2"></i>Terminal Scanner Presensi Utama (Siswa & Guru/GTK)</h4>
+                <p class="text-muted small mb-0">Terminal Scanner Resmi Gerbang/Piket Sekolah untuk mencatat presensi harian Siswa dan Tenaga Pendidik (Guru/GTK).</p>
+            <?php else: ?>
+                <h4 class="fw-bold mb-1"><i class="bi bi-qr-code-scan text-primary me-2"></i>Scan QR Code Presensi Siswa (KBM Kelas)</h4>
+                <p class="text-muted small mb-0">Arahkan kamera ke QR Code pada Kartu Pelajar Digital siswa untuk mencatat presensi otomatis di kelas.</p>
+            <?php endif; ?>
         </div>
         <div>
-            <a href="<?= BASE_URL ?>index.php?url=guru/dashboard" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-semibold">
+            <a href="<?= $dashboardUrl ?>" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-semibold">
                 <i class="bi bi-arrow-left me-1"></i> Kembali ke Dashboard
             </a>
         </div>
@@ -46,10 +56,10 @@
                 <!-- Manual Input Fallback -->
                 <div class="mt-3 pt-3 border-top">
                     <label class="form-label small fw-semibold text-dark mb-1">
-                        <i class="bi bi-keyboard-fill text-primary me-1"></i> Input NIS / NIP / ID Manual:
+                        <i class="bi bi-keyboard-fill text-primary me-1"></i> <?= $isAdminScanRoute ? 'Input NIS / NIP / ID Manual:' : 'Input NIS / NISN Manual:' ?>
                     </label>
                     <div class="input-group">
-                        <input type="text" id="manualNis" class="form-control rounded-start-3" placeholder="Ketik NIS/NISN siswa atau NIP guru..." onkeypress="if(event.key === 'Enter') processManualScan();">
+                        <input type="text" id="manualNis" class="form-control rounded-start-3" placeholder="<?= $isAdminScanRoute ? 'Ketik NIS/NISN siswa atau NIP guru...' : 'Ketik NIS/NISN siswa...' ?>" onkeypress="if(event.key === 'Enter') processManualScan();">
                         <button class="btn btn-success rounded-end-3 px-3 fw-bold" onclick="processManualScan()">
                             <i class="bi bi-check2-circle me-1"></i> Rekam
                         </button>
