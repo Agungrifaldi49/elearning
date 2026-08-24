@@ -349,7 +349,7 @@ class _GabungKelasScreenState extends State<GabungKelasScreen> {
                                               backgroundColor: Color(0xFFE8F5E9),
                                             )
                                           : ElevatedButton.icon(
-                                              onPressed: () => _showEnrollMapelDialog(mapelKey),
+                                              onPressed: () => _showEnrollMapelDialog(''),
                                               icon: const Icon(Icons.key, size: 16),
                                               label: const Text('Masukkan Key Mapel'),
                                               style: ElevatedButton.styleFrom(

@@ -1269,11 +1269,214 @@ class ApiController {
             ],
             [
                 'id' => 5,
-                'judul' => 'Panduan Edit Profil & Upload Foto',
+                'judul' => 'Panduan Passcode Key System & Gabung Rombel',
+                'kategori' => 'Pendaftaran',
+                'deskripsi' => "1. Masuk ke Menu 'Gabung Rombel & Key Mapel'.\n2. Gunakan kolom pencarian untuk mencari Mata Pelajaran atau Guru Pengampu.\n3. Untuk mendaftar ke Mapel Guru: Minta Passcode Key resmi ke Guru Pengampu lalu ketikkan pada kolom Passcode Key.\n4. Untuk mendaftar ke Rombel Kelas Utama: Minta Kode Akses Rombel (misal: MH-A1B2C3) ke Wali Kelas."
+            ],
+            [
+                'id' => 6,
+                'judul' => 'Panduan Forum Diskusi & Pesan Direct Chat',
+                'kategori' => 'Komunikasi',
+                'deskripsi' => "1. Forum Diskusi: Buka Menu Forum untuk membaca, membuat topik pertanyaan baru, atau berdiskusi pada kolom komentar.\n2. Direct Chat: Buka Menu Chat Direct untuk memilih kontak Guru/Siswa dan berkirim pesan secara langsung."
+            ],
+            [
+                'id' => 7,
+                'judul' => 'Panduan Edit Profil & Upload Foto Mobile',
                 'kategori' => 'Pengaturan',
-                'deskripsi' => "1. Buka Menu Samping / AppBar Header di pojok kanan atas.\n2. Pilih 'Edit & Update Profil'.\n3. Ketuk ikon Kamera pada foto profil untuk memilih foto dari Galeri HP atau memotret langsung dari Kamera.\n4. Isikan data nomor telepon, alamat, password baru jika perlu, lalu klik 'Simpan Perubahan Profil'."
+                'deskripsi' => "1. Buka Header AppBar / Profil pada aplikasi Mobile.\n2. Ketuk foto profil untuk memilih foto dari Galeri HP atau Kamera.\n3. Perbarui nomor telepon, alamat, password baru jika perlu, lalu simpan perubahan."
             ]
         ]);
+    }
+
+    public function forum($endpoint = 'list') {
+        $endpoint = strtolower(explode('?', $endpoint)[0]);
+        $input = $this->getPostInput();
+        $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
+
+        if ($endpoint === 'create' || ($_SERVER['REQUEST_METHOD'] === 'POST' && $endpoint !== 'comment')) {
+            $judul = trim($input['judul'] ?? '');
+            $konten = trim($input['konten'] ?? '');
+
+            if (empty($judul) || empty($konten)) {
+                $this->jsonResponse(false, 'Judul dan konten topik wajib diisi!', null, 400);
+            }
+
+            try {
+                $stmt = $this->db->prepare("
+                    INSERT INTO forum (user_id, judul, konten, created_at) 
+                    VALUES (:uid, :jdl, :ktn, NOW())
+                ");
+                $stmt->execute([
+                    'uid' => $userId,
+                    'jdl' => $judul,
+                    'ktn' => $konten
+                ]);
+                $this->jsonResponse(true, 'Topik diskusi berhasil diterbitkan!');
+            } catch (\Throwable $eC) {
+                $this->jsonResponse(false, 'Gagal menerbitkan topik: ' . $eC->getMessage(), null, 500);
+            }
+        } elseif ($endpoint === 'comment') {
+            $forumId = intval($input['forum_id'] ?? $_GET['forum_id'] ?? 0);
+            $komentar = trim($input['komentar'] ?? $input['isi_komentar'] ?? '');
+
+            if ($forumId <= 0 || empty($komentar)) {
+                $this->jsonResponse(false, 'ID Forum dan isi komentar wajib diisi!', null, 400);
+            }
+
+            try {
+                $stmt = $this->db->prepare("
+                    INSERT INTO komentar (forum_id, user_id, komentar, created_at) 
+                    VALUES (:fid, :uid, :km, NOW())
+                ");
+                $stmt->execute([
+                    'fid' => $forumId,
+                    'uid' => $userId,
+                    'km' => $komentar
+                ]);
+                $this->jsonResponse(true, 'Komentar berhasil ditambahkan!');
+            } catch (\Throwable $eKm) {
+                $this->jsonResponse(false, 'Gagal menambahkan komentar: ' . $eKm->getMessage(), null, 500);
+            }
+        } elseif ($endpoint === 'detail') {
+            $forumId = intval($_GET['forum_id'] ?? $_GET['id'] ?? 0);
+            try {
+                $stmtF = $this->db->prepare("
+                    SELECT f.id, f.user_id, f.judul, f.konten, f.created_at,
+                           u.full_name, COALESCE(u.avatar, 'default_avatar.png') as avatar, COALESCE(r.name, 'Member') as role_name
+                    FROM forum f
+                    JOIN users u ON f.user_id = u.id
+                    LEFT JOIN roles r ON u.role_id = r.id
+                    WHERE f.id = :fid
+                    LIMIT 1
+                ");
+                $stmtF->execute(['fid' => $forumId]);
+                $topic = $stmtF->fetch();
+
+                $stmtK = $this->db->prepare("
+                    SELECT k.id, k.forum_id, k.user_id, k.komentar as isi_komentar, k.created_at,
+                           u.full_name, COALESCE(u.avatar, 'default_avatar.png') as avatar
+                    FROM komentar k
+                    JOIN users u ON k.user_id = u.id
+                    WHERE k.forum_id = :fid
+                    ORDER BY k.created_at ASC
+                ");
+                $stmtK->execute(['fid' => $forumId]);
+                $comments = $stmtK->fetchAll();
+
+                $this->jsonResponse(true, 'Detail Topik Forum', [
+                    'topic' => $topic,
+                    'comments' => $comments
+                ]);
+            } catch (\Throwable $eFd) {
+                $this->jsonResponse(false, 'Gagal memuat detail forum: ' . $eFd->getMessage(), null, 500);
+            }
+        } else {
+            // list
+            try {
+                $stmt = $this->db->query("
+                    SELECT f.id, f.user_id, f.judul, f.konten, f.created_at,
+                           u.full_name, COALESCE(u.avatar, 'default_avatar.png') as avatar, COALESCE(r.name, 'Member') as role_name,
+                           (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_komentar
+                    FROM forum f
+                    JOIN users u ON f.user_id = u.id
+                    LEFT JOIN roles r ON u.role_id = r.id
+                    ORDER BY f.created_at DESC
+                    LIMIT 50
+                ");
+                $list = $stmt->fetchAll();
+                $this->jsonResponse(true, 'Daftar Forum Diskusi', $list);
+            } catch (\Throwable $eL) {
+                $this->jsonResponse(true, 'Daftar Forum Diskusi', []);
+            }
+        }
+    }
+
+    public function chat($endpoint = 'contacts') {
+        $endpoint = strtolower(explode('?', $endpoint)[0]);
+        $input = $this->getPostInput();
+        $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
+
+        if ($endpoint === 'messages' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+            $receiverId = intval($input['receiver_id'] ?? 0);
+            $pesan = trim($input['pesan'] ?? $input['message'] ?? '');
+
+            if ($receiverId <= 0 || empty($pesan)) {
+                $this->jsonResponse(false, 'Penerima dan pesan tidak boleh kosong!', null, 400);
+            }
+
+            try {
+                $stmt = $this->db->prepare("
+                    INSERT INTO chat (sender_id, receiver_id, message, created_at) 
+                    VALUES (:sid, :rid, :msg, NOW())
+                ");
+                $stmt->execute([
+                    'sid' => $userId,
+                    'rid' => $receiverId,
+                    'msg' => $pesan
+                ]);
+                $this->jsonResponse(true, 'Pesan terkirim!');
+            } catch (\Throwable $eMsg) {
+                $this->jsonResponse(false, 'Gagal mengirim pesan: ' . $eMsg->getMessage(), null, 500);
+            }
+        } elseif ($endpoint === 'messages') {
+            $receiverId = intval($_GET['receiver_id'] ?? $_GET['contact_id'] ?? 0);
+            try {
+                $stmt = $this->db->prepare("
+                    SELECT c.id, c.sender_id, c.receiver_id, c.message as pesan, c.created_at,
+                           u1.full_name as sender_name, u2.full_name as receiver_name
+                    FROM chat c
+                    JOIN users u1 ON c.sender_id = u1.id
+                    JOIN users u2 ON c.receiver_id = u2.id
+                    WHERE (c.sender_id = :uid1 AND c.receiver_id = :rec1)
+                       OR (c.sender_id = :rec2 AND c.receiver_id = :uid2)
+                    ORDER BY c.created_at ASC
+                ");
+                $stmt->execute([
+                    'uid1' => $userId,
+                    'rec1' => $receiverId,
+                    'rec2' => $receiverId,
+                    'uid2' => $userId
+                ]);
+                $messages = $stmt->fetchAll();
+
+                // Mark messages as read
+                $updRead = $this->db->prepare("UPDATE chat SET is_read = 1 WHERE sender_id = :rec AND receiver_id = :uid");
+                $updRead->execute(['rec' => $receiverId, 'uid' => $userId]);
+
+                $this->jsonResponse(true, 'Riwayat Chat Direct', $messages);
+            } catch (\Throwable $eH) {
+                $this->jsonResponse(true, 'Riwayat Chat Direct', []);
+            }
+        } else {
+            // contacts list
+            try {
+                $stmt = $this->db->prepare("
+                    SELECT u.id, 
+                           COALESCE(s.nama_lengkap, g.nama_lengkap, u.full_name) as full_name,
+                           COALESCE(u.avatar, 'default_avatar.png') as avatar,
+                           COALESCE(r.name, 'Pengguna') as role_name,
+                           (SELECT message FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid1) OR (sender_id = :uid2 AND receiver_id = u.id)) ORDER BY created_at DESC LIMIT 1) as last_message,
+                           (SELECT created_at FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid3) OR (sender_id = :uid4 AND receiver_id = u.id)) ORDER BY created_at DESC LIMIT 1) as last_time
+                    FROM users u
+                    LEFT JOIN roles r ON u.role_id = r.id
+                    LEFT JOIN siswa s ON s.user_id = u.id
+                    LEFT JOIN guru g ON g.user_id = u.id
+                    WHERE u.id != :uid5 AND u.status = 'active'
+                    ORDER BY last_time DESC, full_name ASC
+                ");
+                $stmt->execute([
+                    'uid1' => $userId,
+                    'uid2' => $userId,
+                    'uid3' => $userId,
+                    'uid4' => $userId,
+                    'uid5' => $userId
+                ]);
+                $contacts = $stmt->fetchAll();
+                $this->jsonResponse(true, 'Daftar Kontak Direct Chat', $contacts);
+            } catch (\Throwable $eCt) {
+                $this->jsonResponse(true, 'Daftar Kontak Direct Chat', []);
+            }
+        }
     }
 
     public function library($endpoint = 'list') {
