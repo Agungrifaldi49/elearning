@@ -21,6 +21,10 @@ class KartuDigitalScreen extends StatelessWidget {
         ? '${user?.namaKelas} • ${user?.namaJurusan}'
         : (details?['email'] ?? user?.email ?? 'Guru E-Learning');
 
+    // Official Web E-Learning Payload Format: SMKMH-SISWA-{nis} or SMKMH-GURU-{nip}
+    final qrPayload = isSiswa ? 'SMKMH-SISWA-$nomorId' : 'SMKMH-GURU-$nomorId';
+    final qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${Uri.encodeComponent(qrPayload)}&color=0f172a&bgcolor=ffffff';
+
     return Scaffold(
       appBar: AppBar(
         title: Text(isSiswa ? 'Kartu Pelajar Digital' : 'Kartu Guru Digital'),
@@ -167,27 +171,52 @@ class KartuDigitalScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
 
-                    // Visual QR Code Simulation Container
+                    // REAL WEB-COMPATIBLE QR CODE IMAGE
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
                       ),
                       child: Column(
                         children: [
-                          Icon(
-                            Icons.qr_code_2_rounded,
-                            size: 110,
-                            color: Colors.grey.shade900,
+                          Image.network(
+                            qrImageUrl,
+                            width: 140,
+                            height: 140,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const SizedBox(
+                                width: 140,
+                                height: 140,
+                                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Column(
+                                children: [
+                                  Icon(Icons.qr_code_2_rounded, size: 100, color: Colors.grey.shade900),
+                                  Text(qrPayload, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                ],
+                              );
+                            },
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           Text(
-                            'Scan QR untuk Presensi / Verifikasi',
+                            'Scan QR untuk Presensi Sekolah',
                             style: TextStyle(
                               fontSize: 11,
                               color: Colors.grey.shade700,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            qrPayload,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.indigo.shade700,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],

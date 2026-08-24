@@ -907,27 +907,19 @@ class ApiController {
 
             case 'scan_qr':
                 $input = $this->getPostInput();
-                $qrCode = trim($input['qr_code'] ?? '');
-                $jadwalId = intval($input['jadwal_id'] ?? 0);
+                $qrCode = trim($input['qr_code'] ?? $input['identifier'] ?? '');
                 if (empty($qrCode)) {
-                    $this->jsonResponse(false, 'Kode QR wajib discan!', null, 400);
+                    $this->jsonResponse(false, 'Kode QR atau Identitas NIS/NIP wajib diisi!', null, 400);
                 }
-                $nis = str_replace('SISWA-', '', $qrCode);
                 try {
-                    $stmtSis = $this->db->prepare("SELECT id, nama_lengkap FROM siswa WHERE nis = :nis OR id = :id LIMIT 1");
-                    $stmtSis->execute(['nis' => $nis, 'id' => intval($nis)]);
-                    $siswa = $stmtSis->fetch();
-                    if (!$siswa) {
-                        $this->jsonResponse(false, 'Siswa dengan QR tersebut tidak ditemukan!', null, 404);
+                    require_once ROOT_PATH . 'models/AbsensiModel.php';
+                    $absensiModel = new AbsensiModel();
+                    $res = $absensiModel->processQrScan($qrCode, $guru['id'], true);
+                    if (!empty($res['success'])) {
+                        $this->jsonResponse(true, $res['message'] ?? 'Presensi QR Berhasil!', $res);
+                    } else {
+                        $this->jsonResponse(false, $res['message'] ?? 'Gagal memproses QR Presensi', $res, 400);
                     }
-                    $today = date('Y-m-d');
-                    $stmtAbs = $this->db->prepare("
-                        INSERT INTO absensi (jadwal_id, siswa_id, tanggal, status, created_at) 
-                        VALUES (:jid, :sid, :tgl, 'Hadir', NOW())
-                        ON DUPLICATE KEY UPDATE status = 'Hadir'
-                    ");
-                    $stmtAbs->execute(['jid' => $jadwalId ?: 1, 'sid' => $siswa['id'], 'tgl' => $today]);
-                    $this->jsonResponse(true, 'Presensi QR Berhasil! Siswa ' . $siswa['nama_lengkap'] . ' dicatat HADIR.');
                 } catch (\Throwable $eQr) {
                     $this->jsonResponse(false, 'Gagal memproses QR Presensi: ' . $eQr->getMessage(), null, 500);
                 }
