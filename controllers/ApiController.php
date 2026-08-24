@@ -1580,14 +1580,14 @@ class ApiController {
                            COALESCE(s.nama_lengkap, g.nama_lengkap, u.full_name) as full_name,
                            COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file,
                            COALESCE(r.name, 'Pengguna') as role_name,
-                           (SELECT message FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid1) OR (sender_id = :uid2 AND receiver_id = u.id)) ORDER BY created_at DESC LIMIT 1) as last_message,
-                           (SELECT created_at FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid3) OR (sender_id = :uid4 AND receiver_id = u.id)) ORDER BY created_at DESC LIMIT 1) as last_time,
+                           (SELECT message FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid1) OR (sender_id = :uid2 AND receiver_id = u.id)) ORDER BY id DESC LIMIT 1) as last_message,
+                           (SELECT created_at FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid3) OR (sender_id = :uid4 AND receiver_id = u.id)) ORDER BY id DESC LIMIT 1) as last_time,
                            (SELECT COUNT(*) FROM chat WHERE sender_id = u.id AND receiver_id = :uid_unr AND is_read = 0) as unread_count
                     FROM users u
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
                     LEFT JOIN guru g ON g.user_id = u.id
-                    WHERE u.id != :uid5 AND (u.status = 'active' OR u.status = 'aktif' OR u.status IS NULL OR u.status = '1')
+                    WHERE u.id != :uid5
                     ORDER BY unread_count DESC, last_time DESC, full_name ASC
                 ");
                 $stmt->execute([
@@ -1599,18 +1599,31 @@ class ApiController {
                     'uid5' => $userId
                 ]);
                 $contacts = $stmt->fetchAll();
-                foreach ($contacts as &$c) {
-                    $avFile = $c['avatar_file'] ?? '';
-                    if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                        $c['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
-                    } else {
-                        $c['avatar_url'] = null;
-                    }
-                }
-                $this->jsonResponse(true, 'Daftar Kontak Direct Chat', $contacts);
             } catch (\Throwable $eCt) {
-                $this->jsonResponse(true, 'Daftar Kontak Direct Chat', []);
+                try {
+                    $stmtFB = $this->db->prepare("
+                        SELECT u.id, u.full_name, COALESCE(u.avatar, '') as avatar_file, COALESCE(r.name, 'Pengguna') as role_name 
+                        FROM users u 
+                        LEFT JOIN roles r ON u.role_id = r.id 
+                        WHERE u.id != :uid 
+                        ORDER BY u.full_name ASC
+                    ");
+                    $stmtFB->execute(['uid' => $userId]);
+                    $contacts = $stmtFB->fetchAll();
+                } catch (\Throwable $eFB) {
+                    $contacts = [];
+                }
             }
+
+            foreach ($contacts as &$c) {
+                $avFile = $c['avatar_file'] ?? '';
+                if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
+                    $c['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                } else {
+                    $c['avatar_url'] = null;
+                }
+            }
+            $this->jsonResponse(true, 'Daftar Kontak Direct Chat', $contacts);
         }
     }
 
