@@ -76,20 +76,20 @@ class ApiController {
                     SELECT u.*, r.name as role_name 
                     FROM users u 
                     LEFT JOIN roles r ON u.role_id = r.id 
-                    WHERE u.username = :username OR u.email = :username
+                    WHERE u.username = ? OR u.email = ?
                     LIMIT 1
                 ");
-                $stmt->execute(['username' => $username]);
+                $stmt->execute([$username, $username]);
                 $user = $stmt->fetch();
             } catch (\Throwable $e1) {
                 // Fallback query if roles table or role_id does not exist
                 $stmt = $this->db->prepare("
                     SELECT u.* 
                     FROM users u 
-                    WHERE u.username = :username OR u.email = :username
+                    WHERE u.username = ? OR u.email = ?
                     LIMIT 1
                 ");
-                $stmt->execute(['username' => $username]);
+                $stmt->execute([$username, $username]);
                 $user = $stmt->fetch();
             }
 
