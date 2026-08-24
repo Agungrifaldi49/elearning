@@ -11,15 +11,14 @@ class KartuDigitalScreen extends StatelessWidget {
     final user = auth.currentUser;
     final details = user?.details;
     final isSiswa = user?.isSiswa ?? true;
+    final avatarUrl = user?.fullAvatarUrl ?? '';
 
     final nama = user?.fullName.isNotEmpty == true
         ? user!.fullName
         : (details?['nama_lengkap'] ?? 'Pengguna');
-    final nomorId = isSiswa
-        ? (details?['nis'] ?? user?.username ?? 'NIS-001')
-        : (details?['nip'] ?? user?.username ?? 'NIP-001');
+    final nomorId = isSiswa ? user?.nis ?? 'NIS-001' : user?.nip ?? 'NIP-001';
     final subTitle = isSiswa
-        ? '${details?['nama_kelas'] ?? 'Kelas'} • ${details?['nama_jurusan'] ?? 'SMK'}'
+        ? '${user?.namaKelas} • ${user?.namaJurusan}'
         : (details?['email'] ?? user?.email ?? 'Guru E-Learning');
 
     return Scaffold(
@@ -90,18 +89,21 @@ class KartuDigitalScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
 
-                    // Avatar
+                    // Avatar Image or Fallback Circle
                     CircleAvatar(
-                      radius: 40,
+                      radius: 44,
                       backgroundColor: Colors.white,
                       child: CircleAvatar(
-                        radius: 37,
+                        radius: 41,
                         backgroundColor: Colors.grey.shade200,
-                        child: Icon(
-                          isSiswa ? Icons.person_rounded : Icons.person_pin_rounded,
-                          size: 48,
-                          color: isSiswa ? Colors.indigo : Colors.teal,
-                        ),
+                        backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                        child: avatarUrl.isEmpty
+                            ? Icon(
+                                isSiswa ? Icons.person_rounded : Icons.person_pin_rounded,
+                                size: 50,
+                                color: isSiswa ? Colors.indigo : Colors.teal,
+                              )
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -125,20 +127,43 @@ class KartuDigitalScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'ID: $nomorId',
-                        style: TextStyle(
-                          color: isSiswa ? Colors.indigo.shade900 : Colors.teal.shade900,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            isSiswa ? 'NIS: $nomorId' : 'NIP: $nomorId',
+                            style: TextStyle(
+                              color: isSiswa ? Colors.indigo.shade900 : Colors.teal.shade900,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (isSiswa && user?.nisn != '-') ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'NISN: ${user?.nisn}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 24),
 

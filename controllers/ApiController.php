@@ -133,6 +133,12 @@ class ApiController {
                 }
             }
 
+            if (!empty($user['avatar']) && $user['avatar'] !== 'default_avatar.png') {
+                $user['avatar_url'] = 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $user['avatar'];
+            } else {
+                $user['avatar_url'] = null;
+            }
+
             // Token simple generator for mobile session
             $token = bin2hex(random_bytes(32));
 
@@ -958,6 +964,9 @@ class ApiController {
             $userId = intval($input['user_id'] ?? $userId);
             $fullName = trim($input['full_name'] ?? '');
             $email = trim($input['email'] ?? '');
+            $noTelp = trim($input['no_telepon'] ?? '');
+            $jk = trim($input['jenis_kelamin'] ?? '');
+            $alamat = trim($input['alamat'] ?? '');
             $newPassword = trim($input['password'] ?? '');
 
             if ($userId <= 0) {
@@ -973,7 +982,20 @@ class ApiController {
                     $stmtUpd = $this->db->prepare("UPDATE users SET full_name = IF(:fn!='',:fn,full_name), email = IF(:em!='',:em,email) WHERE id = :uid");
                     $stmtUpd->execute(['fn' => $fullName, 'em' => $email, 'uid' => $userId]);
                 }
-                $this->jsonResponse(true, 'Profil dan password berhasil diperbarui!');
+
+                // Update detail in siswa or guru table if exists
+                if (!empty($noTelp) || !empty($jk) || !empty($alamat)) {
+                    try {
+                        $stmtUpdS = $this->db->prepare("UPDATE siswa SET no_telepon = IF(:nt!='',:nt,no_telepon), jenis_kelamin = IF(:jk!='',:jk,jenis_kelamin), alamat = IF(:al!='',:al,alamat) WHERE user_id = :uid");
+                        $stmtUpdS->execute(['nt' => $noTelp, 'jk' => $jk, 'al' => $alamat, 'uid' => $userId]);
+                    } catch (\Throwable $eS) {}
+                    try {
+                        $stmtUpdG = $this->db->prepare("UPDATE guru SET no_telepon = IF(:nt!='',:nt,no_telepon), jenis_kelamin = IF(:jk!='',:jk,jenis_kelamin), alamat = IF(:al!='',:al,alamat) WHERE user_id = :uid");
+                        $stmtUpdG->execute(['nt' => $noTelp, 'jk' => $jk, 'al' => $alamat, 'uid' => $userId]);
+                    } catch (\Throwable $eG) {}
+                }
+
+                $this->jsonResponse(true, 'Profil dan data diri berhasil diperbarui!');
             } catch (\Throwable $eP) {
                 $this->jsonResponse(false, 'Gagal memperbarui profil: ' . $eP->getMessage(), null, 500);
             }
@@ -983,7 +1005,39 @@ class ApiController {
             $stmtU = $this->db->prepare("SELECT id, username, email, full_name, avatar, role_id FROM users WHERE id = :uid LIMIT 1");
             $stmtU->execute(['uid' => $userId]);
             $user = $stmtU->fetch();
-            $this->jsonResponse(true, 'Data Profil User', $user);
+
+            if ($user && !empty($user['avatar']) && $user['avatar'] !== 'default_avatar.png') {
+                $user['avatar_url'] = 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $user['avatar'];
+            } else if ($user) {
+                $user['avatar_url'] = null;
+            }
+
+            // Get extra details
+            $details = null;
+            try {
+                $stmtS = $this->db->prepare("
+                    SELECT s.*, k.nama_kelas, j.nama_jurusan 
+                    FROM siswa s 
+                    LEFT JOIN kelas k ON s.kelas_id = k.id 
+                    LEFT JOIN jurusan j ON s.jurusan_id = j.id 
+                    WHERE s.user_id = :uid LIMIT 1
+                ");
+                $stmtS->execute(['uid' => $userId]);
+                $details = $stmtS->fetch() ?: null;
+            } catch (\Throwable $eS) {}
+
+            if (!$details) {
+                try {
+                    $stmtG = $this->db->prepare("SELECT * FROM guru WHERE user_id = :uid LIMIT 1");
+                    $stmtG->execute(['uid' => $userId]);
+                    $details = $stmtG->fetch() ?: null;
+                } catch (\Throwable $eG) {}
+            }
+
+            $this->jsonResponse(true, 'Data Profil User', [
+                'user' => $user,
+                'details' => $details
+            ]);
         } catch (\Throwable $eP2) {
             $this->jsonResponse(false, 'Data profil tidak ditemukan', null, 404);
         }
