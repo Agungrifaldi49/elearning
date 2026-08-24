@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 import '../../theme/app_theme.dart';
+import '../shared/edugame_screen.dart';
+import '../shared/kartu_digital_screen.dart';
+import '../shared/library_screen.dart';
 import 'guru_absensi_tab.dart';
+import 'guru_input_nilai_screen.dart';
 
 class GuruDashboardTab extends StatefulWidget {
   const GuruDashboardTab({super.key});
@@ -50,7 +54,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
+                    color: Colors.blue.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -83,7 +87,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(Icons.co_present, color: Colors.white, size: 28),
@@ -99,7 +103,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Quick Stats Row
             Row(
@@ -130,19 +134,53 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
               ],
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // Quick Action Button
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab()));
-              },
-              icon: const Icon(Icons.how_to_reg_rounded),
-              label: const Text('Input Presensi Kehadiran Siswa Hari Ini'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                backgroundColor: AppTheme.primaryColor,
-              ),
+            // Feature Shortcuts Grid for Guru
+            const Text(
+              '⚡ Menu Pengajaran & Fitur',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.1,
+              children: [
+                _buildFeatureGridItem(
+                  icon: Icons.how_to_reg_rounded,
+                  label: 'Input Absensi',
+                  color: Colors.teal,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.edit_note_rounded,
+                  label: 'Input Nilai',
+                  color: Colors.indigo,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.badge_rounded,
+                  label: 'Kartu Guru',
+                  color: Colors.blue.shade700,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.menu_book_rounded,
+                  label: 'Perpustakaan',
+                  color: Colors.deepOrange,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.sports_esports_rounded,
+                  label: 'EduGame',
+                  color: Colors.purple,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen())),
+                ),
+              ],
             ),
 
             const SizedBox(height: 24),
@@ -179,7 +217,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                       leading: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(Icons.class_rounded, color: AppTheme.primaryColor),
@@ -192,7 +230,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -225,7 +263,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -246,6 +284,45 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureGridItem({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

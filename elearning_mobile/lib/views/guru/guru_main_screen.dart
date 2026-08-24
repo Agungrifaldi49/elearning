@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
 import '../auth/login_screen.dart';
+import '../shared/edugame_screen.dart';
+import '../shared/kartu_digital_screen.dart';
+import '../shared/library_screen.dart';
 import 'guru_dashboard_tab.dart';
+import 'guru_input_nilai_screen.dart';
 import 'guru_jadwal_tab.dart';
 import 'guru_materi_tab.dart';
 import 'guru_tugas_tab.dart';
@@ -39,26 +43,39 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
         title: Row(
           children: [
             CircleAvatar(
-              backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
+              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
               child: const Icon(Icons.co_present, color: AppTheme.primaryColor),
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user?.fullName ?? 'Guru',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  user?.subTitle ?? 'Guru SMK MH',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user?.fullName ?? 'Guru',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    user?.subTitle ?? 'Guru SMK MH',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.badge_outlined),
+            tooltip: 'Kartu Guru Digital',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.forum_outlined),
             tooltip: 'Forum Diskusi',
@@ -81,12 +98,24 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
+              } else if (value == 'kartu') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
+              } else if (value == 'input_nilai') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen()));
               } else if (value == 'absensi') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab()));
+              } else if (value == 'library') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen()));
+              } else if (value == 'game') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen()));
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(value: 'kartu', child: Text('Kartu Guru Digital')),
+              const PopupMenuItem(value: 'input_nilai', child: Text('Input & Edit Nilai Siswa')),
               const PopupMenuItem(value: 'absensi', child: Text('Input Absensi Kelas')),
+              const PopupMenuItem(value: 'library', child: Text('Perpustakaan Digital')),
+              const PopupMenuItem(value: 'game', child: Text('EduGame & Kuis Interaktif')),
               const PopupMenuDivider(),
               const PopupMenuItem(value: 'logout', child: Text('Keluar / Logout', style: TextStyle(color: Colors.red))),
             ],
@@ -101,7 +130,7 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 10,
               offset: const Offset(0, -4),
             ),

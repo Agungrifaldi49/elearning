@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
 import '../auth/login_screen.dart';
+import '../shared/edugame_screen.dart';
+import '../shared/kartu_digital_screen.dart';
+import '../shared/library_screen.dart';
 import 'siswa_dashboard_tab.dart';
 import 'siswa_jadwal_tab.dart';
 import 'siswa_materi_tab.dart';
@@ -40,26 +43,39 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
         title: Row(
           children: [
             CircleAvatar(
-              backgroundColor: AppTheme.secondaryColor.withOpacity(0.2),
+              backgroundColor: AppTheme.secondaryColor.withValues(alpha: 0.2),
               child: const Icon(Icons.person, color: AppTheme.secondaryColor),
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user?.fullName ?? 'Siswa',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  user?.subTitle ?? 'Siswa SMK MH',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user?.fullName ?? 'Siswa',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    user?.subTitle ?? 'Siswa SMK MH',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.badge_outlined),
+            tooltip: 'Kartu Pelajar Digital',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.forum_outlined),
             tooltip: 'Forum Diskusi',
@@ -82,6 +98,12 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
+              } else if (value == 'kartu') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
+              } else if (value == 'library') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen()));
+              } else if (value == 'game') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen()));
               } else if (value == 'absensi') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaAbsensiTab()));
               } else if (value == 'nilai') {
@@ -89,6 +111,9 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(value: 'kartu', child: Text('Kartu Pelajar Digital')),
+              const PopupMenuItem(value: 'library', child: Text('Perpustakaan Digital')),
+              const PopupMenuItem(value: 'game', child: Text('EduGame & Kuis Interaktif')),
               const PopupMenuItem(value: 'absensi', child: Text('Presensi Kehadiran')),
               const PopupMenuItem(value: 'nilai', child: Text('Rekap Nilai & Raport')),
               const PopupMenuDivider(),
@@ -105,7 +130,7 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 10,
               offset: const Offset(0, -4),
             ),

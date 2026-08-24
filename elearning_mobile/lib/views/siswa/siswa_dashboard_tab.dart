@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/siswa_provider.dart';
 import '../../theme/app_theme.dart';
+import '../shared/edugame_screen.dart';
+import '../shared/kartu_digital_screen.dart';
+import '../shared/library_screen.dart';
 import 'siswa_absensi_tab.dart';
 import 'siswa_nilai_tab.dart';
 
@@ -52,7 +55,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.secondaryColor.withOpacity(0.3),
+                    color: AppTheme.secondaryColor.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -85,7 +88,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: const Icon(Icons.school, color: Colors.white, size: 28),
@@ -101,7 +104,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Quick Stats Row
             Row(
@@ -132,22 +135,50 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
               ],
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // Quick Action Shortcuts
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            // Feature Shortcuts Grid
+            const Text(
+              '⚡ Akses Fitur Cepat',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.1,
               children: [
-                _buildShortcutItem(
-                  icon: Icons.check_circle_outline,
+                _buildFeatureGridItem(
+                  icon: Icons.badge_rounded,
+                  label: 'Kartu Pelajar',
+                  color: Colors.indigo,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.menu_book_rounded,
+                  label: 'Perpustakaan',
+                  color: Colors.blue,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.sports_esports_rounded,
+                  label: 'EduGame',
+                  color: Colors.purple,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.check_circle_rounded,
                   label: 'Presensi',
                   color: Colors.teal,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaAbsensiTab())),
                 ),
-                _buildShortcutItem(
-                  icon: Icons.grade_outlined,
-                  label: 'Lihat Nilai',
-                  color: Colors.amber,
+                _buildFeatureGridItem(
+                  icon: Icons.grade_rounded,
+                  label: 'Rekap Nilai',
+                  color: Colors.amber.shade800,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaNilaiTab())),
                 ),
               ],
@@ -186,7 +217,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                       leading: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppTheme.secondaryColor.withOpacity(0.1),
+                          color: AppTheme.secondaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(Icons.access_time_filled, color: AppTheme.secondaryColor),
@@ -199,7 +230,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -295,7 +326,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -320,31 +351,40 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
     );
   }
 
-  Widget _buildShortcutItem({
+  Widget _buildFeatureGridItem({
     required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-          ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
