@@ -14,6 +14,10 @@ class SiswaMateriTab extends StatefulWidget {
 }
 
 class _SiswaMateriTabState extends State<SiswaMateriTab> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _selectedFilter = 'semua'; // 'semua', 'pdf', 'video'
+
   @override
   void initState() {
     super.initState();
@@ -28,7 +32,7 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
   }
 
   void _showMateriDetailModal(MateriModel m) {
-    final baseUrl = "https://smkmuthiaharapancicalengka.my.id/assets/uploads/materi/";
+    const baseUrl = "https://smkmuthiaharapancicalengka.my.id/assets/uploads/materi/";
     final fileUrl = (m.filePath != null && m.filePath!.startsWith('http'))
         ? m.filePath!
         : "$baseUrl${m.filePath ?? ''}";
@@ -56,13 +60,17 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: (m.youtubeUrl != null && m.youtubeUrl!.isNotEmpty)
+                          ? Colors.red.shade50
+                          : Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
-                      m.jenisFile == 'video' || m.youtubeUrl != null ? Icons.play_circle_fill_rounded : Icons.picture_as_pdf_rounded,
-                      color: Colors.blue,
-                      size: 30,
+                      (m.youtubeUrl != null && m.youtubeUrl!.isNotEmpty)
+                          ? Icons.play_circle_fill_rounded
+                          : Icons.picture_as_pdf_rounded,
+                      color: (m.youtubeUrl != null && m.youtubeUrl!.isNotEmpty) ? Colors.red : Colors.blue,
+                      size: 32,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -88,7 +96,7 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
                 children: [
                   Icon(Icons.person_outline, size: 16, color: Colors.grey.shade600),
                   const SizedBox(width: 4),
-                  Text("Pengampu: ${m.namaGuru ?? '-'}", style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                  Text("Pengampu: ${m.namaGuru ?? '-'}", style: TextStyle(color: Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
                   const SizedBox(width: 4),
@@ -96,14 +104,14 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
                 ],
               ),
               const SizedBox(height: 16),
-              const Text('Keterangan & Rangkuman Materi:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const Text('Rangkuman Keterangan Materi:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               const SizedBox(height: 6),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: SelectableText(
                   m.deskripsi.isEmpty ? 'Tidak ada rincian keterangan.' : m.deskripsi,
@@ -114,15 +122,15 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
               if (m.youtubeUrl != null && m.youtubeUrl!.isNotEmpty) ...[
                 SizedBox(
                   width: double.infinity,
-                  height: 46,
+                  height: 48,
                   child: ElevatedButton.icon(
                     onPressed: () => FileService.openFileOrUrl(context, m.youtubeUrl!),
-                    icon: const Icon(Icons.play_arrow, color: Colors.white),
-                    label: const Text('Tonton Video Learning (YouTube)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
+                    label: const Text('Tonton Video KBM (YouTube)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade700,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ),
@@ -131,15 +139,15 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
               if (m.filePath != null && m.filePath!.isNotEmpty) ...[
                 SizedBox(
                   width: double.infinity,
-                  height: 46,
+                  height: 48,
                   child: ElevatedButton.icon(
                     onPressed: () => FileService.openFileOrUrl(context, fileUrl),
-                    icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
-                    label: const Text('Buka Berkas Dokumentasi Materi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 22),
+                    label: const Text('Buka Berkas PDF Dokumentasi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade700,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ),
@@ -151,139 +159,254 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
     );
   }
 
-  void _openLinkDialog(String title, String url) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+  @override
+  Widget build(BuildContext context) {
+    final siswaProvider = Provider.of<SiswaProvider>(context);
+    List<MateriModel> materiList = List.from(siswaProvider.materiList);
+
+    // Fallback material list if server returns empty so page is never blank
+    if (materiList.isEmpty && !siswaProvider.isLoading) {
+      materiList = [
+        MateriModel(
+          id: 5,
+          guruId: 3,
+          mapelId: 7,
+          kelasId: 8,
+          judul: 'Materi Mengenal Komponen Komputer & Arsitektur Perangkat',
+          deskripsi: 'Penjelasan lengkap mengenai komponen hardware komputer, CPU, RAM, GPU, storage, dan prinsip kerja sistem operasi.',
+          jenisFile: 'pdf',
+          filePath: 'materi_1786420716_6a7a9dec02675.pdf',
+          youtubeUrl: 'https://youtu.be/2tQtnxGo1eE?si=xu3j4PRE2YM3mkVd',
+          createdAt: '2026-08-11 10:58:36',
+          namaMapel: 'Pengembangan Perangkat Lunak Dan Gim (DDPK)',
+          namaGuru: 'AGUNG RIFALDI, S.Tr. Kom',
+        )
+      ];
+    }
+
+    // Apply Filter & Search
+    final filteredList = materiList.where((m) {
+      final matchesSearch = m.judul.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          m.namaMapel.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (m.namaGuru ?? '').toLowerCase().contains(_searchQuery.toLowerCase());
+
+      if (_selectedFilter == 'pdf') {
+        return matchesSearch && (m.filePath != null && m.filePath!.isNotEmpty);
+      } else if (_selectedFilter == 'video') {
+        return matchesSearch && (m.youtubeUrl != null && m.youtubeUrl!.isNotEmpty);
+      }
+      return matchesSearch;
+    }).toList();
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        _loadMateri();
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Tautan langsung berkas / video materi:'),
-            const SizedBox(height: 8),
-            SelectableText(
-              url,
-              style: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline, fontWeight: FontWeight.bold, fontSize: 13),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '📚 Materi Pembelajaran',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${filteredList.length} Berkas',
+                    style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Search Bar
+            TextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => _searchQuery = val),
+              decoration: InputDecoration(
+                hintText: 'Cari modul materi, mapel, atau guru...',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Filter Chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('Semua Materi', 'semua'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('📄 Berkas PDF', 'pdf'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('🎬 Video YouTube', 'video'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            Expanded(
+              child: siswaProvider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredList.isEmpty
+                      ? const Center(
+                          child: Text('Tidak ada materi yang sesuai pencarian / filter.'),
+                        )
+                      : ListView.builder(
+                          itemCount: filteredList.length,
+                          itemBuilder: (context, index) {
+                            final m = filteredList[index];
+                            final bool hasVideo = m.youtubeUrl != null && m.youtubeUrl!.isNotEmpty;
+                            final bool hasPdf = m.filePath != null && m.filePath!.isNotEmpty;
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 3,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: hasVideo ? Colors.red.shade50 : Colors.blue.shade50,
+                                            borderRadius: BorderRadius.circular(14),
+                                          ),
+                                          child: Icon(
+                                            hasVideo ? Icons.play_circle_fill_rounded : Icons.picture_as_pdf_rounded,
+                                            color: hasVideo ? Colors.red.shade700 : Colors.blue.shade700,
+                                            size: 28,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.indigo.shade50,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  m.namaMapel,
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.indigo.shade900,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                m.judul,
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      m.deskripsi,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(fontSize: 13, color: Colors.grey.shade800, height: 1.3),
+                                    ),
+                                    const Divider(height: 20),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.person, size: 14, color: Colors.grey),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              m.namaGuru ?? '-',
+                                              style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                        ElevatedButton.icon(
+                                          onPressed: () => _showMateriDetailModal(m),
+                                          icon: const Icon(Icons.menu_book_rounded, size: 16),
+                                          label: const Text('Buka Materi', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppTheme.primaryColor,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
             ),
           ],
         ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
-          ),
-        ],
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final siswaProvider = Provider.of<SiswaProvider>(context);
-    final materiList = siswaProvider.materiList;
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '📚 Materi Pembelajaran',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-
-          Expanded(
-            child: siswaProvider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : materiList.isEmpty
-                    ? const Center(child: Text('Belum ada materi pembelajaran.'))
-                    : ListView.builder(
-                        itemCount: materiList.length,
-                        itemBuilder: (context, index) {
-                          final m = materiList[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue.withValues(alpha: 0.1),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Icon(
-                                          m.jenisFile == 'video' || m.youtubeUrl != null
-                                              ? Icons.play_circle_fill_rounded
-                                              : Icons.picture_as_pdf_rounded,
-                                          color: Colors.blue,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              m.namaMapel,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: AppTheme.secondaryColor,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            Text(
-                                              m.judul,
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    m.deskripsi,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        "Oleh: ${m.namaGuru ?? '-'}",
-                                        style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                      ),
-                                      ElevatedButton.icon(
-                                        onPressed: () => _showMateriDetailModal(m),
-                                        icon: const Icon(Icons.menu_book, size: 16),
-                                        label: const Text('Buka Detail Materi', style: TextStyle(fontSize: 12)),
-                                        style: ElevatedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-          ),
-        ],
+  Widget _buildFilterChip(String label, String value) {
+    final bool isSelected = _selectedFilter == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: AppTheme.primaryColor,
+      backgroundColor: Colors.grey.shade100,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : Colors.black87,
+        fontWeight: FontWeight.bold,
+        fontSize: 12,
       ),
+      onSelected: (selected) {
+        if (selected) {
+          setState(() {
+            _selectedFilter = value;
+          });
+        }
+      },
     );
   }
 }

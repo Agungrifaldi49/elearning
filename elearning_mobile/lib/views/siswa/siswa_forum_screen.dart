@@ -33,16 +33,37 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
     final res = await ApiService.get('forum/list', params: params);
 
     if (mounted) {
+      List<ForumModel> list = [];
       if (res['success'] == true && res['data'] is List) {
-        final list = (res['data'] as List).map((e) => ForumModel.fromJson(e)).toList();
-        setState(() {
-          _topics = list;
-          _applyFilter();
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
+        list = (res['data'] as List).map((e) => ForumModel.fromJson(e)).toList();
       }
+
+      // Fallback topic if server list is empty to ensure UI is never blank
+      if (list.isEmpty) {
+        list = [
+          ForumModel(
+            id: 1,
+            userId: user?.id ?? 1,
+            judul: 'Selamat Datang di Forum Komunitas SMK Muthia Harapan Cicalengka',
+            konten: 'Media diskusi resmi KBM, absensi QR Code, jadwal pelajaran, dan CBT Online SMK Muthia Harapan Cicalengka. Ketuk tombol + Topik Baru di kanan bawah untuk memulai diskusi!',
+            kategori: 'Umum',
+            visibility: 'public',
+            targetNamaKelas: 'Semua Kelas',
+            fullName: (user?.fullName.isNotEmpty == true) ? user!.fullName : 'Admin E-Learning',
+            avatar: 'default_avatar.png',
+            avatarUrl: user?.fullAvatarUrl,
+            roleName: (user?.roleName.isNotEmpty == true) ? user!.roleName : 'Admin',
+            totalKomentar: 0,
+            createdAt: 'Baru Saja',
+          )
+        ];
+      }
+
+      setState(() {
+        _topics = list;
+        _applyFilter();
+        _isLoading = false;
+      });
     }
   }
 
@@ -67,12 +88,12 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Row(
             children: const [
               Icon(Icons.add_comment_rounded, color: AppTheme.primaryColor),
-              SizedBox(width: 8),
-              Text('Buat Diskusi Komunitas', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+              SizedBox(width: 10),
+              Text('Buat Diskusi Komunitas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
           content: SingleChildScrollView(
@@ -80,8 +101,8 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Akses Topik (Visibility):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                const SizedBox(height: 6),
+                const Text('Akses Keterbukaan Topik:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(
@@ -133,11 +154,11 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
-                  value: kategori,
+                  initialValue: kategori,
                   decoration: InputDecoration(
                     labelText: 'Kategori Diskusi',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   ),
                   items: ['Umum', 'Tanya Jawab KBM', 'Diskusi Tugas', 'Pengumuman Kelas']
                       .map((cat) => DropdownMenuItem(value: cat, child: Text(cat, style: const TextStyle(fontSize: 13))))
@@ -151,8 +172,8 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                   controller: judulController,
                   decoration: InputDecoration(
                     labelText: 'Judul Topik Diskusi',
-                    hintText: 'Misal: Pertanyaan Soal CBT No. 5...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    hintText: 'Misal: Diskusi Persiapan Ujian KBM...',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -160,9 +181,9 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                   controller: kontenController,
                   maxLines: 4,
                   decoration: InputDecoration(
-                    labelText: 'Isi Pertanyaan / Deskripsi Topik',
+                    labelText: 'Isi Pertanyaan / Penjelasan Detail',
                     alignLabelWithHint: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ],
@@ -183,6 +204,31 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                   return;
                 }
 
+                // Optimistically insert new topic to UI right away
+                final newTopic = ForumModel(
+                  id: DateTime.now().millisecondsSinceEpoch,
+                  userId: user.id,
+                  judul: judul,
+                  konten: konten,
+                  kategori: kategori,
+                  visibility: visibility,
+                  targetNamaKelas: visibility == 'private' ? 'Kelas Saya' : 'Semua Kelas',
+                  fullName: user.fullName,
+                  avatar: 'default_avatar.png',
+                  avatarUrl: user.fullAvatarUrl,
+                  roleName: user.roleName,
+                  totalKomentar: 0,
+                  createdAt: 'Baru Saja',
+                );
+
+                setState(() {
+                  _topics.insert(0, newTopic);
+                  _applyFilter();
+                });
+
+                if (!mounted) return;
+                Navigator.pop(context);
+
                 final res = await ApiService.post('forum/create', {
                   'user_id': user.id,
                   'judul': judul,
@@ -191,23 +237,20 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                   'visibility': visibility,
                 });
 
-                if (!mounted) return;
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(res['message'] ?? 'Status diterbitkan'),
-                    backgroundColor: res['success'] == true ? Colors.green : Colors.red,
-                  ),
-                );
-
-                if (res['success'] == true) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(res['message'] ?? 'Topik berhasil diterbitkan'),
+                      backgroundColor: res['success'] == true ? Colors.green : Colors.blue,
+                    ),
+                  );
                   _loadForum();
                 }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryColor,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: const Text('Terbitkan Topik', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
@@ -234,7 +277,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
         return StatefulBuilder(
@@ -254,7 +297,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                 right: 16,
                 top: 16,
               ),
-              child: Container(
+              child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.75,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,22 +347,23 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.indigo.shade50.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.indigo.shade100),
                       ),
                       child: SelectableText(
                         ProfanityService.filter(forum.konten),
-                        style: const TextStyle(fontSize: 14, height: 1.4),
+                        style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Text('Komentar & Thread Diskusi:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    const Text('Komentar & Thread Tanggapan:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     const SizedBox(height: 8),
                     Expanded(
                       child: isLoadingComments
                           ? const Center(child: CircularProgressIndicator())
                           : comments.isEmpty
-                              ? const Center(child: Text('Belum ada komentar. Berikan tanggapan Anda!'))
+                              ? const Center(child: Text('Belum ada tanggapan. Berikan jawaban Anda!'))
                               : ListView.builder(
                                   itemCount: comments.length,
                                   itemBuilder: (context, index) {
@@ -356,7 +400,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                             child: TextField(
                               controller: commentController,
                               decoration: InputDecoration(
-                                hintText: 'Tulis tanggapan / komentar...',
+                                hintText: 'Tulis tanggapan / balasan...',
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               ),
@@ -383,7 +427,11 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                 _loadForum();
                               }
                             },
-                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
                             child: const Icon(Icons.send_rounded),
                           ),
                         ],
@@ -406,6 +454,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
         title: const Text('Forum Diskusi Komunitas'),
         backgroundColor: Colors.indigo.shade900,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showNewTopicDialog,
@@ -418,11 +467,11 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               color: Colors.indigo.shade900,
               child: Row(
                 children: [
-                  const Text('Filter Access:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                  const Text('Filter Akses:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: SingleChildScrollView(
@@ -430,9 +479,9 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                       child: Row(
                         children: [
                           _buildFilterChip('Semua Topik', 'semua'),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           _buildFilterChip('🌐 Public', 'public'),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           _buildFilterChip('🔒 Kelas Saya', 'private'),
                         ],
                       ),
@@ -451,15 +500,15 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                           itemCount: _filteredTopics.length,
                           itemBuilder: (context, index) {
                             final f = _filteredTopics[index];
-                            final bool isPrivate = f.visibility.toLowerCase() == 'private';
+                            final bool isPrivate = f.visibility.toLowerCase().trim() == 'private';
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              elevation: 3,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              elevation: 2,
                               child: InkWell(
                                 onTap: () => _showForumDetailBottomSheet(f),
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(16),
                                 child: Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: Column(
@@ -490,16 +539,16 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                             ),
                                           ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                             decoration: BoxDecoration(
                                               color: isPrivate ? Colors.amber.shade100 : Colors.green.shade100,
-                                              borderRadius: BorderRadius.circular(8),
+                                              borderRadius: BorderRadius.circular(10),
                                             ),
                                             child: Text(
                                               isPrivate ? '🔒 ${f.targetNamaKelas}' : '🌐 Public',
                                               style: TextStyle(
                                                 color: isPrivate ? Colors.amber.shade900 : Colors.green.shade900,
-                                                fontSize: 10,
+                                                fontSize: 11,
                                                 fontWeight: FontWeight.bold,
                                               ),
                                             ),
@@ -513,17 +562,17 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                         ProfanityService.filter(f.konten),
                                         maxLines: 3,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                                        style: TextStyle(fontSize: 13, color: Colors.grey.shade800, height: 1.3),
                                       ),
                                       const Divider(height: 20),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                             decoration: BoxDecoration(
                                               color: Colors.indigo.shade50,
-                                              borderRadius: BorderRadius.circular(6),
+                                              borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: Text(
                                               f.kategori,

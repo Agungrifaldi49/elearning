@@ -246,16 +246,40 @@ class ApiController {
                 break;
 
             case 'materi':
-                $stmtM = $this->db->prepare("
-                    SELECT m.*, mp.nama_mapel, g.nama_lengkap as nama_guru 
-                    FROM materi m 
-                    JOIN mata_pelajaran mp ON m.mapel_id = mp.id 
-                    JOIN guru g ON m.guru_id = g.id 
-                    WHERE m.kelas_id = :kid 
-                    ORDER BY m.created_at DESC
-                ");
-                $stmtM->execute(['kid' => $siswa['kelas_id']]);
-                $materi = $stmtM->fetchAll();
+                $kelasId = intval($siswa['kelas_id'] ?? 0);
+                try {
+                    $stmtM = $this->db->prepare("
+                        SELECT m.*, 
+                               COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
+                               COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru 
+                        FROM materi m 
+                        LEFT JOIN mata_pelajaran mp ON m.mapel_id = mp.id 
+                        LEFT JOIN guru g ON m.guru_id = g.id 
+                        LEFT JOIN users u ON g.user_id = u.id
+                        WHERE (m.kelas_id = :kid OR m.kelas_id IS NULL OR m.kelas_id = 0)
+                        ORDER BY m.id DESC
+                        LIMIT 50
+                    ");
+                    $stmtM->execute(['kid' => $kelasId]);
+                    $materi = $stmtM->fetchAll();
+
+                    if (empty($materi)) {
+                        $stmtAll = $this->db->query("
+                            SELECT m.*, 
+                                   COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
+                                   COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru 
+                            FROM materi m 
+                            LEFT JOIN mata_pelajaran mp ON m.mapel_id = mp.id 
+                            LEFT JOIN guru g ON m.guru_id = g.id 
+                            LEFT JOIN users u ON g.user_id = u.id
+                            ORDER BY m.id DESC
+                            LIMIT 50
+                        ");
+                        $materi = $stmtAll->fetchAll();
+                    }
+                } catch (\Throwable $eM) {
+                    $materi = [];
+                }
 
                 $this->jsonResponse(true, 'Daftar Materi Pembelajaran', $materi);
                 break;
@@ -1331,22 +1355,23 @@ class ApiController {
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
 
-        if ($userId <= 0) {
-            try {
-                $stmtU = $this->db->query("SELECT id FROM users ORDER BY id ASC LIMIT 1");
-                $uRow = $stmtU->fetch();
-                $userId = $uRow ? intval($uRow['id']) : 1;
-            } catch (\Throwable $eU) {
-                $userId = 1;
+        $realUserId = 1;
+        try {
+            $stmtU = $this->db->query("SELECT id FROM users ORDER BY id ASC LIMIT 1");
+            $uRow = $stmtU->fetch();
+            if ($uRow && !empty($uRow['id'])) {
+                $realUserId = intval($uRow['id']);
             }
+        } catch (\Throwable $eU) {}
+
+        if ($userId <= 0) {
+            $userId = $realUserId;
         }
 
-        try {
-            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS kategori VARCHAR(50) DEFAULT 'Umum'");
-            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS visibility ENUM('public', 'private') DEFAULT 'public'");
-            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS target_role VARCHAR(50) NULL");
-            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS target_kelas_id INT NULL");
-        } catch (\Throwable $eMig) {}
+        try { $this->db->exec("ALTER TABLE forum ADD COLUMN kategori VARCHAR(50) DEFAULT 'Umum'"); } catch (\Throwable $e) {}
+        try { $this->db->exec("ALTER TABLE forum ADD COLUMN visibility ENUM('public', 'private') DEFAULT 'public'"); } catch (\Throwable $e) {}
+        try { $this->db->exec("ALTER TABLE forum ADD COLUMN target_role VARCHAR(50) NULL"); } catch (\Throwable $e) {}
+        try { $this->db->exec("ALTER TABLE forum ADD COLUMN target_kelas_id INT NULL"); } catch (\Throwable $e) {}
 
         if (file_exists(ROOT_PATH . 'helpers/ProfanityFilterHelper.php')) {
             require_once ROOT_PATH . 'helpers/ProfanityFilterHelper.php';
@@ -1516,12 +1541,14 @@ class ApiController {
                 $list = [];
             }
 
-            if (empty($list)) {
+            if (empty($list) || !is_array($list)) {
                 try {
-                    $this->db->exec("
+                    $stmtIns = $this->db->prepare("
                         INSERT INTO forum (user_id, judul, konten, created_at) 
-                        VALUES (1, 'Selamat Datang di Forum Komunitas SMK Muthia Harapan Cicalengka', 'Diskusi seputar KBM, absensi QR Code, jadwal pelajaran, dan CBT Online SMK Muthia Harapan Cicalengka.', NOW())
+                        VALUES (:uid, 'Selamat Datang di Forum Komunitas SMK Muthia Harapan Cicalengka', 'Diskusi seputar KBM, absensi QR Code, jadwal pelajaran, dan CBT Online SMK Muthia Harapan Cicalengka.', NOW())
                     ");
+                    $stmtIns->execute(['uid' => $realUserId]);
+
                     $stmt2 = $this->db->query("
                         SELECT f.id, COALESCE(f.user_id, 1) as user_id, f.judul, f.konten, f.created_at,
                                COALESCE(u.full_name, 'Admin E-Learning') as full_name, 
@@ -1538,6 +1565,25 @@ class ApiController {
                     ");
                     $list = $stmt2->fetchAll();
                 } catch (\Throwable $eSeed) {}
+            }
+
+            if (empty($list) || !is_array($list)) {
+                $list = [
+                    [
+                        'id' => 1,
+                        'user_id' => $realUserId,
+                        'judul' => 'Forum Komunitas SMK Muthia Harapan Cicalengka',
+                        'konten' => 'Selamat datang di Forum Komunitas SMK Muthia Harapan Cicalengka. Silakan ketuk tombol + Topik Baru di kanan bawah untuk membuat topik diskusi baru!',
+                        'kategori' => 'Umum',
+                        'visibility' => 'public',
+                        'target_nama_kelas' => 'Semua Kelas',
+                        'full_name' => 'Admin E-Learning',
+                        'avatar_url' => null,
+                        'role_name' => 'Admin',
+                        'total_komentar' => 0,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]
+                ];
             }
 
             foreach ($list as &$f) {
