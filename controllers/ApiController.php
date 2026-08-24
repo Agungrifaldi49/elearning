@@ -977,37 +977,118 @@ class ApiController {
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? 0);
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $input = $this->getPostInput();
-            $userId = intval($input['user_id'] ?? $userId);
-            $fullName = trim($input['full_name'] ?? '');
-            $email = trim($input['email'] ?? '');
-            $noTelp = trim($input['no_telepon'] ?? '');
-            $jk = trim($input['jenis_kelamin'] ?? '');
-            $alamat = trim($input['alamat'] ?? '');
-            $newPassword = trim($input['password'] ?? '');
+            $userId = intval($input['user_id'] ?? $_POST['user_id'] ?? $userId);
+            $fullName = trim($input['full_name'] ?? $_POST['full_name'] ?? '');
+            $email = trim($input['email'] ?? $_POST['email'] ?? '');
+            $noTelp = trim($input['no_telepon'] ?? $_POST['no_telepon'] ?? '');
+            $jk = trim($input['jenis_kelamin'] ?? $_POST['jenis_kelamin'] ?? '');
+            $alamat = trim($input['alamat'] ?? $_POST['alamat'] ?? '');
+            $newPassword = trim($input['password'] ?? $_POST['password'] ?? '');
+            $avatarBase64 = $input['avatar_base64'] ?? $_POST['avatar_base64'] ?? '';
 
             if ($userId <= 0) {
                 $this->jsonResponse(false, 'ID Pengguna tidak valid', null, 400);
             }
 
             try {
-                if (!empty($newPassword)) {
-                    $hash = password_hash($newPassword, PASSWORD_BCRYPT);
-                    $stmtUpd = $this->db->prepare("UPDATE users SET full_name = IF(:fn!='',:fn,full_name), email = IF(:em!='',:em,email), password = :pass WHERE id = :uid");
-                    $stmtUpd->execute(['fn' => $fullName, 'em' => $email, 'pass' => $hash, 'uid' => $userId]);
-                } else {
-                    $stmtUpd = $this->db->prepare("UPDATE users SET full_name = IF(:fn!='',:fn,full_name), email = IF(:em!='',:em,email) WHERE id = :uid");
-                    $stmtUpd->execute(['fn' => $fullName, 'em' => $email, 'uid' => $userId]);
+                // Process base64 profile image upload if present
+                $newAvatarFilename = null;
+                if (!empty($avatarBase64)) {
+                    if (preg_match('/^data:image\/(\w+);base64,/', $avatarBase64, $type)) {
+                        $avatarBase64 = substr($avatarBase64, strpos($avatarBase64, ',') + 1);
+                        $ext = strtolower($type[1]);
+                    } else {
+                        $ext = 'jpg';
+                    }
+                    $avatarData = base64_decode($avatarBase64);
+                    if ($avatarData !== false) {
+                        $uploadDir = ROOT_PATH . 'assets/uploads/profile/';
+                        if (!is_dir($uploadDir)) {
+                            @mkdir($uploadDir, 0777, true);
+                        }
+                        $newAvatarFilename = 'profil_' . $userId . '_' . time() . '.' . $ext;
+                        @file_put_contents($uploadDir . $newAvatarFilename, $avatarData);
+                    }
                 }
 
-                // Update detail in siswa or guru table if exists
-                if (!empty($noTelp) || !empty($jk) || !empty($alamat)) {
+                // 1. Dynamic UPDATE users query without placeholder duplication
+                $userFields = [];
+                $userParams = ['uid' => $userId];
+
+                if ($fullName !== '') {
+                    $userFields[] = "full_name = :fullName";
+                    $userParams['fullName'] = $fullName;
+                }
+                if ($email !== '') {
+                    $userFields[] = "email = :email";
+                    $userParams['email'] = $email;
+                }
+                if ($newPassword !== '') {
+                    $userFields[] = "password = :password";
+                    $userParams['password'] = password_hash($newPassword, PASSWORD_BCRYPT);
+                }
+                if ($newAvatarFilename !== null) {
+                    $userFields[] = "avatar = :avatar";
+                    $userParams['avatar'] = $newAvatarFilename;
+                }
+
+                if (!empty($userFields)) {
+                    $sqlUser = "UPDATE users SET " . implode(', ', $userFields) . " WHERE id = :uid";
+                    $stmtUpd = $this->db->prepare($sqlUser);
+                    $stmtUpd->execute($userParams);
+                }
+
+                // 2. Dynamic UPDATE detail (siswa or guru)
+                $detailFields = [];
+                $detailParams = ['uid' => $userId];
+
+                if ($noTelp !== '') {
+                    $detailFields[] = "no_telepon = :noTelp";
+                    $detailParams['noTelp'] = $noTelp;
+                }
+                if ($jk !== '') {
+                    $detailFields[] = "jenis_kelamin = :jk";
+                    $detailParams['jk'] = $jk;
+                }
+                if ($alamat !== '') {
+                    $detailFields[] = "alamat = :alamat";
+                    $detailParams['alamat'] = $alamat;
+                }
+
+                if (!empty($detailFields)) {
+                    // Try updating table `siswa`
                     try {
-                        $stmtUpdS = $this->db->prepare("UPDATE siswa SET no_telepon = IF(:nt!='',:nt,no_telepon), jenis_kelamin = IF(:jk!='',:jk,jenis_kelamin), alamat = IF(:al!='',:al,alamat) WHERE user_id = :uid");
-                        $stmtUpdS->execute(['nt' => $noTelp, 'jk' => $jk, 'al' => $alamat, 'uid' => $userId]);
+                        $siswaFields = $detailFields;
+                        $siswaParams = $detailParams;
+                        if ($newAvatarFilename !== null) {
+                            $siswaFields[] = "foto = :foto";
+                            $siswaParams['foto'] = $newAvatarFilename;
+                        }
+                        $sqlSiswa = "UPDATE siswa SET " . implode(', ', $siswaFields) . " WHERE user_id = :uid";
+                        $stmtS = $this->db->prepare($sqlSiswa);
+                        $stmtS->execute($siswaParams);
+                    } catch (\Throwable $eS) {}
+
+                    // Try updating table `guru`
+                    try {
+                        $guruFields = $detailFields;
+                        $guruParams = $detailParams;
+                        if ($newAvatarFilename !== null) {
+                            $guruFields[] = "foto_profil = :fotoProfil";
+                            $guruParams['fotoProfil'] = $newAvatarFilename;
+                        }
+                        $sqlGuru = "UPDATE guru SET " . implode(', ', $guruFields) . " WHERE user_id = :uid";
+                        $stmtG = $this->db->prepare($sqlGuru);
+                        $stmtG->execute($guruParams);
+                    } catch (\Throwable $eG) {}
+                } else if ($newAvatarFilename !== null) {
+                    try {
+                        $stmtS = $this->db->prepare("UPDATE siswa SET foto = ? WHERE user_id = ?");
+                        $stmtS->execute([$newAvatarFilename, $userId]);
                     } catch (\Throwable $eS) {}
                     try {
-                        $stmtUpdG = $this->db->prepare("UPDATE guru SET no_telepon = IF(:nt!='',:nt,no_telepon), jenis_kelamin = IF(:jk!='',:jk,jenis_kelamin), alamat = IF(:al!='',:al,alamat) WHERE user_id = :uid");
-                        $stmtUpdG->execute(['nt' => $noTelp, 'jk' => $jk, 'al' => $alamat, 'uid' => $userId]);
+                        $stmtG = $this->db->prepare("UPDATE guru SET foto_profil = ? WHERE user_id = ?");
+                        $stmtG->execute([$newAvatarFilename, $userId]);
                     } catch (\Throwable $eG) {}
                 }
 
