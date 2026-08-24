@@ -285,18 +285,45 @@ class ApiController {
                 break;
 
             case 'tugas':
-                $stmtT = $this->db->prepare("
-                    SELECT t.*, mp.nama_mapel, g.nama_lengkap as nama_guru, 
-                           pt.id as submission_id, pt.nilai, pt.komentar_guru, pt.submitted_at 
-                    FROM tugas t 
-                    JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
-                    JOIN guru g ON t.guru_id = g.id 
-                    LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = :sid)
-                    WHERE t.kelas_id = :kid 
-                    ORDER BY t.deadline ASC
-                ");
-                $stmtT->execute(['sid' => $siswa['id'], 'kid' => $siswa['kelas_id']]);
-                $tugas = $stmtT->fetchAll();
+                $siswaId = intval($siswa['id'] ?? 0);
+                $kelasId = intval($siswa['kelas_id'] ?? 0);
+                try {
+                    $stmtT = $this->db->prepare("
+                        SELECT t.*, 
+                               COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
+                               COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru, 
+                               pt.id as submission_id, pt.nilai, pt.komentar_guru, pt.submitted_at 
+                        FROM tugas t 
+                        LEFT JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
+                        LEFT JOIN guru g ON t.guru_id = g.id 
+                        LEFT JOIN users u ON g.user_id = u.id
+                        LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = :sid)
+                        WHERE (t.kelas_id = :kid OR t.kelas_id IS NULL OR t.kelas_id = 0)
+                        ORDER BY t.id DESC
+                        LIMIT 50
+                    ");
+                    $stmtT->execute(['sid' => $siswaId, 'kid' => $kelasId]);
+                    $tugas = $stmtT->fetchAll();
+
+                    if (empty($tugas)) {
+                        $stmtAllT = $this->db->query("
+                            SELECT t.*, 
+                                   COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
+                                   COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru, 
+                                   pt.id as submission_id, pt.nilai, pt.komentar_guru, pt.submitted_at 
+                            FROM tugas t 
+                            LEFT JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
+                            LEFT JOIN guru g ON t.guru_id = g.id 
+                            LEFT JOIN users u ON g.user_id = u.id
+                            LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = {$siswaId})
+                            ORDER BY t.id DESC
+                            LIMIT 50
+                        ");
+                        $tugas = $stmtAllT->fetchAll();
+                    }
+                } catch (\Throwable $eT) {
+                    $tugas = [];
+                }
 
                 $this->jsonResponse(true, 'Daftar Tugas Siswa', $tugas);
                 break;
@@ -1523,7 +1550,10 @@ class ApiController {
             // list
             try {
                 $stmt = $this->db->query("
-                    SELECT f.id, COALESCE(f.user_id, 1) as user_id, f.judul, f.konten, f.created_at,
+                    SELECT f.*, 
+                           COALESCE(f.kategori, 'Umum') as kategori,
+                           COALESCE(f.visibility, 'public') as visibility,
+                           COALESCE(k.nama_kelas, 'Semua Kelas') as target_nama_kelas,
                            COALESCE(u.full_name, 'Pengguna E-Learning') as full_name, 
                            COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
                            COALESCE(r.name, 'Member') as role_name,
@@ -1533,12 +1563,31 @@ class ApiController {
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
                     LEFT JOIN guru g ON g.user_id = u.id
+                    LEFT JOIN kelas k ON f.target_kelas_id = k.id
                     ORDER BY f.id DESC
                     LIMIT 50
                 ");
                 $list = $stmt->fetchAll();
             } catch (\Throwable $eL) {
-                $list = [];
+                try {
+                    $stmt2 = $this->db->query("
+                        SELECT f.*, 
+                               COALESCE(u.full_name, 'Pengguna E-Learning') as full_name, 
+                               COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
+                               COALESCE(r.name, 'Member') as role_name,
+                               (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_komentar
+                        FROM forum f
+                        LEFT JOIN users u ON f.user_id = u.id
+                        LEFT JOIN roles r ON u.role_id = r.id
+                        LEFT JOIN siswa s ON s.user_id = u.id
+                        LEFT JOIN guru g ON g.user_id = u.id
+                        ORDER BY f.id DESC
+                        LIMIT 50
+                    ");
+                    $list = $stmt2->fetchAll();
+                } catch (\Throwable $eL2) {
+                    $list = [];
+                }
             }
 
             if (empty($list) || !is_array($list)) {
