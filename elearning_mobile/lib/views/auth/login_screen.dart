@@ -18,6 +18,20 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscureText = true;
   String _selectedRole = 'siswa'; // 'siswa' or 'guru'
 
+  final List<String> _siswaQuotes = [
+    "🚀 Setiap langkah kecil dalam belajar adalah lompatan besar menuju cita-cita impianmu! Semangat KBM di SMK Muthia Harapan Cicalengka!",
+    "💡 Masa depan adalah milik mereka yang mempersiapkan hari ini dengan tekun dan disiplin. Selamat belajar!",
+    "🔥 Sukses tidak datang dari kenyamanan, melainkan dari semangat dan kerja keras yang tak pernah padam. Tetap optimis!",
+    "🎓 Jadikan setiap ilmu sebagai bekal berharga untuk membuka gerbang kesuksesanmu di masa depan!"
+  ];
+
+  final List<String> _guruQuotes = [
+    "👨‍🏫 Selamat bertugas Bpk/Ibu Guru! Terima kasih atas dedikasi tanpa henti dalam mencerdaskan generasi penerus bangsa!",
+    "💡 Mengajar bukan sekadar memberikan materi, melainkan menyalakan api inspirasi dan semangat belajar di hati siswa.",
+    "⭐ Setiap bimbingan dan kesabaran Anda adalah pondasi kokoh bagi masa depan para siswa. Tetap semangat!",
+    "📚 Dedikasi Anda hari ini menciptakan para pemimpin dan profesional hebat di masa esok!"
+  ];
+
   void _handleLogin() async {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
@@ -36,6 +50,143 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success) {
       final user = authProvider.currentUser!;
+      final bool isGuru = user.isGuru;
+      final String name = user.fullName.isNotEmpty ? user.fullName : (isGuru ? 'Bapak/Ibu Guru' : 'Siswa');
+      
+      // Select random quote
+      final quotes = isGuru ? _guruQuotes : _siswaQuotes;
+      final String selectedQuote = (quotes..shuffle()).first;
+
+      // Show Motivational Dialog Popup
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+            elevation: 10,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white,
+                    isGuru ? Colors.blue.shade50 : Colors.indigo.shade50,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Animated Rocket / Badge Icon
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: isGuru ? AppTheme.primaryGradient : AppTheme.siswaGradient,
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isGuru ? AppTheme.primaryColor : AppTheme.secondaryColor).withValues(alpha: 0.4),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      isGuru ? Icons.auto_awesome_rounded : Icons.rocket_launch_rounded,
+                      color: Colors.white,
+                      size: 36,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Greeting Title
+                  Text(
+                    'Halo, $name! 👋',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Kata Semangat Hari Ini:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isGuru ? AppTheme.primaryColor : AppTheme.secondaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Motivational Quote Container
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: (isGuru ? AppTheme.primaryColor : AppTheme.secondaryColor).withValues(alpha: 0.2),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      selectedQuote,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.4,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Enter Dashboard Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      icon: const Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                      label: const Text(
+                        'Masuk ke Dashboard 🚀',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isGuru ? AppTheme.primaryColor : AppTheme.secondaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
+      if (!mounted) return;
+
+      // Navigate to destination screen
       if (user.isGuru) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const GuruMainScreen()),
@@ -48,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Login gagal!'),
+          content: Text(authProvider.errorMessage ?? 'Login gagal! Periksa username/password Anda.'),
           backgroundColor: AppTheme.dangerColor,
         ),
       );
@@ -77,26 +228,40 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header Header Card
+            // Modern Header Hero Card
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.only(top: 70, bottom: 40, left: 24, right: 24),
+              padding: const EdgeInsets.only(top: 65, bottom: 45, left: 24, right: 24),
               decoration: const BoxDecoration(
                 gradient: AppTheme.primaryGradient,
                 borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
+                  bottomLeft: Radius.circular(36),
+                  bottomRight: Radius.circular(36),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 15,
+                    offset: Offset(0, 8),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white30, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.school_rounded, size: 54, color: Colors.white),
+                    child: const Icon(Icons.school_rounded, size: 56, color: Colors.white),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -105,12 +270,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.white,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'E-Learning Mobile App',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'E-Learning Mobile Digital System',
+                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ],
               ),
@@ -122,7 +295,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Selamat Datang!',
+                    'Selamat Datang! 👋',
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
@@ -135,7 +308,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Quick Demo Selector
+                  // Role Selector Tabs
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
@@ -155,6 +328,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ? AppTheme.secondaryColor
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(12),
+                                boxShadow: _selectedRole == 'siswa'
+                                    ? [
+                                        BoxShadow(
+                                          color: AppTheme.secondaryColor.withValues(alpha: 0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ]
+                                    : [],
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -166,9 +348,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Role Siswa',
+                                    'Siswa',
                                     style: TextStyle(
-                                      color: _selectedRole == 'siswa' ? Colors.white : Colors.grey,
+                                      color: _selectedRole == 'siswa' ? Colors.white : Colors.grey.shade700,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -188,6 +370,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ? AppTheme.primaryColor
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(12),
+                                boxShadow: _selectedRole == 'guru'
+                                    ? [
+                                        BoxShadow(
+                                          color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                                          blurRadius: 8,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ]
+                                    : [],
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -199,9 +390,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Role Guru',
+                                    'Guru',
                                     style: TextStyle(
-                                      color: _selectedRole == 'guru' ? Colors.white : Colors.grey,
+                                      color: _selectedRole == 'guru' ? Colors.white : Colors.grey.shade700,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
@@ -220,9 +411,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: _usernameController,
                     decoration: InputDecoration(
-                      labelText: 'Username / Email',
+                      labelText: 'Username / NIP / NISN',
                       prefixIcon: const Icon(Icons.account_circle_outlined),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -233,16 +425,17 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: _obscureText,
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline),
+                      prefixIcon: const Icon(Icons.lock_outline_rounded),
                       suffixIcon: IconButton(
-                        icon: Icon(_obscureText ? Icons.visibility_off : Icons.visibility),
+                        icon: Icon(_obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded),
                         onPressed: () {
                           setState(() {
                             _obscureText = !_obscureText;
                           });
                         },
                       ),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                     ),
                   ),
 
@@ -252,47 +445,74 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: double.infinity,
                     height: 52,
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       onPressed: authProvider.isLoading ? null : _handleLogin,
+                      icon: authProvider.isLoading
+                          ? const SizedBox.shrink()
+                          : const Icon(Icons.login_rounded, color: Colors.white),
+                      label: authProvider.isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                            )
+                          : Text(
+                              'Masuk Sebagai ${_selectedRole == 'guru' ? 'Guru' : 'Siswa'}',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _selectedRole == 'guru' ? AppTheme.primaryColor : AppTheme.secondaryColor,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 4,
                       ),
-                      child: authProvider.isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text('Masuk Sebagai ${_selectedRole == 'guru' ? 'Guru' : 'Siswa'}'),
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                  // Demo Quick Access Buttons
+                  // Demo Quick Access Credentials
                   Center(
                     child: Container(
-                      padding: const EdgeInsets.all(12),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                        color: Colors.blue.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.blue.withValues(alpha: 0.15)),
                       ),
                       child: Column(
                         children: [
-                          const Text(
-                            '💡 Quick Demo Credentials:',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.lightbulb_rounded, size: 18, color: Colors.amber),
+                              SizedBox(width: 6),
+                              Text(
+                                'Akses Cepat Akun Demo:',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              TextButton.icon(
+                              OutlinedButton.icon(
                                 onPressed: () => _fillDemoAccount('siswa'),
-                                icon: const Icon(Icons.touch_app, size: 16),
-                                label: const Text('Isi Siswa (siswa/siswa123)'),
+                                icon: const Icon(Icons.touch_app_rounded, size: 16),
+                                label: const Text('Akun Siswa', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                style: OutlinedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
                               ),
-                              TextButton.icon(
+                              OutlinedButton.icon(
                                 onPressed: () => _fillDemoAccount('guru'),
-                                icon: const Icon(Icons.touch_app, size: 16),
-                                label: const Text('Isi Guru (guru/guru123)'),
+                                icon: const Icon(Icons.touch_app_rounded, size: 16),
+                                label: const Text('Akun Guru', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                style: OutlinedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
                               ),
                             ],
                           ),
