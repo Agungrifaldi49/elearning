@@ -117,6 +117,18 @@ switch ($routeGroup) {
         }
         break;
 
+    case 'api':
+        require_once ROOT_PATH . 'controllers/ApiController.php';
+        $controller = new ApiController();
+        $subAction = strtolower($parts[1] ?? 'index');
+        $endpoint = strtolower($parts[2] ?? 'index');
+        if (method_exists($controller, $subAction)) {
+            $controller->$subAction($endpoint);
+        } else {
+            $controller->index();
+        }
+        break;
+
     default:
         require_once ROOT_PATH . 'controllers/LandingController.php';
         $controller = new LandingController();

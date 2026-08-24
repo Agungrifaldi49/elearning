@@ -1,5 +1,11 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Route /api/* endpoints directly to api.php
+    RewriteRule ^api/(.*)$ api.php?action=$1 [QSA,L]
+    RewriteRule ^api$ api.php?action=index [QSA,L]
+
+    # Standard routing for non-file and non-directory requests
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
