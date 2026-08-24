@@ -1173,16 +1173,34 @@ class ApiController {
     public function panduan() {
         $this->jsonResponse(true, 'Buku Panduan & Petunjuk LMS E-Learning', [
             [
-                'judul' => 'Panduan Akses & Presensi Mobile',
-                'deskripsi' => 'Petunjuk melakukan presensi harian dan QR code di HP.'
+                'id' => 1,
+                'judul' => 'Panduan Presensi QR Code Mobile',
+                'kategori' => 'Absensi',
+                'deskripsi' => "1. Buka Tab Presensi / Scan QR Code pada aplikasi Mobile.\n2. Untuk Guru: Arahkan kamera HP ke Kartu QR Presensi Siswa.\n3. Untuk Siswa: Tunjukkan Kartu Presensi Digital ke Guru.\n4. Sistem akan secara otomatis memutar suara konfirmasi presensi dan menyimpan data ke database E-Learning."
             ],
             [
-                'judul' => 'Panduan Pengerjaan CBT & Tugas',
-                'deskripsi' => 'Tata cara menjawab quiz CBT online dan mengunggah tugas.'
+                'id' => 2,
+                'judul' => 'Panduan Pengerjaan CBT & Quiz Online',
+                'kategori' => 'Ujian',
+                'deskripsi' => "1. Masuk ke Tab CBT & Quiz.\n2. Pilih Ujian atau Quiz yang tersedia dan klik 'Mulai Ujian'.\n3. Jawab soal secara berurutan sebelum batas waktu timer habis.\n4. Klik 'Kirim Ujian Selesai' untuk mengirimkan nilai secara otomatis ke database."
             ],
             [
-                'judul' => 'Panduan Guru Input Nilai & Bank Soal',
-                'deskripsi' => 'Petunjuk untuk bapak/ibu guru mengelola soal dan menilai.'
+                'id' => 3,
+                'judul' => 'Panduan Pengunduhan & Pengumpulan Tugas',
+                'kategori' => 'Tugas',
+                'deskripsi' => "1. Masuk ke Tab Tugas.\n2. Klik pada kartu Tugas untuk membuka Detail Instruksi dan File Lampiran dari Guru.\n3. Unduh atau buka file instruksi tugas.\n4. Ketikkan Catatan Jawaban / Masukkan nama file jawaban lalu klik 'Kirim Jawaban'."
+            ],
+            [
+                'id' => 4,
+                'judul' => 'Panduan Pengelolaan Bank Soal Guru',
+                'kategori' => 'Guru',
+                'deskripsi' => "1. Guru masuk ke Tab CBT & Quiz lalu pilih 'Buat Quiz CBT'.\n2. Klik pada Kartu Quiz untuk membuka Bank Soal.\n3. Klik 'Tambah Soal' untuk memasukkan pertanyaan, bobot nilai, dan pilihan jawaban.\n4. Soal yang dibuat akan langsung tersimpan di Bank Soal E-Learning."
+            ],
+            [
+                'id' => 5,
+                'judul' => 'Panduan Edit Profil & Upload Foto',
+                'kategori' => 'Pengaturan',
+                'deskripsi' => "1. Buka Menu Samping / AppBar Header di pojok kanan atas.\n2. Pilih 'Edit & Update Profil'.\n3. Ketuk ikon Kamera pada foto profil untuk memilih foto dari Galeri HP atau memotret langsung dari Kamera.\n4. Isikan data nomor telepon, alamat, password baru jika perlu, lalu klik 'Simpan Perubahan Profil'."
             ]
         ]);
     }
@@ -1191,6 +1209,18 @@ class ApiController {
         try {
             $stmt = $this->db->query("SELECT * FROM library ORDER BY id DESC LIMIT 50");
             $books = $stmt->fetchAll();
+            $baseUrl = 'https://smkmuthiaharapancicalengka.my.id/';
+            foreach ($books as &$b) {
+                if (!empty($b['file_path'])) {
+                    if (strpos($b['file_path'], 'http') !== 0) {
+                        $b['file_url'] = $baseUrl . ltrim($b['file_path'], '/');
+                    } else {
+                        $b['file_url'] = $b['file_path'];
+                    }
+                } else {
+                    $b['file_url'] = $baseUrl . 'assets/docs/panduan.pdf';
+                }
+            }
             $this->jsonResponse(true, 'Daftar Buku Digital / Perpustakaan', $books);
         } catch (\Throwable $e) {
             // Fallback mock/materi library
@@ -1201,6 +1231,7 @@ class ApiController {
                     'penulis' => 'Tim Kurikulum SMK',
                     'kategori' => 'Umum',
                     'file_path' => 'assets/docs/panduan.pdf',
+                    'file_url' => 'https://smkmuthiaharapancicalengka.my.id/assets/docs/panduan.pdf',
                     'cover' => null
                 ],
                 [
@@ -1209,6 +1240,7 @@ class ApiController {
                     'penulis' => 'Tim E-Learning SMK',
                     'kategori' => 'Teknologi Informasi',
                     'file_path' => 'assets/docs/modul_web.pdf',
+                    'file_url' => 'https://smkmuthiaharapancicalengka.my.id/assets/docs/modul_web.pdf',
                     'cover' => null
                 ]
             ]);
