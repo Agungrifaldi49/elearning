@@ -56,6 +56,7 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
     final userId = user?.id ?? 0;
 
     final res = await ApiService.post('guru/scan_qr?user_id=$userId', {
+      'user_id': userId,
       'qr_code': payload,
       'identifier': payload,
     });
