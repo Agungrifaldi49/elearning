@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/sound_service.dart';
 
 class GuruScanQRScreen extends StatefulWidget {
   const GuruScanQRScreen({super.key});
@@ -38,6 +39,7 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
 
     final upperPayload = payload.toUpperCase();
     if (upperPayload.startsWith('SMKMH-GURU-') || upperPayload.startsWith('GURU-')) {
+      SoundService.playErrorBeep();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('⚠️ Akses Ditolak: Halaman Scanner Presensi ini KHUSUS untuk Siswa! QR Code Guru tidak dapat di-scan di sini.'),
@@ -82,6 +84,13 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
       final success = res['success'] == true;
       final msg = res['message'] ?? (success ? 'Presensi Berhasil!' : 'Gagal memproses QR');
 
+      if (success) {
+        SoundService.playSuccessBeep();
+        _manualInputController.clear();
+      } else {
+        SoundService.playErrorBeep();
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
@@ -89,10 +98,6 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
           duration: const Duration(seconds: 4),
         ),
       );
-
-      if (success) {
-        _manualInputController.clear();
-      }
     }
   }
 
