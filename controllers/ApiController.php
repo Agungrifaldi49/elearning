@@ -1331,6 +1331,16 @@ class ApiController {
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
 
+        if ($userId <= 0) {
+            try {
+                $stmtU = $this->db->query("SELECT id FROM users ORDER BY id ASC LIMIT 1");
+                $uRow = $stmtU->fetch();
+                $userId = $uRow ? intval($uRow['id']) : 1;
+            } catch (\Throwable $eU) {
+                $userId = 1;
+            }
+        }
+
         try {
             $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS kategori VARCHAR(50) DEFAULT 'Umum'");
             $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS visibility ENUM('public', 'private') DEFAULT 'public'");
@@ -1431,10 +1441,11 @@ class ApiController {
                            COALESCE(f.kategori, 'Umum') as kategori,
                            COALESCE(f.visibility, 'public') as visibility,
                            f.created_at,
-                           u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
+                           COALESCE(u.full_name, 'Pengguna') as full_name, 
+                           COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
                            COALESCE(r.name, 'Member') as role_name
                     FROM forum f
-                    JOIN users u ON f.user_id = u.id
+                    LEFT JOIN users u ON f.user_id = u.id
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
                     LEFT JOIN guru g ON g.user_id = u.id
@@ -1455,9 +1466,10 @@ class ApiController {
 
                 $stmtK = $this->db->prepare("
                     SELECT k.id, k.forum_id, k.user_id, k.komentar as isi_komentar, k.created_at,
-                           u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file
+                           COALESCE(u.full_name, 'Pengguna') as full_name, 
+                           COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file
                     FROM komentar k
-                    JOIN users u ON k.user_id = u.id
+                    LEFT JOIN users u ON k.user_id = u.id
                     LEFT JOIN siswa s ON s.user_id = u.id
                     LEFT JOIN guru g ON g.user_id = u.id
                     WHERE k.forum_id = :fid
@@ -1486,12 +1498,13 @@ class ApiController {
             // list
             try {
                 $stmt = $this->db->query("
-                    SELECT f.id, f.user_id, f.judul, f.konten, f.created_at,
-                           u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
+                    SELECT f.id, COALESCE(f.user_id, 1) as user_id, f.judul, f.konten, f.created_at,
+                           COALESCE(u.full_name, 'Pengguna E-Learning') as full_name, 
+                           COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
                            COALESCE(r.name, 'Member') as role_name,
                            (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_komentar
                     FROM forum f
-                    JOIN users u ON f.user_id = u.id
+                    LEFT JOIN users u ON f.user_id = u.id
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
                     LEFT JOIN guru g ON g.user_id = u.id
@@ -1503,10 +1516,34 @@ class ApiController {
                 $list = [];
             }
 
+            if (empty($list)) {
+                try {
+                    $this->db->exec("
+                        INSERT INTO forum (user_id, judul, konten, created_at) 
+                        VALUES (1, 'Selamat Datang di Forum Komunitas SMK Muthia Harapan Cicalengka', 'Diskusi seputar KBM, absensi QR Code, jadwal pelajaran, dan CBT Online SMK Muthia Harapan Cicalengka.', NOW())
+                    ");
+                    $stmt2 = $this->db->query("
+                        SELECT f.id, COALESCE(f.user_id, 1) as user_id, f.judul, f.konten, f.created_at,
+                               COALESCE(u.full_name, 'Admin E-Learning') as full_name, 
+                               COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
+                               COALESCE(r.name, 'Admin') as role_name,
+                               (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_komentar
+                        FROM forum f
+                        LEFT JOIN users u ON f.user_id = u.id
+                        LEFT JOIN roles r ON u.role_id = r.id
+                        LEFT JOIN siswa s ON s.user_id = u.id
+                        LEFT JOIN guru g ON g.user_id = u.id
+                        ORDER BY f.id DESC
+                        LIMIT 50
+                    ");
+                    $list = $stmt2->fetchAll();
+                } catch (\Throwable $eSeed) {}
+            }
+
             foreach ($list as &$f) {
-                if (!isset($f['kategori'])) $f['kategori'] = 'Umum';
-                if (!isset($f['visibility'])) $f['visibility'] = 'public';
-                if (!isset($f['target_nama_kelas'])) $f['target_nama_kelas'] = 'Semua Kelas';
+                if (!isset($f['kategori']) || empty($f['kategori'])) $f['kategori'] = 'Umum';
+                if (!isset($f['visibility']) || empty($f['visibility'])) $f['visibility'] = 'public';
+                if (!isset($f['target_nama_kelas']) || empty($f['target_nama_kelas'])) $f['target_nama_kelas'] = 'Semua Kelas';
 
                 $avFile = $f['avatar_file'] ?? '';
                 if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {

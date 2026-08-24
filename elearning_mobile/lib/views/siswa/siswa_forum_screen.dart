@@ -47,12 +47,13 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
   }
 
   void _applyFilter() {
-    if (_selectedFilter == 'public') {
-      _filteredTopics = _topics.where((t) => t.visibility.toLowerCase() == 'public').toList();
-    } else if (_selectedFilter == 'private') {
-      _filteredTopics = _topics.where((t) => t.visibility.toLowerCase() == 'private').toList();
+    final filter = _selectedFilter.toLowerCase().trim();
+    if (filter == 'public') {
+      _filteredTopics = _topics.where((t) => t.visibility.toLowerCase().trim() != 'private').toList();
+    } else if (filter == 'private') {
+      _filteredTopics = _topics.where((t) => t.visibility.toLowerCase().trim() == 'private').toList();
     } else {
-      _filteredTopics = _topics;
+      _filteredTopics = List.from(_topics);
     }
   }
 
