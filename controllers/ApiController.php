@@ -133,8 +133,9 @@ class ApiController {
                 }
             }
 
-            if (!empty($user['avatar']) && $user['avatar'] !== 'default_avatar.png') {
-                $user['avatar_url'] = 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $user['avatar'];
+            $avFile = $user['avatar'] ?? ($details['foto'] ?? ($details['foto_profil'] ?? ($details['avatar'] ?? '')));
+            if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
+                $user['avatar_url'] = 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
             } else {
                 $user['avatar_url'] = null;
             }
@@ -1021,12 +1022,6 @@ class ApiController {
             $stmtU->execute(['uid' => $userId]);
             $user = $stmtU->fetch();
 
-            if ($user && !empty($user['avatar']) && $user['avatar'] !== 'default_avatar.png') {
-                $user['avatar_url'] = 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $user['avatar'];
-            } else if ($user) {
-                $user['avatar_url'] = null;
-            }
-
             // Get extra details
             $details = null;
             try {
@@ -1047,6 +1042,15 @@ class ApiController {
                     $stmtG->execute(['uid' => $userId]);
                     $details = $stmtG->fetch() ?: null;
                 } catch (\Throwable $eG) {}
+            }
+
+            if ($user) {
+                $avFile = $user['avatar'] ?? ($details['foto'] ?? ($details['foto_profil'] ?? ($details['avatar'] ?? '')));
+                if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
+                    $user['avatar_url'] = 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                } else {
+                    $user['avatar_url'] = null;
+                }
             }
 
             $this->jsonResponse(true, 'Data Profil User', [

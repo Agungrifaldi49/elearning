@@ -20,7 +20,7 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json, Map<String, dynamic>? detailsData, String roleStr) {
-    final avatarFile = (json['avatar'] ?? detailsData?['avatar'] ?? '').toString();
+    final avatarFile = (json['avatar_url'] ?? json['avatar'] ?? detailsData?['foto_profil'] ?? detailsData?['foto'] ?? detailsData?['avatar'] ?? '').toString();
     return UserModel(
       id: int.parse(json['id'].toString()),
       roleId: int.parse(json['role_id'].toString()),
@@ -40,7 +40,7 @@ class UserModel {
     if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
       return avatar;
     }
-    if (avatar.isNotEmpty && avatar != 'default_avatar.png') {
+    if (avatar.isNotEmpty && avatar != 'default_avatar.png' && avatar != 'default.png') {
       return 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/$avatar';
     }
     return '';

@@ -18,10 +18,11 @@ require_once __DIR__ . '/controllers/ApiController.php';
 if (ob_get_length()) ob_clean();
 
 // Parse endpoint action from query parameters, PATH_INFO, or REQUEST_URI
-$action = $_GET['action'] ?? $_GET['url'] ?? $_GET['endpoint'] ?? '';
+$rawAction = $_GET['action'] ?? $_GET['url'] ?? $_GET['endpoint'] ?? '';
+$action = explode('?', $rawAction)[0];
 
 if (empty($action) && isset($_SERVER['PATH_INFO'])) {
-    $action = trim($_SERVER['PATH_INFO'], '/');
+    $action = trim(explode('?', $_SERVER['PATH_INFO'])[0], '/');
 }
 
 if (empty($action)) {
@@ -36,8 +37,8 @@ if (empty($action)) {
 }
 
 $parts = explode('/', trim($action, '/'));
-$method = strtolower($parts[0] ?? 'index');
-$param = strtolower($parts[1] ?? 'index');
+$method = strtolower(explode('?', $parts[0] ?? 'index')[0]);
+$param = strtolower(explode('?', $parts[1] ?? 'index')[0]);
 
 // Strip any query strings if attached (e.g. scan_qr?user_id=1)
 if (strpos($method, '?') !== false) {

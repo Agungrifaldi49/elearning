@@ -15,6 +15,7 @@ import 'guru_cbt_tab.dart';
 import 'guru_absensi_tab.dart';
 import '../siswa/siswa_forum_screen.dart';
 import '../siswa/siswa_chat_screen.dart';
+import '../shared/edit_profil_screen.dart';
 
 class GuruMainScreen extends StatefulWidget {
   const GuruMainScreen({super.key});
@@ -37,36 +38,46 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).currentUser;
+    final avatarUrl = user?.fullAvatarUrl ?? '';
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
-              child: const Icon(Icons.co_present, color: AppTheme.primaryColor),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user?.fullName ?? 'Guru',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    user?.subTitle ?? 'Guru SMK MH',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
+        title: InkWell(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                child: avatarUrl.isEmpty
+                    ? const Icon(Icons.co_present, color: AppTheme.primaryColor)
+                    : null,
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user?.fullName ?? 'Guru',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      user?.subTitle ?? 'Guru SMK MH',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           IconButton(
@@ -98,6 +109,8 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
+              } else if (value == 'profil') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
               } else if (value == 'kartu') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
               } else if (value == 'input_nilai') {
@@ -111,6 +124,7 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(value: 'profil', child: Row(children: [Icon(Icons.person, size: 20), SizedBox(width: 8), Text('Edit & Update Profil')])),
               const PopupMenuItem(value: 'kartu', child: Text('Kartu Guru Digital')),
               const PopupMenuItem(value: 'input_nilai', child: Text('Input & Edit Nilai Siswa')),
               const PopupMenuItem(value: 'absensi', child: Text('Input Absensi Kelas')),

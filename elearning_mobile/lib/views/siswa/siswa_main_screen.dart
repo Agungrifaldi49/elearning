@@ -15,6 +15,7 @@ import 'siswa_absensi_tab.dart';
 import 'siswa_nilai_tab.dart';
 import 'siswa_forum_screen.dart';
 import 'siswa_chat_screen.dart';
+import '../shared/edit_profil_screen.dart';
 
 class SiswaMainScreen extends StatefulWidget {
   const SiswaMainScreen({super.key});
@@ -37,36 +38,46 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).currentUser;
+    final avatarUrl = user?.fullAvatarUrl ?? '';
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: AppTheme.secondaryColor.withValues(alpha: 0.2),
-              child: const Icon(Icons.person, color: AppTheme.secondaryColor),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    user?.fullName ?? 'Siswa',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    user?.subTitle ?? 'Siswa SMK MH',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
+        title: InkWell(
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: AppTheme.secondaryColor.withValues(alpha: 0.2),
+                backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                child: avatarUrl.isEmpty
+                    ? const Icon(Icons.person, color: AppTheme.secondaryColor)
+                    : null,
               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user?.fullName ?? 'Siswa',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      user?.subTitle ?? 'Siswa SMK MH',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           IconButton(
@@ -98,6 +109,8 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
+              } else if (value == 'profil') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
               } else if (value == 'kartu') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
               } else if (value == 'library') {
@@ -111,6 +124,7 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(value: 'profil', child: Row(children: [Icon(Icons.person, size: 20), SizedBox(width: 8), Text('Edit & Update Profil')])),
               const PopupMenuItem(value: 'kartu', child: Text('Kartu Pelajar Digital')),
               const PopupMenuItem(value: 'library', child: Text('Perpustakaan Digital')),
               const PopupMenuItem(value: 'game', child: Text('EduGame & Kuis Interaktif')),

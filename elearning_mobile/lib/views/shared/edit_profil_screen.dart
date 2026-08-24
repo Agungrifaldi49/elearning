@@ -38,7 +38,7 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
     }
 
     final userId = user?.id ?? 0;
-    final res = await ApiService.get('profil?user_id=$userId');
+    final res = await ApiService.get('profil', params: {'user_id': '$userId'});
     if (mounted) {
       if (res['success'] == true && res['data'] is Map<String, dynamic>) {
         final d = res['data']['details'];
@@ -70,7 +70,8 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
-    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.currentUser;
     final userId = user?.id ?? 0;
 
     final res = await ApiService.post('profil', {
@@ -86,6 +87,17 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
     if (mounted) {
       setState(() => _isSaving = false);
       if (res['success'] == true) {
+        // Fetch refreshed user profile data
+        final resFresh = await ApiService.get('profil', params: {'user_id': '$userId'});
+        if (resFresh['success'] == true && resFresh['data'] is Map<String, dynamic>) {
+          await authProvider.updateUser(
+            resFresh['data']['user'],
+            resFresh['data']['details'],
+            user?.roleName ?? 'Siswa',
+          );
+        }
+
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(res['message'] ?? 'Profil & data diri berhasil disimpan!'), backgroundColor: Colors.green),
         );

@@ -49,6 +49,12 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<void> updateUser(Map<String, dynamic> userData, Map<String, dynamic>? detailsData, String roleStr) async {
+    _currentUser = UserModel.fromJson(userData, detailsData, roleStr);
+    await AuthService.saveSession(userData, detailsData, roleStr);
+    notifyListeners();
+  }
+
   Future<void> logout() async {
     await AuthService.clearSession();
     _currentUser = null;
