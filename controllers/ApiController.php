@@ -513,24 +513,95 @@ class ApiController {
                 }
                 break;
 
+            case 'available_mapel':
+                try {
+                    $search = trim($_GET['search'] ?? $_POST['search'] ?? '');
+                    $sql = "
+                        SELECT mek.id as key_id, mek.mapel_id, mek.guru_id, mek.kelas_id, mek.enrollment_key,
+                               mp.nama_mapel, mp.kode_mapel, g.nama_lengkap as nama_guru, k.nama_kelas,
+                               (SELECT COUNT(*) FROM siswa_mapel_enrollment sme WHERE sme.mapel_id = mek.mapel_id AND sme.guru_id = mek.guru_id AND sme.siswa_id = :sid) as is_enrolled
+                        FROM mapel_enrollment_keys mek
+                        JOIN mata_pelajaran mp ON mek.mapel_id = mp.id
+                        JOIN guru g ON mek.guru_id = g.id
+                        LEFT JOIN kelas k ON mek.kelas_id = k.id
+                    ";
+                    if ($search !== '') {
+                        $sql .= " WHERE mp.nama_mapel LIKE :s1 OR g.nama_lengkap LIKE :s2 OR k.nama_kelas LIKE :s3";
+                        $stmtM = $this->db->prepare($sql);
+                        $stmtM->execute(['sid' => $siswa['id'], 's1' => "%$search%", 's2' => "%$search%", 's3' => "%$search%"]);
+                    } else {
+                        $stmtM = $this->db->prepare($sql);
+                        $stmtM->execute(['sid' => $siswa['id']]);
+                    }
+                    $list = $stmtM->fetchAll();
+                    $this->jsonResponse(true, 'Daftar Mata Pelajaran & Key System', $list);
+                } catch (\Throwable $eAm) {
+                    // Fallback to basic mapel list if mapel_enrollment_keys table is not available
+                    $stmtBasic = $this->db->prepare("
+                        SELECT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel 
+                        FROM mata_pelajaran mp
+                    ");
+                    $stmtBasic->execute();
+                    $list = $stmtBasic->fetchAll();
+                    $this->jsonResponse(true, 'Daftar Mata Pelajaran', $list);
+                }
+                break;
+
             case 'gabung_kelas':
                 $input = $this->getPostInput();
+                $action = $input['action'] ?? 'join_kelas';
+                $keyMapel = trim($input['key_mapel'] ?? $input['passcode_key'] ?? '');
                 $kodeKelas = trim($input['kode_kelas'] ?? '');
-                if (empty($kodeKelas)) {
-                    $this->jsonResponse(false, 'Kode Kelas wajib diisi!', null, 400);
-                }
-                try {
-                    $stmtK = $this->db->prepare("SELECT id, nama_kelas FROM kelas WHERE kode_kelas = :kode LIMIT 1");
-                    $stmtK->execute(['kode' => $kodeKelas]);
-                    $kelas = $stmtK->fetch();
-                    if (!$kelas) {
-                        $this->jsonResponse(false, 'Kode Kelas tidak valid atau tidak ditemukan.', null, 404);
+
+                if ($action === 'enroll_mapel' || (!empty($keyMapel) && empty($kodeKelas))) {
+                    if (empty($keyMapel)) {
+                        $this->jsonResponse(false, 'Kode Akses / Key Mapel tidak boleh kosong!', null, 400);
                     }
-                    $stmtUpd = $this->db->prepare("UPDATE siswa SET kelas_id = :kid WHERE id = :sid");
-                    $stmtUpd->execute(['kid' => $kelas['id'], 'sid' => $siswa['id']]);
-                    $this->jsonResponse(true, 'Berhasil bergabung ke kelas ' . $kelas['nama_kelas']);
-                } catch (\Throwable $eG) {
-                    $this->jsonResponse(false, 'Gagal bergabung ke kelas: ' . $eG->getMessage(), null, 500);
+                    $cleanKey = strtoupper($keyMapel);
+                    try {
+                        $stmtK = $this->db->prepare("
+                            SELECT mek.*, mp.nama_mapel, g.nama_lengkap as nama_guru 
+                            FROM mapel_enrollment_keys mek
+                            JOIN mata_pelajaran mp ON mek.mapel_id = mp.id
+                            JOIN guru g ON mek.guru_id = g.id
+                            WHERE UPPER(mek.enrollment_key) = :k1 OR UPPER(mek.passcode) = :k2
+                            LIMIT 1
+                        ");
+                        $stmtK->execute(['k1' => $cleanKey, 'k2' => $cleanKey]);
+                        $target = $stmtK->fetch();
+
+                        if (!$target) {
+                            $this->jsonResponse(false, 'Key Mapel tidak valid! Silakan minta Passcode Key resmi dari Guru atau Admin.', null, 404);
+                        }
+
+                        $ins = $this->db->prepare("INSERT IGNORE INTO siswa_mapel_enrollment (siswa_id, mapel_id, guru_id) VALUES (:sid, :mid, :gid)");
+                        $ins->execute(['sid' => $siswa['id'], 'mid' => $target['mapel_id'], 'gid' => $target['guru_id']]);
+
+                        $this->jsonResponse(true, 'Selamat! Anda berhasil terdaftar di Mata Pelajaran ' . $target['nama_mapel'] . ' (' . $target['nama_guru'] . ').', $target);
+                    } catch (\Throwable $eEn) {
+                        $this->jsonResponse(false, 'Gagal terdaftar ke mapel: ' . $eEn->getMessage(), null, 500);
+                    }
+                } else {
+                    if (empty($kodeKelas)) {
+                        $this->jsonResponse(false, 'Kode Rombel Kelas wajib diisi!', null, 400);
+                    }
+                    try {
+                        $cleanKode = strtoupper($kodeKelas);
+                        if (strpos($cleanKode, 'MH-') === 0) {
+                            $cleanKode = substr($cleanKode, 3);
+                        }
+                        $stmtK = $this->db->prepare("SELECT id, nama_kelas FROM kelas WHERE kode_kelas = :kode OR UPPER(nama_kelas) = :nk LIMIT 1");
+                        $stmtK->execute(['kode' => $cleanKode, 'nk' => $cleanKode]);
+                        $kelas = $stmtK->fetch();
+                        if (!$kelas) {
+                            $this->jsonResponse(false, 'Kode Rombel Kelas tidak valid atau tidak ditemukan.', null, 404);
+                        }
+                        $stmtUpd = $this->db->prepare("UPDATE siswa SET kelas_id = :kid WHERE id = :sid");
+                        $stmtUpd->execute(['kid' => $kelas['id'], 'sid' => $siswa['id']]);
+                        $this->jsonResponse(true, 'Berhasil bergabung ke Rombel Kelas ' . $kelas['nama_kelas']);
+                    } catch (\Throwable $eG) {
+                        $this->jsonResponse(false, 'Gagal bergabung ke kelas: ' . $eG->getMessage(), null, 500);
+                    }
                 }
                 break;
 

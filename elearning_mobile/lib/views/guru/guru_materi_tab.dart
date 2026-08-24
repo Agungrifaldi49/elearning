@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/materi_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
+import '../../services/file_service.dart';
 import '../../theme/app_theme.dart';
 
 class GuruMateriTab extends StatefulWidget {
@@ -105,7 +106,7 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                   width: double.infinity,
                   height: 46,
                   child: ElevatedButton.icon(
-                    onPressed: () => _openLinkDialog('Video Learning YouTube', m.youtubeUrl!),
+                    onPressed: () => FileService.openFileOrUrl(context, m.youtubeUrl!),
                     icon: const Icon(Icons.play_arrow, color: Colors.white),
                     label: const Text('Tonton Video Learning (YouTube)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
@@ -122,9 +123,9 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                   width: double.infinity,
                   height: 46,
                   child: ElevatedButton.icon(
-                    onPressed: () => _openLinkDialog('Dokumen File PDF', fileUrl),
+                    onPressed: () => FileService.openFileOrUrl(context, fileUrl),
                     icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
-                    label: const Text('Buka / Unduh Berkas Materi PDF', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    label: const Text('Buka Berkas Materi PDF', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade700,
                       foregroundColor: Colors.white,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../services/file_service.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -145,7 +146,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
-                    _openBookFile(fileUrl, judul);
+                    FileService.openFileOrUrl(context, fileUrl);
                   },
                   icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
                   label: const Text('Buka / Unduh File PDF Buku', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),

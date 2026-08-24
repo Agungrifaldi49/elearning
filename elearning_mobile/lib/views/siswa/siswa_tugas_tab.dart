@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/tugas_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/siswa_provider.dart';
+import '../../services/file_service.dart';
 import '../../theme/app_theme.dart';
 
 class SiswaTugasTab extends StatefulWidget {
@@ -109,9 +110,9 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                   width: double.infinity,
                   height: 44,
                   child: ElevatedButton.icon(
-                    onPressed: () => _openLinkDialog('Berkas Soal/Tugas Guru', fileUrl),
+                    onPressed: () => FileService.openFileOrUrl(context, fileUrl),
                     icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
-                    label: const Text('Buka / Unduh Berkas Lampiran Tugas (PDF)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    label: const Text('Buka Berkas Lampiran Tugas (PDF)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade700,
                       foregroundColor: Colors.white,

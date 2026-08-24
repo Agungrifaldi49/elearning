@@ -15,6 +15,7 @@ import 'siswa_absensi_tab.dart';
 import 'siswa_nilai_tab.dart';
 import 'siswa_forum_screen.dart';
 import 'siswa_chat_screen.dart';
+import 'gabung_kelas_screen.dart';
 import '../shared/edit_profil_screen.dart';
 
 class SiswaMainScreen extends StatefulWidget {
@@ -113,6 +114,8 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
               } else if (value == 'kartu') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
+              } else if (value == 'gabung_kelas') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const GabungKelasScreen()));
               } else if (value == 'library') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen()));
               } else if (value == 'game') {
@@ -125,6 +128,7 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'profil', child: Row(children: [Icon(Icons.person, size: 20), SizedBox(width: 8), Text('Edit & Update Profil')])),
+              const PopupMenuItem(value: 'gabung_kelas', child: Row(children: [Icon(Icons.key, size: 20, color: Colors.amber), SizedBox(width: 8), Text('Gabung Rombel & Key Mapel')])),
               const PopupMenuItem(value: 'kartu', child: Text('Kartu Pelajar Digital')),
               const PopupMenuItem(value: 'library', child: Text('Perpustakaan Digital')),
               const PopupMenuItem(value: 'game', child: Text('EduGame & Kuis Interaktif')),
