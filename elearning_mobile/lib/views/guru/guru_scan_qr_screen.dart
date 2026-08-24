@@ -39,7 +39,7 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
 
     final upperPayload = payload.toUpperCase();
     if (upperPayload.startsWith('SMKMH-GURU-') || upperPayload.startsWith('GURU-')) {
-      SoundService.playErrorBeep();
+      SoundService.speakErrorAnnouncement("Halaman pemindaian presensi ini khusus untuk siswa.");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('⚠️ Akses Ditolak: Halaman Scanner Presensi ini KHUSUS untuk Siswa! QR Code Guru tidak dapat di-scan di sini.'),
@@ -84,11 +84,31 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
       final success = res['success'] == true;
       final msg = res['message'] ?? (success ? 'Presensi Berhasil!' : 'Gagal memproses QR');
 
+      final rawData = res['data'];
+      final dataMap = (rawData is Map<String, dynamic>) ? rawData : res;
+      final namaSiswa = dataMap['nama'] ?? dataMap['nama_lengkap'] ?? dataMap['nama_siswa'] ?? 'Siswa';
+
       if (success) {
-        SoundService.playSuccessBeep();
         _manualInputController.clear();
+        final type = (dataMap['type'] ?? '').toString().toLowerCase();
+        final isLate = dataMap['is_late'] == true;
+
+        if (type == 'pulang') {
+          SoundService.speakPresensiPulang(nama: namaSiswa);
+        } else {
+          SoundService.speakPresensiMasuk(nama: namaSiswa, isLate: isLate);
+        }
       } else {
-        SoundService.playErrorBeep();
+        final isAlreadyAttended = res['already_attended'] == true || dataMap['already_attended'] == true;
+        final isNotScheduled = res['is_not_scheduled'] == true || dataMap['is_not_scheduled'] == true || res['reason'] == 'holiday' || dataMap['reason'] == 'holiday' || res['reason'] == 'no_schedule_day' || dataMap['reason'] == 'no_schedule_day';
+
+        if (isAlreadyAttended) {
+          SoundService.speakPresensiLengkap(nama: namaSiswa);
+        } else if (isNotScheduled) {
+          SoundService.speakHariLibur(message: msg);
+        } else {
+          SoundService.speakErrorAnnouncement(msg);
+        }
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
