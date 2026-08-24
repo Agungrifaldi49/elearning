@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/forum_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/profanity_service.dart';
 import '../../theme/app_theme.dart';
 
 class SiswaForumScreen extends StatefulWidget {
@@ -298,10 +299,15 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                     children: [
                                       CircleAvatar(
                                         backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
-                                        child: Text(
-                                          f.fullName.isNotEmpty ? f.fullName[0] : 'U',
-                                          style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
-                                        ),
+                                        backgroundImage: (f.avatarUrl != null && f.avatarUrl!.isNotEmpty)
+                                            ? NetworkImage(f.avatarUrl!)
+                                            : null,
+                                        child: (f.avatarUrl == null || f.avatarUrl!.isEmpty)
+                                            ? Text(
+                                                f.fullName.isNotEmpty ? f.fullName[0] : 'U',
+                                                style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+                                              )
+                                            : null,
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
@@ -327,10 +333,10 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 12),
-                                  Text(f.judul, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  Text(ProfanityService.filter(f.judul), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                                   const SizedBox(height: 6),
                                   Text(
-                                    f.konten,
+                                    ProfanityService.filter(f.konten),
                                     maxLines: 3,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(fontSize: 14, color: Colors.grey.shade800),

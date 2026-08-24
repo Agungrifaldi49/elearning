@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/chat_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/profanity_service.dart';
 import '../../theme/app_theme.dart';
 
 class SiswaChatScreen extends StatefulWidget {
@@ -109,13 +110,18 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                               child: ListTile(
                                 leading: CircleAvatar(
                                   backgroundColor: isGuru ? Colors.amber.withValues(alpha: 0.2) : AppTheme.primaryColor.withValues(alpha: 0.15),
-                                  child: Text(
-                                    c.fullName.isNotEmpty ? c.fullName[0] : 'U',
-                                    style: TextStyle(
-                                      color: isGuru ? Colors.amber.shade900 : AppTheme.primaryColor,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                  backgroundImage: (c.avatarUrl != null && c.avatarUrl!.isNotEmpty)
+                                      ? NetworkImage(c.avatarUrl!)
+                                      : null,
+                                  child: (c.avatarUrl == null || c.avatarUrl!.isEmpty)
+                                      ? Text(
+                                          c.fullName.isNotEmpty ? c.fullName[0] : 'U',
+                                          style: TextStyle(
+                                            color: isGuru ? Colors.amber.shade900 : AppTheme.primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        )
+                                      : null,
                                 ),
                                 title: Row(
                                   children: [
@@ -279,7 +285,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                 crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    m.pesan,
+                                    ProfanityService.filter(m.pesan),
                                     style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 14),
                                   ),
                                   const SizedBox(height: 4),

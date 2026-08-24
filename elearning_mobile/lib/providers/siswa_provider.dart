@@ -129,13 +129,22 @@ class SiswaProvider with ChangeNotifier {
     return res;
   }
 
+  Map<String, dynamic>? _absensiStats;
+  Map<String, dynamic>? get absensiStats => _absensiStats;
+
   Future<void> fetchAbsensi(int userId) async {
     _isLoading = true;
     notifyListeners();
 
     final res = await ApiService.get('siswa/absensi', params: {'user_id': userId.toString()});
-    if (res['success'] == true && res['data'] is List) {
-      _absensiList = (res['data'] as List).map((e) => AbsensiModel.fromJson(e)).toList();
+    if (res['success'] == true) {
+      if (res['data'] is Map) {
+        _absensiStats = res['data']['stats'];
+        final list = res['data']['history'] as List? ?? [];
+        _absensiList = list.map((e) => AbsensiModel.fromJson(e)).toList();
+      } else if (res['data'] is List) {
+        _absensiList = (res['data'] as List).map((e) => AbsensiModel.fromJson(e)).toList();
+      }
     }
     _isLoading = false;
     notifyListeners();

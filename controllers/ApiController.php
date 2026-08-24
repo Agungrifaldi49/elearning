@@ -424,19 +424,57 @@ class ApiController {
                 break;
 
             case 'absensi':
-                // Get attendance list for student
-                $stmtAbs = $this->db->prepare("
-                    SELECT a.*, j.hari, j.jam_mulai, j.jam_selesai, mp.nama_mapel 
-                    FROM absensi a 
-                    JOIN jadwal j ON a.jadwal_id = j.id 
-                    JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
-                    WHERE a.siswa_id = :sid 
-                    ORDER BY a.tanggal DESC LIMIT 30
-                ");
-                $stmtAbs->execute(['sid' => $siswa['id']]);
-                $history = $stmtAbs->fetchAll();
+            case 'history_absensi':
+                try {
+                    $stmtAbs = $this->db->prepare("
+                        SELECT a.*, j.hari, j.jam_mulai, j.jam_selesai, mp.nama_mapel, g.nama_lengkap as nama_guru
+                        FROM absensi a 
+                        LEFT JOIN jadwal j ON a.jadwal_id = j.id 
+                        LEFT JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
+                        LEFT JOIN guru g ON a.guru_id = g.id
+                        WHERE a.siswa_id = :sid 
+                        ORDER BY a.tanggal DESC, a.id DESC 
+                        LIMIT 100
+                    ");
+                    $stmtAbs->execute(['sid' => $siswa['id']]);
+                    $history = $stmtAbs->fetchAll();
 
-                $this->jsonResponse(true, 'Riwayat Absensi Siswa', $history);
+                    $totalHadir = 0;
+                    $tepatWaktu = 0;
+                    $terlambat = 0;
+                    $sudahPulang = 0;
+                    $izinSakit = 0;
+
+                    foreach ($history as $h) {
+                        $st = strtolower($h['status'] ?? '');
+                        if (strpos($st, 'tepat') !== false || $st === 'hadir') {
+                            $tepatWaktu++;
+                            $totalHadir++;
+                        } elseif (strpos($st, 'telat') !== false || strpos($st, 'terlambat') !== false) {
+                            $terlambat++;
+                            $totalHadir++;
+                        } elseif (strpos($st, 'pulang') !== false) {
+                            $sudahPulang++;
+                        } elseif ($st === 'sakit' || $st === 'izin' || $st === 'alpha' || $st === 'alpa') {
+                            $izinSakit++;
+                        } else {
+                            $totalHadir++;
+                        }
+                    }
+
+                    $this->jsonResponse(true, 'Laporan & History Presensi Siswa', [
+                        'stats' => [
+                            'total_hadir' => $totalHadir,
+                            'tepat_waktu' => $tepatWaktu,
+                            'terlambat' => $terlambat,
+                            'sudah_pulang' => $sudahPulang,
+                            'izin_sakit_alpha' => $izinSakit,
+                        ],
+                        'history' => $history
+                    ]);
+                } catch (\Throwable $eAbs) {
+                    $this->jsonResponse(false, 'Gagal memuat riwayat absensi: ' . $eAbs->getMessage(), null, 500);
+                }
                 break;
 
             case 'checkin_absensi':
@@ -1293,12 +1331,21 @@ class ApiController {
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
 
+        if (file_exists(ROOT_PATH . 'helpers/ProfanityFilterHelper.php')) {
+            require_once ROOT_PATH . 'helpers/ProfanityFilterHelper.php';
+        }
+
         if ($endpoint === 'create' || ($_SERVER['REQUEST_METHOD'] === 'POST' && $endpoint !== 'comment')) {
             $judul = trim($input['judul'] ?? '');
             $konten = trim($input['konten'] ?? '');
 
             if (empty($judul) || empty($konten)) {
                 $this->jsonResponse(false, 'Judul dan konten topik wajib diisi!', null, 400);
+            }
+
+            if (class_exists('ProfanityFilterHelper')) {
+                $judul = ProfanityFilterHelper::filter($judul);
+                $konten = ProfanityFilterHelper::filter($konten);
             }
 
             try {
@@ -1323,6 +1370,10 @@ class ApiController {
                 $this->jsonResponse(false, 'ID Forum dan isi komentar wajib diisi!', null, 400);
             }
 
+            if (class_exists('ProfanityFilterHelper')) {
+                $komentar = ProfanityFilterHelper::filter($komentar);
+            }
+
             try {
                 $stmt = $this->db->prepare("
                     INSERT INTO komentar (forum_id, user_id, komentar, created_at) 
@@ -1342,26 +1393,48 @@ class ApiController {
             try {
                 $stmtF = $this->db->prepare("
                     SELECT f.id, f.user_id, f.judul, f.konten, f.created_at,
-                           u.full_name, COALESCE(u.avatar, 'default_avatar.png') as avatar, COALESCE(r.name, 'Member') as role_name
+                           u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, COALESCE(r.name, 'Member') as role_name
                     FROM forum f
                     JOIN users u ON f.user_id = u.id
                     LEFT JOIN roles r ON u.role_id = r.id
+                    LEFT JOIN siswa s ON s.user_id = u.id
+                    LEFT JOIN guru g ON g.user_id = u.id
                     WHERE f.id = :fid
                     LIMIT 1
                 ");
                 $stmtF->execute(['fid' => $forumId]);
                 $topic = $stmtF->fetch();
 
+                if ($topic) {
+                    $avFile = $topic['avatar_file'] ?? '';
+                    if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
+                        $topic['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                    } else {
+                        $topic['avatar_url'] = null;
+                    }
+                }
+
                 $stmtK = $this->db->prepare("
                     SELECT k.id, k.forum_id, k.user_id, k.komentar as isi_komentar, k.created_at,
-                           u.full_name, COALESCE(u.avatar, 'default_avatar.png') as avatar
+                           u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file
                     FROM komentar k
                     JOIN users u ON k.user_id = u.id
+                    LEFT JOIN siswa s ON s.user_id = u.id
+                    LEFT JOIN guru g ON g.user_id = u.id
                     WHERE k.forum_id = :fid
                     ORDER BY k.created_at ASC
                 ");
                 $stmtK->execute(['fid' => $forumId]);
                 $comments = $stmtK->fetchAll();
+
+                foreach ($comments as &$c) {
+                    $avFile = $c['avatar_file'] ?? '';
+                    if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
+                        $c['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                    } else {
+                        $c['avatar_url'] = null;
+                    }
+                }
 
                 $this->jsonResponse(true, 'Detail Topik Forum', [
                     'topic' => $topic,
@@ -1375,15 +1448,25 @@ class ApiController {
             try {
                 $stmt = $this->db->query("
                     SELECT f.id, f.user_id, f.judul, f.konten, f.created_at,
-                           u.full_name, COALESCE(u.avatar, 'default_avatar.png') as avatar, COALESCE(r.name, 'Member') as role_name,
+                           u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, COALESCE(r.name, 'Member') as role_name,
                            (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_komentar
                     FROM forum f
                     JOIN users u ON f.user_id = u.id
                     LEFT JOIN roles r ON u.role_id = r.id
+                    LEFT JOIN siswa s ON s.user_id = u.id
+                    LEFT JOIN guru g ON g.user_id = u.id
                     ORDER BY f.created_at DESC
                     LIMIT 50
                 ");
                 $list = $stmt->fetchAll();
+                foreach ($list as &$f) {
+                    $avFile = $f['avatar_file'] ?? '';
+                    if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
+                        $f['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                    } else {
+                        $f['avatar_url'] = null;
+                    }
+                }
                 $this->jsonResponse(true, 'Daftar Forum Diskusi', $list);
             } catch (\Throwable $eL) {
                 $this->jsonResponse(true, 'Daftar Forum Diskusi', []);
@@ -1396,12 +1479,20 @@ class ApiController {
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
 
+        if (file_exists(ROOT_PATH . 'helpers/ProfanityFilterHelper.php')) {
+            require_once ROOT_PATH . 'helpers/ProfanityFilterHelper.php';
+        }
+
         if ($endpoint === 'messages' && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $receiverId = intval($input['receiver_id'] ?? 0);
             $pesan = trim($input['pesan'] ?? $input['message'] ?? '');
 
             if ($receiverId <= 0 || empty($pesan)) {
                 $this->jsonResponse(false, 'Penerima dan pesan tidak boleh kosong!', null, 400);
+            }
+
+            if (class_exists('ProfanityFilterHelper')) {
+                $pesan = ProfanityFilterHelper::filter($pesan);
             }
 
             try {
@@ -1453,7 +1544,7 @@ class ApiController {
                 $stmt = $this->db->prepare("
                     SELECT u.id, 
                            COALESCE(s.nama_lengkap, g.nama_lengkap, u.full_name) as full_name,
-                           COALESCE(u.avatar, 'default_avatar.png') as avatar,
+                           COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file,
                            COALESCE(r.name, 'Pengguna') as role_name,
                            (SELECT message FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid1) OR (sender_id = :uid2 AND receiver_id = u.id)) ORDER BY created_at DESC LIMIT 1) as last_message,
                            (SELECT created_at FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid3) OR (sender_id = :uid4 AND receiver_id = u.id)) ORDER BY created_at DESC LIMIT 1) as last_time
@@ -1472,6 +1563,14 @@ class ApiController {
                     'uid5' => $userId
                 ]);
                 $contacts = $stmt->fetchAll();
+                foreach ($contacts as &$c) {
+                    $avFile = $c['avatar_file'] ?? '';
+                    if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
+                        $c['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                    } else {
+                        $c['avatar_url'] = null;
+                    }
+                }
                 $this->jsonResponse(true, 'Daftar Kontak Direct Chat', $contacts);
             } catch (\Throwable $eCt) {
                 $this->jsonResponse(true, 'Daftar Kontak Direct Chat', []);
