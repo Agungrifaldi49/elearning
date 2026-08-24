@@ -4,6 +4,8 @@ class ForumModel {
   final String judul;
   final String konten;
   final String kategori;
+  final String visibility;
+  final String targetNamaKelas;
   final String fullName;
   final String avatar;
   final String? avatarUrl;
@@ -17,6 +19,8 @@ class ForumModel {
     required this.judul,
     required this.konten,
     required this.kategori,
+    this.visibility = 'public',
+    this.targetNamaKelas = 'Semua Kelas',
     required this.fullName,
     required this.avatar,
     this.avatarUrl,
@@ -36,6 +40,8 @@ class ForumModel {
       judul: json['judul'] ?? '',
       konten: json['konten'] ?? '',
       kategori: json['kategori'] ?? 'Umum',
+      visibility: json['visibility'] ?? 'public',
+      targetNamaKelas: json['target_nama_kelas'] ?? json['nama_kelas'] ?? 'Semua Kelas',
       fullName: json['full_name'] ?? '',
       avatar: json['avatar'] ?? 'default_avatar.png',
       avatarUrl: avUrl,
@@ -53,6 +59,7 @@ class KomentarModel {
   final String isiKomentar;
   final String fullName;
   final String avatar;
+  final String? avatarUrl;
   final String createdAt;
 
   KomentarModel({
@@ -62,17 +69,23 @@ class KomentarModel {
     required this.isiKomentar,
     required this.fullName,
     required this.avatar,
+    this.avatarUrl,
     required this.createdAt,
   });
 
   factory KomentarModel.fromJson(Map<String, dynamic> json) {
+    String? avUrl = json['avatar_url'];
+    if (avUrl == null && json['avatar'] != null && json['avatar'].toString().startsWith('http')) {
+      avUrl = json['avatar'];
+    }
     return KomentarModel(
-      id: int.parse(json['id'].toString()),
-      forumId: int.parse(json['forum_id'].toString()),
-      userId: int.parse(json['user_id'].toString()),
+      id: int.parse((json['id'] ?? 0).toString()),
+      forumId: int.parse((json['forum_id'] ?? 0).toString()),
+      userId: int.parse((json['user_id'] ?? 0).toString()),
       isiKomentar: json['isi_komentar'] ?? '',
       fullName: json['full_name'] ?? '',
       avatar: json['avatar'] ?? 'default_avatar.png',
+      avatarUrl: avUrl,
       createdAt: json['created_at'] ?? '',
     );
   }

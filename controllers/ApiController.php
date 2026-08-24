@@ -1338,6 +1338,18 @@ class ApiController {
         if ($endpoint === 'create' || ($_SERVER['REQUEST_METHOD'] === 'POST' && $endpoint !== 'comment')) {
             $judul = trim($input['judul'] ?? '');
             $konten = trim($input['konten'] ?? '');
+            $kategori = trim($input['kategori'] ?? 'Umum');
+            $visibility = trim($input['visibility'] ?? 'public');
+            $targetKelasId = intval($input['target_kelas_id'] ?? 0);
+
+            if ($targetKelasId <= 0 && $userId > 0) {
+                $stmtS = $this->db->prepare("SELECT kelas_id FROM siswa WHERE user_id = :uid LIMIT 1");
+                $stmtS->execute(['uid' => $userId]);
+                $sData = $stmtS->fetch();
+                if ($sData && !empty($sData['kelas_id'])) {
+                    $targetKelasId = intval($sData['kelas_id']);
+                }
+            }
 
             if (empty($judul) || empty($konten)) {
                 $this->jsonResponse(false, 'Judul dan konten topik wajib diisi!', null, 400);
@@ -1350,17 +1362,33 @@ class ApiController {
 
             try {
                 $stmt = $this->db->prepare("
-                    INSERT INTO forum (user_id, judul, konten, created_at) 
-                    VALUES (:uid, :jdl, :ktn, NOW())
+                    INSERT INTO forum (user_id, judul, konten, kategori, visibility, target_kelas_id, created_at) 
+                    VALUES (:uid, :jdl, :ktn, :ktg, :vis, :tkid, NOW())
                 ");
                 $stmt->execute([
                     'uid' => $userId,
                     'jdl' => $judul,
-                    'ktn' => $konten
+                    'ktn' => $konten,
+                    'ktg' => $kategori,
+                    'vis' => $visibility === 'private' ? 'private' : 'public',
+                    'tkid' => $targetKelasId > 0 ? $targetKelasId : null
                 ]);
                 $this->jsonResponse(true, 'Topik diskusi berhasil diterbitkan!');
             } catch (\Throwable $eC) {
-                $this->jsonResponse(false, 'Gagal menerbitkan topik: ' . $eC->getMessage(), null, 500);
+                try {
+                    $stmtFB = $this->db->prepare("
+                        INSERT INTO forum (user_id, judul, konten, created_at) 
+                        VALUES (:uid, :jdl, :ktn, NOW())
+                    ");
+                    $stmtFB->execute([
+                        'uid' => $userId,
+                        'jdl' => $judul,
+                        'ktn' => $konten
+                    ]);
+                    $this->jsonResponse(true, 'Topik diskusi berhasil diterbitkan!');
+                } catch (\Throwable $eFB) {
+                    $this->jsonResponse(false, 'Gagal menerbitkan topik: ' . $eFB->getMessage(), null, 500);
+                }
             }
         } elseif ($endpoint === 'comment') {
             $forumId = intval($input['forum_id'] ?? $_GET['forum_id'] ?? 0);
@@ -1392,13 +1420,19 @@ class ApiController {
             $forumId = intval($_GET['forum_id'] ?? $_GET['id'] ?? 0);
             try {
                 $stmtF = $this->db->prepare("
-                    SELECT f.id, f.user_id, f.judul, f.konten, f.created_at,
-                           u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, COALESCE(r.name, 'Member') as role_name
+                    SELECT f.id, f.user_id, f.judul, f.konten, 
+                           COALESCE(f.kategori, 'Umum') as kategori,
+                           COALESCE(f.visibility, 'public') as visibility,
+                           COALESCE(k.nama_kelas, 'Semua Kelas') as target_nama_kelas,
+                           f.created_at,
+                           u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
+                           COALESCE(r.name, 'Member') as role_name
                     FROM forum f
                     JOIN users u ON f.user_id = u.id
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
                     LEFT JOIN guru g ON g.user_id = u.id
+                    LEFT JOIN kelas k ON f.target_kelas_id = k.id
                     WHERE f.id = :fid
                     LIMIT 1
                 ");
@@ -1446,38 +1480,66 @@ class ApiController {
         } else {
             // list
             try {
-                $stmt = $this->db->query("
-                    SELECT f.id, f.user_id, f.judul, f.konten, f.created_at,
-                           u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, COALESCE(r.name, 'Member') as role_name,
+                $userKelasId = 0;
+                if ($userId > 0) {
+                    $stmtK = $this->db->prepare("SELECT kelas_id FROM siswa WHERE user_id = :uid LIMIT 1");
+                    $stmtK->execute(['uid' => $userId]);
+                    $sRes = $stmtK->fetch();
+                    if ($sRes && !empty($sRes['kelas_id'])) {
+                        $userKelasId = intval($sRes['kelas_id']);
+                    }
+                }
+
+                $stmt = $this->db->prepare("
+                    SELECT f.id, f.user_id, f.judul, f.konten, 
+                           COALESCE(f.kategori, 'Umum') as kategori,
+                           COALESCE(f.visibility, 'public') as visibility,
+                           COALESCE(k.nama_kelas, 'Semua Kelas') as target_nama_kelas,
+                           f.created_at,
+                           u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
+                           COALESCE(r.name, 'Member') as role_name,
                            (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_komentar
                     FROM forum f
                     JOIN users u ON f.user_id = u.id
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
                     LEFT JOIN guru g ON g.user_id = u.id
-                    ORDER BY f.created_at DESC
+                    LEFT JOIN kelas k ON f.target_kelas_id = k.id
+                    WHERE (
+                        f.visibility = 'public' 
+                        OR f.visibility IS NULL 
+                        OR f.user_id = :uid1 
+                        OR (
+                            f.visibility = 'private' 
+                            AND (f.target_kelas_id IS NULL OR f.target_kelas_id = 0 OR f.target_kelas_id = :kid)
+                        )
+                    )
+                    ORDER BY f.id DESC
                     LIMIT 50
                 ");
+                $stmt->execute(['uid1' => $userId, 'kid' => $userKelasId]);
                 $list = $stmt->fetchAll();
 
                 if (empty($list)) {
-                    // Seed initial welcome topic if table is currently empty
-                    $stmtInit = $this->db->query("
-                        INSERT INTO forum (user_id, judul, konten, created_at) 
-                        VALUES (1, 'Selamat Datang di Forum Komunitas SMK Muthia Harapan Cicalengka', 'Diskusi seputar pembelajaran, jadwal KBM, absensi QR Code, dan CBT Online SMK Muthia Harapan Cicalengka.', NOW())
-                    ");
-                    $stmtRetry = $this->db->query("
-                        SELECT f.id, f.user_id, f.judul, f.konten, f.created_at,
-                               u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, COALESCE(r.name, 'Member') as role_name,
+                    $stmtAll = $this->db->query("
+                        SELECT f.id, f.user_id, f.judul, f.konten, 
+                               COALESCE(f.kategori, 'Umum') as kategori,
+                               COALESCE(f.visibility, 'public') as visibility,
+                               COALESCE(k.nama_kelas, 'Semua Kelas') as target_nama_kelas,
+                               f.created_at,
+                               u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
+                               COALESCE(r.name, 'Member') as role_name,
                                (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_komentar
                         FROM forum f
                         JOIN users u ON f.user_id = u.id
                         LEFT JOIN roles r ON u.role_id = r.id
                         LEFT JOIN siswa s ON s.user_id = u.id
                         LEFT JOIN guru g ON g.user_id = u.id
-                        ORDER BY f.created_at DESC
+                        LEFT JOIN kelas k ON f.target_kelas_id = k.id
+                        ORDER BY f.id DESC
+                        LIMIT 50
                     ");
-                    $list = $stmtRetry->fetchAll();
+                    $list = $stmtAll->fetchAll();
                 }
 
                 foreach ($list as &$f) {
@@ -1497,6 +1559,8 @@ class ApiController {
                         'judul' => 'Forum Komunitas & Diskusi SMK Muthia Harapan',
                         'konten' => 'Selamat datang di Forum Komunitas SMK Muthia Harapan Cicalengka. Silakan buat topik diskusi baru!',
                         'kategori' => 'Umum',
+                        'visibility' => 'public',
+                        'target_nama_kelas' => 'Semua Kelas',
                         'full_name' => 'Admin E-Learning',
                         'avatar_url' => null,
                         'role_name' => 'Admin',
