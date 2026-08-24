@@ -354,7 +354,7 @@ class AbsensiModel extends BaseModel {
                 if (!$allowGuruScan) {
                     return [
                         'success' => false,
-                        'message' => "Pemindaian QR Code Guru ({$guru['nama_lengkap']}) tidak diizinkan pada scanner Guru. Presensi Guru hanya dapat dipindai oleh Admin / Petugas Piket Sekolah di Kios Gerbang Utama."
+                        'message' => "Akses Ditolak! Pemindaian QR Code Guru ({$guru['nama_lengkap']}) tidak diizinkan pada halaman ini. Halaman Scanner Guru ini KHUSUS untuk memindai presensi Siswa!"
                     ];
                 }
 

@@ -36,6 +36,18 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
     final payload = rawPayload.trim();
     if (payload.isEmpty) return;
 
+    final upperPayload = payload.toUpperCase();
+    if (upperPayload.startsWith('SMKMH-GURU-') || upperPayload.startsWith('GURU-')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ Akses Ditolak: Halaman Scanner Presensi ini KHUSUS untuk Siswa! QR Code Guru tidak dapat di-scan di sini.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     final now = DateTime.now();
     if (_lastScannedCode == payload &&
         _lastScanTime != null &&

@@ -932,7 +932,7 @@ class ApiController {
                 try {
                     require_once ROOT_PATH . 'models/AbsensiModel.php';
                     $absensiModel = new AbsensiModel();
-                    $res = $absensiModel->processQrScan($qrCode, $guru['id'], true);
+                    $res = $absensiModel->processQrScan($qrCode, $guru['id'], false);
                     if (!empty($res['success'])) {
                         $this->jsonResponse(true, $res['message'] ?? 'Presensi QR Berhasil!', $res);
                     } else {
