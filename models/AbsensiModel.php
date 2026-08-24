@@ -509,10 +509,13 @@ class AbsensiModel extends BaseModel {
 
             // Strict Academic Schedule & Holiday Verification
             $schedCheck = $this->verifySchoolScheduleToday($siswa['id'], $today, $currentTime);
-            if (!$schedCheck['allowed']) {
+            if (!$schedCheck['allowed'] && ($schedCheck['reason'] ?? '') === 'holiday') {
                 return [
                     'success' => false,
                     'is_not_scheduled' => true,
+                    'nama' => $siswa['nama_lengkap'],
+                    'nis' => $siswa['nis'] ?: ($siswa['nisn'] ?: '-'),
+                    'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
                     'reason' => $schedCheck['reason'],
                     'message' => $schedCheck['message']
                 ];

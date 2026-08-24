@@ -98,7 +98,6 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final data = _lastScanResult?['data'];
     final isSuccess = _lastScanResult?['success'] == true;
 
     return Scaffold(
@@ -206,53 +205,97 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
                 children: [
                   // Scan Result Feedback Card
                   if (_lastScanResult != null) ...[
-                    Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      color: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                    Builder(
+                      builder: (context) {
+                        final rawData = _lastScanResult!['data'];
+                        final dataMap = (rawData is Map<String, dynamic>) ? rawData : _lastScanResult!;
+                        final namaSiswa = dataMap['nama'] ?? dataMap['nama_lengkap'] ?? dataMap['nama_siswa'] ?? '-';
+                        final nisSiswa = dataMap['nis'] ?? dataMap['nisn'] ?? '-';
+                        final kelasSiswa = dataMap['kelas'] ?? dataMap['nama_kelas'] ?? '-';
+                        final jamMasukVal = dataMap['jam_masuk'] ?? dataMap['jam'] ?? dataMap['waktu_masuk'] ?? '-';
+                        final jamPulangVal = dataMap['jam_pulang'] ?? dataMap['waktu_pulang'];
+                        final statusKet = dataMap['status_keterangan'] ?? dataMap['status'] ?? (isSuccess ? 'Hadir Tepat Waktu' : 'Terkendala');
+
+                        return Card(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          color: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
+                          elevation: 4,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
-                                  isSuccess ? Icons.check_circle_rounded : Icons.error_rounded,
-                                  color: isSuccess ? Colors.green.shade800 : Colors.red.shade800,
-                                  size: 28,
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    isSuccess ? 'Presensi Terekam!' : 'Presensi Terkendala',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                      color: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
+                                Row(
+                                  children: [
+                                    Icon(
+                                      isSuccess ? Icons.check_circle_rounded : Icons.error_rounded,
+                                      color: isSuccess ? Colors.green.shade800 : Colors.red.shade800,
+                                      size: 28,
                                     ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        isSuccess ? 'Presensi Terekam!' : 'Presensi Terkendala',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _lastScanResult!['message'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
+                                  ),
+                                ),
+                                const Divider(height: 16),
+                                Text(
+                                  "👤 Nama Siswa: $namaSiswa",
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  "💳 NIS / NISN: $nisSiswa • Rombel: $kelasSiswa",
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      "⏰ Jam Masuk: $jamMasukVal",
+                                      style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                    if (jamPulangVal != null) ...[
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        "🏠 Pulang: $jamPulangVal",
+                                        style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isSuccess ? Colors.teal : Colors.red.shade700,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    "Status: $statusKet",
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _lastScanResult!['message'] ?? '',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
-                              ),
-                            ),
-                            if (data != null && data is Map<String, dynamic>) ...[
-                              const Divider(height: 16),
-                              Text("Siswa: ${data['nama'] ?? '-'}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                              Text("NIS: ${data['nis'] ?? '-'} • Rombel: ${data['kelas'] ?? '-'}"),
-                              if (data['jam_masuk'] != null) Text("Masuk: ${data['jam_masuk']}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                              if (data['jam_pulang'] != null) Text("Pulang: ${data['jam_pulang']}", style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                            ],
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 12),
                   ],
