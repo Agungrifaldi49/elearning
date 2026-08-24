@@ -1,34 +1,40 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // Primary Base URL pointing directly to api.php entry point
+  // Production Base URL pointing directly to api.php entry point
   static String baseUrl = 'https://smkmuthiaharapancicalengka.my.id/api.php?action=';
-  
-  // Fallback Base URL pointing to clean /api/ route or index.php?url=api/
-  static String fallbackUrl = 'https://smkmuthiaharapancicalengka.my.id/index.php?url=api/';
 
   static Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> body) async {
     try {
       final uri = Uri.parse('$baseUrl$endpoint');
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
-      );
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      final bodyString = jsonEncode(body);
 
-      if (_isHtmlResponse(response.body)) {
-        final fallbackUri = Uri.parse('$fallbackUrl$endpoint');
-        final fallbackResponse = await http.post(
-          fallbackUri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(body),
-        );
-        return _parseResponse(fallbackResponse);
+      // Mask sensitive fields in log
+      final maskedBody = Map<String, dynamic>.from(body);
+      if (maskedBody.containsKey('password')) {
+        maskedBody['password'] = '***';
       }
 
-      return _parseResponse(response);
+      debugPrint('=== API REQUEST (POST) ===');
+      debugPrint('URL: $uri');
+      debugPrint('Headers: $headers');
+      debugPrint('Body: $maskedBody');
+
+      final response = await http.post(
+        uri,
+        headers: headers,
+        body: bodyString,
+      );
+
+      return _handleResponse(response, uri.toString());
     } catch (e) {
+      debugPrint('=== API REQUEST ERROR ===\n$e');
       return {'success': false, 'message': 'Koneksi server gagal: $e'};
     }
   }
@@ -41,52 +47,71 @@ class ApiService {
         query.addAll(params);
         uri = uri.replace(queryParameters: query);
       }
-      final response = await http.get(uri);
 
-      if (_isHtmlResponse(response.body)) {
-        var fallbackUri = Uri.parse('$fallbackUrl$endpoint');
-        if (params != null && params.isNotEmpty) {
-          final query = Map<String, String>.from(fallbackUri.queryParameters);
-          query.addAll(params);
-          fallbackUri = fallbackUri.replace(queryParameters: query);
-        }
-        final fallbackResponse = await http.get(fallbackUri);
-        return _parseResponse(fallbackResponse);
-      }
+      final headers = {
+        'Accept': 'application/json',
+      };
 
-      return _parseResponse(response);
+      debugPrint('=== API REQUEST (GET) ===');
+      debugPrint('URL: $uri');
+      debugPrint('Headers: $headers');
+
+      final response = await http.get(uri, headers: headers);
+
+      return _handleResponse(response, uri.toString());
     } catch (e) {
+      debugPrint('=== API REQUEST ERROR ===\n$e');
       return {'success': false, 'message': 'Koneksi server gagal: $e'};
     }
   }
 
-  static bool _isHtmlResponse(String body) {
-    final trimmed = body.trim().toLowerCase();
-    return trimmed.startsWith('<') || trimmed.startsWith('<!doctype');
-  }
+  static Map<String, dynamic> _handleResponse(http.Response response, String url) {
+    final statusCode = response.statusCode;
+    final headers = response.headers;
+    final rawBody = response.body;
+    final trimmedBody = rawBody.trim();
+    final contentType = headers['content-type'] ?? headers['Content-Type'] ?? '';
 
-  static Map<String, dynamic> _parseResponse(http.Response response) {
-    final body = response.body.trim();
+    debugPrint('=== API RESPONSE ===');
+    debugPrint('URL: $url');
+    debugPrint('StatusCode: $statusCode');
+    debugPrint('Headers: $headers');
+    debugPrint('ContentType: $contentType');
+    debugPrint('BodyLength: ${rawBody.length}');
+    debugPrint('BodyContent: $trimmedBody');
 
-    if (_isHtmlResponse(body)) {
+    // 1. Validation for empty body
+    if (trimmedBody.isEmpty) {
       return {
         'success': false,
-        'message': 'Server hosting mengembalikan respons HTML (bukan JSON).\n'
-            'Silakan upload file "api.php", "controllers/ApiController.php", dan ".htaccess" '
-            'ke hosting smkmuthiaharapancicalengka.my.id.'
+        'message': 'Server mengembalikan response kosong.\n(StatusCode: $statusCode)'
       };
     }
 
+    // 2. Validation for non-JSON / HTML response
+    if (trimmedBody.startsWith('<') || trimmedBody.toLowerCase().startsWith('<!doctype')) {
+      final snippet = trimmedBody.length > 200 ? trimmedBody.substring(0, 200) : trimmedBody;
+      return {
+        'success': false,
+        'message': 'Server tidak mengembalikan JSON.\nSnippet: $snippet'
+      };
+    }
+
+    // 3. Attempt JSON decoding safely
     try {
-      final decoded = jsonDecode(body);
+      final decoded = jsonDecode(trimmedBody);
       if (decoded is Map<String, dynamic>) {
         return decoded;
       }
-      return {'success': false, 'message': 'Respon dari server tidak berbentuk JSON yang valid.'};
-    } catch (e) {
       return {
         'success': false,
-        'message': 'Gagal memproses data server: $e\nData yang diterima: ${body.length > 100 ? body.substring(0, 100) : body}'
+        'message': 'Respon dari server tidak berbentuk JSON Map yang valid.'
+      };
+    } catch (e) {
+      final snippet = trimmedBody.length > 150 ? trimmedBody.substring(0, 150) : trimmedBody;
+      return {
+        'success': false,
+        'message': 'Gagal dekode JSON: $e\nResponse Mentah: $snippet'
       };
     }
   }

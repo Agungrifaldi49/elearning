@@ -20,11 +20,19 @@ class ApiController {
             exit();
         }
 
-        $this->db = Database::getConnection();
+        try {
+            $this->db = Database::getConnection();
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, 'Koneksi Database Server Gagal: ' . $e->getMessage(), null, 500);
+        }
     }
 
     private function jsonResponse($success, $message, $data = null, $statusCode = 200) {
+        while (ob_get_level() > 0) {
+            @ob_end_clean();
+        }
         http_response_code($statusCode);
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'success' => $success,
             'message' => $message,
@@ -60,57 +68,85 @@ class ApiController {
             $this->jsonResponse(false, 'Username dan password wajib diisi!', null, 400);
         }
 
-        $stmt = $this->db->prepare("
-            SELECT u.*, r.name as role_name 
-            FROM users u 
-            JOIN roles r ON u.role_id = r.id 
-            WHERE u.username = :username OR u.email = :username
-            LIMIT 1
-        ");
-        $stmt->execute(['username' => $username]);
-        $user = $stmt->fetch();
+        try {
+            // Safe query compatible with or without roles table join
+            $user = null;
+            try {
+                $stmt = $this->db->prepare("
+                    SELECT u.*, r.name as role_name 
+                    FROM users u 
+                    LEFT JOIN roles r ON u.role_id = r.id 
+                    WHERE u.username = :username OR u.email = :username
+                    LIMIT 1
+                ");
+                $stmt->execute(['username' => $username]);
+                $user = $stmt->fetch();
+            } catch (\Throwable $e1) {
+                // Fallback query if roles table or role_id does not exist
+                $stmt = $this->db->prepare("
+                    SELECT u.* 
+                    FROM users u 
+                    WHERE u.username = :username OR u.email = :username
+                    LIMIT 1
+                ");
+                $stmt->execute(['username' => $username]);
+                $user = $stmt->fetch();
+            }
 
-        if (!$user || !password_verify($password, $user['password'])) {
-            $this->jsonResponse(false, 'Username atau password salah!', null, 401);
+            if (!$user || !isset($user['password']) || !password_verify($password, $user['password'])) {
+                $this->jsonResponse(false, 'Username atau password salah!', null, 401);
+            }
+
+            if (isset($user['status']) && $user['status'] !== 'active') {
+                $this->jsonResponse(false, 'Akun Anda sedang tidak aktif!', null, 403);
+            }
+
+            $role = strtolower($user['role_name'] ?? $user['role'] ?? 'siswa');
+            if ($role !== 'guru' && $role !== 'siswa') {
+                $this->jsonResponse(false, 'Akses mobile hanya tersedia untuk Guru dan Siswa.', null, 403);
+            }
+
+            $details = null;
+            if ($role === 'guru') {
+                try {
+                    $stmtG = $this->db->prepare("SELECT * FROM guru WHERE user_id = :uid LIMIT 1");
+                    $stmtG->execute(['uid' => $user['id']]);
+                    $details = $stmtG->fetch() ?: null;
+                } catch (\Throwable $eG) {}
+            } else if ($role === 'siswa') {
+                try {
+                    $stmtS = $this->db->prepare("
+                        SELECT s.*, k.nama_kelas, j.nama_jurusan 
+                        FROM siswa s 
+                        LEFT JOIN kelas k ON s.kelas_id = k.id 
+                        LEFT JOIN jurusan j ON s.jurusan_id = j.id 
+                        WHERE s.user_id = :uid LIMIT 1
+                    ");
+                    $stmtS->execute(['uid' => $user['id']]);
+                    $details = $stmtS->fetch() ?: null;
+                } catch (\Throwable $eS) {
+                    try {
+                        $stmtS = $this->db->prepare("SELECT * FROM siswa WHERE user_id = :uid LIMIT 1");
+                        $stmtS->execute(['uid' => $user['id']]);
+                        $details = $stmtS->fetch() ?: null;
+                    } catch (\Throwable $eS2) {}
+                }
+            }
+
+            // Token simple generator for mobile session
+            $token = bin2hex(random_bytes(32));
+
+            unset($user['password']);
+
+            $this->jsonResponse(true, 'Login berhasil', [
+                'user' => $user,
+                'role' => $role,
+                'details' => $details,
+                'token' => $token
+            ]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, 'Proses login bermasalah: ' . $e->getMessage(), null, 500);
         }
-
-        if ($user['status'] !== 'active') {
-            $this->jsonResponse(false, 'Akun Anda sedang tidak aktif!', null, 403);
-        }
-
-        $role = strtolower($user['role_name']);
-        if ($role !== 'guru' && $role !== 'siswa') {
-            $this->jsonResponse(false, 'Akses mobile hanya tersedia untuk Guru dan Siswa.', null, 403);
-        }
-
-        $details = null;
-        if ($role === 'guru') {
-            $stmtG = $this->db->prepare("SELECT * FROM guru WHERE user_id = :uid LIMIT 1");
-            $stmtG->execute(['uid' => $user['id']]);
-            $details = $stmtG->fetch();
-        } else if ($role === 'siswa') {
-            $stmtS = $this->db->prepare("
-                SELECT s.*, k.nama_kelas, j.nama_jurusan 
-                FROM siswa s 
-                LEFT JOIN kelas k ON s.kelas_id = k.id 
-                LEFT JOIN jurusan j ON s.jurusan_id = j.id 
-                WHERE s.user_id = :uid LIMIT 1
-            ");
-            $stmtS->execute(['uid' => $user['id']]);
-            $details = $stmtS->fetch();
-        }
-
-        // Token simple generator for mobile session
-        $token = bin2hex(random_bytes(32));
-
-        unset($user['password']);
-
-        $this->jsonResponse(true, 'Login berhasil', [
-            'user' => $user,
-            'role' => $role,
-            'details' => $details,
-            'token' => $token
-        ]);
     }
 
     public function siswa($endpoint = 'dashboard') {
