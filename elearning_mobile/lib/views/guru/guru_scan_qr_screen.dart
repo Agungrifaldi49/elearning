@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
@@ -11,27 +12,43 @@ class GuruScanQRScreen extends StatefulWidget {
 }
 
 class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
-  final _qrInputController = TextEditingController();
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.normal,
+    facing: CameraFacing.back,
+    torchEnabled: false,
+  );
+
+  final _manualInputController = TextEditingController();
   bool _isProcessing = false;
+  bool _isTorchOn = false;
+  String _lastScannedCode = '';
+  DateTime? _lastScanTime;
   Map<String, dynamic>? _lastScanResult;
 
   @override
   void dispose() {
-    _qrInputController.dispose();
+    _scannerController.dispose();
+    _manualInputController.dispose();
     super.dispose();
   }
 
-  Future<void> _processScan([String? customPayload]) async {
-    final qr = (customPayload ?? _qrInputController.text).trim();
-    if (qr.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kode QR / NIS / NISN tidak boleh kosong!'), backgroundColor: Colors.orange),
-      );
-      return;
+  Future<void> _processScan(String rawPayload) async {
+    final payload = rawPayload.trim();
+    if (payload.isEmpty) return;
+
+    final now = DateTime.now();
+    if (_lastScannedCode == payload &&
+        _lastScanTime != null &&
+        now.difference(_lastScanTime!).inSeconds < 3) {
+      return; // Debounce duplicate scan
     }
+
+    if (_isProcessing) return;
 
     setState(() {
       _isProcessing = true;
+      _lastScannedCode = payload;
+      _lastScanTime = now;
       _lastScanResult = null;
     });
 
@@ -39,8 +56,8 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
     final userId = user?.id ?? 0;
 
     final res = await ApiService.post('guru/scan_qr?user_id=$userId', {
-      'qr_code': qr,
-      'identifier': qr,
+      'qr_code': payload,
+      'identifier': payload,
     });
 
     if (mounted) {
@@ -61,7 +78,7 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
       );
 
       if (success) {
-        _qrInputController.clear();
+        _manualInputController.clear();
       }
     }
   }
@@ -73,166 +90,198 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Scan QR Code Presensi Siswa'),
+        title: const Text('Kamera Scanner Presensi Siswa'),
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isTorchOn ? Icons.flash_on : Icons.flash_off,
+              color: _isTorchOn ? Colors.amber : Colors.white,
+            ),
+            onPressed: () {
+              _scannerController.toggleTorch();
+              setState(() {
+                _isTorchOn = !_isTorchOn;
+              });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.cameraswitch, color: Colors.white),
+            onPressed: () => _scannerController.switchCamera(),
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // Scanner Header Box
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.teal.shade800, Colors.teal.shade500],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      body: Column(
+        children: [
+          // LIVE CAMERA SCANNER VIEWPORT
+          Expanded(
+            flex: 5,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                MobileScanner(
+                  controller: _scannerController,
+                  onDetect: (barcodeCapture) {
+                    for (final barcode in barcodeCapture.barcodes) {
+                      final val = barcode.rawValue;
+                      if (val != null && val.isNotEmpty) {
+                        _processScan(val);
+                        break;
+                      }
+                    }
+                  },
                 ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
-              ),
+
+                // Viewfinder Target Overlay Frame
+                Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: _isProcessing ? Colors.amber : Colors.tealAccent,
+                      width: 3,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isSuccess ? Colors.teal : Colors.black).withValues(alpha: 0.3),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Hint Label Banner
+                Positioned(
+                  bottom: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.65),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _isProcessing
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2),
+                              )
+                            : const Icon(Icons.qr_code_scanner, color: Colors.tealAccent, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isProcessing ? 'Memproses Presensi...' : 'Arahkan kamera ke QR Code Kartu Pelajar',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // REALTIME SCAN RESULT & MANUAL FALLBACK CONTAINER
+          Expanded(
+            flex: 4,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  const Icon(Icons.qr_code_scanner_rounded, size: 80, color: Colors.white),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Terminal Scanner Presensi Siswa',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Pindai QR Code Kartu Pelajar Digital (SMKMH-SISWA-xxx) atau ketik NIS secara manual.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12),
+                  // Scan Result Feedback Card
+                  if (_lastScanResult != null) ...[
+                    Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      color: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
+                      elevation: 4,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  isSuccess ? Icons.check_circle_rounded : Icons.error_rounded,
+                                  color: isSuccess ? Colors.green.shade800 : Colors.red.shade800,
+                                  size: 28,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    isSuccess ? 'Presensi Terekam!' : 'Presensi Terkendala',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _lastScanResult!['message'] ?? '',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
+                              ),
+                            ),
+                            if (data != null && data is Map<String, dynamic>) ...[
+                              const Divider(height: 16),
+                              Text("Siswa: ${data['nama'] ?? '-'}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                              Text("NIS: ${data['nis'] ?? '-'} • Rombel: ${data['kelas'] ?? '-'}"),
+                              if (data['jam_masuk'] != null) Text("Masuk: ${data['jam_masuk']}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                              if (data['jam_pulang'] != null) Text("Pulang: ${data['jam_pulang']}", style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // Manual Input Fallback Accordion
+                  ExpansionTile(
+                    initiallyExpanded: false,
+                    leading: const Icon(Icons.keyboard, color: Colors.teal),
+                    title: const Text('Input Manual NIS / Payload QR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Column(
+                          children: [
+                            TextField(
+                              controller: _manualInputController,
+                              decoration: const InputDecoration(
+                                labelText: 'Ketik NIS / Kode QR (Contoh: SMKMH-SISWA-1001)',
+                                border: OutlineInputBorder(),
+                              ),
+                              onSubmitted: (val) => _processScan(val),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _isProcessing ? null : () => _processScan(_manualInputController.text),
+                                icon: const Icon(Icons.check),
+                                label: const Text('Rekam Presensi Manual'),
+                                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            // Input Form Card
-            Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Input / Pindai Payload QR Code:',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _qrInputController,
-                      decoration: InputDecoration(
-                        labelText: 'Kode QR / NIS (Contoh: SMKMH-SISWA-1001)',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.qr_code, color: Colors.teal),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () => _qrInputController.clear(),
-                        ),
-                      ),
-                      onSubmitted: (val) => _processScan(val),
-                    ),
-                    const SizedBox(height: 14),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: _isProcessing ? null : () => _processScan(),
-                        icon: _isProcessing
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Icon(Icons.check_circle_rounded),
-                        label: const Text('Proses & Catat Presensi', style: TextStyle(fontSize: 16)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Scan Result Card (Realtime Web-Compatible Feedback)
-            if (_lastScanResult != null) ...[
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                color: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            isSuccess ? Icons.check_circle_rounded : Icons.error_rounded,
-                            color: isSuccess ? Colors.green.shade800 : Colors.red.shade800,
-                            size: 32,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              isSuccess ? 'Presensi Berhasil Terekam!' : 'Presensi Gagal / Terkendala',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _lastScanResult!['message'] ?? '',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isSuccess ? Colors.green.shade900 : Colors.red.shade900,
-                        ),
-                      ),
-                      if (data != null && data is Map<String, dynamic>) ...[
-                        const Divider(height: 24),
-                        Text("Nama Siswa: ${data['nama'] ?? '-'}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                        Text("NIS / NIP: ${data['nis'] ?? '-'}"),
-                        Text("Rombel Kelas: ${data['kelas'] ?? '-'}"),
-                        if (data['jam_masuk'] != null) Text("Jam Masuk: ${data['jam_masuk']}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                        if (data['jam_pulang'] != null) Text("Jam Pulang: ${data['jam_pulang']}", style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                        if (data['status_keterangan'] != null)
-                          Container(
-                            margin: const EdgeInsets.only(top: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: data['is_late'] == true ? Colors.orange : Colors.green,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              "Status: ${data['status_keterangan']}",
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                            ),
-                          ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
