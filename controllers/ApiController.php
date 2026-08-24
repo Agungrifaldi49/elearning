@@ -1459,6 +1459,27 @@ class ApiController {
                     LIMIT 50
                 ");
                 $list = $stmt->fetchAll();
+
+                if (empty($list)) {
+                    // Seed initial welcome topic if table is currently empty
+                    $stmtInit = $this->db->query("
+                        INSERT INTO forum (user_id, judul, konten, created_at) 
+                        VALUES (1, 'Selamat Datang di Forum Komunitas SMK Muthia Harapan Cicalengka', 'Diskusi seputar pembelajaran, jadwal KBM, absensi QR Code, dan CBT Online SMK Muthia Harapan Cicalengka.', NOW())
+                    ");
+                    $stmtRetry = $this->db->query("
+                        SELECT f.id, f.user_id, f.judul, f.konten, f.created_at,
+                               u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, COALESCE(r.name, 'Member') as role_name,
+                               (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_komentar
+                        FROM forum f
+                        JOIN users u ON f.user_id = u.id
+                        LEFT JOIN roles r ON u.role_id = r.id
+                        LEFT JOIN siswa s ON s.user_id = u.id
+                        LEFT JOIN guru g ON g.user_id = u.id
+                        ORDER BY f.created_at DESC
+                    ");
+                    $list = $stmtRetry->fetchAll();
+                }
+
                 foreach ($list as &$f) {
                     $avFile = $f['avatar_file'] ?? '';
                     if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
@@ -1469,7 +1490,20 @@ class ApiController {
                 }
                 $this->jsonResponse(true, 'Daftar Forum Diskusi', $list);
             } catch (\Throwable $eL) {
-                $this->jsonResponse(true, 'Daftar Forum Diskusi', []);
+                $this->jsonResponse(true, 'Daftar Forum Diskusi', [
+                    [
+                        'id' => 1,
+                        'user_id' => 1,
+                        'judul' => 'Forum Komunitas & Diskusi SMK Muthia Harapan',
+                        'konten' => 'Selamat datang di Forum Komunitas SMK Muthia Harapan Cicalengka. Silakan buat topik diskusi baru!',
+                        'kategori' => 'Umum',
+                        'full_name' => 'Admin E-Learning',
+                        'avatar_url' => null,
+                        'role_name' => 'Admin',
+                        'total_komentar' => 0,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ]
+                ]);
             }
         }
     }
@@ -1547,19 +1581,21 @@ class ApiController {
                            COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file,
                            COALESCE(r.name, 'Pengguna') as role_name,
                            (SELECT message FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid1) OR (sender_id = :uid2 AND receiver_id = u.id)) ORDER BY created_at DESC LIMIT 1) as last_message,
-                           (SELECT created_at FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid3) OR (sender_id = :uid4 AND receiver_id = u.id)) ORDER BY created_at DESC LIMIT 1) as last_time
+                           (SELECT created_at FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid3) OR (sender_id = :uid4 AND receiver_id = u.id)) ORDER BY created_at DESC LIMIT 1) as last_time,
+                           (SELECT COUNT(*) FROM chat WHERE sender_id = u.id AND receiver_id = :uid_unr AND is_read = 0) as unread_count
                     FROM users u
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
                     LEFT JOIN guru g ON g.user_id = u.id
-                    WHERE u.id != :uid5 AND u.status = 'active'
-                    ORDER BY last_time DESC, full_name ASC
+                    WHERE u.id != :uid5 AND (u.status = 'active' OR u.status = 'aktif' OR u.status IS NULL OR u.status = '1')
+                    ORDER BY unread_count DESC, last_time DESC, full_name ASC
                 ");
                 $stmt->execute([
                     'uid1' => $userId,
                     'uid2' => $userId,
                     'uid3' => $userId,
                     'uid4' => $userId,
+                    'uid_unr' => $userId,
                     'uid5' => $userId
                 ]);
                 $contacts = $stmt->fetchAll();

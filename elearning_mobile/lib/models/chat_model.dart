@@ -19,9 +19,9 @@ class ChatMessageModel {
 
   factory ChatMessageModel.fromJson(Map<String, dynamic> json) {
     return ChatMessageModel(
-      id: int.parse(json['id'].toString()),
-      senderId: int.parse(json['sender_id'].toString()),
-      receiverId: int.parse(json['receiver_id'].toString()),
+      id: int.parse((json['id'] ?? 0).toString()),
+      senderId: int.parse((json['sender_id'] ?? 0).toString()),
+      receiverId: int.parse((json['receiver_id'] ?? 0).toString()),
       pesan: json['pesan'] ?? '',
       senderName: json['sender_name'],
       receiverName: json['receiver_name'],
@@ -36,6 +36,9 @@ class ChatContactModel {
   final String avatar;
   final String? avatarUrl;
   final String roleName;
+  final String? lastMessage;
+  final String? lastTime;
+  final int unreadCount;
 
   ChatContactModel({
     required this.id,
@@ -43,6 +46,9 @@ class ChatContactModel {
     required this.avatar,
     this.avatarUrl,
     required this.roleName,
+    this.lastMessage,
+    this.lastTime,
+    this.unreadCount = 0,
   });
 
   factory ChatContactModel.fromJson(Map<String, dynamic> json) {
@@ -56,6 +62,9 @@ class ChatContactModel {
       avatar: json['avatar'] ?? 'default_avatar.png',
       avatarUrl: avUrl,
       roleName: json['role_name'] ?? '',
+      lastMessage: json['last_message'],
+      lastTime: json['last_time'],
+      unreadCount: int.parse((json['unread_count'] ?? 0).toString()),
     );
   }
 }

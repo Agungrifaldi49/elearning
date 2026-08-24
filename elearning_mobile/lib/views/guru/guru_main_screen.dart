@@ -88,15 +88,23 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.forum_outlined),
-            tooltip: 'Forum Diskusi',
+            icon: const Badge(
+              smallSize: 8,
+              backgroundColor: Colors.amber,
+              child: Icon(Icons.forum_outlined),
+            ),
+            tooltip: 'Forum Diskusi Komunitas',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaForumScreen()));
             },
           ),
           IconButton(
-            icon: const Icon(Icons.chat_bubble_outline),
-            tooltip: 'Pesan Chat',
+            icon: const Badge(
+              smallSize: 9,
+              backgroundColor: Colors.red,
+              child: Icon(Icons.chat_bubble_outline),
+            ),
+            tooltip: 'Pesan & Chat Direct',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaChatScreen()));
             },

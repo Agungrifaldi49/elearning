@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/chat_model.dart';
@@ -18,25 +19,37 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
   List<ChatContactModel> _filteredContacts = [];
   bool _isLoading = false;
   final TextEditingController _searchController = TextEditingController();
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadContacts();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) => _loadContacts(showLoading: false));
   }
 
-  Future<void> _loadContacts() async {
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadContacts({bool showLoading = true}) async {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user == null) return;
 
-    setState(() => _isLoading = true);
+    if (showLoading && _contacts.isEmpty) {
+      setState(() => _isLoading = true);
+    }
 
     final res = await ApiService.get('chat/contacts', params: {'user_id': user.id.toString()});
     if (mounted) {
       if (res['success'] == true && res['data'] is List) {
+        final list = (res['data'] as List).map((e) => ChatContactModel.fromJson(e)).toList();
         setState(() {
-          _contacts = (res['data'] as List).map((e) => ChatContactModel.fromJson(e)).toList();
-          _filteredContacts = _contacts;
+          _contacts = list;
+          _filterContacts(_searchController.text);
           _isLoading = false;
         });
       } else {
@@ -52,19 +65,20 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
       final q = query.toLowerCase();
       setState(() {
         _filteredContacts = _contacts.where((c) {
-          final name = c.fullName.toLowerCase();
-          final role = c.roleName.toLowerCase();
-          return name.contains(q) || role.contains(q);
+          return c.fullName.toLowerCase().contains(q) || c.roleName.toLowerCase().contains(q);
         }).toList();
       });
     }
   }
 
-  void _openChatRoom(ChatContactModel contact) {
-    Navigator.push(
+  void _openChatRoom(ChatContactModel contact) async {
+    await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => ChatRoomScreen(contact: contact)),
-    ).then((_) => _loadContacts());
+      MaterialPageRoute(
+        builder: (_) => ChatRoomScreen(contact: contact),
+      ),
+    );
+    _loadContacts(showLoading: false);
   }
 
   @override
@@ -77,27 +91,35 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            color: Colors.indigo.shade900,
             child: TextField(
               controller: _searchController,
               onChanged: _filterContacts,
+              style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: 'Cari nama guru atau teman siswa...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                hintText: 'Cari Guru, Siswa, Admin, Kepsek...',
+                hintStyle: const TextStyle(color: Colors.white60),
+                prefixIcon: const Icon(Icons.search, color: Colors.white60),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.15),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               ),
             ),
           ),
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredContacts.isEmpty
-                    ? const Center(child: Text('Kontak pesan tidak ditemukan.'))
-                    : RefreshIndicator(
-                        onRefresh: _loadContacts,
-                        child: ListView.builder(
+            child: RefreshIndicator(
+              onRefresh: () => _loadContacts(),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filteredContacts.isEmpty
+                      ? const Center(child: Text('Tidak ada kontak tersedia.'))
+                      : ListView.builder(
                           itemCount: _filteredContacts.length,
                           itemBuilder: (context, index) {
                             final c = _filteredContacts[index];
@@ -108,20 +130,43 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               elevation: 1,
                               child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: isGuru ? Colors.amber.withValues(alpha: 0.2) : AppTheme.primaryColor.withValues(alpha: 0.15),
-                                  backgroundImage: (c.avatarUrl != null && c.avatarUrl!.isNotEmpty)
-                                      ? NetworkImage(c.avatarUrl!)
-                                      : null,
-                                  child: (c.avatarUrl == null || c.avatarUrl!.isEmpty)
-                                      ? Text(
-                                          c.fullName.isNotEmpty ? c.fullName[0] : 'U',
-                                          style: TextStyle(
-                                            color: isGuru ? Colors.amber.shade900 : AppTheme.primaryColor,
-                                            fontWeight: FontWeight.bold,
+                                leading: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: isGuru ? Colors.amber.withValues(alpha: 0.2) : AppTheme.primaryColor.withValues(alpha: 0.15),
+                                      backgroundImage: (c.avatarUrl != null && c.avatarUrl!.isNotEmpty)
+                                          ? NetworkImage(c.avatarUrl!)
+                                          : null,
+                                      child: (c.avatarUrl == null || c.avatarUrl!.isEmpty)
+                                          ? Text(
+                                              c.fullName.isNotEmpty ? c.fullName[0] : 'U',
+                                              style: TextStyle(
+                                                color: isGuru ? Colors.amber.shade900 : AppTheme.primaryColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    if (c.unreadCount > 0)
+                                      Positioned(
+                                        right: -2,
+                                        top: -2,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: Colors.red,
+                                            shape: BoxShape.circle,
                                           ),
-                                        )
-                                      : null,
+                                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                          child: Text(
+                                            '${c.unreadCount}',
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                                 title: Row(
                                   children: [
@@ -145,14 +190,37 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                     ),
                                   ],
                                 ),
-                                subtitle: const Text('Ketuk untuk membuka percakapan direct', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                                trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                                subtitle: Text(
+                                  c.lastMessage != null && c.lastMessage!.isNotEmpty
+                                      ? ProfanityService.filter(c.lastMessage)
+                                      : 'Ketuk untuk percakapan direct',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: c.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                                    color: c.unreadCount > 0 ? Colors.black87 : Colors.grey.shade600,
+                                  ),
+                                ),
+                                trailing: c.unreadCount > 0
+                                    ? Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade600,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          '${c.unreadCount} BARU',
+                                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                        ),
+                                      )
+                                    : const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                                 onTap: () => _openChatRoom(c),
                               ),
                             );
                           },
                         ),
-                      ),
+            ),
           ),
         ],
       ),
@@ -173,16 +241,29 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   final _messageController = TextEditingController();
   List<ChatMessageModel> _messages = [];
   bool _isLoading = true;
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
     _loadMessages();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) => _loadMessages(showLoading: false));
   }
 
-  Future<void> _loadMessages() async {
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMessages({bool showLoading = true}) async {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user == null) return;
+
+    if (showLoading && _messages.isEmpty) {
+      setState(() => _isLoading = true);
+    }
 
     final res = await ApiService.get('chat/messages', params: {
       'user_id': user.id.toString(),
@@ -214,7 +295,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     });
 
     if (res['success'] == true) {
-      _loadMessages();
+      _loadMessages(showLoading: false);
     }
   }
 
@@ -227,17 +308,32 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         title: Row(
           children: [
             CircleAvatar(
-              radius: 16,
+              radius: 18,
               backgroundColor: Colors.white24,
-              child: Text(widget.contact.fullName.isNotEmpty ? widget.contact.fullName[0] : 'U', style: const TextStyle(color: Colors.white, fontSize: 13)),
+              backgroundImage: (widget.contact.avatarUrl != null && widget.contact.avatarUrl!.isNotEmpty)
+                  ? NetworkImage(widget.contact.avatarUrl!)
+                  : null,
+              child: (widget.contact.avatarUrl == null || widget.contact.avatarUrl!.isEmpty)
+                  ? Text(
+                      widget.contact.fullName.isNotEmpty ? widget.contact.fullName[0] : 'U',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    )
+                  : null,
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.contact.fullName, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                  Text(widget.contact.roleName, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+                  Text(
+                    widget.contact.fullName,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    widget.contact.roleName,
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                  ),
                 ],
               ),
             ),
@@ -252,19 +348,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _messages.isEmpty
-                    ? Center(
-                        child: Text(
-                          "Belum ada pesan dengan ${widget.contact.fullName}.\nMulai percakapan sekarang!",
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      )
+                    ? const Center(child: Text('Belum ada pesan. Mulai percakapan sekarang!'))
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final m = _messages[index];
-                          final isMe = m.senderId == user?.id;
+                          final isMe = user != null && m.senderId == user.id;
 
                           return Align(
                             alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -291,7 +381,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                   const SizedBox(height: 4),
                                   Text(
                                     m.createdAt,
-                                    style: TextStyle(color: isMe ? Colors.white70 : Colors.grey.shade600, fontSize: 9),
+                                    style: TextStyle(
+                                      color: isMe ? Colors.white70 : Colors.grey.shade600,
+                                      fontSize: 10,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -303,8 +396,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4)],
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withValues(alpha: 0.2),
+                  blurRadius: 6,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
             child: Row(
               children: [
@@ -312,16 +411,17 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   child: TextField(
                     controller: _messageController,
                     decoration: InputDecoration(
-                      hintText: 'Ketik pesan...',
+                      hintText: 'Tulis pesan direct...',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send_rounded, color: AppTheme.primaryColor),
+                IconButton.filled(
                   onPressed: _sendMessage,
+                  icon: const Icon(Icons.send_rounded),
+                  style: IconButton.styleFrom(backgroundColor: Colors.indigo.shade800),
                 ),
               ],
             ),
