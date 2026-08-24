@@ -1327,9 +1327,16 @@ class ApiController {
     }
 
     public function forum($endpoint = 'list') {
-        $endpoint = strtolower(explode('?', $endpoint)[0]);
+        $endpoint = strtolower(explode('&', explode('?', $endpoint)[0])[0]);
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
+
+        try {
+            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS kategori VARCHAR(50) DEFAULT 'Umum'");
+            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS visibility ENUM('public', 'private') DEFAULT 'public'");
+            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS target_role VARCHAR(50) NULL");
+            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS target_kelas_id INT NULL");
+        } catch (\Throwable $eMig) {}
 
         if (file_exists(ROOT_PATH . 'helpers/ProfanityFilterHelper.php')) {
             require_once ROOT_PATH . 'helpers/ProfanityFilterHelper.php';
@@ -1423,7 +1430,6 @@ class ApiController {
                     SELECT f.id, f.user_id, f.judul, f.konten, 
                            COALESCE(f.kategori, 'Umum') as kategori,
                            COALESCE(f.visibility, 'public') as visibility,
-                           COALESCE(k.nama_kelas, 'Semua Kelas') as target_nama_kelas,
                            f.created_at,
                            u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
                            COALESCE(r.name, 'Member') as role_name
@@ -1432,7 +1438,6 @@ class ApiController {
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
                     LEFT JOIN guru g ON g.user_id = u.id
-                    LEFT JOIN kelas k ON f.target_kelas_id = k.id
                     WHERE f.id = :fid
                     LIMIT 1
                 ");
@@ -1480,22 +1485,8 @@ class ApiController {
         } else {
             // list
             try {
-                $userKelasId = 0;
-                if ($userId > 0) {
-                    $stmtK = $this->db->prepare("SELECT kelas_id FROM siswa WHERE user_id = :uid LIMIT 1");
-                    $stmtK->execute(['uid' => $userId]);
-                    $sRes = $stmtK->fetch();
-                    if ($sRes && !empty($sRes['kelas_id'])) {
-                        $userKelasId = intval($sRes['kelas_id']);
-                    }
-                }
-
-                $stmt = $this->db->prepare("
-                    SELECT f.id, f.user_id, f.judul, f.konten, 
-                           COALESCE(f.kategori, 'Umum') as kategori,
-                           COALESCE(f.visibility, 'public') as visibility,
-                           COALESCE(k.nama_kelas, 'Semua Kelas') as target_nama_kelas,
-                           f.created_at,
+                $stmt = $this->db->query("
+                    SELECT f.id, f.user_id, f.judul, f.konten, f.created_at,
                            u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
                            COALESCE(r.name, 'Member') as role_name,
                            (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_komentar
@@ -1504,71 +1495,27 @@ class ApiController {
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
                     LEFT JOIN guru g ON g.user_id = u.id
-                    LEFT JOIN kelas k ON f.target_kelas_id = k.id
-                    WHERE (
-                        f.visibility = 'public' 
-                        OR f.visibility IS NULL 
-                        OR f.user_id = :uid1 
-                        OR (
-                            f.visibility = 'private' 
-                            AND (f.target_kelas_id IS NULL OR f.target_kelas_id = 0 OR f.target_kelas_id = :kid)
-                        )
-                    )
                     ORDER BY f.id DESC
                     LIMIT 50
                 ");
-                $stmt->execute(['uid1' => $userId, 'kid' => $userKelasId]);
                 $list = $stmt->fetchAll();
-
-                if (empty($list)) {
-                    $stmtAll = $this->db->query("
-                        SELECT f.id, f.user_id, f.judul, f.konten, 
-                               COALESCE(f.kategori, 'Umum') as kategori,
-                               COALESCE(f.visibility, 'public') as visibility,
-                               COALESCE(k.nama_kelas, 'Semua Kelas') as target_nama_kelas,
-                               f.created_at,
-                               u.full_name, COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
-                               COALESCE(r.name, 'Member') as role_name,
-                               (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_komentar
-                        FROM forum f
-                        JOIN users u ON f.user_id = u.id
-                        LEFT JOIN roles r ON u.role_id = r.id
-                        LEFT JOIN siswa s ON s.user_id = u.id
-                        LEFT JOIN guru g ON g.user_id = u.id
-                        LEFT JOIN kelas k ON f.target_kelas_id = k.id
-                        ORDER BY f.id DESC
-                        LIMIT 50
-                    ");
-                    $list = $stmtAll->fetchAll();
-                }
-
-                foreach ($list as &$f) {
-                    $avFile = $f['avatar_file'] ?? '';
-                    if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                        $f['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
-                    } else {
-                        $f['avatar_url'] = null;
-                    }
-                }
-                $this->jsonResponse(true, 'Daftar Forum Diskusi', $list);
             } catch (\Throwable $eL) {
-                $this->jsonResponse(true, 'Daftar Forum Diskusi', [
-                    [
-                        'id' => 1,
-                        'user_id' => 1,
-                        'judul' => 'Forum Komunitas & Diskusi SMK Muthia Harapan',
-                        'konten' => 'Selamat datang di Forum Komunitas SMK Muthia Harapan Cicalengka. Silakan buat topik diskusi baru!',
-                        'kategori' => 'Umum',
-                        'visibility' => 'public',
-                        'target_nama_kelas' => 'Semua Kelas',
-                        'full_name' => 'Admin E-Learning',
-                        'avatar_url' => null,
-                        'role_name' => 'Admin',
-                        'total_komentar' => 0,
-                        'created_at' => date('Y-m-d H:i:s')
-                    ]
-                ]);
+                $list = [];
             }
+
+            foreach ($list as &$f) {
+                if (!isset($f['kategori'])) $f['kategori'] = 'Umum';
+                if (!isset($f['visibility'])) $f['visibility'] = 'public';
+                if (!isset($f['target_nama_kelas'])) $f['target_nama_kelas'] = 'Semua Kelas';
+
+                $avFile = $f['avatar_file'] ?? '';
+                if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
+                    $f['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                } else {
+                    $f['avatar_url'] = null;
+                }
+            }
+            $this->jsonResponse(true, 'Daftar Forum Diskusi', $list);
         }
     }
 
