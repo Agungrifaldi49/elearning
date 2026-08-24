@@ -3,9 +3,15 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/siswa_provider.dart';
 import '../../theme/app_theme.dart';
+import '../shared/edit_profil_screen.dart';
 import '../shared/edugame_screen.dart';
 import '../shared/kartu_digital_screen.dart';
 import '../shared/library_screen.dart';
+import '../shared/live_class_screen.dart';
+import '../shared/panduan_screen.dart';
+import 'gabung_kelas_screen.dart';
+import 'learning_path_screen.dart';
+import 'sertifikat_screen.dart';
 import 'siswa_absensi_tab.dart';
 import 'siswa_nilai_tab.dart';
 
@@ -139,7 +145,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
 
             // Feature Shortcuts Grid
             const Text(
-              '⚡ Akses Fitur Cepat',
+              '⚡ Seluruh Fitur Siswa LMS',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -149,13 +155,25 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 1.1,
+              childAspectRatio: 1.05,
               children: [
                 _buildFeatureGridItem(
                   icon: Icons.badge_rounded,
                   label: 'Kartu Pelajar',
                   color: Colors.indigo,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.group_add_rounded,
+                  label: 'Gabung Kelas',
+                  color: Colors.deepOrange,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GabungKelasScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.videocam_rounded,
+                  label: 'Live Meeting',
+                  color: Colors.red,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveClassScreen())),
                 ),
                 _buildFeatureGridItem(
                   icon: Icons.menu_book_rounded,
@@ -170,6 +188,12 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen())),
                 ),
                 _buildFeatureGridItem(
+                  icon: Icons.alt_route_rounded,
+                  label: 'Learning Path',
+                  color: Colors.deepPurple,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LearningPathScreen())),
+                ),
+                _buildFeatureGridItem(
                   icon: Icons.check_circle_rounded,
                   label: 'Presensi',
                   color: Colors.teal,
@@ -180,6 +204,24 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   label: 'Rekap Nilai',
                   color: Colors.amber.shade800,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaNilaiTab())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.workspace_premium_rounded,
+                  label: 'Sertifikat',
+                  color: Colors.amber.shade900,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SertifikatScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.help_outline_rounded,
+                  label: 'Panduan LMS',
+                  color: Colors.blueGrey,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PanduanScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.person_rounded,
+                  label: 'Edit Profil',
+                  color: Colors.blueGrey.shade700,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen())),
                 ),
               ],
             ),
@@ -363,7 +405,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(14),
@@ -372,15 +414,17 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 6),
+              Icon(icon, color: color, size: 26),
+              const SizedBox(height: 4),
               Text(
                 label,
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: color,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
               ),
             ],

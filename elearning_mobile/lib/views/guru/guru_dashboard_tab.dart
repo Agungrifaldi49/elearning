@@ -3,11 +3,17 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 import '../../theme/app_theme.dart';
+import '../shared/edit_profil_screen.dart';
 import '../shared/edugame_screen.dart';
 import '../shared/kartu_digital_screen.dart';
 import '../shared/library_screen.dart';
+import '../shared/live_class_screen.dart';
+import '../shared/panduan_screen.dart';
 import 'guru_absensi_tab.dart';
+import 'guru_bank_soal_screen.dart';
 import 'guru_input_nilai_screen.dart';
+import 'guru_recap_absensi_screen.dart';
+import 'guru_scan_qr_screen.dart';
 
 class GuruDashboardTab extends StatefulWidget {
   const GuruDashboardTab({super.key});
@@ -138,7 +144,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
 
             // Feature Shortcuts Grid for Guru
             const Text(
-              '⚡ Menu Pengajaran & Fitur',
+              '⚡ Seluruh Fitur Pengajaran Guru',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -148,7 +154,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 1.1,
+              childAspectRatio: 1.05,
               children: [
                 _buildFeatureGridItem(
                   icon: Icons.how_to_reg_rounded,
@@ -163,10 +169,34 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen())),
                 ),
                 _buildFeatureGridItem(
+                  icon: Icons.qr_code_scanner_rounded,
+                  label: 'Scan QR Presensi',
+                  color: Colors.teal.shade800,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruScanQRScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.inventory_2_rounded,
+                  label: 'Bank Soal CBT',
+                  color: Colors.amber.shade900,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruBankSoalScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.videocam_rounded,
+                  label: 'Live Meeting',
+                  color: Colors.red,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveClassScreen())),
+                ),
+                _buildFeatureGridItem(
                   icon: Icons.badge_rounded,
                   label: 'Kartu Guru',
                   color: Colors.blue.shade700,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.assessment_rounded,
+                  label: 'Rekap Absensi',
+                  color: Colors.deepPurple,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruRecapAbsensiScreen())),
                 ),
                 _buildFeatureGridItem(
                   icon: Icons.menu_book_rounded,
@@ -179,6 +209,18 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                   label: 'EduGame',
                   color: Colors.purple,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.help_outline_rounded,
+                  label: 'Panduan LMS',
+                  color: Colors.blueGrey,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PanduanScreen())),
+                ),
+                _buildFeatureGridItem(
+                  icon: Icons.person_rounded,
+                  label: 'Edit Profil',
+                  color: Colors.blueGrey.shade700,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen())),
                 ),
               ],
             ),
@@ -301,7 +343,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(14),
@@ -310,15 +352,17 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 6),
+              Icon(icon, color: color, size: 26),
+              const SizedBox(height: 4),
               Text(
                 label,
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: color,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
               ),
             ],
