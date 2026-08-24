@@ -156,6 +156,7 @@ class ApiController {
     }
 
     public function siswa($endpoint = 'dashboard') {
+        $endpoint = strtolower(explode('?', $endpoint)[0]);
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
         $stmtS = $this->db->prepare("
@@ -576,6 +577,7 @@ class ApiController {
     }
 
     public function guru($endpoint = 'dashboard') {
+        $endpoint = strtolower(explode('?', $endpoint)[0]);
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
         $stmtG = $this->db->prepare("SELECT * FROM guru WHERE user_id = :uid OR id = :uid2 LIMIT 1");
@@ -924,6 +926,8 @@ class ApiController {
                 break;
 
             case 'scan_qr':
+            case 'scan-qr':
+            case 'scan':
                 $input = $this->getPostInput();
                 $qrCode = trim($input['qr_code'] ?? $input['identifier'] ?? '');
                 if (empty($qrCode)) {
@@ -944,6 +948,7 @@ class ApiController {
                 break;
 
             case 'recap_absensi':
+            case 'recap-absensi':
                 $kelasId = intval($_GET['kelas_id'] ?? 0);
                 $bulan = $_GET['bulan'] ?? date('Y-m');
                 try {

@@ -39,10 +39,21 @@ $parts = explode('/', trim($action, '/'));
 $method = strtolower($parts[0] ?? 'index');
 $param = strtolower($parts[1] ?? 'index');
 
+// Strip any query strings if attached (e.g. scan_qr?user_id=1)
+if (strpos($method, '?') !== false) {
+    $method = explode('?', $method)[0];
+}
+if (strpos($param, '?') !== false) {
+    $param = explode('?', $param)[0];
+}
+
 // If 'api' is passed as the first segment, shift to real method name
 if ($method === 'api') {
     $method = $param;
     $param = strtolower($parts[2] ?? 'index');
+    if (strpos($param, '?') !== false) {
+        $param = explode('?', $param)[0];
+    }
 }
 
 if (empty($method)) {
