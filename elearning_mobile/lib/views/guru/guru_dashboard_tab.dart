@@ -23,6 +23,8 @@ class GuruDashboardTab extends StatefulWidget {
 }
 
 class _GuruDashboardTabState extends State<GuruDashboardTab> {
+  bool _isFeaturesExpanded = false;
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +44,78 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final stats = guruProvider.dashboardData?['stats'] ?? {'materi': 0, 'tugas': 0, 'quiz': 0};
     final jadwalToday = guruProvider.dashboardData?['jadwal_hari_ini'] as List? ?? [];
+
+    // Complete 11 Features List for Guru
+    final allFeatures = [
+      _buildFeatureGridItem(
+        icon: Icons.how_to_reg_rounded,
+        label: 'Input Absensi',
+        color: Colors.teal,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.edit_note_rounded,
+        label: 'Input Nilai',
+        color: Colors.indigo,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.qr_code_scanner_rounded,
+        label: 'Scan QR Presensi',
+        color: Colors.teal.shade800,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruScanQRScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.inventory_2_rounded,
+        label: 'Bank Soal CBT',
+        color: Colors.amber.shade900,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruBankSoalScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.videocam_rounded,
+        label: 'Live Meeting',
+        color: Colors.red,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveClassScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.badge_rounded,
+        label: 'Kartu Guru',
+        color: Colors.blue.shade700,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.assessment_rounded,
+        label: 'Rekap Absensi',
+        color: Colors.deepPurple,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruRecapAbsensiScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.menu_book_rounded,
+        label: 'Perpustakaan',
+        color: Colors.deepOrange,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.sports_esports_rounded,
+        label: 'EduGame',
+        color: Colors.purple,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.help_outline_rounded,
+        label: 'Panduan LMS',
+        color: Colors.blueGrey,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PanduanScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.person_rounded,
+        label: 'Edit Profil',
+        color: Colors.blueGrey.shade700,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen())),
+      ),
+    ];
+
+    final displayedFeatures = _isFeaturesExpanded ? allFeatures : allFeatures.take(6).toList();
 
     return RefreshIndicator(
       onRefresh: () async => _loadData(),
@@ -142,87 +216,60 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
 
             const SizedBox(height: 20),
 
-            // Feature Shortcuts Grid for Guru
-            const Text(
-              '⚡ Seluruh Fitur Pengajaran Guru',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 3,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.05,
+            // Feature Shortcuts Grid Header & Toggle Button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildFeatureGridItem(
-                  icon: Icons.how_to_reg_rounded,
-                  label: 'Input Absensi',
-                  color: Colors.teal,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab())),
+                const Text(
+                  '⚡ Fitur Pengajaran Guru',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                _buildFeatureGridItem(
-                  icon: Icons.edit_note_rounded,
-                  label: 'Input Nilai',
-                  color: Colors.indigo,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen())),
-                ),
-                _buildFeatureGridItem(
-                  icon: Icons.qr_code_scanner_rounded,
-                  label: 'Scan QR Presensi',
-                  color: Colors.teal.shade800,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruScanQRScreen())),
-                ),
-                _buildFeatureGridItem(
-                  icon: Icons.inventory_2_rounded,
-                  label: 'Bank Soal CBT',
-                  color: Colors.amber.shade900,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruBankSoalScreen())),
-                ),
-                _buildFeatureGridItem(
-                  icon: Icons.videocam_rounded,
-                  label: 'Live Meeting',
-                  color: Colors.red,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveClassScreen())),
-                ),
-                _buildFeatureGridItem(
-                  icon: Icons.badge_rounded,
-                  label: 'Kartu Guru',
-                  color: Colors.blue.shade700,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
-                ),
-                _buildFeatureGridItem(
-                  icon: Icons.assessment_rounded,
-                  label: 'Rekap Absensi',
-                  color: Colors.deepPurple,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruRecapAbsensiScreen())),
-                ),
-                _buildFeatureGridItem(
-                  icon: Icons.menu_book_rounded,
-                  label: 'Perpustakaan',
-                  color: Colors.deepOrange,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen())),
-                ),
-                _buildFeatureGridItem(
-                  icon: Icons.sports_esports_rounded,
-                  label: 'EduGame',
-                  color: Colors.purple,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen())),
-                ),
-                _buildFeatureGridItem(
-                  icon: Icons.help_outline_rounded,
-                  label: 'Panduan LMS',
-                  color: Colors.blueGrey,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PanduanScreen())),
-                ),
-                _buildFeatureGridItem(
-                  icon: Icons.person_rounded,
-                  label: 'Edit Profil',
-                  color: Colors.blueGrey.shade700,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen())),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isFeaturesExpanded = !_isFeaturesExpanded;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _isFeaturesExpanded ? 'Sembunyikan' : 'Selengkapnya',
+                          style: const TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Icon(
+                          _isFeaturesExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          color: AppTheme.primaryColor,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+
+            // Animated Grid Container
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.05,
+                children: displayedFeatures,
+              ),
             ),
 
             const SizedBox(height: 24),
