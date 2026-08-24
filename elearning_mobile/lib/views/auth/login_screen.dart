@@ -206,19 +206,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _fillDemoAccount(String role) {
-    setState(() {
-      _selectedRole = role;
-      if (role == 'guru') {
-        _usernameController.text = 'guru';
-        _passwordController.text = 'guru123';
-      } else {
-        _usernameController.text = 'siswa';
-        _passwordController.text = 'siswa123';
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -319,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => _fillDemoAccount('siswa'),
+                            onTap: () => setState(() => _selectedRole = 'siswa'),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -361,7 +348,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => _fillDemoAccount('guru'),
+                            onTap: () => setState(() => _selectedRole = 'guru'),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -439,7 +426,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
 
                   // Login Button
                   SizedBox(
@@ -465,58 +452,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 4,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Demo Quick Access Credentials
-                  Center(
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.blue.withValues(alpha: 0.15)),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(Icons.lightbulb_rounded, size: 18, color: Colors.amber),
-                              SizedBox(width: 6),
-                              Text(
-                                'Akses Cepat Akun Demo:',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed: () => _fillDemoAccount('siswa'),
-                                icon: const Icon(Icons.touch_app_rounded, size: 16),
-                                label: const Text('Akun Siswa', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                style: OutlinedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed: () => _fillDemoAccount('guru'),
-                                icon: const Icon(Icons.touch_app_rounded, size: 16),
-                                label: const Text('Akun Guru', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                style: OutlinedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
                       ),
                     ),
                   ),
