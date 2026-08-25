@@ -332,16 +332,57 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
     );
   }
 
+  String _searchQuery = '';
+  String _selectedStatusFilter = 'all'; // 'all', 'pending', 'completed', 'locked'
+  String _selectedMapel = 'all'; // 'all' or Mapel Name
+  bool _groupByMapel = true;
+
   @override
   Widget build(BuildContext context) {
     final siswaProvider = Provider.of<SiswaProvider>(context);
     final quizList = siswaProvider.quizList;
+
+    // Filter logic
+    final filteredQuizList = quizList.where((q) {
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        final matchJudul = q.judul.toLowerCase().contains(query);
+        final matchMapel = q.namaMapel.toLowerCase().contains(query);
+        final matchGuru = (q.namaGuru ?? '').toLowerCase().contains(query);
+        if (!matchJudul && !matchMapel && !matchGuru) return false;
+      }
+
+      if (_selectedStatusFilter == 'pending') {
+        if (q.isCompleted || q.isSuspended || q.isTerkunci || q.isMaxAttemptsReached) return false;
+      } else if (_selectedStatusFilter == 'completed') {
+        if (!q.isCompleted) return false;
+      } else if (_selectedStatusFilter == 'locked') {
+        if (!q.isSuspended && !q.isTerkunci && !q.isMaxAttemptsReached) return false;
+      }
+
+      if (_selectedMapel != 'all' && q.namaMapel != _selectedMapel) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+
+    // Mapel list for filter pills
+    final mapelSet = quizList.map((q) => q.namaMapel).toSet();
+    final allMapelList = mapelSet.toList();
+
+    // Grouping by mapel
+    Map<String, List<QuizModel>> groupedQuizzes = {};
+    for (var q in filteredQuizList) {
+      groupedQuizzes.putIfAbsent(q.namaMapel, () => []).add(q);
+    }
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Bar
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -349,94 +390,314 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
                 '🎯 CBT & Quiz Ujian',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              IconButton(
-                icon: const Icon(Icons.refresh, color: AppTheme.primaryColor),
-                onPressed: _loadQuiz,
-                tooltip: 'Refresh Kuis',
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      _groupByMapel ? Icons.grid_view_rounded : Icons.view_list_rounded,
+                      color: AppTheme.primaryColor,
+                    ),
+                    onPressed: () => setState(() => _groupByMapel = !_groupByMapel),
+                    tooltip: _groupByMapel ? 'Tampilan Daftar' : 'Kelompokkan per Mapel',
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, color: AppTheme.primaryColor),
+                    onPressed: _loadQuiz,
+                    tooltip: 'Refresh Kuis',
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
+          // Search Bar
+          TextField(
+            onChanged: (val) => setState(() => _searchQuery = val),
+            decoration: InputDecoration(
+              hintText: 'Cari judul kuis, mapel, atau guru...',
+              prefixIcon: const Icon(Icons.search, color: AppTheme.primaryColor, size: 20),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () => setState(() => _searchQuery = ''),
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Status Filter Tabs
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildStatusChip('Semua (${quizList.length})', 'all', Icons.format_list_bulleted_rounded),
+                const SizedBox(width: 6),
+                _buildStatusChip(
+                  'Belum Dikerjakan (${quizList.where((q) => !q.isCompleted && !q.isSuspended && !q.isTerkunci && !q.isMaxAttemptsReached).length})',
+                  'pending',
+                  Icons.pending_actions_rounded,
+                ),
+                const SizedBox(width: 6),
+                _buildStatusChip(
+                  'Sudah Dikerjakan (${quizList.where((q) => q.isCompleted).length})',
+                  'completed',
+                  Icons.task_alt_rounded,
+                ),
+                const SizedBox(width: 6),
+                _buildStatusChip(
+                  'Suspend / Terkunci (${quizList.where((q) => q.isSuspended || q.isTerkunci || q.isMaxAttemptsReached).length})',
+                  'locked',
+                  Icons.lock_rounded,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Subject/Mapel Filter Bar
+          if (allMapelList.isNotEmpty) ...[
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('Semua Mapel', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    selected: _selectedMapel == 'all',
+                    onSelected: (sel) {
+                      if (sel) setState(() => _selectedMapel = 'all');
+                    },
+                    selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                    side: BorderSide(color: _selectedMapel == 'all' ? AppTheme.primaryColor : Colors.grey.shade300),
+                  ),
+                  const SizedBox(width: 6),
+                  ...allMapelList.map((m) {
+                    final count = quizList.where((q) => q.namaMapel == m).length;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text('$m ($count)', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        selected: _selectedMapel == m,
+                        onSelected: (sel) {
+                          setState(() => _selectedMapel = sel ? m : 'all');
+                        },
+                        selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                        side: BorderSide(color: _selectedMapel == m ? AppTheme.primaryColor : Colors.grey.shade300),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+
+          // Main List Content
           Expanded(
             child: siswaProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : quizList.isEmpty
-                    ? const Center(child: Text('Belum ada quiz atau ujian CBT.'))
-                    : ListView.builder(
-                        itemCount: quizList.length,
-                        itemBuilder: (context, index) {
-                          final q = quizList[index];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
+                : filteredQuizList.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.folder_off_outlined, size: 54, color: Colors.grey.shade400),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Tidak ada kuis CBT ditemukan.',
+                              style: TextStyle(fontSize: 14, color: Colors.grey.shade600, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Coba ubah kata kunci pencarian atau filter status.',
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _groupByMapel
+                        ? ListView(
+                            children: groupedQuizzes.entries.map((entry) {
+                              return Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          q.namaMapel,
-                                          style: const TextStyle(
-                                            color: AppTheme.primaryColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                      _buildStatusBadge(q),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    q.judul,
-                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "Durasi: ${q.durasiMenit} Menit • Jumlah Soal: ${q.jumlahSoal}",
-                                    style: const TextStyle(fontSize: 13, color: Colors.grey),
-                                  ),
-                                  if (q.isSuspended) ...[
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red.shade50,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: Colors.red.shade200),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.gavel_rounded, color: Colors.red, size: 16),
-                                          const SizedBox(width: 6),
-                                          Expanded(
-                                            child: Text(
-                                              q.accessReason ?? 'Kuis disuspend/didiskualifikasi karena melanggar aturan ujian online.',
-                                              style: TextStyle(fontSize: 11, color: Colors.red.shade900, fontWeight: FontWeight.bold),
+                                  Container(
+                                    margin: const EdgeInsets.symmetric(vertical: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(Icons.menu_book_rounded, color: AppTheme.primaryColor, size: 18),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            entry.key,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.primaryColor,
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryColor,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            '${entry.value.length} Kuis',
+                                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                  const SizedBox(height: 12),
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: _buildActionButton(q),
                                   ),
+                                  ...entry.value.map((q) => _buildQuizCard(q)),
                                 ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                              );
+                            }).toList(),
+                          )
+                        : ListView.builder(
+                            itemCount: filteredQuizList.length,
+                            itemBuilder: (context, index) {
+                              return _buildQuizCard(filteredQuizList[index]);
+                            },
+                          ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String label, String value, IconData icon) {
+    final isSelected = _selectedStatusFilter == value;
+    return ChoiceChip(
+      avatar: Icon(icon, size: 14, color: isSelected ? AppTheme.primaryColor : Colors.grey.shade600),
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? AppTheme.primaryColor : Colors.black87,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: (sel) {
+        if (sel) setState(() => _selectedStatusFilter = value);
+      },
+      selectedColor: AppTheme.primaryColor.withValues(alpha: 0.18),
+      backgroundColor: Colors.grey.shade100,
+      side: BorderSide(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300),
+    );
+  }
+
+  Widget _buildQuizCard(QuizModel q) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.bookmark_outline, size: 16, color: AppTheme.primaryColor),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          q.namaMapel,
+                          style: const TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _buildStatusBadge(q),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              q.judul,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(
+                  "Durasi: ${q.durasiMenit} mnt",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(width: 12),
+                const Icon(Icons.help_outline_rounded, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(
+                  "Soal: ${q.jumlahSoal}",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(width: 12),
+                const Icon(Icons.repeat, size: 14, color: Colors.grey),
+                const SizedBox(width: 4),
+                Text(
+                  "Percobaan: ${q.attemptCount}/${q.maxAttempts}",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            if (q.isSuspended) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.shade200),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.gavel_rounded, color: Colors.red, size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        q.accessReason ?? 'Kuis disuspend/didiskualifikasi karena melanggar aturan ujian online.',
+                        style: TextStyle(fontSize: 11, color: Colors.red.shade900, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _buildActionButton(q),
+            ),
+          ],
+        ),
       ),
     );
   }

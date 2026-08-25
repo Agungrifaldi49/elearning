@@ -191,6 +191,8 @@ class ExamModel extends BaseModel {
                 'status' => 'diskualifikasi',
                 'susulan' => $susulan,
                 'quiz' => $quiz,
+                'attempt_count' => $attemptCount,
+                'max_attempts' => $maxAttempts,
                 'pelanggaran_count' => $hqRow['pelanggaran_count'] ?? 2
             ];
         }
@@ -217,7 +219,9 @@ class ExamModel extends BaseModel {
                 'is_expired' => true,
                 'status' => 'terkunci',
                 'susulan' => $susulan,
-                'quiz' => $quiz
+                'quiz' => $quiz,
+                'attempt_count' => $attemptCount,
+                'max_attempts' => $maxAttempts
             ];
         }
 
