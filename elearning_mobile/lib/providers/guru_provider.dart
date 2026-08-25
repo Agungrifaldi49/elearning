@@ -177,10 +177,38 @@ class GuruProvider with ChangeNotifier {
       'user_id': userId.toString(),
       'kelas_id': kelasId.toString(),
     });
-    if (res['success'] == true && res['data'] is List) {
-      return res['data'];
+    if (res['success'] == true && res['data'] != null) {
+      if (res['data'] is Map && res['data']['students'] is List) {
+        return res['data']['students'];
+      } else if (res['data'] is List) {
+        return res['data'];
+      }
     }
     return [];
+  }
+
+  Future<Map<String, dynamic>> fetchAbsensiData(int userId, int kelasId, {int mapelId = 0}) async {
+    final Map<String, String> params = {
+      'user_id': userId.toString(),
+      'kelas_id': kelasId.toString(),
+    };
+    if (mapelId > 0) {
+      params['mapel_id'] = mapelId.toString();
+    }
+
+    final res = await ApiService.get('guru/absensi', params: params);
+    if (res['success'] == true && res['data'] != null) {
+      if (res['data'] is Map) {
+        return Map<String, dynamic>.from(res['data']);
+      } else if (res['data'] is List) {
+        return {
+          'mapel_list': [],
+          'classes': [],
+          'students': res['data'],
+        };
+      }
+    }
+    return {'mapel_list': [], 'classes': [], 'students': []};
   }
 
   Future<bool> saveAbsensi(int userId, int jadwalId, Map<int, String> records) async {

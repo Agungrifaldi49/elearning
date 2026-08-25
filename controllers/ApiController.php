@@ -1335,8 +1335,8 @@ class ApiController {
                     $jadwalId = intval($input['jadwal_id'] ?? 0);
                     $records = $input['records'] ?? []; // Map [siswa_id => status]
 
-                    if ($jadwalId <= 0 || empty($records)) {
-                        $this->jsonResponse(false, 'Data absensi tidak lengkap', null, 400);
+                    if (empty($records)) {
+                        $this->jsonResponse(false, 'Data absensi tidak boleh kosong', null, 400);
                     }
 
                     $today = date('Y-m-d');
@@ -1347,22 +1347,183 @@ class ApiController {
                             ON DUPLICATE KEY UPDATE status = :st
                         ");
                         $stmtIns->execute([
-                            'jid' => $jadwalId,
+                            'jid' => $jadwalId > 0 ? $jadwalId : 1,
                             'sid' => intval($siswaId),
                             'tgl' => $today,
                             'st' => $status
                         ]);
                     }
 
-                    $this->jsonResponse(true, 'Absensi siswa berhasil disimpan!');
+                    $this->jsonResponse(true, 'Presensi siswa terdaftar berhasil disimpan!');
                 }
 
                 $kelasId = intval($_GET['kelas_id'] ?? 0);
-                $stmtSis = $this->db->prepare("SELECT id, nis, nama_lengkap FROM siswa WHERE kelas_id = :kid ORDER BY nama_lengkap ASC");
-                $stmtSis->execute(['kid' => $kelasId]);
+                $mapelId = intval($_GET['mapel_id'] ?? 0);
+                $guruId = intval($guru['id'] ?? 0);
+
+                // Fetch Teacher's Enrolled Subjects
+                $stmtMapel = $this->db->prepare("
+                    SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel
+                    FROM mata_pelajaran mp
+                    LEFT JOIN mapel_enrollment_keys mek ON mp.id = mek.mapel_id AND mek.guru_id = :gid1
+                    LEFT JOIN jadwal j ON mp.id = j.mapel_id AND j.guru_id = :gid2
+                    LEFT JOIN materi m ON mp.id = m.mapel_id AND m.guru_id = :gid3
+                    WHERE mek.guru_id = :gid4 OR j.guru_id = :gid5 OR m.guru_id = :gid6
+                ");
+                $stmtMapel->execute([
+                    'gid1' => $guruId, 'gid2' => $guruId, 'gid3' => $guruId,
+                    'gid4' => $guruId, 'gid5' => $guruId, 'gid6' => $guruId
+                ]);
+                $teacherMapelList = $stmtMapel->fetchAll();
+
+                // Query Students enrolled in Teacher's subjects
+                $sqlSis = "
+                    SELECT DISTINCT s.id, s.nis, s.nama_lengkap, s.kelas_id, 
+                           COALESCE(k.nama_kelas, 'Tanpa Kelas') as nama_kelas,
+                           mp.nama_mapel as nama_mapel_enrolled
+                    FROM siswa s
+                    LEFT JOIN kelas k ON s.kelas_id = k.id
+                    LEFT JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id AND sme.guru_id = :gid1
+                    LEFT JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+                    WHERE 1=1
+                ";
+                $paramsSis = ['gid1' => $guruId];
+
+                if ($mapelId > 0) {
+                    $sqlSis .= " AND sme.mapel_id = :mid";
+                    $paramsSis['mid'] = $mapelId;
+                }
+
+                if ($kelasId > 0) {
+                    $sqlSis .= " AND s.kelas_id = :kid";
+                    $paramsSis['kid'] = $kelasId;
+                }
+
+                $sqlSis .= " ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC";
+                $stmtSis = $this->db->prepare($sqlSis);
+                $stmtSis->execute($paramsSis);
                 $students = $stmtSis->fetchAll();
 
-                $this->jsonResponse(true, 'Daftar Siswa untuk Absensi', $students);
+                // Fallback: If no students returned via enrollment table, fetch all students
+                if (empty($students)) {
+                    $sqlFb = "
+                        SELECT s.id, s.nis, s.nama_lengkap, s.kelas_id, COALESCE(k.nama_kelas, 'Tanpa Kelas') as nama_kelas
+                        FROM siswa s
+                        LEFT JOIN kelas k ON s.kelas_id = k.id
+                    ";
+                    $paramsFb = [];
+                    if ($kelasId > 0) {
+                        $sqlFb .= " WHERE s.kelas_id = :kid";
+                        $paramsFb['kid'] = $kelasId;
+                    }
+                    $sqlFb .= " ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC";
+                    $stmtFb = $this->db->prepare($sqlFb);
+                    $stmtFb->execute($paramsFb);
+                    $students = $stmtFb->fetchAll();
+                }
+
+                $stmtK = $this->db->query("SELECT id, nama_kelas, kode_kelas FROM kelas ORDER BY nama_kelas ASC");
+                $classList = $stmtK->fetchAll();
+
+                $this->jsonResponse(true, 'Daftar Siswa Terdaftar di Mapel Guru', [
+                    'mapel_list' => $teacherMapelList,
+                    'classes' => $classList,
+                    'students' => $students
+                ]);
+                break;
+
+            case 'recap_absensi':
+            case 'rekap_absensi':
+                $kelasId = intval($_GET['kelas_id'] ?? $_POST['kelas_id'] ?? 0);
+                $mapelId = intval($_GET['mapel_id'] ?? $_POST['mapel_id'] ?? 0);
+                $search = trim($_GET['search'] ?? $_POST['search'] ?? '');
+                $tanggal = trim($_GET['tanggal'] ?? $_POST['tanggal'] ?? '');
+                $guruId = intval($guru['id'] ?? 0);
+
+                $sql = "
+                    SELECT a.id, a.siswa_id, a.tanggal, a.status, a.waktu_masuk, a.waktu_pulang, a.created_at,
+                           s.nama_lengkap, s.nis, s.kelas_id, COALESCE(k.nama_kelas, 'Umum') as nama_kelas,
+                           mp.nama_mapel
+                    FROM absensi a 
+                    JOIN siswa s ON a.siswa_id = s.id 
+                    LEFT JOIN kelas k ON s.kelas_id = k.id 
+                    LEFT JOIN jadwal j ON a.jadwal_id = j.id 
+                    LEFT JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
+                    LEFT JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id AND sme.guru_id = :gid1
+                    WHERE 1=1
+                ";
+                $params = ['gid1' => $guruId];
+
+                if ($kelasId > 0) {
+                    $sql .= " AND s.kelas_id = :kid";
+                    $params['kid'] = $kelasId;
+                }
+                if ($mapelId > 0) {
+                    $sql .= " AND (j.mapel_id = :mid OR sme.mapel_id = :mid2)";
+                    $params['mid'] = $mapelId;
+                    $params['mid2'] = $mapelId;
+                }
+                if ($search !== '') {
+                    $sql .= " AND (s.nama_lengkap LIKE :s1 OR s.nis LIKE :s2)";
+                    $params['s1'] = "%$search%";
+                    $params['s2'] = "%$search%";
+                }
+                if ($tanggal !== '') {
+                    $sql .= " AND a.tanggal = :tgl";
+                    $params['tgl'] = $tanggal;
+                }
+
+                $sql .= " ORDER BY a.tanggal DESC, k.nama_kelas ASC, s.nama_lengkap ASC LIMIT 300";
+
+                $stmtRec = $this->db->prepare($sql);
+                $stmtRec->execute($params);
+                $recaps = $stmtRec->fetchAll();
+
+                // Fallback query if empty
+                if (empty($recaps) && $kelasId == 0 && empty($search)) {
+                    $stmtAll = $this->db->prepare("
+                        SELECT a.id, a.siswa_id, a.tanggal, a.status, a.waktu_masuk, a.waktu_pulang, a.created_at,
+                               s.nama_lengkap, s.nis, s.kelas_id, COALESCE(k.nama_kelas, 'Umum') as nama_kelas
+                        FROM absensi a 
+                        JOIN siswa s ON a.siswa_id = s.id 
+                        LEFT JOIN kelas k ON s.kelas_id = k.id 
+                        ORDER BY a.created_at DESC LIMIT 100
+                    ");
+                    $stmtAll->execute();
+                    $recaps = $stmtAll->fetchAll();
+                }
+
+                $totalHadir = 0;
+                $totalIzin = 0;
+                $totalSakit = 0;
+                $totalAlpa = 0;
+                foreach ($recaps as $r) {
+                    $st = strtolower($r['status'] ?? '');
+                    if (strpos($st, 'hadir') !== false || strpos($st, 'tepat') !== false) {
+                        $totalHadir++;
+                    } elseif (strpos($st, 'izin') !== false) {
+                        $totalIzin++;
+                    } elseif (strpos($st, 'sakit') !== false) {
+                        $totalSakit++;
+                    } else {
+                        $totalAlpa++;
+                    }
+                }
+
+                $stmtK = $this->db->query("SELECT id, nama_kelas, kode_kelas FROM kelas ORDER BY nama_kelas ASC");
+                $classList = $stmtK->fetchAll();
+
+                $this->jsonResponse(true, 'Data Rekapitulasi Presensi Terdaftar', [
+                    'summary' => [
+                        'total_records' => count($recaps),
+                        'hadir' => $totalHadir,
+                        'izin' => $totalIzin,
+                        'sakit' => $totalSakit,
+                        'alpa' => $totalAlpa,
+                    ],
+                    'classes' => $classList,
+                    'records' => $recaps
+                ]);
                 break;
 
             case 'kartu':

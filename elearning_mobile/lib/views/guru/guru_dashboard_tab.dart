@@ -183,7 +183,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
               ),
             ),
 
-            if (!guruProvider.hasClockedInToday && DateTime.now().hour < 14) ...[
+            if (!guruProvider.hasClockedInToday) ...[
               const SizedBox(height: 12),
               InkWell(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab())),
@@ -235,7 +235,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                   ),
                 ),
               ),
-            ] else if (guruProvider.hasClockedInToday && !guruProvider.hasClockedOutToday && DateTime.now().hour >= 14) ...[
+            ] else if (guruProvider.hasClockedInToday && !guruProvider.hasClockedOutToday) ...[
               const SizedBox(height: 12),
               InkWell(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab())),

@@ -184,7 +184,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
               ),
             ),
 
-            if (!siswaProvider.hasClockedInToday && DateTime.now().hour < 14) ...[
+            if (!siswaProvider.hasClockedInToday) ...[
               const SizedBox(height: 12),
               InkWell(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaAbsensiTab())),
@@ -236,7 +236,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   ),
                 ),
               ),
-            ] else if (siswaProvider.hasClockedInToday && !siswaProvider.hasClockedOutToday && DateTime.now().hour >= 14) ...[
+            ] else if (siswaProvider.hasClockedInToday && !siswaProvider.hasClockedOutToday) ...[
               const SizedBox(height: 12),
               InkWell(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaAbsensiTab())),

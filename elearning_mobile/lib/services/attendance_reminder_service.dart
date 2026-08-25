@@ -20,8 +20,8 @@ class AttendanceReminderService {
 
     final hour = now.hour;
 
-    // 1. Belum Absen Masuk Reminder (Morning entry check-in)
-    if (!hasClockedInToday && hour >= 6 && hour < 14 && lastEntryReminder == null) {
+    // 1. Belum Absen Masuk Reminder (Entry check-in)
+    if (!hasClockedInToday && lastEntryReminder == null) {
       await prefs.setString('last_entry_reminder_$todayStr', 'shown');
       if (context.mounted) {
         _showEntryReminderDialog(context, isGuru);
@@ -29,8 +29,8 @@ class AttendanceReminderService {
       return;
     }
 
-    // 2. Pengingat Absen Pulang (Afternoon exit check-out, e.g. 10-15 mins before end of day)
-    if (hasClockedInToday && !hasClockedOutToday && hour >= 14 && hour < 19 && lastExitReminder == null) {
+    // 2. Pengingat Absen Pulang (Exit check-out when clocked in but not clocked out)
+    if (hasClockedInToday && !hasClockedOutToday && lastExitReminder == null) {
       await prefs.setString('last_exit_reminder_$todayStr', 'shown');
       if (context.mounted) {
         _showExitReminderDialog(context, isGuru);
