@@ -83,9 +83,10 @@ class QuizModel {
   }
 
   bool get isCompleted => finishedAt != null || totalNilai != null;
+  bool get isUnlimitedAttempts => maxAttempts == 0 || maxAttempts >= 99;
   bool get isSuspended => (isDisqualified || accessStatus == 'diskualifikasi') && susulanStatus != 'disetujui';
   bool get isTerkunci => (accessStatus == 'terkunci') && susulanStatus != 'disetujui';
-  bool get isMaxAttemptsReached => (attemptCount >= maxAttempts || accessStatus == 'max_attempts_reached') && maxAttempts > 0 && susulanStatus != 'disetujui';
+  bool get isMaxAttemptsReached => !isUnlimitedAttempts && maxAttempts > 0 && (attemptCount >= maxAttempts || accessStatus == 'max_attempts_reached') && susulanStatus != 'disetujui';
 }
 
 class SoalModel {

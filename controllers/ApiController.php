@@ -401,7 +401,7 @@ class ApiController {
                     $q['susulan_status'] = $susRow['status'] ?? null;
                     $q['is_disqualified'] = (!empty($q['is_disqualified']) && (int)$q['is_disqualified'] === 1) || (($accessCheck['status'] ?? '') === 'diskualifikasi');
                     $q['pelanggaran_count'] = intval($q['pelanggaran_count'] ?? 0);
-                    $q['max_attempts'] = max(1, intval($q['max_attempts'] ?? $accessCheck['max_attempts'] ?? 1));
+                    $q['max_attempts'] = isset($q['max_attempts']) ? intval($q['max_attempts']) : (isset($accessCheck['max_attempts']) ? intval($accessCheck['max_attempts']) : 1);
                     $q['attempt_count'] = intval($accessCheck['attempt_count'] ?? ($q['finished_at'] != null ? 1 : 0));
                 }
 

@@ -434,71 +434,126 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
           ),
           const SizedBox(height: 10),
 
-          // Status Filter Tabs
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+          // Combobox Filters Section (Mapel & Status Dropdowns)
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.shade300),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Row(
               children: [
-                _buildStatusChip('Semua (${quizList.length})', 'all', Icons.format_list_bulleted_rounded),
-                const SizedBox(width: 6),
-                _buildStatusChip(
-                  'Belum Dikerjakan (${quizList.where((q) => !q.isCompleted && !q.isSuspended && !q.isTerkunci && !q.isMaxAttemptsReached).length})',
-                  'pending',
-                  Icons.pending_actions_rounded,
+                // 1. Combobox Mapel
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Filter Mapel:',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: allMapelList.contains(_selectedMapel) || _selectedMapel == 'all' ? _selectedMapel : 'all',
+                            isExpanded: true,
+                            isDense: true,
+                            icon: const Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor),
+                            style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
+                            onChanged: (val) {
+                              if (val != null) setState(() => _selectedMapel = val);
+                            },
+                            items: [
+                              const DropdownMenuItem(
+                                value: 'all',
+                                child: Text('Semua Mapel', overflow: TextOverflow.ellipsis),
+                              ),
+                              ...allMapelList.map((m) {
+                                final count = quizList.where((q) => q.namaMapel == m).length;
+                                return DropdownMenuItem(
+                                  value: m,
+                                  child: Text('$m ($count)', overflow: TextOverflow.ellipsis),
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 6),
-                _buildStatusChip(
-                  'Sudah Dikerjakan (${quizList.where((q) => q.isCompleted).length})',
-                  'completed',
-                  Icons.task_alt_rounded,
-                ),
-                const SizedBox(width: 6),
-                _buildStatusChip(
-                  'Suspend / Terkunci (${quizList.where((q) => q.isSuspended || q.isTerkunci || q.isMaxAttemptsReached).length})',
-                  'locked',
-                  Icons.lock_rounded,
+                const SizedBox(width: 8),
+
+                // 2. Combobox Status Kuis
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Filter Status:',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _selectedStatusFilter,
+                            isExpanded: true,
+                            isDense: true,
+                            icon: const Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor),
+                            style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold),
+                            onChanged: (val) {
+                              if (val != null) setState(() => _selectedStatusFilter = val);
+                            },
+                            items: [
+                              DropdownMenuItem(
+                                value: 'all',
+                                child: Text('Semua Status (${quizList.length})', overflow: TextOverflow.ellipsis),
+                              ),
+                              DropdownMenuItem(
+                                value: 'pending',
+                                child: Text('Belum Dikerjakan (${quizList.where((q) => !q.isCompleted && !q.isSuspended && !q.isTerkunci && !q.isMaxAttemptsReached).length})', overflow: TextOverflow.ellipsis),
+                              ),
+                              DropdownMenuItem(
+                                value: 'completed',
+                                child: Text('Sudah Dikerjakan (${quizList.where((q) => q.isCompleted).length})', overflow: TextOverflow.ellipsis),
+                              ),
+                              DropdownMenuItem(
+                                value: 'locked',
+                                child: Text('Suspend/Terkunci (${quizList.where((q) => q.isSuspended || q.isTerkunci || q.isMaxAttemptsReached).length})', overflow: TextOverflow.ellipsis),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-
-          // Subject/Mapel Filter Bar
-          if (allMapelList.isNotEmpty) ...[
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  ChoiceChip(
-                    label: const Text('Semua Mapel', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    selected: _selectedMapel == 'all',
-                    onSelected: (sel) {
-                      if (sel) setState(() => _selectedMapel = 'all');
-                    },
-                    selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
-                    side: BorderSide(color: _selectedMapel == 'all' ? AppTheme.primaryColor : Colors.grey.shade300),
-                  ),
-                  const SizedBox(width: 6),
-                  ...allMapelList.map((m) {
-                    final count = quizList.where((q) => q.namaMapel == m).length;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        label: Text('$m ($count)', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        selected: _selectedMapel == m,
-                        onSelected: (sel) {
-                          setState(() => _selectedMapel = sel ? m : 'all');
-                        },
-                        selectedColor: AppTheme.primaryColor.withValues(alpha: 0.2),
-                        side: BorderSide(color: _selectedMapel == m ? AppTheme.primaryColor : Colors.grey.shade300),
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
+          const SizedBox(height: 10),
 
           // Main List Content
           Expanded(
@@ -582,28 +637,6 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
     );
   }
 
-  Widget _buildStatusChip(String label, String value, IconData icon) {
-    final isSelected = _selectedStatusFilter == value;
-    return ChoiceChip(
-      avatar: Icon(icon, size: 14, color: isSelected ? AppTheme.primaryColor : Colors.grey.shade600),
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? AppTheme.primaryColor : Colors.black87,
-        ),
-      ),
-      selected: isSelected,
-      onSelected: (sel) {
-        if (sel) setState(() => _selectedStatusFilter = value);
-      },
-      selectedColor: AppTheme.primaryColor.withValues(alpha: 0.18),
-      backgroundColor: Colors.grey.shade100,
-      side: BorderSide(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300),
-    );
-  }
-
   Widget _buildQuizCard(QuizModel q) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -663,7 +696,9 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
                 const Icon(Icons.repeat, size: 14, color: Colors.grey),
                 const SizedBox(width: 4),
                 Text(
-                  "Percobaan: ${q.attemptCount}/${q.maxAttempts}",
+                  q.isUnlimitedAttempts
+                      ? "Percobaan: ${q.attemptCount} / ∞ (Tanpa Batas)"
+                      : "Percobaan: ${q.attemptCount}/${q.maxAttempts}",
                   style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
                 ),
               ],
