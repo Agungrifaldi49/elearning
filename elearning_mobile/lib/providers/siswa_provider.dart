@@ -21,6 +21,8 @@ class SiswaProvider with ChangeNotifier {
   List<AbsensiModel> _absensiList = [];
   List<NilaiModel> _nilaiList = [];
   List<ForumModel> _forumTopicList = [];
+  List<ChatContactModel> _chatContacts = [];
+  final StreamController<List<ChatContactModel>> _chatContactsController = StreamController<List<ChatContactModel>>.broadcast();
 
   Set<int> _seenMateriIds = {};
   Set<int> _seenTugasIds = {};
@@ -38,6 +40,8 @@ class SiswaProvider with ChangeNotifier {
   List<AbsensiModel> get absensiList => _absensiList;
   List<NilaiModel> get nilaiList => _nilaiList;
   List<ForumModel> get forumTopicList => _forumTopicList;
+  List<ChatContactModel> get chatContacts => _chatContacts;
+  Stream<List<ChatContactModel>> get chatContactsStream => _chatContactsController.stream;
 
   Set<int> get seenMateriIds => _seenMateriIds;
   Set<int> get seenTugasIds => _seenTugasIds;
@@ -359,7 +363,7 @@ class SiswaProvider with ChangeNotifier {
 
   void startRealtimeSync(int userId) {
     _realtimeTimer?.cancel();
-    _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       await fetchMateriSilent(userId);
       await fetchQuizSilent(userId);
       await fetchDashboardSilent(userId);
@@ -428,6 +432,10 @@ class SiswaProvider with ChangeNotifier {
     final res = await ApiService.get('chat/contacts', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
       final list = (res['data'] as List).map((e) => ChatContactModel.fromJson(e)).toList();
+      _chatContacts = list;
+      if (!_chatContactsController.isClosed) {
+        _chatContactsController.add(list);
+      }
       int totalUnread = 0;
       for (var c in list) {
         totalUnread += c.unreadCount;
@@ -435,6 +443,34 @@ class SiswaProvider with ChangeNotifier {
       _unreadChatCount = totalUnread;
       notifyListeners();
     }
+  }
+
+  void markContactChatAsRead(int userId, int contactId) async {
+    final index = _chatContacts.indexWhere((c) => c.id == contactId);
+    if (index != -1) {
+      final oldUnread = _chatContacts[index].unreadCount;
+      if (oldUnread > 0) {
+        _chatContacts[index] = ChatContactModel(
+          id: _chatContacts[index].id,
+          fullName: _chatContacts[index].fullName,
+          avatarUrl: _chatContacts[index].avatarUrl,
+          roleName: _chatContacts[index].roleName,
+          lastMessage: _chatContacts[index].lastMessage,
+          lastTime: _chatContacts[index].lastTime,
+          unreadCount: 0,
+        );
+        _unreadChatCount = _unreadChatCount - oldUnread;
+        if (_unreadChatCount < 0) _unreadChatCount = 0;
+        if (!_chatContactsController.isClosed) {
+          _chatContactsController.add(_chatContacts);
+        }
+        notifyListeners();
+      }
+    }
+    await ApiService.get('chat/messages', params: {
+      'user_id': userId.toString(),
+      'receiver_id': contactId.toString(),
+    });
   }
 
   Future<void> fetchAbsensiSilent(int userId) async {

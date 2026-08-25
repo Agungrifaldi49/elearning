@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/chat_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/siswa_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/profanity_service.dart';
 import '../../theme/app_theme.dart';
@@ -19,18 +20,15 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
   List<ChatContactModel> _filteredContacts = [];
   bool _isLoading = false;
   final TextEditingController _searchController = TextEditingController();
-  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _loadContacts();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) => _loadContacts(showLoading: false));
   }
 
   @override
   void dispose() {
-    _refreshTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -43,18 +41,16 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
       setState(() => _isLoading = true);
     }
 
-    final res = await ApiService.get('chat/contacts', params: {'user_id': user.id.toString()});
+    final siswaProvider = Provider.of<SiswaProvider>(context, listen: false);
+    await siswaProvider.fetchChatContactsSilent(user.id);
+    final list = siswaProvider.chatContacts;
+
     if (mounted) {
-      if (res['success'] == true && res['data'] is List) {
-        final list = (res['data'] as List).map((e) => ChatContactModel.fromJson(e)).toList();
-        setState(() {
-          _contacts = list;
-          _filterContacts(_searchController.text);
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
-      }
+      setState(() {
+        _contacts = list;
+        _filterContacts(_searchController.text);
+        _isLoading = false;
+      });
     }
   }
 
@@ -85,6 +81,11 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
   }
 
   void _openChatRoom(ChatContactModel contact) async {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user != null) {
+      Provider.of<SiswaProvider>(context, listen: false).markContactChatAsRead(user.id, contact.id);
+    }
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -96,6 +97,8 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final siswaProvider = Provider.of<SiswaProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pesan & Chat Direct'),
@@ -126,127 +129,124 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
             ),
           ),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => _loadContacts(),
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _filteredContacts.isEmpty
-                      ? const Center(child: Text('Tidak ada kontak tersedia.'))
-                      : ListView.builder(
-                          itemCount: _filteredContacts.length,
-                          itemBuilder: (context, index) {
-                            final c = _filteredContacts[index];
-                            final bool isGuru = c.roleName.toLowerCase().contains('guru');
+            child: StreamBuilder<List<ChatContactModel>>(
+              stream: siswaProvider.chatContactsStream,
+              initialData: siswaProvider.chatContacts,
+              builder: (context, snapshot) {
+                final currentList = snapshot.data ?? siswaProvider.chatContacts;
+                if (currentList.isNotEmpty && _searchController.text.isEmpty) {
+                  _contacts = currentList;
+                  _filteredContacts = List.from(currentList);
+                  _filteredContacts.sort((a, b) {
+                    if (a.unreadCount > 0 && b.unreadCount == 0) return -1;
+                    if (a.unreadCount == 0 && b.unreadCount > 0) return 1;
+                    if (a.unreadCount > 0 && b.unreadCount > 0) {
+                      return b.unreadCount.compareTo(a.unreadCount);
+                    }
+                    return 0;
+                  });
+                }
 
-                            final hasUnread = c.unreadCount > 0;
+                return RefreshIndicator(
+                  onRefresh: () => _loadContacts(),
+                  child: _isLoading && _filteredContacts.isEmpty
+                      ? const Center(child: CircularProgressIndicator())
+                      : _filteredContacts.isEmpty
+                          ? const Center(child: Text('Tidak ada kontak tersedia.'))
+                          : ListView.builder(
+                              itemCount: _filteredContacts.length,
+                              itemBuilder: (context, index) {
+                                final c = _filteredContacts[index];
+                                final bool isGuru = c.roleName.toLowerCase().contains('guru');
+                                final hasUnread = c.unreadCount > 0;
 
-                            return Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: hasUnread
-                                    ? BorderSide(color: Colors.red.shade300, width: 1.5)
-                                    : BorderSide.none,
-                              ),
-                              color: hasUnread ? Colors.red.shade50.withValues(alpha: 0.4) : Colors.white,
-                              elevation: hasUnread ? 3 : 1,
-                              child: ListTile(
-                                leading: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    CircleAvatar(
-                                      backgroundColor: isGuru ? Colors.amber.withValues(alpha: 0.2) : AppTheme.primaryColor.withValues(alpha: 0.15),
-                                      backgroundImage: (c.avatarUrl != null && c.avatarUrl!.isNotEmpty)
-                                          ? NetworkImage(c.avatarUrl!)
-                                          : null,
-                                      child: (c.avatarUrl == null || c.avatarUrl!.isEmpty)
-                                          ? Text(
-                                              c.fullName.isNotEmpty ? c.fullName[0] : 'U',
-                                              style: TextStyle(
-                                                color: isGuru ? Colors.amber.shade900 : AppTheme.primaryColor,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            )
-                                          : null,
-                                    ),
-                                    if (hasUnread)
-                                      Positioned(
-                                        right: -3,
-                                        top: -3,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: const BoxDecoration(
-                                            color: Colors.red,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                                          child: Text(
-                                            '${c.unreadCount}',
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                title: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(c.fullName, style: TextStyle(fontWeight: hasUnread ? FontWeight.w900 : FontWeight.bold, fontSize: 14)),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: isGuru ? Colors.amber.shade100 : Colors.blue.shade100,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        c.roleName,
-                                        style: TextStyle(
-                                          color: isGuru ? Colors.amber.shade900 : Colors.blue.shade900,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                subtitle: Text(
-                                  c.lastMessage != null && c.lastMessage!.isNotEmpty
-                                      ? ProfanityService.filter(c.lastMessage)
-                                      : 'Ketuk untuk percakapan direct',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
-                                    color: hasUnread ? Colors.black87 : Colors.grey.shade600,
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: hasUnread
+                                        ? BorderSide(color: Colors.red.shade300, width: 1.5)
+                                        : BorderSide.none,
                                   ),
-                                ),
-                                trailing: hasUnread
-                                    ? Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.shade600,
-                                          borderRadius: BorderRadius.circular(12),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.red.withValues(alpha: 0.3),
-                                              blurRadius: 4,
+                                  color: hasUnread ? Colors.red.shade50.withValues(alpha: 0.4) : Colors.white,
+                                  elevation: hasUnread ? 3 : 1,
+                                  child: ListTile(
+                                    leading: Badge(
+                                      isLabelVisible: hasUnread,
+                                      label: Text(
+                                        '${c.unreadCount}',
+                                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                      backgroundColor: Colors.red,
+                                      child: CircleAvatar(
+                                        backgroundColor: isGuru ? Colors.amber.withValues(alpha: 0.2) : AppTheme.primaryColor.withValues(alpha: 0.15),
+                                        backgroundImage: (c.avatarUrl != null && c.avatarUrl!.isNotEmpty)
+                                            ? NetworkImage(c.avatarUrl!)
+                                            : null,
+                                        child: (c.avatarUrl == null || c.avatarUrl!.isEmpty)
+                                            ? Text(
+                                                c.fullName.isNotEmpty ? c.fullName[0] : 'U',
+                                                style: TextStyle(
+                                                  color: isGuru ? Colors.amber.shade900 : AppTheme.primaryColor,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                    title: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(c.fullName, style: TextStyle(fontWeight: hasUnread ? FontWeight.w900 : FontWeight.bold, fontSize: 14)),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: isGuru ? Colors.amber.shade100 : Colors.blue.shade100,
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            c.roleName,
+                                            style: TextStyle(
+                                              color: isGuru ? Colors.amber.shade900 : Colors.blue.shade900,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                          ],
+                                          ),
                                         ),
-                                        child: Text(
-                                          '🔴 ${c.unreadCount} BARU',
-                                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                                        ),
-                                      )
-                                    : const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                                onTap: () => _openChatRoom(c),
-                              ),
-                            );
-                          },
-                        ),
+                                      ],
+                                    ),
+                                    subtitle: Text(
+                                      c.lastMessage != null && c.lastMessage!.isNotEmpty
+                                          ? ProfanityService.filter(c.lastMessage)
+                                          : 'Ketuk untuk percakapan direct',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
+                                        color: hasUnread ? Colors.black87 : Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    trailing: hasUnread
+                                        ? Badge(
+                                            isLabelVisible: true,
+                                            label: Text(
+                                              '🔴 ${c.unreadCount} BARU',
+                                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                            ),
+                                            backgroundColor: Colors.red.shade600,
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            child: const SizedBox.shrink(),
+                                          )
+                                        : const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                                    onTap: () => _openChatRoom(c),
+                                  ),
+                                );
+                              },
+                            ),
+                );
+              },
             ),
           ),
         ],
@@ -273,8 +273,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+        if (user != null) {
+          Provider.of<SiswaProvider>(context, listen: false).markContactChatAsRead(user.id, widget.contact.id);
+        }
+      }
+    });
     _loadMessages();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) => _loadMessages(showLoading: false));
+    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) => _loadMessages(showLoading: false));
   }
 
   @override
