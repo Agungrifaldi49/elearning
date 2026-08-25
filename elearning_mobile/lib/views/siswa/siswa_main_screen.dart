@@ -17,6 +17,7 @@ import 'siswa_forum_screen.dart';
 import 'siswa_chat_screen.dart';
 import 'gabung_kelas_screen.dart';
 import '../shared/edit_profil_screen.dart';
+import '../../services/attendance_reminder_service.dart';
 
 import '../../providers/siswa_provider.dart';
 
@@ -53,7 +54,16 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
         siswaProvider.fetchTugas(user.id);
         siswaProvider.fetchForumSilent(user.id);
         siswaProvider.fetchChatContactsSilent(user.id);
-        siswaProvider.fetchAbsensi(user.id);
+        siswaProvider.fetchAbsensi(user.id).then((_) {
+          if (mounted) {
+            AttendanceReminderService.checkAndShowReminder(
+              context: context,
+              isGuru: false,
+              hasClockedInToday: siswaProvider.hasClockedInToday,
+              hasClockedOutToday: siswaProvider.hasClockedOutToday,
+            );
+          }
+        });
         siswaProvider.startRealtimeSync(user.id);
       }
     });

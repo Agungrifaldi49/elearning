@@ -56,6 +56,18 @@ class SiswaProvider with ChangeNotifier {
   int get unreadJadwalCount => _jadwalList.where((j) => !_seenJadwalIds.contains(j.id)).length;
   int get unreadForumCount => _forumTopicList.where((f) => !_seenForumIds.contains(f.id)).length;
 
+  bool get hasClockedInToday {
+    final now = DateTime.now();
+    final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    return _absensiList.any((a) => a.tanggal.contains(todayStr));
+  }
+
+  bool get hasClockedOutToday {
+    final now = DateTime.now();
+    final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    return _absensiList.any((a) => a.tanggal.contains(todayStr) && a.waktuPulang != null && a.waktuPulang!.isNotEmpty);
+  }
+
   Future<void> loadSeenState() async {
     try {
       final prefs = await SharedPreferences.getInstance();

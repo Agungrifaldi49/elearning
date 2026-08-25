@@ -17,6 +17,7 @@ import 'guru_absensi_tab.dart';
 import '../siswa/siswa_forum_screen.dart';
 import '../siswa/siswa_chat_screen.dart';
 import '../shared/edit_profil_screen.dart';
+import '../../services/attendance_reminder_service.dart';
 
 class GuruMainScreen extends StatefulWidget {
   const GuruMainScreen({super.key});
@@ -50,6 +51,17 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
         guruProvider.fetchForumSilent(user.id);
         guruProvider.fetchChatContactsSilent(user.id);
         guruProvider.startRealtimeSync(user.id);
+        
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          if (mounted) {
+            AttendanceReminderService.checkAndShowReminder(
+              context: context,
+              isGuru: true,
+              hasClockedInToday: guruProvider.hasClockedInToday,
+              hasClockedOutToday: guruProvider.hasClockedOutToday,
+            );
+          }
+        });
       }
     });
   }

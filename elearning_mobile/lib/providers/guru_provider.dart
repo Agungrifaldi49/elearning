@@ -35,6 +35,11 @@ class GuruProvider with ChangeNotifier {
   int get unreadChatCount => _unreadChatCount;
   int get unreadForumCount => _forumTopicList.where((f) => !_seenForumIds.contains(f.id)).length;
 
+  bool _hasClockedInToday = false;
+  bool _hasClockedOutToday = false;
+  bool get hasClockedInToday => _hasClockedInToday;
+  bool get hasClockedOutToday => _hasClockedOutToday;
+
   Future<void> fetchDashboard(int userId) async {
     _isLoading = true;
     notifyListeners();
