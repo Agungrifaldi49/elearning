@@ -59,16 +59,29 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
   }
 
   void _filterContacts(String query) {
+    List<ChatContactModel> list;
     if (query.isEmpty) {
-      setState(() => _filteredContacts = _contacts);
+      list = List.from(_contacts);
     } else {
       final q = query.toLowerCase();
-      setState(() {
-        _filteredContacts = _contacts.where((c) {
-          return c.fullName.toLowerCase().contains(q) || c.roleName.toLowerCase().contains(q);
-        }).toList();
-      });
+      list = _contacts.where((c) {
+        return c.fullName.toLowerCase().contains(q) || c.roleName.toLowerCase().contains(q);
+      }).toList();
     }
+
+    // Contacts with unread messages (unreadCount > 0) MUST be sorted to the VERY TOP of the contact list!
+    list.sort((a, b) {
+      if (a.unreadCount > 0 && b.unreadCount == 0) return -1;
+      if (a.unreadCount == 0 && b.unreadCount > 0) return 1;
+      if (a.unreadCount > 0 && b.unreadCount > 0) {
+        return b.unreadCount.compareTo(a.unreadCount);
+      }
+      return 0;
+    });
+
+    setState(() {
+      _filteredContacts = list;
+    });
   }
 
   void _openChatRoom(ChatContactModel contact) async {

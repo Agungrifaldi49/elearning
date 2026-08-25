@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/materi_model.dart';
 import '../models/tugas_model.dart';
 import '../models/quiz_model.dart';
 import '../models/jadwal_model.dart';
 import '../models/absensi_model.dart';
 import '../models/nilai_model.dart';
+import '../models/forum_model.dart';
+import '../models/chat_model.dart';
 import '../services/api_service.dart';
 
 class SiswaProvider with ChangeNotifier {
@@ -17,6 +20,14 @@ class SiswaProvider with ChangeNotifier {
   List<QuizModel> _quizList = [];
   List<AbsensiModel> _absensiList = [];
   List<NilaiModel> _nilaiList = [];
+  List<ForumModel> _forumTopicList = [];
+
+  Set<int> _seenMateriIds = {};
+  Set<int> _seenTugasIds = {};
+  Set<int> _seenQuizIds = {};
+  Set<int> _seenJadwalIds = {};
+  Set<int> _seenForumIds = {};
+  int _unreadChatCount = 0;
 
   bool get isLoading => _isLoading;
   Map<String, dynamic>? get dashboardData => _dashboardData;
@@ -26,6 +37,132 @@ class SiswaProvider with ChangeNotifier {
   List<QuizModel> get quizList => _quizList;
   List<AbsensiModel> get absensiList => _absensiList;
   List<NilaiModel> get nilaiList => _nilaiList;
+  List<ForumModel> get forumTopicList => _forumTopicList;
+
+  Set<int> get seenMateriIds => _seenMateriIds;
+  Set<int> get seenTugasIds => _seenTugasIds;
+  Set<int> get seenQuizIds => _seenQuizIds;
+  Set<int> get seenJadwalIds => _seenJadwalIds;
+  Set<int> get seenForumIds => _seenForumIds;
+  int get unreadChatCount => _unreadChatCount;
+
+  int get unreadMateriCount => _materiList.where((m) => !_seenMateriIds.contains(m.id)).length;
+  int get unreadTugasCount => _tugasList.where((t) => !t.isSubmitted && !_seenTugasIds.contains(t.id)).length;
+  int get unreadQuizCount => _quizList.where((q) => !q.isCompleted && !q.isSuspended && !q.isTerkunci && !q.isMaxAttemptsReached && !_seenQuizIds.contains(q.id)).length;
+  int get unreadJadwalCount => _jadwalList.where((j) => !_seenJadwalIds.contains(j.id)).length;
+  int get unreadForumCount => _forumTopicList.where((f) => !_seenForumIds.contains(f.id)).length;
+
+  Future<void> loadSeenState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _seenMateriIds = (prefs.getStringList('seen_materi_ids') ?? []).map((e) => int.tryParse(e) ?? 0).toSet();
+      _seenTugasIds = (prefs.getStringList('seen_tugas_ids') ?? []).map((e) => int.tryParse(e) ?? 0).toSet();
+      _seenQuizIds = (prefs.getStringList('seen_quiz_ids') ?? []).map((e) => int.tryParse(e) ?? 0).toSet();
+      _seenJadwalIds = (prefs.getStringList('seen_jadwal_ids') ?? []).map((e) => int.tryParse(e) ?? 0).toSet();
+      _seenForumIds = (prefs.getStringList('seen_forum_ids') ?? []).map((e) => int.tryParse(e) ?? 0).toSet();
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  void markJadwalAsSeen(int id) async {
+    if (!_seenJadwalIds.contains(id)) {
+      _seenJadwalIds.add(id);
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('seen_jadwal_ids', _seenJadwalIds.map((e) => e.toString()).toList());
+      } catch (_) {}
+    }
+  }
+
+  void markAllJadwalAsSeen() async {
+    _seenJadwalIds.addAll(_jadwalList.map((j) => j.id));
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('seen_jadwal_ids', _seenJadwalIds.map((e) => e.toString()).toList());
+    } catch (_) {}
+  }
+
+  void markForumAsSeen(int id) async {
+    if (!_seenForumIds.contains(id)) {
+      _seenForumIds.add(id);
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('seen_forum_ids', _seenForumIds.map((e) => e.toString()).toList());
+      } catch (_) {}
+    }
+  }
+
+  void markAllForumAsSeen() async {
+    _seenForumIds.addAll(_forumTopicList.map((f) => f.id));
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('seen_forum_ids', _seenForumIds.map((e) => e.toString()).toList());
+    } catch (_) {}
+  }
+
+  void markMateriAsSeen(int materiId) async {
+    if (!_seenMateriIds.contains(materiId)) {
+      _seenMateriIds.add(materiId);
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('seen_materi_ids', _seenMateriIds.map((e) => e.toString()).toList());
+      } catch (_) {}
+    }
+  }
+
+  void markTugasAsSeen(int tugasId) async {
+    if (!_seenTugasIds.contains(tugasId)) {
+      _seenTugasIds.add(tugasId);
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('seen_tugas_ids', _seenTugasIds.map((e) => e.toString()).toList());
+      } catch (_) {}
+    }
+  }
+
+  void markQuizAsSeen(int quizId) async {
+    if (!_seenQuizIds.contains(quizId)) {
+      _seenQuizIds.add(quizId);
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('seen_quiz_ids', _seenQuizIds.map((e) => e.toString()).toList());
+      } catch (_) {}
+    }
+  }
+
+  void markAllMateriAsSeen() async {
+    _seenMateriIds.addAll(_materiList.map((m) => m.id));
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('seen_materi_ids', _seenMateriIds.map((e) => e.toString()).toList());
+    } catch (_) {}
+  }
+
+  void markAllTugasAsSeen() async {
+    _seenTugasIds.addAll(_tugasList.map((t) => t.id));
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('seen_tugas_ids', _seenTugasIds.map((e) => e.toString()).toList());
+    } catch (_) {}
+  }
+
+  void markAllQuizAsSeen() async {
+    _seenQuizIds.addAll(_quizList.map((q) => q.id));
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('seen_quiz_ids', _seenQuizIds.map((e) => e.toString()).toList());
+    } catch (_) {}
+  }
 
   Future<void> fetchDashboard(int userId) async {
     _isLoading = true;
@@ -123,16 +260,26 @@ class SiswaProvider with ChangeNotifier {
     return null;
   }
 
-  Future<Map<String, dynamic>> submitQuiz(int userId, int quizId, Map<int, int> answers) async {
+  Future<Map<String, dynamic>> submitQuiz(int userId, int quizId, Map<int, int> answers, {Map<int, String>? essayAnswers}) async {
     final Map<String, int> formattedAnswers = {};
     answers.forEach((key, value) {
       formattedAnswers[key.toString()] = value;
     });
 
+    final Map<String, String> formattedEssayAnswers = {};
+    if (essayAnswers != null) {
+      essayAnswers.forEach((key, value) {
+        if (value.trim().isNotEmpty) {
+          formattedEssayAnswers[key.toString()] = value.trim();
+        }
+      });
+    }
+
     final res = await ApiService.post('siswa/submit_quiz', {
       'user_id': userId,
       'quiz_id': quizId,
       'answers': formattedAnswers,
+      'essay_answers': formattedEssayAnswers,
     });
 
     if (res['success'] == true) {
@@ -213,9 +360,13 @@ class SiswaProvider with ChangeNotifier {
   void startRealtimeSync(int userId) {
     _realtimeTimer?.cancel();
     _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      await fetchMateriSilent(userId);
       await fetchQuizSilent(userId);
       await fetchDashboardSilent(userId);
       await fetchTugasSilent(userId);
+      await fetchJadwalSilent(userId);
+      await fetchForumSilent(userId);
+      await fetchChatContactsSilent(userId);
       await fetchAbsensiSilent(userId);
     });
   }
@@ -223,6 +374,14 @@ class SiswaProvider with ChangeNotifier {
   void stopRealtimeSync() {
     _realtimeTimer?.cancel();
     _realtimeTimer = null;
+  }
+
+  Future<void> fetchMateriSilent(int userId) async {
+    final res = await ApiService.get('siswa/materi', params: {'user_id': userId.toString()});
+    if (res['success'] == true && res['data'] is List) {
+      _materiList = (res['data'] as List).map((e) => MateriModel.fromJson(e)).toList();
+      notifyListeners();
+    }
   }
 
   Future<void> fetchQuizSilent(int userId) async {
@@ -245,6 +404,35 @@ class SiswaProvider with ChangeNotifier {
     final res = await ApiService.get('siswa/tugas', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
       _tugasList = (res['data'] as List).map((e) => TugasModel.fromJson(e)).toList();
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchJadwalSilent(int userId) async {
+    final res = await ApiService.get('siswa/jadwal', params: {'user_id': userId.toString()});
+    if (res['success'] == true && res['data'] is List) {
+      _jadwalList = (res['data'] as List).map((e) => JadwalModel.fromJson(e)).toList();
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchForumSilent(int userId) async {
+    final res = await ApiService.get('forum/list', params: {'user_id': userId.toString()});
+    if (res['success'] == true && res['data'] is List) {
+      _forumTopicList = (res['data'] as List).map((e) => ForumModel.fromJson(e)).toList();
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchChatContactsSilent(int userId) async {
+    final res = await ApiService.get('chat/contacts', params: {'user_id': userId.toString()});
+    if (res['success'] == true && res['data'] is List) {
+      final list = (res['data'] as List).map((e) => ChatContactModel.fromJson(e)).toList();
+      int totalUnread = 0;
+      for (var c in list) {
+        totalUnread += c.unreadCount;
+      }
+      _unreadChatCount = totalUnread;
       notifyListeners();
     }
   }

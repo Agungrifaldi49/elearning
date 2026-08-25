@@ -45,9 +45,14 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
       final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         final siswaProvider = Provider.of<SiswaProvider>(context, listen: false);
+        siswaProvider.loadSeenState();
         siswaProvider.fetchDashboard(user.id);
+        siswaProvider.fetchJadwal(user.id);
+        siswaProvider.fetchMateri(user.id);
         siswaProvider.fetchQuiz(user.id);
         siswaProvider.fetchTugas(user.id);
+        siswaProvider.fetchForumSilent(user.id);
+        siswaProvider.fetchChatContactsSilent(user.id);
         siswaProvider.fetchAbsensi(user.id);
         siswaProvider.startRealtimeSync(user.id);
       }
@@ -64,6 +69,13 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).currentUser;
     final avatarUrl = user?.fullAvatarUrl ?? '';
+    final siswaProvider = Provider.of<SiswaProvider>(context);
+    final unreadJadwal = siswaProvider.unreadJadwalCount;
+    final unreadMateri = siswaProvider.unreadMateriCount;
+    final unreadTugas = siswaProvider.unreadTugasCount;
+    final unreadQuiz = siswaProvider.unreadQuizCount;
+    final unreadForum = siswaProvider.unreadForumCount;
+    final unreadChat = siswaProvider.unreadChatCount;
 
     return Scaffold(
       appBar: AppBar(
@@ -113,22 +125,26 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
             },
           ),
           IconButton(
-            icon: const Badge(
-              smallSize: 8,
-              backgroundColor: Colors.amber,
-              child: Icon(Icons.forum_outlined),
-            ),
+            icon: unreadForum > 0
+                ? Badge(
+                    label: Text('$unreadForum', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    backgroundColor: Colors.amber.shade800,
+                    child: const Icon(Icons.forum_outlined),
+                  )
+                : const Icon(Icons.forum_outlined),
             tooltip: 'Forum Diskusi Komunitas',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaForumScreen()));
             },
           ),
           IconButton(
-            icon: const Badge(
-              smallSize: 9,
-              backgroundColor: Colors.red,
-              child: Icon(Icons.chat_bubble_outline),
-            ),
+            icon: unreadChat > 0
+                ? Badge(
+                    label: Text('$unreadChat', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    backgroundColor: Colors.red,
+                    child: const Icon(Icons.chat_bubble_outline),
+                  )
+                : const Icon(Icons.chat_bubble_outline),
             tooltip: 'Pesan & Chat Direct',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaChatScreen()));
@@ -197,30 +213,78 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
           selectedItemColor: AppTheme.secondaryColor,
           unselectedItemColor: Colors.grey,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined),
               activeIcon: Icon(Icons.dashboard),
               label: 'Beranda',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_month_outlined),
-              activeIcon: Icon(Icons.calendar_month),
+              icon: unreadJadwal > 0
+                  ? Badge(
+                      label: Text('$unreadJadwal', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.calendar_month_outlined),
+                    )
+                  : const Icon(Icons.calendar_month_outlined),
+              activeIcon: unreadJadwal > 0
+                  ? Badge(
+                      label: Text('$unreadJadwal', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.calendar_month),
+                    )
+                  : const Icon(Icons.calendar_month),
               label: 'Jadwal',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.book_outlined),
-              activeIcon: Icon(Icons.book),
+              icon: unreadMateri > 0
+                  ? Badge(
+                      label: Text('$unreadMateri', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.book_outlined),
+                    )
+                  : const Icon(Icons.book_outlined),
+              activeIcon: unreadMateri > 0
+                  ? Badge(
+                      label: Text('$unreadMateri', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.book),
+                    )
+                  : const Icon(Icons.book),
               label: 'Materi',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.assignment_outlined),
-              activeIcon: Icon(Icons.assignment),
+              icon: unreadTugas > 0
+                  ? Badge(
+                      label: Text('$unreadTugas', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.assignment_outlined),
+                    )
+                  : const Icon(Icons.assignment_outlined),
+              activeIcon: unreadTugas > 0
+                  ? Badge(
+                      label: Text('$unreadTugas', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.assignment),
+                    )
+                  : const Icon(Icons.assignment),
               label: 'Tugas',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.quiz_outlined),
-              activeIcon: Icon(Icons.quiz),
+              icon: unreadQuiz > 0
+                  ? Badge(
+                      label: Text('$unreadQuiz', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.quiz_outlined),
+                    )
+                  : const Icon(Icons.quiz_outlined),
+              activeIcon: unreadQuiz > 0
+                  ? Badge(
+                      label: Text('$unreadQuiz', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.quiz),
+                    )
+                  : const Icon(Icons.quiz),
               label: 'CBT Quiz',
             ),
           ],

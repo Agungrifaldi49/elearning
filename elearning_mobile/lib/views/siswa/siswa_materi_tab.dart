@@ -32,6 +32,8 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
   }
 
   void _showMateriDetailModal(MateriModel m) {
+    Provider.of<SiswaProvider>(context, listen: false).markMateriAsSeen(m.id);
+
     const baseUrl = "https://smkmuthiaharapancicalengka.my.id/assets/uploads/materi/";
     final fileUrl = (m.filePath != null && m.filePath!.startsWith('http'))
         ? m.filePath!

@@ -527,6 +527,7 @@ class ApiController {
                 $input = $this->getPostInput();
                 $quizId = intval($input['quiz_id'] ?? 0);
                 $answers = $input['answers'] ?? []; // Map of [soal_id => pilihan_id]
+                $essayAnswers = $input['essay_answers'] ?? []; // Map of [soal_id => text_jawaban]
 
                 if ($quizId <= 0) {
                     $this->jsonResponse(false, 'Quiz ID tidak valid', null, 400);
@@ -544,50 +545,83 @@ class ApiController {
                     $totalBobot += $bobot;
 
                     $soalId = $soal['id'];
-                    $pilihanId = intval($answers[$soalId] ?? $answers[strval($soalId)] ?? 0);
+                    $jenisSoal = strtolower($soal['jenis_soal'] ?? 'pg');
 
-                    // Check if answer correct
-                    $isBenar = 0;
-                    if ($pilihanId > 0) {
-                        $stmtCheck = $this->db->prepare("SELECT is_benar FROM pilihan_jawaban WHERE id = :pid LIMIT 1");
-                        $stmtCheck->execute(['pid' => $pilihanId]);
-                        $pj = $stmtCheck->fetch();
-                        if ($pj && ($pj['is_benar'] == 1 || $pj['is_benar'] === '1' || $pj['is_benar'] === true)) {
-                            $isBenar = 1;
-                            $skorDapat += $bobot;
+                    if ($jenisSoal === 'essay') {
+                        $teksEssay = trim($essayAnswers[$soalId] ?? $essayAnswers[strval($soalId)] ?? '');
+
+                        $stmtCheckJ = $this->db->prepare("SELECT id FROM jawaban_siswa WHERE siswa_id = :sid AND quiz_id = :qid AND soal_id = :soal_id LIMIT 1");
+                        $stmtCheckJ->execute(['sid' => $siswa['id'], 'qid' => $quizId, 'soal_id' => $soalId]);
+                        $existingJ = $stmtCheckJ->fetch();
+
+                        if ($existingJ) {
+                            $stmtJ = $this->db->prepare("
+                                UPDATE jawaban_siswa 
+                                SET teks_jawaban_essay = :teks, is_benar = 0, nilai = 0 
+                                WHERE id = :jid
+                            ");
+                            $stmtJ->execute([
+                                'jid' => $existingJ['id'],
+                                'teks' => $teksEssay
+                            ]);
+                        } else {
+                            $stmtJ = $this->db->prepare("
+                                INSERT INTO jawaban_siswa (siswa_id, quiz_id, soal_id, teks_jawaban_essay, is_benar, nilai) 
+                                VALUES (:sid, :qid, :soal_id, :teks, 0, 0)
+                            ");
+                            $stmtJ->execute([
+                                'sid' => $siswa['id'],
+                                'qid' => $quizId,
+                                'soal_id' => $soalId,
+                                'teks' => $teksEssay
+                            ]);
                         }
-                    }
-
-                    // Save or Update student answer
-                    $stmtCheckJ = $this->db->prepare("SELECT id FROM jawaban_siswa WHERE siswa_id = :sid AND quiz_id = :qid AND soal_id = :soal_id LIMIT 1");
-                    $stmtCheckJ->execute(['sid' => $siswa['id'], 'qid' => $quizId, 'soal_id' => $soalId]);
-                    $existingJ = $stmtCheckJ->fetch();
-
-                    if ($existingJ) {
-                        $stmtJ = $this->db->prepare("
-                            UPDATE jawaban_siswa 
-                            SET pilihan_id = :pid, is_benar = :ib, nilai = :nil 
-                            WHERE id = :jid
-                        ");
-                        $stmtJ->execute([
-                            'jid' => $existingJ['id'],
-                            'pid' => $pilihanId ?: null,
-                            'ib' => $isBenar,
-                            'nil' => $isBenar ? $bobot : 0
-                        ]);
                     } else {
-                        $stmtJ = $this->db->prepare("
-                            INSERT INTO jawaban_siswa (siswa_id, quiz_id, soal_id, pilihan_id, is_benar, nilai) 
-                            VALUES (:sid, :qid, :soal_id, :pid, :ib, :nil)
-                        ");
-                        $stmtJ->execute([
-                            'sid' => $siswa['id'],
-                            'qid' => $quizId,
-                            'soal_id' => $soalId,
-                            'pid' => $pilihanId ?: null,
-                            'ib' => $isBenar,
-                            'nil' => $isBenar ? $bobot : 0
-                        ]);
+                        $pilihanId = intval($answers[$soalId] ?? $answers[strval($soalId)] ?? 0);
+
+                        // Check if answer correct
+                        $isBenar = 0;
+                        if ($pilihanId > 0) {
+                            $stmtCheck = $this->db->prepare("SELECT is_benar FROM pilihan_jawaban WHERE id = :pid LIMIT 1");
+                            $stmtCheck->execute(['pid' => $pilihanId]);
+                            $pj = $stmtCheck->fetch();
+                            if ($pj && ($pj['is_benar'] == 1 || $pj['is_benar'] === '1' || $pj['is_benar'] === true)) {
+                                $isBenar = 1;
+                                $skorDapat += $bobot;
+                            }
+                        }
+
+                        // Save or Update student answer
+                        $stmtCheckJ = $this->db->prepare("SELECT id FROM jawaban_siswa WHERE siswa_id = :sid AND quiz_id = :qid AND soal_id = :soal_id LIMIT 1");
+                        $stmtCheckJ->execute(['sid' => $siswa['id'], 'qid' => $quizId, 'soal_id' => $soalId]);
+                        $existingJ = $stmtCheckJ->fetch();
+
+                        if ($existingJ) {
+                            $stmtJ = $this->db->prepare("
+                                UPDATE jawaban_siswa 
+                                SET pilihan_id = :pid, is_benar = :ib, nilai = :nil 
+                                WHERE id = :jid
+                            ");
+                            $stmtJ->execute([
+                                'jid' => $existingJ['id'],
+                                'pid' => $pilihanId ?: null,
+                                'ib' => $isBenar,
+                                'nil' => $isBenar ? $bobot : 0
+                            ]);
+                        } else {
+                            $stmtJ = $this->db->prepare("
+                                INSERT INTO jawaban_siswa (siswa_id, quiz_id, soal_id, pilihan_id, is_benar, nilai) 
+                                VALUES (:sid, :qid, :soal_id, :pid, :ib, :nil)
+                            ");
+                            $stmtJ->execute([
+                                'sid' => $siswa['id'],
+                                'qid' => $quizId,
+                                'soal_id' => $soalId,
+                                'pid' => $pilihanId ?: null,
+                                'ib' => $isBenar,
+                                'nil' => $isBenar ? $bobot : 0
+                            ]);
+                        }
                     }
                 }
 

@@ -32,6 +32,8 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
   }
 
   void _showTugasDetailAndSubmit(TugasModel t) {
+    Provider.of<SiswaProvider>(context, listen: false).markTugasAsSeen(t.id);
+
     final catatanController = TextEditingController();
     final fileController = TextEditingController();
 

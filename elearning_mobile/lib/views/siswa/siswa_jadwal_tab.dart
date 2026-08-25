@@ -20,6 +20,11 @@ class _SiswaJadwalTabState extends State<SiswaJadwalTab> {
   void initState() {
     super.initState();
     _loadJadwal();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<SiswaProvider>(context, listen: false).markAllJadwalAsSeen();
+      }
+    });
   }
 
   void _loadJadwal() {

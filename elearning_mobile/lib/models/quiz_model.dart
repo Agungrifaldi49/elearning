@@ -25,6 +25,8 @@ class QuizModel {
   final String? accessReason;
   final int maxAttempts;
   final int attemptCount;
+  final String kategori;
+  final String? accessKey;
 
   QuizModel({
     required this.id,
@@ -51,6 +53,8 @@ class QuizModel {
     this.accessReason,
     this.maxAttempts = 1,
     this.attemptCount = 0,
+    this.kategori = 'kuis',
+    this.accessKey,
   });
 
   factory QuizModel.fromJson(Map<String, dynamic> json) {
@@ -79,6 +83,8 @@ class QuizModel {
       accessReason: json['access_reason'],
       maxAttempts: int.parse((json['max_attempts'] ?? 1).toString()),
       attemptCount: int.parse((json['attempt_count'] ?? 0).toString()),
+      kategori: json['kategori'] ?? 'kuis',
+      accessKey: json['access_key'] ?? json['token'] ?? json['kunci_akses'],
     );
   }
 
@@ -87,6 +93,16 @@ class QuizModel {
   bool get isSuspended => (isDisqualified || accessStatus == 'diskualifikasi') && susulanStatus != 'disetujui';
   bool get isTerkunci => (accessStatus == 'terkunci') && susulanStatus != 'disetujui';
   bool get isMaxAttemptsReached => !isUnlimitedAttempts && maxAttempts > 0 && (attemptCount >= maxAttempts || accessStatus == 'max_attempts_reached') && susulanStatus != 'disetujui';
+
+  bool get isUts => kategori.toLowerCase() == 'uts';
+  bool get isUas => kategori.toLowerCase() == 'uas';
+  bool get requiresToken => isUts || isUas || (accessKey != null && accessKey!.trim().isNotEmpty);
+  String get kategoriBadgeText {
+    if (isUts) return 'UTS 🔑';
+    if (isUas) return 'UAS 🔑';
+    if (accessKey != null && accessKey!.trim().isNotEmpty) return 'Kuis (Token) 🔑';
+    return 'Kuis Harian';
+  }
 }
 
 class SoalModel {

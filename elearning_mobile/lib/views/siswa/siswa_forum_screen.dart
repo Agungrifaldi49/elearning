@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/forum_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/siswa_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/profanity_service.dart';
 import '../../theme/app_theme.dart';
@@ -261,6 +262,8 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
   }
 
   void _showForumDetailBottomSheet(ForumModel forum) async {
+    Provider.of<SiswaProvider>(context, listen: false).markForumAsSeen(forum.id);
+
     final commentController = TextEditingController();
     bool isLoadingComments = true;
     List<dynamic> comments = [];

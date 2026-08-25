@@ -140,6 +140,198 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
   }
 
   void _confirmStartQuiz(QuizModel quiz) {
+    Provider.of<SiswaProvider>(context, listen: false).markQuizAsSeen(quiz.id);
+
+    if (quiz.requiresToken) {
+      _showTokenVerificationModal(quiz);
+    } else {
+      _showQuizRulesConfirmation(quiz);
+    }
+  }
+
+  void _showTokenVerificationModal(QuizModel q) {
+    final tokenController = TextEditingController();
+    String? errorMessage;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade100,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.vpn_key_rounded, color: Colors.amber.shade900, size: 24),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Verifikasi Token ${q.kategoriBadgeText}',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          q.judul,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded, color: Colors.blue, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Pelaksanaan ${q.kategoriBadgeText} memerlukan Token Ujian resmi dari Guru Pengampu atau Admin.',
+                              style: TextStyle(fontSize: 12, color: Colors.blue.shade900, height: 1.3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Masukkan Token Ujian:',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: tokenController,
+                      textCapitalization: TextCapitalization.characters,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 2.5),
+                      decoration: InputDecoration(
+                        hintText: 'Contoh: UTS89A',
+                        prefixIcon: const Icon(Icons.key, color: AppTheme.primaryColor),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                      ),
+                    ),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline_rounded, color: Colors.red, size: 16),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                errorMessage!,
+                                style: TextStyle(fontSize: 11, color: Colors.red.shade900, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.support_agent_rounded, color: Colors.grey, size: 18),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Belum punya token? Silakan hubungi Guru Pengampu (${q.namaGuru ?? "Guru"}) atau Admin Sekolah.',
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final input = tokenController.text.trim().toUpperCase();
+                    final requiredToken = (q.accessKey ?? '').trim().toUpperCase();
+
+                    if (input.isEmpty) {
+                      setModalState(() {
+                        errorMessage = 'Silakan masukkan Token Ujian terlebih dahulu!';
+                      });
+                      return;
+                    }
+
+                    if (requiredToken.isNotEmpty && input != requiredToken) {
+                      setModalState(() {
+                        errorMessage = 'Token Ujian tidak valid! Minta token resmi ke Guru (${q.namaGuru ?? "Pengampu"}) atau Admin.';
+                      });
+                      return;
+                    }
+
+                    // Token Validated! Proceed to Quiz Rules & Exam!
+                    Navigator.pop(context);
+                    _showQuizRulesConfirmation(q);
+                  },
+                  icon: const Icon(Icons.verified_rounded, size: 16),
+                  label: const Text('Verifikasi & Mulai Ujian 🚀'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showQuizRulesConfirmation(QuizModel quiz) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -430,15 +622,21 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 24),
-                        SizedBox(width: 8),
-                        Text(
-                          'Portal CBT & Ujian Digital',
-                          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 24),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Portal CBT & Ujian Digital',
+                              style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
@@ -453,14 +651,17 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildStatPill('Total: ${quizList.length}', Icons.quiz_outlined, Colors.white.withValues(alpha: 0.2)),
-                    const SizedBox(width: 8),
-                    _buildStatPill('Tersedia: $totalPending', Icons.play_circle_fill_rounded, Colors.greenAccent.withValues(alpha: 0.3)),
-                    const SizedBox(width: 8),
-                    _buildStatPill('Selesai: $totalCompleted', Icons.task_alt_rounded, Colors.amberAccent.withValues(alpha: 0.3)),
-                  ],
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildStatPill('Total: ${quizList.length}', Icons.quiz_outlined, Colors.white.withValues(alpha: 0.2)),
+                      const SizedBox(width: 8),
+                      _buildStatPill('Tersedia: $totalPending', Icons.play_circle_fill_rounded, Colors.greenAccent.withValues(alpha: 0.3)),
+                      const SizedBox(width: 8),
+                      _buildStatPill('Selesai: $totalCompleted', Icons.task_alt_rounded, Colors.amberAccent.withValues(alpha: 0.3)),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -471,10 +672,15 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Daftar Kuis (${filteredQuizList.length})',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Expanded(
+                child: Text(
+                  'Daftar Kuis (${filteredQuizList.length})',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: () => setState(() => _groupByMapel = !_groupByMapel),
                 borderRadius: BorderRadius.circular(10),
@@ -737,9 +943,11 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
+                  flex: 5,
                   child: Row(
                     children: [
                       const Icon(Icons.bookmark_outline, size: 16, color: AppTheme.primaryColor),
@@ -747,6 +955,8 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
                       Expanded(
                         child: Text(
                           q.namaMapel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: AppTheme.primaryColor,
                             fontWeight: FontWeight.bold,
@@ -757,7 +967,11 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
                     ],
                   ),
                 ),
-                _buildStatusBadge(q),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 7,
+                  child: _buildStatusBadge(q),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -766,31 +980,34 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
-            Row(
-              children: [
-                const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  "Durasi: ${q.durasiMenit} mnt",
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(width: 12),
-                const Icon(Icons.help_outline_rounded, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  "Soal: ${q.jumlahSoal}",
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                const SizedBox(width: 12),
-                const Icon(Icons.repeat, size: 14, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(
-                  q.isUnlimitedAttempts
-                      ? "Percobaan: ${q.attemptCount} / ∞ (Tanpa Batas)"
-                      : "Percobaan: ${q.attemptCount}/${q.maxAttempts}",
-                  style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
-                ),
-              ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    "Durasi: ${q.durasiMenit} mnt",
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.help_outline_rounded, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    "Soal: ${q.jumlahSoal}",
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.repeat, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    q.isUnlimitedAttempts
+                        ? "Percobaan: ${q.attemptCount} / ∞ (Tanpa Batas)"
+                        : "Percobaan: ${q.attemptCount}/${q.maxAttempts}",
+                    style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             ),
             if (q.isSuspended) ...[
               const SizedBox(height: 8),
@@ -816,10 +1033,7 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
               ),
             ],
             const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: _buildActionButton(q),
-            ),
+            _buildActionButton(q),
           ],
         ),
       ),
@@ -829,11 +1043,38 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
   Widget _buildStatusBadge(QuizModel q) {
     List<Widget> badges = [];
 
+    if (q.requiresToken || q.isUts || q.isUas) {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.amber.shade100,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.amber.shade300),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.key, color: Colors.amber, size: 12),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  q.kategoriBadgeText,
+                  style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold, fontSize: 10.5),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (q.totalNilai != null || q.isCompleted) {
       final isLulus = q.statusLulus == 'lulus';
       badges.add(
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
             color: isLulus ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(8),
@@ -843,8 +1084,9 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
             style: TextStyle(
               color: isLulus ? Colors.green : Colors.red,
               fontWeight: FontWeight.bold,
-              fontSize: 11,
+              fontSize: 10.5,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       );
@@ -853,7 +1095,7 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
     if (q.isSuspended) {
       badges.add(
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
             color: Colors.red.shade100,
             borderRadius: BorderRadius.circular(8),
@@ -864,9 +1106,12 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
             children: [
               Icon(Icons.block, color: Colors.red, size: 12),
               SizedBox(width: 4),
-              Text(
-                'DISUSPEND 🚫 (Pelanggaran)',
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+              Flexible(
+                child: Text(
+                  'DISUSPEND 🚫',
+                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10.5),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -875,7 +1120,7 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
     } else if (q.isTerkunci) {
       badges.add(
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
             color: Colors.orange.shade100,
             borderRadius: BorderRadius.circular(8),
@@ -886,9 +1131,12 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
             children: [
               Icon(Icons.lock_clock, color: Colors.orange, size: 12),
               SizedBox(width: 4),
-              Text(
-                'TERKUNCI 🔒 (Batas Waktu Habis)',
-                style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 11),
+              Flexible(
+                child: Text(
+                  'TERKUNCI 🔒',
+                  style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 10.5),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -897,22 +1145,23 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
     } else if (q.isMaxAttemptsReached) {
       badges.add(
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
             color: Colors.blue.shade100,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.blue.shade300),
           ),
           child: Text(
-            'Percobaan Max: ${q.attemptCount}/${q.maxAttempts} 🏁',
-            style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.bold, fontSize: 11),
+            'Max: ${q.attemptCount}/${q.maxAttempts} 🏁',
+            style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.bold, fontSize: 10.5),
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       );
     } else if (!q.isCompleted && q.totalNilai == null) {
       badges.add(
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
             color: Colors.purple.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(8),
@@ -922,7 +1171,7 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
             style: TextStyle(
               color: Colors.purple,
               fontWeight: FontWeight.bold,
-              fontSize: 11,
+              fontSize: 10.5,
             ),
           ),
         ),
@@ -930,6 +1179,7 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
     }
 
     return Wrap(
+      alignment: WrapAlignment.end,
       spacing: 6,
       runSpacing: 4,
       children: badges,
@@ -1067,11 +1317,18 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
       );
     }
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 6,
-      alignment: WrapAlignment.end,
-      children: buttons,
+    List<Widget> columnChildren = [];
+    for (int i = 0; i < buttons.length; i++) {
+      if (i > 0) columnChildren.add(const SizedBox(height: 8));
+      columnChildren.add(SizedBox(
+        width: double.infinity,
+        child: buttons[i],
+      ));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: columnChildren,
     );
   }
 }
@@ -1090,12 +1347,29 @@ class CbtExamEngineScreen extends StatefulWidget {
 class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
   final Map<int, int> _answers = {}; // [soal_id => pilihan_id]
+  final Map<int, String> _essayAnswers = {}; // [soal_id => teks_jawaban_essay]
   late Timer _timer;
   late int _remainingSeconds;
 
   int _warningCount = 0;
   bool _isExamActive = true;
   bool _isSubmitting = false;
+  bool _canPopScreen = false;
+
+  bool _isSoalAnswered(SoalModel s) {
+    if (s.jenisSoal.toLowerCase() == 'essay') {
+      return _essayAnswers[s.id]?.trim().isNotEmpty == true;
+    }
+    return _answers.containsKey(s.id);
+  }
+
+  int get _answeredCount {
+    int count = 0;
+    for (var s in widget.soalList) {
+      if (_isSoalAnswered(s)) count++;
+    }
+    return count;
+  }
 
   @override
   void initState() {
@@ -1222,18 +1496,25 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
       // Instantly pop back to SiswaCbtTab without keeping user on exam screen
       if (mounted) Navigator.pop(context, 'disqualified');
       Provider.of<SiswaProvider>(context, listen: false)
-          .submitQuiz(user.id, widget.quiz.id, _answers);
+          .submitQuiz(user.id, widget.quiz.id, _answers, essayAnswers: _essayAnswers);
       return;
     }
 
     final res = await Provider.of<SiswaProvider>(context, listen: false)
-        .submitQuiz(user.id, widget.quiz.id, _answers);
+        .submitQuiz(user.id, widget.quiz.id, _answers, essayAnswers: _essayAnswers);
 
     if (!mounted) return;
 
     if (isForceDisqualified) {
       Navigator.pop(context);
       return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isExamActive = false;
+        _canPopScreen = true;
+      });
     }
 
     if (res['success'] == true) {
@@ -1265,16 +1546,20 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
           actions: [
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
+                Navigator.of(context, rootNavigator: true).pop();
+                Navigator.of(context).pop('submitted');
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               child: const Text('Kembali ke Dashboard'),
             ),
           ],
         ),
       );
     } else {
-      Navigator.pop(context);
+      Navigator.of(context).pop('submitted');
     }
   }
 
@@ -1289,7 +1574,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
       Provider.of<SiswaProvider>(context, listen: false)
           .recordQuizViolation(user.id, widget.quiz.id);
       Provider.of<SiswaProvider>(context, listen: false)
-          .submitQuiz(user.id, widget.quiz.id, _answers);
+          .submitQuiz(user.id, widget.quiz.id, _answers, essayAnswers: _essayAnswers);
     }
 
     if (mounted) {
@@ -1332,7 +1617,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        final answeredCount = _answers.length;
+        final answeredCount = _answeredCount;
         final totalCount = widget.soalList.length;
 
         return StatefulBuilder(
@@ -1408,7 +1693,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                       itemCount: totalCount,
                       itemBuilder: (context, idx) {
                         final qItem = widget.soalList[idx];
-                        final isAnswered = _answers.containsKey(qItem.id);
+                        final isAnswered = _isSoalAnswered(qItem);
                         final isCurrent = idx == _currentIndex;
 
                         Color bgColor;
@@ -1529,7 +1814,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
   }
 
   void _confirmSubmitExam() {
-    final answered = _answers.length;
+    final answered = _answeredCount;
     final total = widget.soalList.length;
     final unanswered = total - answered;
 
@@ -1613,7 +1898,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
     final isTimerWarning = _remainingSeconds < 300; // Under 5 mins
 
     return PopScope(
-      canPop: false,
+      canPop: _canPopScreen || !_isExamActive,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         _showExitWarning();
@@ -1645,7 +1930,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                     const Icon(Icons.grid_view_rounded, color: Colors.white, size: 16),
                     const SizedBox(width: 4),
                     Text(
-                      '${_answers.length}/${widget.soalList.length} Dijawab',
+                      '$_answeredCount/${widget.soalList.length} Dijawab',
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ],
@@ -1684,7 +1969,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                 itemCount: widget.soalList.length,
                 itemBuilder: (context, idx) {
                   final sItem = widget.soalList[idx];
-                  final isAns = _answers.containsKey(sItem.id);
+                  final isAns = _isSoalAnswered(sItem);
                   final isCurr = idx == _currentIndex;
 
                   return Padding(
@@ -1891,69 +2176,116 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text('Pilihan Jawaban:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    const SizedBox(height: 6),
-
-                    // Options List View
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: soal.pilihan.length,
-                        itemBuilder: (context, idx) {
-                          final pil = soal.pilihan[idx];
-                          final isSelected = _answers[soal.id] == pil.id;
-                          return InkWell(
-                            onTap: () {
+                    if (soal.jenisSoal.toLowerCase() == 'essay') ...[
+                      const Text('✍️ Jawaban Essay / Uraian:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryColor)),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: TextFormField(
+                            key: ValueKey('essay_${soal.id}'),
+                            initialValue: _essayAnswers[soal.id] ?? '',
+                            maxLines: 7,
+                            minLines: 4,
+                            onChanged: (val) {
                               setState(() {
-                                _answers[soal.id] = pil.id;
+                                _essayAnswers[soal.id] = val;
                               });
                             },
-                            borderRadius: BorderRadius.circular(12),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.12) : Colors.white,
+                            style: const TextStyle(fontSize: 14, height: 1.4),
+                            decoration: InputDecoration(
+                              hintText: 'Tuliskan jawaban essay / uraian Anda secara lengkap di sini...',
+                              contentPadding: const EdgeInsets.all(14),
+                              fillColor: Colors.white,
+                              filled: true,
+                              border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
-                                  width: isSelected ? 2 : 1,
-                                ),
-                                boxShadow: isSelected
-                                    ? [BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.15), blurRadius: 4)]
-                                    : null,
+                                borderSide: BorderSide(color: Colors.grey.shade300),
                               ),
-                              child: Row(
-                                children: [
-                                  CircleAvatar(
-                                    radius: 16,
-                                    backgroundColor: isSelected ? AppTheme.primaryColor : Colors.grey.shade200,
-                                    foregroundColor: isSelected ? Colors.white : Colors.black87,
-                                    child: Text(
-                                      String.fromCharCode(65 + idx),
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      pil.teksPilihan,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                        color: isSelected ? AppTheme.primaryColor : Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                  if (isSelected)
-                                    const Icon(Icons.check_circle_rounded, color: AppTheme.primaryColor, size: 20),
-                                ],
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
                               ),
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
-                    ),
+                    ] else ...[
+                      Text(
+                        soal.jenisSoal.toLowerCase() == 'tf' ? 'Pilihan Jawaban (Benar / Salah):' : 'Pilihan Jawaban:',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(height: 6),
+
+                      // Options List View (PG & True/False)
+                      Expanded(
+                        child: () {
+                          List<PilihanModel> pilihanList = soal.pilihan;
+                          if (soal.jenisSoal.toLowerCase() == 'tf' && pilihanList.isEmpty) {
+                            pilihanList = [
+                              PilihanModel(id: 1, soalId: soal.id, teksPilihan: 'BENAR (True)'),
+                              PilihanModel(id: 2, soalId: soal.id, teksPilihan: 'SALAH (False)'),
+                            ];
+                          }
+                          return ListView.builder(
+                            itemCount: pilihanList.length,
+                            itemBuilder: (context, idx) {
+                              final pil = pilihanList[idx];
+                              final isSelected = _answers[soal.id] == pil.id;
+                              return InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _answers[soal.id] = pil.id;
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.12) : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
+                                      width: isSelected ? 2 : 1,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.15), blurRadius: 4)]
+                                        : null,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 16,
+                                        backgroundColor: isSelected ? AppTheme.primaryColor : Colors.grey.shade200,
+                                        foregroundColor: isSelected ? Colors.white : Colors.black87,
+                                        child: Text(
+                                          String.fromCharCode(65 + idx),
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          pil.teksPilihan,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                            color: isSelected ? AppTheme.primaryColor : Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isSelected)
+                                        const Icon(Icons.check_circle_rounded, color: AppTheme.primaryColor, size: 20),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }(),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -1972,58 +2304,62 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (_currentIndex > 0)
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _currentIndex--;
-                        });
-                      },
-                      icon: const Icon(Icons.arrow_back, size: 16),
-                      label: const Text('Sebelumnya'),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    )
-                  else
-                    const SizedBox(width: 100),
-                  ElevatedButton.icon(
-                    onPressed: _showQuestionGridModalSheet,
-                    icon: const Icon(Icons.grid_view_rounded, size: 16),
-                    label: Text('${_currentIndex + 1}/${widget.soalList.length} 🔢'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber.shade800,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                  if (_currentIndex < widget.soalList.length - 1)
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    if (_currentIndex > 0)
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _currentIndex--;
+                          });
+                        },
+                        icon: const Icon(Icons.arrow_back, size: 16),
+                        label: const Text('Sebelumnya'),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _currentIndex++;
-                        });
-                      },
-                      icon: const Icon(Icons.arrow_forward, size: 16),
-                      label: const Text('Selanjutnya'),
+                      onPressed: _showQuestionGridModalSheet,
+                      icon: const Icon(Icons.grid_view_rounded, size: 16),
+                      label: Text('${_currentIndex + 1}/${widget.soalList.length} 🔢'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: Colors.amber.shade800,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                    )
-                  else
-                    ElevatedButton.icon(
-                      onPressed: _confirmSubmitExam,
-                      icon: const Icon(Icons.check_circle_rounded, size: 16),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      label: const Text('Kirim Selesai'),
                     ),
-                ],
+                    const SizedBox(width: 8),
+                    if (_currentIndex < widget.soalList.length - 1)
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _currentIndex++;
+                          });
+                        },
+                        icon: const Icon(Icons.arrow_forward, size: 16),
+                        label: const Text('Selanjutnya'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryColor,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      )
+                    else
+                      ElevatedButton.icon(
+                        onPressed: _confirmSubmitExam,
+                        icon: const Icon(Icons.check_circle_rounded, size: 16),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        label: const Text('Kirim Selesai'),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],
