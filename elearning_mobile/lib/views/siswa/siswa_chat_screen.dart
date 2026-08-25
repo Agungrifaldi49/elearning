@@ -18,7 +18,6 @@ class SiswaChatScreen extends StatefulWidget {
 
 class _SiswaChatScreenState extends State<SiswaChatScreen> {
   List<ChatContactModel> _contacts = [];
-  List<ChatContactModel> _filteredContacts = [];
   bool _isLoading = false;
   final TextEditingController _searchController = TextEditingController();
 
@@ -56,36 +55,9 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
     if (mounted) {
       setState(() {
         _contacts = list;
-        _filterContacts(_searchController.text);
         _isLoading = false;
       });
     }
-  }
-
-  void _filterContacts(String query) {
-    List<ChatContactModel> list;
-    if (query.isEmpty) {
-      list = List.from(_contacts);
-    } else {
-      final q = query.toLowerCase();
-      list = _contacts.where((c) {
-        return c.fullName.toLowerCase().contains(q) || c.roleName.toLowerCase().contains(q);
-      }).toList();
-    }
-
-    // Contacts with unread messages (unreadCount > 0) MUST be sorted to the VERY TOP of the contact list!
-    list.sort((a, b) {
-      if (a.unreadCount > 0 && b.unreadCount == 0) return -1;
-      if (a.unreadCount == 0 && b.unreadCount > 0) return 1;
-      if (a.unreadCount > 0 && b.unreadCount > 0) {
-        return b.unreadCount.compareTo(a.unreadCount);
-      }
-      return 0;
-    });
-
-    setState(() {
-      _filteredContacts = list;
-    });
   }
 
   void _openChatRoom(ChatContactModel contact) async {
@@ -138,7 +110,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
             color: Colors.indigo.shade900,
             child: TextField(
               controller: _searchController,
-              onChanged: _filterContacts,
+              onChanged: (_) => setState(() {}),
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Cari Guru, Siswa, Admin, Kepsek...',
@@ -160,29 +132,34 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
               initialData: initialContacts,
               builder: (context, snapshot) {
                 final currentList = snapshot.data ?? initialContacts;
-                if (currentList.isNotEmpty && _searchController.text.isEmpty) {
-                  _contacts = currentList;
-                  _filteredContacts = List.from(currentList);
-                  _filteredContacts.sort((a, b) {
-                    if (a.unreadCount > 0 && b.unreadCount == 0) return -1;
-                    if (a.unreadCount == 0 && b.unreadCount > 0) return 1;
-                    if (a.unreadCount > 0 && b.unreadCount > 0) {
-                      return b.unreadCount.compareTo(a.unreadCount);
-                    }
-                    return 0;
-                  });
+                List<ChatContactModel> displayList = List.from(currentList);
+
+                final query = _searchController.text.trim().toLowerCase();
+                if (query.isNotEmpty) {
+                  displayList = displayList.where((c) {
+                    return c.fullName.toLowerCase().contains(query) || c.roleName.toLowerCase().contains(query);
+                  }).toList();
                 }
+
+                displayList.sort((a, b) {
+                  if (a.unreadCount > 0 && b.unreadCount == 0) return -1;
+                  if (a.unreadCount == 0 && b.unreadCount > 0) return 1;
+                  if (a.unreadCount > 0 && b.unreadCount > 0) {
+                    return b.unreadCount.compareTo(a.unreadCount);
+                  }
+                  return 0;
+                });
 
                 return RefreshIndicator(
                   onRefresh: () => _loadContacts(),
-                  child: _isLoading && _filteredContacts.isEmpty
+                  child: _isLoading && displayList.isEmpty
                       ? const Center(child: CircularProgressIndicator())
-                      : _filteredContacts.isEmpty
+                      : displayList.isEmpty
                           ? const Center(child: Text('Tidak ada kontak tersedia.'))
                           : ListView.builder(
-                              itemCount: _filteredContacts.length,
+                              itemCount: displayList.length,
                               itemBuilder: (context, index) {
-                                final c = _filteredContacts[index];
+                                final c = displayList[index];
                                 final bool isGuru = c.roleName.toLowerCase().contains('guru');
                                 final hasUnread = c.unreadCount > 0;
 

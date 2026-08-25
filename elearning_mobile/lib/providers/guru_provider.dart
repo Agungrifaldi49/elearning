@@ -238,13 +238,9 @@ class GuruProvider with ChangeNotifier {
 
   void startRealtimeSync(int userId) {
     _realtimeTimer?.cancel();
-    _realtimeTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      await fetchQuizSilent(userId);
-      await fetchSusulanRequestsSilent(userId);
-      await fetchDashboardSilent(userId);
-      await fetchTugasSilent(userId);
-      await fetchForumSilent(userId);
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       await fetchChatContactsSilent(userId);
+      await fetchForumSilent(userId);
     });
   }
 
@@ -256,8 +252,11 @@ class GuruProvider with ChangeNotifier {
   Future<void> fetchQuizSilent(int userId) async {
     final res = await ApiService.get('guru/quiz', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
-      _quizList = (res['data'] as List).map((e) => QuizModel.fromJson(e)).toList();
-      notifyListeners();
+      final list = (res['data'] as List).map((e) => QuizModel.fromJson(e)).toList();
+      if (list.length != _quizList.length) {
+        _quizList = list;
+        notifyListeners();
+      }
     }
   }
 
@@ -265,7 +264,6 @@ class GuruProvider with ChangeNotifier {
     final res = await ApiService.get('guru/susulan_requests', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
       _susulanList = res['data'];
-      notifyListeners();
     }
   }
 
@@ -273,23 +271,28 @@ class GuruProvider with ChangeNotifier {
     final res = await ApiService.get('guru/dashboard', params: {'user_id': userId.toString()});
     if (res['success'] == true) {
       _dashboardData = res['data'];
-      notifyListeners();
     }
   }
 
   Future<void> fetchTugasSilent(int userId) async {
     final res = await ApiService.get('guru/tugas', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
-      _tugasList = (res['data'] as List).map((e) => TugasModel.fromJson(e)).toList();
-      notifyListeners();
+      final list = (res['data'] as List).map((e) => TugasModel.fromJson(e)).toList();
+      if (list.length != _tugasList.length) {
+        _tugasList = list;
+        notifyListeners();
+      }
     }
   }
 
   Future<void> fetchForumSilent(int userId) async {
     final res = await ApiService.get('forum/list', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
-      _forumTopicList = (res['data'] as List).map((e) => ForumModel.fromJson(e)).toList();
-      notifyListeners();
+      final list = (res['data'] as List).map((e) => ForumModel.fromJson(e)).toList();
+      if (list.length != _forumTopicList.length) {
+        _forumTopicList = list;
+        notifyListeners();
+      }
     }
   }
 
@@ -305,8 +308,10 @@ class GuruProvider with ChangeNotifier {
       for (var c in list) {
         totalUnread += c.unreadCount;
       }
-      _unreadChatCount = totalUnread;
-      notifyListeners();
+      if (_unreadChatCount != totalUnread) {
+        _unreadChatCount = totalUnread;
+        notifyListeners();
+      }
     }
   }
 
