@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/forum_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/siswa_provider.dart';
+import '../../providers/guru_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/profanity_service.dart';
 import '../../theme/app_theme.dart';
@@ -262,7 +263,14 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
   }
 
   void _showForumDetailBottomSheet(ForumModel forum) async {
-    Provider.of<SiswaProvider>(context, listen: false).markForumAsSeen(forum.id);
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user != null) {
+      if (user.roleName.toLowerCase().contains('guru')) {
+        Provider.of<GuruProvider>(context, listen: false).markForumAsSeen(forum.id);
+      } else {
+        Provider.of<SiswaProvider>(context, listen: false).markForumAsSeen(forum.id);
+      }
+    }
 
     final commentController = TextEditingController();
     bool isLoadingComments = true;

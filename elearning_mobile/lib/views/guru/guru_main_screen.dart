@@ -47,6 +47,8 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
         guruProvider.fetchQuiz(user.id);
         guruProvider.fetchSusulanRequests(user.id);
         guruProvider.fetchTugas(user.id);
+        guruProvider.fetchForumSilent(user.id);
+        guruProvider.fetchChatContactsSilent(user.id);
         guruProvider.startRealtimeSync(user.id);
       }
     });
@@ -62,6 +64,9 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).currentUser;
     final avatarUrl = user?.fullAvatarUrl ?? '';
+    final guruProvider = Provider.of<GuruProvider>(context);
+    final unreadForum = guruProvider.unreadForumCount;
+    final unreadChat = guruProvider.unreadChatCount;
 
     return Scaffold(
       appBar: AppBar(
@@ -111,22 +116,26 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
             },
           ),
           IconButton(
-            icon: const Badge(
-              smallSize: 8,
-              backgroundColor: Colors.amber,
-              child: Icon(Icons.forum_outlined),
-            ),
+            icon: unreadForum > 0
+                ? Badge(
+                    label: Text('$unreadForum', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    backgroundColor: Colors.amber.shade800,
+                    child: const Icon(Icons.forum_outlined),
+                  )
+                : const Icon(Icons.forum_outlined),
             tooltip: 'Forum Diskusi Komunitas',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaForumScreen()));
             },
           ),
           IconButton(
-            icon: const Badge(
-              smallSize: 9,
-              backgroundColor: Colors.red,
-              child: Icon(Icons.chat_bubble_outline),
-            ),
+            icon: unreadChat > 0
+                ? Badge(
+                    label: Text('$unreadChat', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    backgroundColor: Colors.red,
+                    child: const Icon(Icons.chat_bubble_outline),
+                  )
+                : const Icon(Icons.chat_bubble_outline),
             tooltip: 'Pesan & Chat Direct',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaChatScreen()));

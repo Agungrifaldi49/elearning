@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/chat_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/siswa_provider.dart';
+import '../../providers/guru_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/profanity_service.dart';
 import '../../theme/app_theme.dart';
@@ -41,9 +42,16 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
       setState(() => _isLoading = true);
     }
 
-    final siswaProvider = Provider.of<SiswaProvider>(context, listen: false);
-    await siswaProvider.fetchChatContactsSilent(user.id);
-    final list = siswaProvider.chatContacts;
+    List<ChatContactModel> list;
+    if (user.roleName.toLowerCase().contains('guru')) {
+      final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+      await guruProvider.fetchChatContactsSilent(user.id);
+      list = guruProvider.chatContacts;
+    } else {
+      final siswaProvider = Provider.of<SiswaProvider>(context, listen: false);
+      await siswaProvider.fetchChatContactsSilent(user.id);
+      list = siswaProvider.chatContacts;
+    }
 
     if (mounted) {
       setState(() {
@@ -83,7 +91,11 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
   void _openChatRoom(ChatContactModel contact) async {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user != null) {
-      Provider.of<SiswaProvider>(context, listen: false).markContactChatAsRead(user.id, contact.id);
+      if (user.roleName.toLowerCase().contains('guru')) {
+        Provider.of<GuruProvider>(context, listen: false).markContactChatAsRead(user.id, contact.id);
+      } else {
+        Provider.of<SiswaProvider>(context, listen: false).markContactChatAsRead(user.id, contact.id);
+      }
     }
 
     await Navigator.push(
@@ -97,7 +109,21 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final siswaProvider = Provider.of<SiswaProvider>(context);
+    final user = Provider.of<AuthProvider>(context).currentUser;
+    final isGuruRole = user?.roleName.toLowerCase().contains('guru') ?? false;
+
+    Stream<List<ChatContactModel>> chatStream;
+    List<ChatContactModel> initialContacts;
+
+    if (isGuruRole) {
+      final guruProvider = Provider.of<GuruProvider>(context);
+      chatStream = guruProvider.chatContactsStream;
+      initialContacts = guruProvider.chatContacts;
+    } else {
+      final siswaProvider = Provider.of<SiswaProvider>(context);
+      chatStream = siswaProvider.chatContactsStream;
+      initialContacts = siswaProvider.chatContacts;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -130,10 +156,10 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
           ),
           Expanded(
             child: StreamBuilder<List<ChatContactModel>>(
-              stream: siswaProvider.chatContactsStream,
-              initialData: siswaProvider.chatContacts,
+              stream: chatStream,
+              initialData: initialContacts,
               builder: (context, snapshot) {
-                final currentList = snapshot.data ?? siswaProvider.chatContacts;
+                final currentList = snapshot.data ?? initialContacts;
                 if (currentList.isNotEmpty && _searchController.text.isEmpty) {
                   _contacts = currentList;
                   _filteredContacts = List.from(currentList);
@@ -277,7 +303,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (mounted) {
         final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
         if (user != null) {
-          Provider.of<SiswaProvider>(context, listen: false).markContactChatAsRead(user.id, widget.contact.id);
+          if (user.roleName.toLowerCase().contains('guru')) {
+            Provider.of<GuruProvider>(context, listen: false).markContactChatAsRead(user.id, widget.contact.id);
+          } else {
+            Provider.of<SiswaProvider>(context, listen: false).markContactChatAsRead(user.id, widget.contact.id);
+          }
         }
       }
     });

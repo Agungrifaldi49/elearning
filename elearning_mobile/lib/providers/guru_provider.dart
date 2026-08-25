@@ -4,6 +4,8 @@ import '../models/materi_model.dart';
 import '../models/tugas_model.dart';
 import '../models/quiz_model.dart';
 import '../models/jadwal_model.dart';
+import '../models/forum_model.dart';
+import '../models/chat_model.dart';
 import '../services/api_service.dart';
 
 class GuruProvider with ChangeNotifier {
@@ -13,6 +15,12 @@ class GuruProvider with ChangeNotifier {
   List<MateriModel> _materiList = [];
   List<TugasModel> _tugasList = [];
   List<QuizModel> _quizList = [];
+  List<ForumModel> _forumTopicList = [];
+  List<ChatContactModel> _chatContacts = [];
+  final StreamController<List<ChatContactModel>> _chatContactsController = StreamController<List<ChatContactModel>>.broadcast();
+
+  Set<int> _seenForumIds = {};
+  int _unreadChatCount = 0;
 
   bool get isLoading => _isLoading;
   Map<String, dynamic>? get dashboardData => _dashboardData;
@@ -20,6 +28,12 @@ class GuruProvider with ChangeNotifier {
   List<MateriModel> get materiList => _materiList;
   List<TugasModel> get tugasList => _tugasList;
   List<QuizModel> get quizList => _quizList;
+  List<ForumModel> get forumTopicList => _forumTopicList;
+  List<ChatContactModel> get chatContacts => _chatContacts;
+  Stream<List<ChatContactModel>> get chatContactsStream => _chatContactsController.stream;
+
+  int get unreadChatCount => _unreadChatCount;
+  int get unreadForumCount => _forumTopicList.where((f) => !_seenForumIds.contains(f.id)).length;
 
   Future<void> fetchDashboard(int userId) async {
     _isLoading = true;
@@ -219,11 +233,13 @@ class GuruProvider with ChangeNotifier {
 
   void startRealtimeSync(int userId) {
     _realtimeTimer?.cancel();
-    _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
       await fetchQuizSilent(userId);
       await fetchSusulanRequestsSilent(userId);
       await fetchDashboardSilent(userId);
       await fetchTugasSilent(userId);
+      await fetchForumSilent(userId);
+      await fetchChatContactsSilent(userId);
     });
   }
 
@@ -262,5 +278,64 @@ class GuruProvider with ChangeNotifier {
       _tugasList = (res['data'] as List).map((e) => TugasModel.fromJson(e)).toList();
       notifyListeners();
     }
+  }
+
+  Future<void> fetchForumSilent(int userId) async {
+    final res = await ApiService.get('forum/list', params: {'user_id': userId.toString()});
+    if (res['success'] == true && res['data'] is List) {
+      _forumTopicList = (res['data'] as List).map((e) => ForumModel.fromJson(e)).toList();
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchChatContactsSilent(int userId) async {
+    final res = await ApiService.get('chat/contacts', params: {'user_id': userId.toString()});
+    if (res['success'] == true && res['data'] is List) {
+      final list = (res['data'] as List).map((e) => ChatContactModel.fromJson(e)).toList();
+      _chatContacts = list;
+      if (!_chatContactsController.isClosed) {
+        _chatContactsController.add(list);
+      }
+      int totalUnread = 0;
+      for (var c in list) {
+        totalUnread += c.unreadCount;
+      }
+      _unreadChatCount = totalUnread;
+      notifyListeners();
+    }
+  }
+
+  void markContactChatAsRead(int userId, int contactId) async {
+    final index = _chatContacts.indexWhere((c) => c.id == contactId);
+    if (index != -1) {
+      final oldUnread = _chatContacts[index].unreadCount;
+      if (oldUnread > 0) {
+        _chatContacts[index] = ChatContactModel(
+          id: _chatContacts[index].id,
+          fullName: _chatContacts[index].fullName,
+          avatar: _chatContacts[index].avatar,
+          avatarUrl: _chatContacts[index].avatarUrl,
+          roleName: _chatContacts[index].roleName,
+          lastMessage: _chatContacts[index].lastMessage,
+          lastTime: _chatContacts[index].lastTime,
+          unreadCount: 0,
+        );
+        _unreadChatCount = _unreadChatCount - oldUnread;
+        if (_unreadChatCount < 0) _unreadChatCount = 0;
+        if (!_chatContactsController.isClosed) {
+          _chatContactsController.add(_chatContacts);
+        }
+        notifyListeners();
+      }
+    }
+    await ApiService.get('chat/messages', params: {
+      'user_id': userId.toString(),
+      'receiver_id': contactId.toString(),
+    });
+  }
+
+  void markForumAsSeen(int forumId) async {
+    _seenForumIds.add(forumId);
+    notifyListeners();
   }
 }
