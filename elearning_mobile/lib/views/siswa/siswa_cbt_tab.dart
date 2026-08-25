@@ -332,6 +332,27 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
     );
   }
 
+  Widget _buildStatPill(String label, IconData icon, Color bg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _searchQuery = '';
   String _selectedStatusFilter = 'all'; // 'all', 'pending', 'completed', 'locked'
   String _selectedMapel = 'all'; // 'all' or Mapel Name
@@ -377,35 +398,103 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
       groupedQuizzes.putIfAbsent(q.namaMapel, () => []).add(q);
     }
 
+    final totalCompleted = quizList.where((q) => q.isCompleted).length;
+    final totalPending = quizList.where((q) => !q.isCompleted && !q.isSuspended && !q.isTerkunci && !q.isMaxAttemptsReached).length;
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Bar
+          // Hero Banner Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.primaryColor, AppTheme.primaryColor.withValues(alpha: 0.85)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 24),
+                        SizedBox(width: 8),
+                        Text(
+                          'Portal CBT & Ujian Digital',
+                          style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 20),
+                      onPressed: _loadQuiz,
+                      tooltip: 'Refresh Data Kuis',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Kerjakan kuis & ujian online tepat waktu dengan jujur dan fokus.',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _buildStatPill('Total: ${quizList.length}', Icons.quiz_outlined, Colors.white.withValues(alpha: 0.2)),
+                    const SizedBox(width: 8),
+                    _buildStatPill('Tersedia: $totalPending', Icons.play_circle_fill_rounded, Colors.greenAccent.withValues(alpha: 0.3)),
+                    const SizedBox(width: 8),
+                    _buildStatPill('Selesai: $totalCompleted', Icons.task_alt_rounded, Colors.amberAccent.withValues(alpha: 0.3)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Header Title & View Toggle
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                '🎯 CBT & Quiz Ujian',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Text(
+                'Daftar Kuis (${filteredQuizList.length})',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      _groupByMapel ? Icons.grid_view_rounded : Icons.view_list_rounded,
-                      color: AppTheme.primaryColor,
-                    ),
-                    onPressed: () => setState(() => _groupByMapel = !_groupByMapel),
-                    tooltip: _groupByMapel ? 'Tampilan Daftar' : 'Kelompokkan per Mapel',
+              InkWell(
+                onTap: () => setState(() => _groupByMapel = !_groupByMapel),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh, color: AppTheme.primaryColor),
-                    onPressed: _loadQuiz,
-                    tooltip: 'Refresh Kuis',
+                  child: Row(
+                    children: [
+                      Icon(_groupByMapel ? Icons.grid_view_rounded : Icons.view_list_rounded, size: 16, color: AppTheme.primaryColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        _groupByMapel ? 'Per Mapel' : 'Daftar',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ],
           ),
@@ -1439,9 +1528,89 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
     );
   }
 
+  void _confirmSubmitExam() {
+    final answered = _answers.length;
+    final total = widget.soalList.length;
+    final unanswered = total - answered;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Row(
+          children: [
+            Icon(Icons.task_alt_rounded, color: Colors.green, size: 26),
+            SizedBox(width: 8),
+            Text(
+              'Kirim Jawaban Ujian?',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Soal Dijawab:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      Text('$answered / $total Soal', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.green)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Belum Dijawab:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      Text('$unanswered Soal', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: unanswered > 0 ? Colors.red : Colors.grey)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Apakah Anda yakin ingin mengakhiri dan mengirim hasil ujian CBT ini sekarang?',
+              style: TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Lanjutkan Kerjakan'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _submitExam();
+            },
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: const Text('Kirim Sekarang'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final soal = widget.soalList[_currentIndex];
+    final isTimerWarning = _remainingSeconds < 300; // Under 5 mins
 
     return PopScope(
       canPop: false,
@@ -1450,9 +1619,16 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
         _showExitWarning();
       },
       child: Scaffold(
+        backgroundColor: Colors.grey.shade100,
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          title: Text('CBT: ${widget.quiz.judul}', style: const TextStyle(fontSize: 16)),
+          elevation: 2,
+          backgroundColor: AppTheme.primaryColor,
+          foregroundColor: Colors.white,
+          title: Text(
+            'CBT: ${widget.quiz.judul}',
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          ),
           actions: [
             InkWell(
               onTap: _showQuestionGridModalSheet,
@@ -1461,16 +1637,16 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 margin: const EdgeInsets.only(right: 6),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.15),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.grid_view_rounded, color: Colors.blue, size: 16),
+                    const Icon(Icons.grid_view_rounded, color: Colors.white, size: 16),
                     const SizedBox(width: 4),
                     Text(
                       '${_answers.length}/${widget.soalList.length} Dijawab',
-                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                   ],
                 ),
@@ -1480,185 +1656,323 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               margin: const EdgeInsets.only(right: 12),
               decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.1),
+                color: isTimerWarning ? Colors.red : Colors.amber.shade700,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.timer, color: Colors.red, size: 16),
+                  const Icon(Icons.timer_outlined, color: Colors.white, size: 16),
                   const SizedBox(width: 4),
                   Text(
                     _formatTimer(_remainingSeconds),
-                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ],
               ),
             ),
           ],
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Soal Nomor ${_currentIndex + 1} dari ${widget.soalList.length}',
-                    style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.bold),
-                  ),
-                  Text('Bobot: ${soal.bobot} Poin', style: const TextStyle(fontSize: 12, color: Colors.blue)),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        soal.pertanyaan,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                      ),
-                      if (soal.hasGambar) ...[
-                        const SizedBox(height: 12),
-                        InkWell(
-                          onTap: () => _showImagePreviewDialog(context, soal.fileGambarUrl!),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade300),
-                              color: Colors.grey.shade50,
+        body: Column(
+          children: [
+            // Floating Horizontal Question Strip
+            Container(
+              height: 52,
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+              color: Colors.white,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: widget.soalList.length,
+                itemBuilder: (context, idx) {
+                  final sItem = widget.soalList[idx];
+                  final isAns = _answers.containsKey(sItem.id);
+                  final isCurr = idx == _currentIndex;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: InkWell(
+                      onTap: () => setState(() => _currentIndex = idx),
+                      borderRadius: BorderRadius.circular(10),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 42,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: isCurr
+                              ? AppTheme.primaryColor
+                              : (isAns ? Colors.green : Colors.grey.shade100),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isCurr ? AppTheme.primaryColor : (isAns ? Colors.green : Colors.grey.shade300),
+                            width: isCurr ? 2 : 1,
+                          ),
+                          boxShadow: isCurr
+                              ? [BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.3), blurRadius: 4)]
+                              : null,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '${idx + 1}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: (isCurr || isAns) ? Colors.white : Colors.black87,
+                              ),
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Stack(
-                                children: [
-                                  Image.network(
-                                    soal.fileGambarUrl!,
-                                    fit: BoxFit.contain,
-                                    width: double.infinity,
-                                    height: 280,
-                                    errorBuilder: (context, error, stackTrace) => Container(
-                                      padding: const EdgeInsets.all(16),
-                                      color: Colors.red.shade50,
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.broken_image_rounded, color: Colors.red, size: 24),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                            if (isAns && !isCurr) ...[
+                              const SizedBox(width: 2),
+                              const Icon(Icons.check, size: 10, color: Colors.white),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Divider(height: 1, thickness: 1),
+
+            // Main Question Content Body
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Question Header Card
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Soal No. ${_currentIndex + 1} dari ${widget.soalList.length}',
+                              style: const TextStyle(fontSize: 13, color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Bobot: ${soal.bobot} Poin',
+                              style: TextStyle(fontSize: 12, color: Colors.amber.shade900, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Question Card Text & Image
+                    Card(
+                      elevation: 1.5,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              soal.pertanyaan,
+                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, height: 1.35),
+                            ),
+                            if (soal.hasGambar) ...[
+                              const SizedBox(height: 12),
+                              InkWell(
+                                onTap: () => _showImagePreviewDialog(context, soal.fileGambarUrl!),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                    color: Colors.grey.shade50,
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Stack(
+                                      children: [
+                                        Image.network(
+                                          soal.fileGambarUrl!,
+                                          fit: BoxFit.contain,
+                                          width: double.infinity,
+                                          height: 240,
+                                          errorBuilder: (context, error, stackTrace) => Container(
+                                            padding: const EdgeInsets.all(16),
+                                            color: Colors.red.shade50,
+                                            child: Row(
                                               children: [
-                                                const Text(
-                                                  'Gagal memuat gambar soal',
-                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.red),
-                                                ),
-                                                Text(
-                                                  soal.fileGambarUrl ?? '',
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: TextStyle(fontSize: 10, color: Colors.red.shade800),
+                                                const Icon(Icons.broken_image_rounded, color: Colors.red, size: 24),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      const Text(
+                                                        'Gagal memuat gambar soal',
+                                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.red),
+                                                      ),
+                                                      Text(
+                                                        soal.fileGambarUrl ?? '',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow.ellipsis,
+                                                        style: TextStyle(fontSize: 10, color: Colors.red.shade800),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return Container(
-                                        height: 140,
-                                        alignment: Alignment.center,
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            const CircularProgressIndicator(strokeWidth: 2.5),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              'Memuat gambar soal...',
-                                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                                            ),
-                                          ],
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return Container(
+                                              height: 140,
+                                              alignment: Alignment.center,
+                                              child: Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const CircularProgressIndicator(strokeWidth: 2.5),
+                                                  const SizedBox(height: 8),
+                                                  Text(
+                                                    'Memuat gambar soal...',
+                                                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
                                         ),
-                                      );
-                                    },
-                                  ),
-                                  Positioned(
-                                    right: 8,
-                                    bottom: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.65),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.zoom_in, color: Colors.white, size: 14),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'Perbesar Gambar',
-                                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                        Positioned(
+                                          right: 8,
+                                          bottom: 8,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withValues(alpha: 0.65),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: const Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'Perbesar Gambar',
+                                                  style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Pilihan Jawaban:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+
+                    // Options List View
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: soal.pilihan.length,
+                        itemBuilder: (context, idx) {
+                          final pil = soal.pilihan[idx];
+                          final isSelected = _answers[soal.id] == pil.id;
+                          return InkWell(
+                            onTap: () {
+                              setState(() {
+                                _answers[soal.id] = pil.id;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.12) : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
+                                  width: isSelected ? 2 : 1,
+                                ),
+                                boxShadow: isSelected
+                                    ? [BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.15), blurRadius: 4)]
+                                    : null,
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 16,
+                                    backgroundColor: isSelected ? AppTheme.primaryColor : Colors.grey.shade200,
+                                    foregroundColor: isSelected ? Colors.white : Colors.black87,
+                                    child: Text(
+                                      String.fromCharCode(65 + idx),
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      pil.teksPilihan,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected ? AppTheme.primaryColor : Colors.black87,
                                       ),
                                     ),
                                   ),
+                                  if (isSelected)
+                                    const Icon(Icons.check_circle_rounded, color: AppTheme.primaryColor, size: 20),
                                 ],
                               ),
                             ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text('Pilihan Jawaban:', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-
-              Expanded(
-                child: ListView.builder(
-                  itemCount: soal.pilihan.length,
-                  itemBuilder: (context, idx) {
-                    final pil = soal.pilihan[idx];
-                    final isSelected = _answers[soal.id] == pil.id;
-                    return Card(
-                      color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.15) : null,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: isSelected
-                            ? const BorderSide(color: AppTheme.primaryColor, width: 1.5)
-                            : BorderSide.none,
-                      ),
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
-                          foregroundColor: isSelected ? Colors.white : Colors.black,
-                          child: Text(String.fromCharCode(65 + idx)),
-                        ),
-                        title: Text(pil.teksPilihan, style: const TextStyle(fontSize: 14)),
-                        onTap: () {
-                          setState(() {
-                            _answers[soal.id] = pil.id;
-                          });
+                          );
                         },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 ),
               ),
+            ),
 
-              Row(
+            // Bottom Floating Bar
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   if (_currentIndex > 0)
@@ -1670,9 +1984,12 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                       },
                       icon: const Icon(Icons.arrow_back, size: 16),
                       label: const Text('Sebelumnya'),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     )
                   else
-                    const SizedBox(),
+                    const SizedBox(width: 100),
                   ElevatedButton.icon(
                     onPressed: _showQuestionGridModalSheet,
                     icon: const Icon(Icons.grid_view_rounded, size: 16),
@@ -1691,18 +2008,25 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                       },
                       icon: const Icon(Icons.arrow_forward, size: 16),
                       label: const Text('Selanjutnya'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     )
                   else
                     ElevatedButton.icon(
-                      onPressed: () => _submitExam(),
+                      onPressed: _confirmSubmitExam,
                       icon: const Icon(Icons.check_circle_rounded, size: 16),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                       label: const Text('Kirim Selesai'),
                     ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
