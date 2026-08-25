@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../siswa/siswa_main_screen.dart';
 import '../guru/guru_main_screen.dart';
@@ -18,6 +19,12 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscureText = true;
   String _selectedRole = 'siswa'; // 'siswa' or 'guru'
 
+  @override
+  void initState() {
+    super.initState();
+    ApiService.initBaseUrl();
+  }
+
   final List<String> _siswaQuotes = [
     "🚀 Setiap langkah kecil dalam belajar adalah lompatan besar menuju cita-cita impianmu! Semangat KBM di SMK Muthia Harapan Cicalengka!",
     "💡 Masa depan adalah milik mereka yang mempersiapkan hari ini dengan tekun dan disiplin. Selamat belajar!",
@@ -31,6 +38,92 @@ class _LoginScreenState extends State<LoginScreen> {
     "⭐ Setiap bimbingan dan kesabaran Anda adalah pondasi kokoh bagi masa depan para siswa. Tetap semangat!",
     "📚 Dedikasi Anda hari ini menciptakan para pemimpin dan profesional hebat di masa esok!"
   ];
+
+  void _showServerConfigDialog() {
+    final serverController = TextEditingController(text: ApiService.baseUrl);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Row(
+            children: [
+              Icon(Icons.dns_rounded, color: AppTheme.primaryColor),
+              SizedBox(width: 10),
+              Text('Pengaturan Server API', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pilih atau masukkan URL server backend E-Learning:',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.cloud_done_rounded, color: Colors.green),
+                title: const Text('Domain Online (Resmi)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                subtitle: const Text('smkmuthiaharapancicalengka.my.id', style: TextStyle(fontSize: 11)),
+                onTap: () {
+                  serverController.text = ApiService.defaultOnlineUrl;
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.wifi_rounded, color: Colors.blue),
+                title: const Text('Server Wi-Fi Lokal (IP 192.168.100.26)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                subtitle: const Text('http://192.168.100.26/api.php?action=', style: TextStyle(fontSize: 11)),
+                onTap: () {
+                  serverController.text = 'http://192.168.100.26/api.php?action=';
+                },
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: serverController,
+                style: const TextStyle(fontSize: 12),
+                decoration: InputDecoration(
+                  labelText: 'Custom Server Base URL',
+                  hintText: 'https://...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final newUrl = serverController.text.trim();
+                if (newUrl.isNotEmpty) {
+                  await ApiService.setBaseUrl(newUrl);
+                  if (mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('URL Server berhasil diubah ke:\n$newUrl')),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Simpan URL'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _handleLogin() async {
     final username = _usernameController.text.trim();
@@ -199,8 +292,14 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(authProvider.errorMessage ?? 'Login gagal! Periksa username/password Anda.'),
+          content: Text(authProvider.errorMessage ?? 'Login gagal! Periksa koneksi internet Anda.'),
           backgroundColor: AppTheme.dangerColor,
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: 'Ganti Server',
+            textColor: Colors.amber,
+            onPressed: _showServerConfigDialog,
+          ),
         ),
       );
     }
@@ -218,7 +317,7 @@ class _LoginScreenState extends State<LoginScreen> {
             // Modern Header Hero Card
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.only(top: 65, bottom: 45, left: 24, right: 24),
+              padding: const EdgeInsets.only(top: 45, bottom: 35, left: 24, right: 24),
               decoration: const BoxDecoration(
                 gradient: AppTheme.primaryGradient,
                 borderRadius: BorderRadius.only(
@@ -235,6 +334,14 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               child: Column(
                 children: [
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      icon: const Icon(Icons.settings_suggest_rounded, color: Colors.white),
+                      tooltip: 'Pengaturan Server API',
+                      onPressed: _showServerConfigDialog,
+                    ),
+                  ),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(

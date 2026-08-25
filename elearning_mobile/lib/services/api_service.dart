@@ -1,10 +1,32 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Production Base URL pointing directly to api.php entry point
-  static String baseUrl = 'https://smkmuthiaharapancicalengka.my.id/api.php?action=';
+  static const String defaultOnlineUrl = 'https://smkmuthiaharapancicalengka.my.id/api.php?action=';
+  static String baseUrl = defaultOnlineUrl;
+
+  static Future<void> initBaseUrl() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedUrl = prefs.getString('custom_api_base_url');
+      if (savedUrl != null && savedUrl.isNotEmpty) {
+        baseUrl = savedUrl;
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> setBaseUrl(String newUrl) async {
+    baseUrl = newUrl;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('custom_api_base_url', newUrl);
+    } catch (_) {}
+  }
 
   static Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> body) async {
     try {
@@ -30,9 +52,21 @@ class ApiService {
         uri,
         headers: headers,
         body: bodyString,
-      );
+      ).timeout(const Duration(seconds: 8));
 
       return _handleResponse(response, uri.toString());
+    } on TimeoutException {
+      debugPrint('=== API TIMEOUT ERROR ===');
+      return {
+        'success': false,
+        'message': 'Koneksi ke server timeout (8 detik).\nServer tidak merespons. Periksa koneksi internet atau ganti URL server.'
+      };
+    } on SocketException catch (e) {
+      debugPrint('=== API SOCKET ERROR ===\n$e');
+      return {
+        'success': false,
+        'message': 'Koneksi jaringan terputus (SocketException).\nServer tidak dapat dijangkau dari perangkat Anda.'
+      };
     } catch (e) {
       debugPrint('=== API REQUEST ERROR ===\n$e');
       return {'success': false, 'message': 'Koneksi server gagal: $e'};
@@ -56,9 +90,21 @@ class ApiService {
       debugPrint('URL: $uri');
       debugPrint('Headers: $headers');
 
-      final response = await http.get(uri, headers: headers);
+      final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 8));
 
       return _handleResponse(response, uri.toString());
+    } on TimeoutException {
+      debugPrint('=== API TIMEOUT ERROR ===');
+      return {
+        'success': false,
+        'message': 'Koneksi ke server timeout (8 detik).'
+      };
+    } on SocketException catch (e) {
+      debugPrint('=== API SOCKET ERROR ===\n$e');
+      return {
+        'success': false,
+        'message': 'Gagal terhubung ke jaringan server.'
+      };
     } catch (e) {
       debugPrint('=== API REQUEST ERROR ===\n$e');
       return {'success': false, 'message': 'Koneksi server gagal: $e'};
