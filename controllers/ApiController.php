@@ -434,6 +434,20 @@ class ApiController {
                     $stmtP = $this->db->prepare("SELECT id, soal_id, teks_pilihan FROM pilihan_jawaban WHERE soal_id = :sid");
                     $stmtP->execute(['sid' => $s['id']]);
                     $s['pilihan'] = $stmtP->fetchAll();
+
+                    $img = $s['file_gambar'] ?? $s['gambar'] ?? null;
+                    if (!empty($img)) {
+                        if (!str_starts_with($img, 'http://') && !str_starts_with($img, 'https://')) {
+                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+                            $imgUrl = "{$scheme}://{$host}/" . ltrim($img, '/');
+                        } else {
+                            $imgUrl = $img;
+                        }
+                        $s['file_gambar_url'] = $imgUrl;
+                    } else {
+                        $s['file_gambar_url'] = null;
+                    }
                 }
 
                 $this->jsonResponse(true, 'Detail Quiz & Soal', [

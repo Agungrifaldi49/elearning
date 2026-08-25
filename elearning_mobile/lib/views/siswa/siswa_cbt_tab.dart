@@ -766,6 +766,173 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
     );
   }
 
+  void _showQuestionGridModalSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final answeredCount = _answers.length;
+        final totalCount = widget.soalList.length;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.grid_view_rounded, color: AppTheme.primaryColor),
+                          SizedBox(width: 8),
+                          Text(
+                            'Navigasi Nomor Soal Ujian',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Sudah Dijawab: $answeredCount Dari $totalCount Soal',
+                          style: TextStyle(color: Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${((answeredCount / (totalCount == 0 ? 1 : totalCount)) * 100).toInt()}% Selesai',
+                          style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Indicator Legend
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildLegendItem(Colors.green, 'Sudah Dijawab ✓'),
+                      _buildLegendItem(AppTheme.primaryColor, 'Sedang Dibuka 🎯'),
+                      _buildLegendItem(Colors.grey.shade400, 'Belum Dijawab ⚪'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  Expanded(
+                    child: GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 5,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 1.1,
+                      ),
+                      itemCount: totalCount,
+                      itemBuilder: (context, idx) {
+                        final qItem = widget.soalList[idx];
+                        final isAnswered = _answers.containsKey(qItem.id);
+                        final isCurrent = idx == _currentIndex;
+
+                        Color bgColor;
+                        Color textColor;
+                        BorderSide border;
+
+                        if (isCurrent) {
+                          bgColor = AppTheme.primaryColor;
+                          textColor = Colors.white;
+                          border = const BorderSide(color: Colors.amber, width: 2.5);
+                        } else if (isAnswered) {
+                          bgColor = Colors.green;
+                          textColor = Colors.white;
+                          border = BorderSide.none;
+                        } else {
+                          bgColor = Colors.grey.shade100;
+                          textColor = Colors.black87;
+                          border = BorderSide(color: Colors.grey.shade300);
+                        }
+
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              _currentIndex = idx;
+                            });
+                            Navigator.pop(context);
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: bgColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.fromBorderSide(border),
+                              boxShadow: isCurrent
+                                  ? [BoxShadow(color: AppTheme.primaryColor.withValues(alpha: 0.4), blurRadius: 6)]
+                                  : null,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '${idx + 1}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: textColor,
+                                  ),
+                                ),
+                                if (isAnswered && !isCurrent)
+                                  const Icon(Icons.check_circle, color: Colors.white, size: 12)
+                                else if (isCurrent)
+                                  const Icon(Icons.edit, color: Colors.amber, size: 12),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final soal = widget.soalList[_currentIndex];
@@ -781,6 +948,28 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
           automaticallyImplyLeading: false,
           title: Text('CBT: ${widget.quiz.judul}', style: const TextStyle(fontSize: 16)),
           actions: [
+            InkWell(
+              onTap: _showQuestionGridModalSheet,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                margin: const EdgeInsets.only(right: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.grid_view_rounded, color: Colors.blue, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${_answers.length}/${widget.soalList.length} Dijawab',
+                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               margin: const EdgeInsets.only(right: 12),
@@ -821,9 +1010,49 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    soal.pertanyaan,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        soal.pertanyaan,
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
+                      if (soal.hasGambar) ...[
+                        const SizedBox(height: 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            soal.fileGambarUrl!,
+                            fit: BoxFit.contain,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              padding: const EdgeInsets.all(12),
+                              color: Colors.grey.shade100,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.broken_image, color: Colors.grey),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Gambar Soal: ${soal.fileGambar}',
+                                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                height: 120,
+                                alignment: Alignment.center,
+                                child: const CircularProgressIndicator(strokeWidth: 2),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
@@ -879,6 +1108,15 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                     )
                   else
                     const SizedBox(),
+                  ElevatedButton.icon(
+                    onPressed: _showQuestionGridModalSheet,
+                    icon: const Icon(Icons.grid_view_rounded, size: 16),
+                    label: Text('${_currentIndex + 1}/${widget.soalList.length} 🔢'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber.shade800,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
                   if (_currentIndex < widget.soalList.length - 1)
                     ElevatedButton.icon(
                       onPressed: () {
@@ -894,7 +1132,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                       onPressed: () => _submitExam(),
                       icon: const Icon(Icons.check_circle_rounded, size: 16),
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                      label: const Text('Kirim Ujian Selesai'),
+                      label: const Text('Kirim Selesai'),
                     ),
                 ],
               ),

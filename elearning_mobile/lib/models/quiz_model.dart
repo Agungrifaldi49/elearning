@@ -1,3 +1,5 @@
+import '../services/api_service.dart';
+
 class QuizModel {
   final int id;
   final int guruId;
@@ -81,6 +83,7 @@ class SoalModel {
   final String jenisSoal;
   final String pertanyaan;
   final String? fileGambar;
+  final String? fileGambarUrl;
   final int bobot;
   final List<PilihanModel> pilihan;
 
@@ -90,22 +93,37 @@ class SoalModel {
     required this.jenisSoal,
     required this.pertanyaan,
     this.fileGambar,
+    this.fileGambarUrl,
     required this.bobot,
     required this.pilihan,
   });
 
   factory SoalModel.fromJson(Map<String, dynamic> json) {
     var pList = (json['pilihan'] as List? ?? []).map((e) => PilihanModel.fromJson(e)).toList();
+    String? gUrl = json['file_gambar_url'] ?? json['gambar_url'] ?? json['full_gambar_url'];
+    String? gPath = json['file_gambar'] ?? json['gambar'];
+
+    if ((gUrl == null || gUrl.isEmpty) && gPath != null && gPath.isNotEmpty) {
+      if (gPath.startsWith('http://') || gPath.startsWith('https://')) {
+        gUrl = gPath;
+      } else {
+        gUrl = ApiService.baseUrl.replaceFirst('/api.php', '') + '/' + gPath.replaceFirst(RegExp(r'^/'), '');
+      }
+    }
+
     return SoalModel(
       id: int.parse(json['id'].toString()),
       quizId: int.parse(json['quiz_id'].toString()),
       jenisSoal: json['jenis_soal'] ?? 'pg',
       pertanyaan: json['pertanyaan'] ?? '',
-      fileGambar: json['file_gambar'],
+      fileGambar: gPath,
+      fileGambarUrl: gUrl,
       bobot: int.parse((json['bobot'] ?? 10).toString()),
       pilihan: pList,
     );
   }
+
+  bool get hasGambar => fileGambarUrl != null && fileGambarUrl!.isNotEmpty;
 }
 
 class PilihanModel {
