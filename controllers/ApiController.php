@@ -2077,6 +2077,10 @@ class ApiController {
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
 
+        try {
+            $this->db->exec("ALTER TABLE chat ADD COLUMN is_read TINYINT(1) DEFAULT 0");
+        } catch (\Throwable $eIgn) {}
+
         if (file_exists(ROOT_PATH . 'helpers/ProfanityFilterHelper.php')) {
             require_once ROOT_PATH . 'helpers/ProfanityFilterHelper.php';
         }

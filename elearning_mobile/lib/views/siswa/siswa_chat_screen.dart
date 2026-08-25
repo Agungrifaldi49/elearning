@@ -138,10 +138,18 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                             final c = _filteredContacts[index];
                             final bool isGuru = c.roleName.toLowerCase().contains('guru');
 
+                            final hasUnread = c.unreadCount > 0;
+
                             return Card(
                               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 1,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: hasUnread
+                                    ? BorderSide(color: Colors.red.shade300, width: 1.5)
+                                    : BorderSide.none,
+                              ),
+                              color: hasUnread ? Colors.red.shade50.withValues(alpha: 0.4) : Colors.white,
+                              elevation: hasUnread ? 3 : 1,
                               child: ListTile(
                                 leading: Stack(
                                   clipBehavior: Clip.none,
@@ -161,21 +169,21 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                             )
                                           : null,
                                     ),
-                                    if (c.unreadCount > 0)
+                                    if (hasUnread)
                                       Positioned(
-                                        right: -2,
-                                        top: -2,
+                                        right: -3,
+                                        top: -3,
                                         child: Container(
                                           padding: const EdgeInsets.all(4),
                                           decoration: const BoxDecoration(
                                             color: Colors.red,
                                             shape: BoxShape.circle,
                                           ),
-                                          constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                          constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                                           child: Text(
                                             '${c.unreadCount}',
                                             textAlign: TextAlign.center,
-                                            style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                                           ),
                                         ),
                                       ),
@@ -184,7 +192,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                 title: Row(
                                   children: [
                                     Expanded(
-                                      child: Text(c.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                      child: Text(c.fullName, style: TextStyle(fontWeight: hasUnread ? FontWeight.w900 : FontWeight.bold, fontSize: 14)),
                                     ),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -211,19 +219,25 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: c.unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
-                                    color: c.unreadCount > 0 ? Colors.black87 : Colors.grey.shade600,
+                                    fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
+                                    color: hasUnread ? Colors.black87 : Colors.grey.shade600,
                                   ),
                                 ),
-                                trailing: c.unreadCount > 0
+                                trailing: hasUnread
                                     ? Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
                                           color: Colors.red.shade600,
                                           borderRadius: BorderRadius.circular(12),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.red.withValues(alpha: 0.3),
+                                              blurRadius: 4,
+                                            ),
+                                          ],
                                         ),
                                         child: Text(
-                                          '${c.unreadCount} BARU',
+                                          '🔴 ${c.unreadCount} BARU',
                                           style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                                         ),
                                       )
