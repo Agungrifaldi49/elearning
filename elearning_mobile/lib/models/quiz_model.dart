@@ -20,8 +20,11 @@ class QuizModel {
   final bool isDisqualified;
   final int pelanggaranCount;
   final bool canAccess;
+  final String? accessStatus;
   final String? susulanStatus;
   final String? accessReason;
+  final int maxAttempts;
+  final int attemptCount;
 
   QuizModel({
     required this.id,
@@ -43,8 +46,11 @@ class QuizModel {
     this.isDisqualified = false,
     this.pelanggaranCount = 0,
     this.canAccess = true,
+    this.accessStatus,
     this.susulanStatus,
     this.accessReason,
+    this.maxAttempts = 1,
+    this.attemptCount = 0,
   });
 
   factory QuizModel.fromJson(Map<String, dynamic> json) {
@@ -65,16 +71,21 @@ class QuizModel {
       statusLulus: json['status_lulus'],
       finishedAt: json['finished_at'],
       totalPeserta: json['total_peserta'] != null ? int.parse(json['total_peserta'].toString()) : null,
-      isDisqualified: json['is_disqualified'] == true || json['is_disqualified'].toString() == '1',
+      isDisqualified: json['is_disqualified'] == true || json['is_disqualified'].toString() == '1' || json['access_status'] == 'diskualifikasi',
       pelanggaranCount: int.parse((json['pelanggaran_count'] ?? 0).toString()),
       canAccess: json['can_access'] != false && json['can_access'].toString() != 'false',
+      accessStatus: json['access_status'] ?? 'terbuka',
       susulanStatus: json['susulan_status'],
       accessReason: json['access_reason'],
+      maxAttempts: int.parse((json['max_attempts'] ?? 1).toString()),
+      attemptCount: int.parse((json['attempt_count'] ?? 0).toString()),
     );
   }
 
-  bool get isCompleted => finishedAt != null;
-  bool get isSuspended => isDisqualified || (!canAccess && susulanStatus != 'disetujui');
+  bool get isCompleted => finishedAt != null || totalNilai != null;
+  bool get isSuspended => (isDisqualified || accessStatus == 'diskualifikasi') && susulanStatus != 'disetujui';
+  bool get isTerkunci => (accessStatus == 'terkunci') && susulanStatus != 'disetujui';
+  bool get isMaxAttemptsReached => (attemptCount >= maxAttempts || accessStatus == 'max_attempts_reached') && maxAttempts > 0 && susulanStatus != 'disetujui';
 }
 
 class SoalModel {

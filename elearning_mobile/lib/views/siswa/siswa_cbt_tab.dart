@@ -473,10 +473,47 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
               Icon(Icons.block, color: Colors.red, size: 12),
               SizedBox(width: 4),
               Text(
-                'DISUSPEND 🚫',
+                'DISUSPEND 🚫 (Pelanggaran)',
                 style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
               ),
             ],
+          ),
+        ),
+      );
+    } else if (q.isTerkunci) {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.orange.shade100,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange.shade300),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.lock_clock, color: Colors.orange, size: 12),
+              SizedBox(width: 4),
+              Text(
+                'TERKUNCI 🔒 (Batas Waktu Habis)',
+                style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (q.isMaxAttemptsReached) {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade100,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue.shade300),
+          ),
+          child: Text(
+            'Percobaan Max: ${q.attemptCount}/${q.maxAttempts} 🏁',
+            style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.bold, fontSize: 11),
           ),
         ),
       );
@@ -558,18 +595,72 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
           ),
         );
       }
-    } else if (q.isCompleted) {
-      buttons.add(
-        ElevatedButton.icon(
-          onPressed: () => _confirmStartQuiz(q),
-          icon: const Icon(Icons.replay, size: 16),
-          label: const Text('Kerjakan Ulang'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.grey.shade700,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    } else if (q.isTerkunci) {
+      if (q.susulanStatus == 'pending') {
+        buttons.add(
+          ElevatedButton.icon(
+            onPressed: () => _showRequestPermissionModal(q),
+            icon: const Icon(Icons.hourglass_top_rounded, size: 16),
+            label: const Text('Izin Susulan Terkirim ⏳'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber.shade800,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           ),
-        ),
-      );
+        );
+      } else {
+        buttons.add(
+          ElevatedButton.icon(
+            onPressed: () => _showRequestPermissionModal(q),
+            icon: const Icon(Icons.lock_open_rounded, size: 16),
+            label: const Text('Ajukan Izin Susulan 📩'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange.shade800,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        );
+      }
+    } else if (q.isCompleted) {
+      if (q.isMaxAttemptsReached) {
+        if (q.susulanStatus == 'pending') {
+          buttons.add(
+            ElevatedButton.icon(
+              onPressed: () => _showRequestPermissionModal(q),
+              icon: const Icon(Icons.hourglass_top_rounded, size: 16),
+              label: const Text('Permohonan Remidi Terkirim ⏳'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amber.shade800,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          );
+        } else {
+          buttons.add(
+            ElevatedButton.icon(
+              onPressed: () => _showRequestPermissionModal(q),
+              icon: const Icon(Icons.published_with_changes_rounded, size: 16),
+              label: const Text('Ajukan Remidi / Ulang 📩'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade700,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          );
+        }
+      } else {
+        buttons.add(
+          ElevatedButton.icon(
+            onPressed: () => _confirmStartQuiz(q),
+            icon: const Icon(Icons.replay, size: 16),
+            label: const Text('Kerjakan Ulang'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey.shade700,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        );
+      }
     } else {
       buttons.add(
         ElevatedButton.icon(
