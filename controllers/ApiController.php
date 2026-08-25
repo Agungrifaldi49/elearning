@@ -435,17 +435,30 @@ class ApiController {
                     $stmtP->execute(['sid' => $s['id']]);
                     $s['pilihan'] = $stmtP->fetchAll();
 
-                    $img = $s['file_gambar'] ?? $s['gambar'] ?? null;
+                    $img = !empty($s['file_gambar']) ? $s['file_gambar'] : (!empty($s['gambar']) ? $s['gambar'] : null);
                     if (!empty($img)) {
+                        $s['file_gambar'] = $img;
                         if (!str_starts_with($img, 'http://') && !str_starts_with($img, 'https://')) {
-                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                            $cleanImg = ltrim($img, '/');
+                            if (!str_starts_with($cleanImg, 'assets/uploads/') && !str_starts_with($cleanImg, 'uploads/')) {
+                                $cleanImg = 'assets/uploads/soal/' . $cleanImg;
+                            } else if (str_starts_with($cleanImg, 'uploads/')) {
+                                $cleanImg = 'assets/' . $cleanImg;
+                            }
+                            
                             $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-                            $imgUrl = "{$scheme}://{$host}/" . ltrim($img, '/');
+                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                            
+                            $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+                            $scriptDir = trim(str_replace('\\', '/', $scriptDir), '/');
+                            $baseDir = !empty($scriptDir) ? '/' . $scriptDir : '';
+                            
+                            $s['file_gambar_url'] = "{$scheme}://{$host}{$baseDir}/" . $cleanImg;
                         } else {
-                            $imgUrl = $img;
+                            $s['file_gambar_url'] = $img;
                         }
-                        $s['file_gambar_url'] = $imgUrl;
                     } else {
+                        $s['file_gambar'] = null;
                         $s['file_gambar_url'] = null;
                     }
                 }

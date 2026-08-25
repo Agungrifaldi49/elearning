@@ -100,14 +100,31 @@ class SoalModel {
 
   factory SoalModel.fromJson(Map<String, dynamic> json) {
     var pList = (json['pilihan'] as List? ?? []).map((e) => PilihanModel.fromJson(e)).toList();
-    String? gUrl = json['file_gambar_url'] ?? json['gambar_url'] ?? json['full_gambar_url'];
     String? gPath = json['file_gambar'] ?? json['gambar'];
+    String? gUrl = json['file_gambar_url'] ?? json['gambar_url'] ?? json['full_gambar_url'];
 
-    if ((gUrl == null || gUrl.isEmpty) && gPath != null && gPath.isNotEmpty) {
-      if (gPath.startsWith('http://') || gPath.startsWith('https://')) {
-        gUrl = gPath;
+    if (gPath != null && gPath.toString().trim().isNotEmpty) {
+      String pathStr = gPath.toString().trim();
+      if (pathStr.startsWith('http://') || pathStr.startsWith('https://')) {
+        gUrl = pathStr;
       } else {
-        gUrl = ApiService.baseUrl.replaceFirst('/api.php', '') + '/' + gPath.replaceFirst(RegExp(r'^/'), '');
+        String cleanPath = pathStr.replaceFirst(RegExp(r'^/'), '');
+        if (!cleanPath.startsWith('assets/uploads/') && !cleanPath.startsWith('uploads/')) {
+          cleanPath = 'assets/uploads/soal/' + cleanPath;
+        } else if (cleanPath.startsWith('uploads/')) {
+          cleanPath = 'assets/' + cleanPath;
+        }
+
+        String rootUrl = ApiService.baseUrl;
+        if (rootUrl.endsWith('/api.php')) {
+          rootUrl = rootUrl.substring(0, rootUrl.length - 8);
+        } else if (rootUrl.endsWith('api.php')) {
+          rootUrl = rootUrl.substring(0, rootUrl.length - 7);
+        }
+        if (!rootUrl.endsWith('/')) {
+          rootUrl += '/';
+        }
+        gUrl = rootUrl + cleanPath;
       }
     }
 

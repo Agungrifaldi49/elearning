@@ -919,6 +919,43 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
     );
   }
 
+  void _showImagePreviewDialog(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: CircleAvatar(
+                backgroundColor: Colors.black.withValues(alpha: 0.7),
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildLegendItem(Color color, String label) {
     return Row(
       children: [
@@ -1019,36 +1056,95 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                       ),
                       if (soal.hasGambar) ...[
                         const SizedBox(height: 12),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.network(
-                            soal.fileGambarUrl!,
-                            fit: BoxFit.contain,
-                            width: double.infinity,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              padding: const EdgeInsets.all(12),
-                              color: Colors.grey.shade100,
-                              child: Row(
+                        InkWell(
+                          onTap: () => _showImagePreviewDialog(context, soal.fileGambarUrl!),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                              color: Colors.grey.shade50,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Stack(
                                 children: [
-                                  const Icon(Icons.broken_image, color: Colors.grey),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Gambar Soal: ${soal.fileGambar}',
-                                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                  Image.network(
+                                    soal.fileGambarUrl!,
+                                    fit: BoxFit.contain,
+                                    width: double.infinity,
+                                    height: 280,
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      padding: const EdgeInsets.all(16),
+                                      color: Colors.red.shade50,
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.broken_image_rounded, color: Colors.red, size: 24),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                const Text(
+                                                  'Gagal memuat gambar soal',
+                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.red),
+                                                ),
+                                                Text(
+                                                  soal.fileGambarUrl ?? '',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(fontSize: 10, color: Colors.red.shade800),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        height: 140,
+                                        alignment: Alignment.center,
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const CircularProgressIndicator(strokeWidth: 2.5),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Memuat gambar soal...',
+                                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  Positioned(
+                                    right: 8,
+                                    bottom: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.65),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Perbesar Gambar',
+                                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                height: 120,
-                                alignment: Alignment.center,
-                                child: const CircularProgressIndicator(strokeWidth: 2),
-                              );
-                            },
                           ),
                         ),
                       ],
