@@ -595,26 +595,29 @@ class ApiController {
                 $nilaiAkhir = ($totalBobot > 0) ? round(($skorDapat / $totalBobot) * 100, 2) : 0;
                 $statusLulus = ($nilaiAkhir >= 70) ? 'lulus' : 'tidak_lulus';
 
-                // Save or Update Hasil Quiz
-                $stmtCheckH = $this->db->prepare("SELECT id FROM hasil_quiz WHERE siswa_id = :sid AND quiz_id = :qid LIMIT 1");
+                // Save or Update Hasil Quiz and Attempt Count
+                $stmtCheckH = $this->db->prepare("SELECT id, attempt_count FROM hasil_quiz WHERE siswa_id = :sid AND quiz_id = :qid LIMIT 1");
                 $stmtCheckH->execute(['sid' => $siswa['id'], 'qid' => $quizId]);
                 $existingH = $stmtCheckH->fetch();
 
+                $newAttemptCount = 1;
                 if ($existingH) {
+                    $newAttemptCount = max(1, intval($existingH['attempt_count'] ?? 0) + 1);
                     $stmtH = $this->db->prepare("
                         UPDATE hasil_quiz 
-                        SET total_nilai = :tn, status_lulus = :sl, finished_at = NOW() 
+                        SET total_nilai = :tn, status_lulus = :sl, attempt_count = :att, finished_at = NOW() 
                         WHERE id = :hid
                     ");
                     $stmtH->execute([
                         'hid' => $existingH['id'],
                         'tn' => $nilaiAkhir,
-                        'sl' => $statusLulus
+                        'sl' => $statusLulus,
+                        'att' => $newAttemptCount
                     ]);
                 } else {
                     $stmtH = $this->db->prepare("
-                        INSERT INTO hasil_quiz (siswa_id, quiz_id, total_nilai, status_lulus, finished_at) 
-                        VALUES (:sid, :qid, :tn, :sl, NOW())
+                        INSERT INTO hasil_quiz (siswa_id, quiz_id, total_nilai, status_lulus, attempt_count, finished_at) 
+                        VALUES (:sid, :qid, :tn, :sl, 1, NOW())
                     ");
                     $stmtH->execute([
                         'sid' => $siswa['id'],
@@ -624,9 +627,25 @@ class ApiController {
                     ]);
                 }
 
+                // Insert into hasil_quiz_history for attempt tracking
+                try {
+                    $stmtHistIns = $this->db->prepare("
+                        INSERT INTO hasil_quiz_history (siswa_id, quiz_id, attempt_number, total_nilai, status_lulus, created_at)
+                        VALUES (:sid, :qid, :att, :tn, :sl, NOW())
+                    ");
+                    $stmtHistIns->execute([
+                        'sid' => $siswa['id'],
+                        'qid' => $quizId,
+                        'att' => $newAttemptCount,
+                        'tn' => $nilaiAkhir,
+                        'sl' => $statusLulus
+                    ]);
+                } catch (\Throwable $eH) {}
+
                 $this->jsonResponse(true, 'Quiz berhasil dikirim!', [
                     'total_nilai' => $nilaiAkhir,
-                    'status_lulus' => $statusLulus
+                    'status_lulus' => $statusLulus,
+                    'attempt_count' => $newAttemptCount
                 ]);
                 break;
 

@@ -29,10 +29,17 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
     }
   }
 
-  void _showRequestPermissionModal(QuizModel quiz) {
-    final catatanController = TextEditingController(
-      text: 'Mohon izin untuk membuka kunci kuis CBT / Ujian Susulan karena kuis sebelumnya disuspend / terkunci.',
-    );
+  void _showRequestPermissionModal(QuizModel quiz, {String? reasonHint}) {
+    String defaultText = 'Mohon izin untuk membuka kunci kuis CBT / Ujian Susulan.';
+    if (quiz.isSuspended) {
+      defaultText = 'Mohon izin untuk membuka kunci suspend kuis karena tidak sengaja berpindah aplikasi/fullscreen.';
+    } else if (quiz.isMaxAttemptsReached) {
+      defaultText = 'Mohon izin untuk diberikan kesempatan ujian susulan / remidi (Batas percobaan ${quiz.attemptCount}/${quiz.maxAttempts} tercapai).';
+    } else if (quiz.isTerkunci) {
+      defaultText = 'Mohon izin ujian susulan karena kuis telah melewati batas waktu deadline.';
+    }
+
+    final catatanController = TextEditingController(text: defaultText);
 
     showDialog(
       context: context,
@@ -67,7 +74,7 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Kuis "${quiz.judul}" telah terkunci/disuspend. Ajukan permohonan ke Guru Pengampu untuk membuka kembali akses kuis.',
+                      'Kuis "${quiz.judul}" butuh izin Guru. Ajukan permohonan ke Guru Pengampu untuk membuka kembali akses pengerjaan kuis.',
                       style: TextStyle(fontSize: 12, color: Colors.amber.shade900),
                     ),
                   ),
