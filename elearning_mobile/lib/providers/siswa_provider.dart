@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/materi_model.dart';
 import '../models/tugas_model.dart';
@@ -194,5 +195,60 @@ class SiswaProvider with ChangeNotifier {
     }
     _isLoading = false;
     notifyListeners();
+  }
+
+  Timer? _realtimeTimer;
+
+  void startRealtimeSync(int userId) {
+    _realtimeTimer?.cancel();
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      await fetchQuizSilent(userId);
+      await fetchDashboardSilent(userId);
+      await fetchTugasSilent(userId);
+      await fetchAbsensiSilent(userId);
+    });
+  }
+
+  void stopRealtimeSync() {
+    _realtimeTimer?.cancel();
+    _realtimeTimer = null;
+  }
+
+  Future<void> fetchQuizSilent(int userId) async {
+    final res = await ApiService.get('siswa/quiz', params: {'user_id': userId.toString()});
+    if (res['success'] == true && res['data'] is List) {
+      _quizList = (res['data'] as List).map((e) => QuizModel.fromJson(e)).toList();
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchDashboardSilent(int userId) async {
+    final res = await ApiService.get('siswa/dashboard', params: {'user_id': userId.toString()});
+    if (res['success'] == true) {
+      _dashboardData = res['data'];
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchTugasSilent(int userId) async {
+    final res = await ApiService.get('siswa/tugas', params: {'user_id': userId.toString()});
+    if (res['success'] == true && res['data'] is List) {
+      _tugasList = (res['data'] as List).map((e) => TugasModel.fromJson(e)).toList();
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchAbsensiSilent(int userId) async {
+    final res = await ApiService.get('siswa/absensi', params: {'user_id': userId.toString()});
+    if (res['success'] == true) {
+      if (res['data'] is Map) {
+        _absensiStats = res['data']['stats'];
+        final list = res['data']['history'] as List? ?? [];
+        _absensiList = list.map((e) => AbsensiModel.fromJson(e)).toList();
+      } else if (res['data'] is List) {
+        _absensiList = (res['data'] as List).map((e) => AbsensiModel.fromJson(e)).toList();
+      }
+      notifyListeners();
+    }
   }
 }

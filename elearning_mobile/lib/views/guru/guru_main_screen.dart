@@ -42,9 +42,20 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
-        Provider.of<GuruProvider>(context, listen: false).fetchSusulanRequests(user.id);
+        final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+        guruProvider.fetchDashboard(user.id);
+        guruProvider.fetchQuiz(user.id);
+        guruProvider.fetchSusulanRequests(user.id);
+        guruProvider.fetchTugas(user.id);
+        guruProvider.startRealtimeSync(user.id);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    Provider.of<GuruProvider>(context, listen: false).stopRealtimeSync();
+    super.dispose();
   }
 
   @override

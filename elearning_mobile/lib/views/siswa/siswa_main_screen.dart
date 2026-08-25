@@ -18,6 +18,8 @@ import 'siswa_chat_screen.dart';
 import 'gabung_kelas_screen.dart';
 import '../shared/edit_profil_screen.dart';
 
+import '../../providers/siswa_provider.dart';
+
 class SiswaMainScreen extends StatefulWidget {
   const SiswaMainScreen({super.key});
 
@@ -35,6 +37,28 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
     const SiswaTugasTab(),
     const SiswaCbtTab(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      if (user != null) {
+        final siswaProvider = Provider.of<SiswaProvider>(context, listen: false);
+        siswaProvider.fetchDashboard(user.id);
+        siswaProvider.fetchQuiz(user.id);
+        siswaProvider.fetchTugas(user.id);
+        siswaProvider.fetchAbsensi(user.id);
+        siswaProvider.startRealtimeSync(user.id);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    Provider.of<SiswaProvider>(context, listen: false).stopRealtimeSync();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
