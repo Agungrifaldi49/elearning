@@ -116,10 +116,14 @@ class SoalModel {
         }
 
         String rootUrl = ApiService.baseUrl;
-        if (rootUrl.endsWith('/api.php')) {
-          rootUrl = rootUrl.substring(0, rootUrl.length - 8);
-        } else if (rootUrl.endsWith('api.php')) {
-          rootUrl = rootUrl.substring(0, rootUrl.length - 7);
+        int apiIdx = rootUrl.indexOf('/api.php');
+        if (apiIdx != -1) {
+          rootUrl = rootUrl.substring(0, apiIdx);
+        } else {
+          int queryIdx = rootUrl.indexOf('?');
+          if (queryIdx != -1) {
+            rootUrl = rootUrl.substring(0, queryIdx);
+          }
         }
         if (!rootUrl.endsWith('/')) {
           rootUrl += '/';

@@ -426,12 +426,17 @@ class ApiController {
 
                 $examModel->startQuizAttempt($quizId, $siswa['id']);
 
-                $stmtSoal = $this->db->prepare("SELECT * FROM soal WHERE quiz_id = :qid ORDER BY id ASC");
+                $isRandomSoal = ($quiz['random_soal'] ?? 'Y') === 'Y';
+                $isRandomJawaban = ($quiz['random_jawaban'] ?? 'Y') === 'Y';
+
+                $orderClause = $isRandomSoal ? "ORDER BY RAND()" : "ORDER BY id ASC";
+                $stmtSoal = $this->db->prepare("SELECT * FROM soal WHERE quiz_id = :qid {$orderClause}");
                 $stmtSoal->execute(['qid' => $quizId]);
                 $soalList = $stmtSoal->fetchAll();
 
                 foreach ($soalList as &$s) {
-                    $stmtP = $this->db->prepare("SELECT id, soal_id, teks_pilihan FROM pilihan_jawaban WHERE soal_id = :sid");
+                    $orderPilihan = $isRandomJawaban ? "ORDER BY RAND()" : "ORDER BY id ASC";
+                    $stmtP = $this->db->prepare("SELECT id, soal_id, teks_pilihan FROM pilihan_jawaban WHERE soal_id = :sid {$orderPilihan}");
                     $stmtP->execute(['sid' => $s['id']]);
                     $s['pilihan'] = $stmtP->fetchAll();
 
@@ -449,11 +454,7 @@ class ApiController {
                             $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
                             $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
                             
-                            $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
-                            $scriptDir = trim(str_replace('\\', '/', $scriptDir), '/');
-                            $baseDir = !empty($scriptDir) ? '/' . $scriptDir : '';
-                            
-                            $s['file_gambar_url'] = "{$scheme}://{$host}{$baseDir}/" . $cleanImg;
+                            $s['file_gambar_url'] = "{$scheme}://{$host}/" . $cleanImg;
                         } else {
                             $s['file_gambar_url'] = $img;
                         }
