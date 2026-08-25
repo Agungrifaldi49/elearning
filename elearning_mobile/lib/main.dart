@@ -30,7 +30,7 @@ class ElearningMobileApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      title: 'E-Learning SMK Muthia Harapan',
+      title: 'MHC E-LEARNING',
       debugShowCheckedModeBanner: false,
       themeMode: themeProvider.themeMode,
       theme: AppTheme.lightTheme,

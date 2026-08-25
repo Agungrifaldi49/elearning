@@ -15,6 +15,11 @@ class QuizModel {
   final String? statusLulus;
   final String? finishedAt;
   final int? totalPeserta;
+  final bool isDisqualified;
+  final int pelanggaranCount;
+  final bool canAccess;
+  final String? susulanStatus;
+  final String? accessReason;
 
   QuizModel({
     required this.id,
@@ -33,6 +38,11 @@ class QuizModel {
     this.statusLulus,
     this.finishedAt,
     this.totalPeserta,
+    this.isDisqualified = false,
+    this.pelanggaranCount = 0,
+    this.canAccess = true,
+    this.susulanStatus,
+    this.accessReason,
   });
 
   factory QuizModel.fromJson(Map<String, dynamic> json) {
@@ -53,10 +63,16 @@ class QuizModel {
       statusLulus: json['status_lulus'],
       finishedAt: json['finished_at'],
       totalPeserta: json['total_peserta'] != null ? int.parse(json['total_peserta'].toString()) : null,
+      isDisqualified: json['is_disqualified'] == true || json['is_disqualified'].toString() == '1',
+      pelanggaranCount: int.parse((json['pelanggaran_count'] ?? 0).toString()),
+      canAccess: json['can_access'] != false && json['can_access'].toString() != 'false',
+      susulanStatus: json['susulan_status'],
+      accessReason: json['access_reason'],
     );
   }
 
   bool get isCompleted => finishedAt != null;
+  bool get isSuspended => isDisqualified || (!canAccess && susulanStatus != 'disetujui');
 }
 
 class SoalModel {

@@ -129,6 +129,27 @@ class SiswaProvider with ChangeNotifier {
     return res;
   }
 
+  Future<Map<String, dynamic>> recordQuizViolation(int userId, int quizId) async {
+    final res = await ApiService.post('siswa/record_violation', {
+      'user_id': userId,
+      'quiz_id': quizId,
+    });
+    return res;
+  }
+
+  Future<bool> requestQuizSusulan(int userId, int quizId, String catatan) async {
+    final res = await ApiService.post('siswa/request_susulan', {
+      'user_id': userId,
+      'quiz_id': quizId,
+      'catatan': catatan,
+    });
+    if (res['success'] == true) {
+      await fetchQuiz(userId);
+      return true;
+    }
+    return false;
+  }
+
   Map<String, dynamic>? _absensiStats;
   Map<String, dynamic>? get absensiStats => _absensiStats;
 

@@ -59,11 +59,23 @@ class KartuDigitalScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(Icons.school_rounded, color: Colors.white, size: 28),
-                            SizedBox(width: 8),
-                            Text(
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Image.asset(
+                                'assets/logo/mhc_logo.png',
+                                width: 24,
+                                height: 24,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
                               'SMK MUTHIA HARAPAN',
                               style: TextStyle(
                                 color: Colors.white,

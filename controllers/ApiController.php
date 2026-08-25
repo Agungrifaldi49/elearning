@@ -362,9 +362,13 @@ class ApiController {
                 break;
 
             case 'quiz':
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                $examModel = new ExamModel();
+
                 $stmtQ = $this->db->prepare("
                     SELECT q.*, mp.nama_mapel, g.nama_lengkap as nama_guru, 
-                           hq.total_nilai, hq.status_lulus, hq.finished_at 
+                           hq.total_nilai, hq.status_lulus, hq.finished_at,
+                           hq.is_disqualified, hq.pelanggaran_count
                     FROM quiz q 
                     JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
                     JOIN guru g ON q.guru_id = g.id 
@@ -375,11 +379,30 @@ class ApiController {
                 $stmtQ->execute(['sid' => $siswa['id'], 'kid' => $siswa['kelas_id']]);
                 $quizList = $stmtQ->fetchAll();
 
+                foreach ($quizList as &$q) {
+                    $accessCheck = $examModel->canSiswaAccessQuiz($q['id'], $siswa['id']);
+                    $q['can_access'] = $accessCheck['access'];
+                    $q['access_status'] = $accessCheck['status'] ?? 'terbuka';
+                    $q['access_reason'] = ($accessCheck['status'] ?? '') === 'diskualifikasi' 
+                        ? 'Anda telah DIDISKUALIFIKASI karena 2x melanggar aturan (berpindah aplikasi / keluar fullscreen)'
+                        : (isset($accessCheck['reason']) ? $accessCheck['reason'] : '');
+                    
+                    $stmtS = $this->db->prepare("SELECT status FROM quiz_susulan WHERE quiz_id = ? AND siswa_id = ? ORDER BY id DESC LIMIT 1");
+                    $stmtS->execute([$q['id'], $siswa['id']]);
+                    $susRow = $stmtS->fetch();
+                    $q['susulan_status'] = $susRow['status'] ?? null;
+                    $q['is_disqualified'] = (!empty($q['is_disqualified']) && (int)$q['is_disqualified'] === 1) || (($accessCheck['status'] ?? '') === 'diskualifikasi');
+                    $q['pelanggaran_count'] = intval($q['pelanggaran_count'] ?? 0);
+                }
+
                 $this->jsonResponse(true, 'Daftar Quiz & CBT', $quizList);
                 break;
 
             case 'quiz_detail':
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                $examModel = new ExamModel();
                 $quizId = intval($_GET['quiz_id'] ?? 0);
+
                 $stmtQ = $this->db->prepare("SELECT * FROM quiz WHERE id = :qid LIMIT 1");
                 $stmtQ->execute(['qid' => $quizId]);
                 $quiz = $stmtQ->fetch();
@@ -387,6 +410,21 @@ class ApiController {
                 if (!$quiz) {
                     $this->jsonResponse(false, 'Quiz tidak ditemukan', null, 404);
                 }
+
+                $accessCheck = $examModel->canSiswaAccessQuiz($quizId, $siswa['id']);
+                if (!$accessCheck['access']) {
+                    $reason = 'Akses kuis ini telah terkunci atau deadline telah berakhir.';
+                    if (($accessCheck['status'] ?? '') === 'diskualifikasi') {
+                        $reason = 'Akses Terkunci! Anda telah DIDISKUALIFIKASI dari kuis ini karena 2x melanggar aturan ujian online (berpindah aplikasi / keluar fullscreen). Silakan ajukan izin ke Guru.';
+                    }
+                    $this->jsonResponse(false, $reason, [
+                        'can_access' => false,
+                        'access_status' => $accessCheck['status'] ?? 'terkunci',
+                        'is_disqualified' => (($accessCheck['status'] ?? '') === 'diskualifikasi')
+                    ], 403);
+                }
+
+                $examModel->startQuizAttempt($quizId, $siswa['id']);
 
                 $stmtSoal = $this->db->prepare("SELECT * FROM soal WHERE quiz_id = :qid ORDER BY id ASC");
                 $stmtSoal->execute(['qid' => $quizId]);
@@ -402,6 +440,67 @@ class ApiController {
                     'quiz' => $quiz,
                     'soal' => $soalList
                 ]);
+                break;
+
+            case 'record_violation':
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                require_once ROOT_PATH . 'models/CommunicationModel.php';
+                $examModel = new ExamModel();
+                $input = $this->getPostInput();
+                $quizId = intval($input['quiz_id'] ?? $_GET['quiz_id'] ?? 0);
+
+                if ($quizId <= 0) {
+                    $this->jsonResponse(false, 'Quiz ID tidak valid', null, 400);
+                }
+
+                $resViolation = $examModel->recordPelanggaran($siswa['id'], $quizId);
+
+                if (!empty($resViolation['is_disqualified'])) {
+                    try {
+                        $commModel = new CommunicationModel();
+                        $uName = $siswa['nama_lengkap'] ?? 'Siswa';
+                        $commModel->sendNotificationToTeacherByQuiz(
+                            $quizId,
+                            '🚨 Diskualifikasi Ujian Online Mobile (CBT)',
+                            "Siswa {$uName} didiskualifikasi dari Ujian karena 2x melanggar aturan di aplikasi mobile (berpindah aplikasi / keluar fullscreen).",
+                            'index.php?url=guru/quiz'
+                        );
+                    } catch (\Throwable $eN) {}
+                }
+
+                $this->jsonResponse(true, 'Pelanggaran keamanan kuis berhasil dicatat', [
+                    'pelanggaran_count' => $resViolation['pelanggaran_count'],
+                    'is_disqualified' => $resViolation['is_disqualified']
+                ]);
+                break;
+
+            case 'request_susulan':
+            case 'ajukan_susulan':
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                require_once ROOT_PATH . 'models/CommunicationModel.php';
+                $examModel = new ExamModel();
+                $input = $this->getPostInput();
+                $quizId = intval($input['quiz_id'] ?? $_GET['quiz_id'] ?? 0);
+                $catatan = trim($input['catatan'] ?? $input['alasan'] ?? 'Permohonan izin ujian susulan / buka suspend via mobile app');
+
+                if ($quizId <= 0) {
+                    $this->jsonResponse(false, 'Quiz ID tidak valid', null, 400);
+                }
+
+                $res = $examModel->requestSusulan($quizId, $siswa['id'], $catatan);
+
+                try {
+                    $commModel = new CommunicationModel();
+                    $uName = $siswa['nama_lengkap'] ?? 'Siswa';
+                    $commModel->sendNotificationToTeacherByQuiz(
+                        $quizId,
+                        '📩 Permintaan Izin Ujian Mobile',
+                        "Siswa {$uName} mengajukan permohonan izin Ujian Susulan / Buka Suspend via Mobile. Catatan: {$catatan}",
+                        'index.php?url=guru/quiz'
+                    );
+                } catch (\Throwable $eN) {}
+
+                $this->jsonResponse(true, 'Permohonan izin Ujian Susulan / Buka Suspend telah dikirimkan ke Guru Pengampu.');
                 break;
 
             case 'submit_quiz':
