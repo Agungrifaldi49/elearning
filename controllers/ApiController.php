@@ -536,8 +536,8 @@ class ApiController {
                 $quizId = intval($input['quiz_id'] ?? 0);
                 $answers = $input['answers'] ?? []; // Map of [soal_id => pilihan_id]
 
-                if ($quizId <= 0 || empty($answers)) {
-                    $this->jsonResponse(false, 'Jawaban quiz tidak boleh kosong', null, 400);
+                if ($quizId <= 0) {
+                    $this->jsonResponse(false, 'Quiz ID tidak valid', null, 400);
                 }
 
                 $stmtSoal = $this->db->prepare("SELECT * FROM soal WHERE quiz_id = :qid");
@@ -579,7 +579,7 @@ class ApiController {
                     ]);
                 }
 
-                $nilaiAkhir = ($totalBobot > 0) ? round(($skorDapat / $totalBobot) * 100, 2) : 100;
+                $nilaiAkhir = ($totalBobot > 0) ? round(($skorDapat / $totalBobot) * 100, 2) : 0;
                 $statusLulus = ($nilaiAkhir >= 70) ? 'lulus' : 'tidak_lulus';
 
                 // Save or Update Hasil Quiz
@@ -598,6 +598,105 @@ class ApiController {
                 $this->jsonResponse(true, 'Quiz berhasil dikirim!', [
                     'total_nilai' => $nilaiAkhir,
                     'status_lulus' => $statusLulus
+                ]);
+                break;
+
+            case 'quiz_review':
+                $quizId = intval($_GET['quiz_id'] ?? $_POST['quiz_id'] ?? 0);
+
+                if ($quizId <= 0) {
+                    $this->jsonResponse(false, 'Quiz ID tidak valid', null, 400);
+                }
+
+                $stmtQ = $this->db->prepare("
+                    SELECT q.*, mp.nama_mapel, g.nama_lengkap as nama_guru, k.nama_kelas 
+                    FROM quiz q
+                    LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id
+                    LEFT JOIN guru g ON q.guru_id = g.id
+                    LEFT JOIN kelas k ON q.kelas_id = k.id
+                    WHERE q.id = :qid LIMIT 1
+                ");
+                $stmtQ->execute(['qid' => $quizId]);
+                $quizInfo = $stmtQ->fetch();
+
+                if (!$quizInfo) {
+                    $this->jsonResponse(false, 'Data quiz tidak ditemukan', null, 404);
+                }
+
+                $stmtH = $this->db->prepare("
+                    SELECT * FROM hasil_quiz 
+                    WHERE quiz_id = :qid AND siswa_id = :sid 
+                    ORDER BY id DESC LIMIT 1
+                ");
+                $stmtH->execute(['qid' => $quizId, 'sid' => $siswa['id']]);
+                $hasilQuiz = $stmtH->fetch();
+
+                $stmtSoal = $this->db->prepare("SELECT * FROM soal WHERE quiz_id = :qid ORDER BY id ASC");
+                $stmtSoal->execute(['qid' => $quizId]);
+                $soalList = $stmtSoal->fetchAll();
+
+                $totalBenar = 0;
+                $totalSalah = 0;
+
+                foreach ($soalList as &$s) {
+                    $stmtP = $this->db->prepare("SELECT id, soal_id, teks_pilihan, is_benar FROM pilihan_jawaban WHERE soal_id = :sid ORDER BY id ASC");
+                    $stmtP->execute(['sid' => $s['id']]);
+                    $s['pilihan'] = $stmtP->fetchAll();
+
+                    $img = !empty($s['file_gambar']) ? $s['file_gambar'] : (!empty($s['gambar']) ? $s['gambar'] : null);
+                    if (!empty($img)) {
+                        $s['file_gambar'] = $img;
+                        if (!str_starts_with($img, 'http://') && !str_starts_with($img, 'https://')) {
+                            $cleanImg = ltrim($img, '/');
+                            if (!str_starts_with($cleanImg, 'assets/uploads/') && !str_starts_with($cleanImg, 'uploads/')) {
+                                $cleanImg = 'assets/uploads/soal/' . $cleanImg;
+                            } else if (str_starts_with($cleanImg, 'uploads/')) {
+                                $cleanImg = 'assets/' . $cleanImg;
+                            }
+                            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                            $s['file_gambar_url'] = "{$scheme}://{$host}/" . $cleanImg;
+                        } else {
+                            $s['file_gambar_url'] = $img;
+                        }
+                    } else {
+                        $s['file_gambar_url'] = null;
+                    }
+
+                    $stmtJ = $this->db->prepare("
+                        SELECT * FROM jawaban_siswa 
+                        WHERE quiz_id = :qid AND siswa_id = :sid AND soal_id = :soal_id 
+                        LIMIT 1
+                    ");
+                    $stmtJ->execute(['qid' => $quizId, 'sid' => $siswa['id'], 'soal_id' => $s['id']]);
+                    $jSiswa = $stmtJ->fetch();
+
+                    $s['jawaban_siswa'] = $jSiswa ? [
+                        'pilihan_id' => $jSiswa['pilihan_id'] ? intval($jSiswa['pilihan_id']) : null,
+                        'is_benar' => intval($jSiswa['is_benar']),
+                        'nilai' => floatval($jSiswa['nilai']),
+                    ] : null;
+
+                    if ($jSiswa && intval($jSiswa['is_benar']) === 1) {
+                        $totalBenar++;
+                    } else {
+                        $totalSalah++;
+                    }
+                }
+
+                $this->jsonResponse(true, 'Detail Hasil Kuis & Pembahasan', [
+                    'quiz' => $quizInfo,
+                    'hasil' => $hasilQuiz ?: [
+                        'total_nilai' => 0,
+                        'status_lulus' => 'tidak_lulus',
+                        'finished_at' => null
+                    ],
+                    'summary' => [
+                        'total_soal' => count($soalList),
+                        'total_benar' => $totalBenar,
+                        'total_salah' => $totalSalah,
+                    ],
+                    'soal' => $soalList
                 ]);
                 break;
 

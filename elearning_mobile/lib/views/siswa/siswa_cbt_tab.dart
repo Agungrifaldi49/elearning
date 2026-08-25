@@ -6,6 +6,7 @@ import '../../models/quiz_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/siswa_provider.dart';
 import '../../theme/app_theme.dart';
+import 'siswa_quiz_review_screen.dart';
 
 class SiswaCbtTab extends StatefulWidget {
   const SiswaCbtTab({super.key});
@@ -514,14 +515,36 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
         );
       }
     } else if (q.isCompleted) {
-      return ElevatedButton.icon(
-        onPressed: () => _confirmStartQuiz(q),
-        icon: const Icon(Icons.replay),
-        label: const Text('Kerjakan Ulang'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.grey.shade700,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+      return Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: [
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SiswaQuizReviewScreen(quiz: q),
+                ),
+              );
+            },
+            icon: const Icon(Icons.analytics_rounded, size: 16),
+            label: const Text('Hasil & Pembahasan 📊'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => _confirmStartQuiz(q),
+            icon: const Icon(Icons.replay, size: 16),
+            label: const Text('Kerjakan Ulang'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey.shade700,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
       );
     } else {
       return ElevatedButton.icon(
@@ -739,6 +762,25 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
     }
   }
 
+  void _forceExitExam() {
+    _isExamActive = false;
+    _timer.cancel();
+
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: SystemUiOverlay.values);
+
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user != null) {
+      Provider.of<SiswaProvider>(context, listen: false)
+          .recordQuizViolation(user.id, widget.quiz.id);
+      Provider.of<SiswaProvider>(context, listen: false)
+          .submitQuiz(user.id, widget.quiz.id, _answers);
+    }
+
+    if (mounted) {
+      Navigator.pop(context, 'disqualified');
+    }
+  }
+
   void _showExitWarning() {
     showDialog(
       context: context,
@@ -746,7 +788,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Keluar dari Ujian?'),
         content: const Text(
-          'Ujian masih berlangsung. Jika Anda keluar sekarang, pengerjaan kuis akan dianggap sebagai pelanggaran keamanan!',
+          'Ujian masih berlangsung. Jika Anda memilih Keluar Paksa, pengerjaan kuis akan dihentikan dan disuspend!',
         ),
         actions: [
           TextButton(
@@ -756,7 +798,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _handleSecurityViolation();
+              _forceExitExam();
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Keluar Paksa'),

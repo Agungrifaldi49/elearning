@@ -112,6 +112,17 @@ class SiswaProvider with ChangeNotifier {
     return null;
   }
 
+  Future<Map<String, dynamic>?> fetchQuizReview(int userId, int quizId) async {
+    final res = await ApiService.get('siswa/quiz_review', params: {
+      'user_id': userId.toString(),
+      'quiz_id': quizId.toString(),
+    });
+    if (res['success'] == true && res['data'] != null) {
+      return res['data'];
+    }
+    return null;
+  }
+
   Future<Map<String, dynamic>> submitQuiz(int userId, int quizId, Map<int, int> answers) async {
     final Map<String, int> formattedAnswers = {};
     answers.forEach((key, value) {
