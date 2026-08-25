@@ -342,15 +342,21 @@ class ExamModel extends BaseModel {
 
     public function getSusulanRequestsByGuru($guruId = null) {
         $sql = "
-            SELECT qs.*, q.judul as judul_quiz, s.nama_lengkap as nama_siswa, s.nisn, k.nama_kelas, map.nama_mapel
+            SELECT qs.*, q.judul as judul_quiz, 
+                   COALESCE(s.nama_lengkap, 'Siswa') as nama_siswa, s.nisn, 
+                   COALESCE(k.nama_kelas, ks.nama_kelas, 'Umum') as nama_kelas, 
+                   COALESCE(map.nama_mapel, 'Mata Pelajaran') as nama_mapel
             FROM quiz_susulan qs
             JOIN quiz q ON qs.quiz_id = q.id
-            JOIN siswa s ON qs.siswa_id = s.id
-            JOIN kelas k ON q.kelas_id = k.id
-            JOIN mata_pelajaran map ON q.mapel_id = map.id
+            LEFT JOIN siswa s ON qs.siswa_id = s.id
+            LEFT JOIN kelas ks ON s.kelas_id = ks.id
+            LEFT JOIN kelas k ON q.kelas_id = k.id
+            LEFT JOIN mata_pelajaran map ON q.mapel_id = map.id
+            WHERE 1=1
         ";
-        if ($guruId !== null) {
-            $sql .= " WHERE q.guru_id = " . (int)$guruId;
+        if ($guruId !== null && (int)$guruId > 0) {
+            $gIdInt = (int)$guruId;
+            $sql .= " AND (q.guru_id = {$gIdInt} OR q.guru_id IN (SELECT id FROM guru WHERE user_id = {$gIdInt}))";
         }
         $sql .= " ORDER BY qs.id DESC";
         return $this->db->query($sql)->fetchAll();
@@ -359,6 +365,21 @@ class ExamModel extends BaseModel {
     public function updateSusulanStatus($requestId, $status) {
         $stmt = $this->db->prepare("UPDATE quiz_susulan SET status = ? WHERE id = ?");
         return $stmt->execute([$status, (int)$requestId]);
+    }
+
+    public function approveSusulanById($requestId, $catatan = 'Disetujui Guru via Mobile') {
+        $stmt = $this->db->prepare("SELECT quiz_id, siswa_id FROM quiz_susulan WHERE id = ?");
+        $stmt->execute([(int)$requestId]);
+        $row = $stmt->fetch();
+        if ($row) {
+            return $this->approveSusulanRequest($row['quiz_id'], $row['siswa_id'], $catatan);
+        }
+        return false;
+    }
+
+    public function rejectSusulanById($requestId, $catatan = 'Ditolak Guru via Mobile') {
+        $stmt = $this->db->prepare("UPDATE quiz_susulan SET status = 'ditolak', catatan = ?, updated_at = NOW() WHERE id = ?");
+        return $stmt->execute([$catatan, (int)$requestId]);
     }
 
     public function deleteQuiz($id) {

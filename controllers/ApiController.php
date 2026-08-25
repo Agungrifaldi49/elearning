@@ -1075,6 +1075,49 @@ class ApiController {
                 $this->jsonResponse(true, 'Daftar Quiz / Ujian Guru', $quizList);
                 break;
 
+            case 'susulan_requests':
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                $examModel = new ExamModel();
+                $targetGId = !empty($guru['id']) ? (int)$guru['id'] : $userId;
+                $susulanList = $examModel->getSusulanRequestsByGuru($targetGId);
+                $this->jsonResponse(true, 'Daftar Permintaan Izin Susulan / Buka Suspend', $susulanList);
+                break;
+
+            case 'approve_susulan':
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                $examModel = new ExamModel();
+                $input = $this->getPostInput();
+                $requestId = intval($input['request_id'] ?? 0);
+                $quizId = intval($input['quiz_id'] ?? 0);
+                $siswaId = intval($input['siswa_id'] ?? 0);
+                $catatan = trim($input['catatan'] ?? 'Disetujui Guru via Mobile App');
+
+                if ($requestId > 0) {
+                    $examModel->approveSusulanById($requestId, $catatan);
+                } else if ($quizId > 0 && $siswaId > 0) {
+                    $examModel->approveSusulanRequest($quizId, $siswaId, $catatan);
+                } else {
+                    $this->jsonResponse(false, 'Request ID atau Quiz ID & Siswa ID wajib diisi', null, 400);
+                }
+
+                $this->jsonResponse(true, 'Permintaan Ujian Susulan / Buka Suspend berhasil DISETUJUI!');
+                break;
+
+            case 'reject_susulan':
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                $examModel = new ExamModel();
+                $input = $this->getPostInput();
+                $requestId = intval($input['request_id'] ?? 0);
+                $catatan = trim($input['catatan'] ?? 'Ditolak Guru via Mobile App');
+
+                if ($requestId <= 0) {
+                    $this->jsonResponse(false, 'Request ID tidak valid', null, 400);
+                }
+
+                $examModel->rejectSusulanById($requestId, $catatan);
+                $this->jsonResponse(true, 'Permintaan Ujian Susulan / Buka Suspend DITOLAK.');
+                break;
+
             case 'absensi':
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $input = $this->getPostInput();

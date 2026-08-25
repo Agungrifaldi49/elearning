@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/guru_provider.dart';
 import '../../theme/app_theme.dart';
 import '../auth/login_screen.dart';
 import '../shared/edugame_screen.dart';
@@ -34,6 +35,17 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
     const GuruTugasTab(),
     const GuruCbtTab(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+      if (user != null) {
+        Provider.of<GuruProvider>(context, listen: false).fetchSusulanRequests(user.id);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -169,30 +181,58 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
           selectedItemColor: AppTheme.primaryColor,
           unselectedItemColor: Colors.grey,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          items: const [
-            BottomNavigationBarItem(
+          items: [
+            const BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined),
               activeIcon: Icon(Icons.dashboard),
               label: 'Dashboard',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.calendar_month_outlined),
               activeIcon: Icon(Icons.calendar_month),
               label: 'Jadwal',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.upload_file_outlined),
               activeIcon: Icon(Icons.upload_file),
               label: 'Materi',
             ),
-            BottomNavigationBarItem(
+            const BottomNavigationBarItem(
               icon: Icon(Icons.task_outlined),
               activeIcon: Icon(Icons.task),
               label: 'Tugas',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.quiz_outlined),
-              activeIcon: Icon(Icons.quiz),
+              icon: Consumer<GuruProvider>(
+                builder: (context, guruProvider, child) {
+                  final pendingCount = guruProvider.susulanList
+                      .where((e) => (e['status'] ?? '') == 'pending')
+                      .length;
+                  if (pendingCount > 0) {
+                    return Badge(
+                      label: Text('$pendingCount'),
+                      backgroundColor: Colors.amber.shade900,
+                      child: const Icon(Icons.quiz_outlined),
+                    );
+                  }
+                  return const Icon(Icons.quiz_outlined);
+                },
+              ),
+              activeIcon: Consumer<GuruProvider>(
+                builder: (context, guruProvider, child) {
+                  final pendingCount = guruProvider.susulanList
+                      .where((e) => (e['status'] ?? '') == 'pending')
+                      .length;
+                  if (pendingCount > 0) {
+                    return Badge(
+                      label: Text('$pendingCount'),
+                      backgroundColor: Colors.amber.shade900,
+                      child: const Icon(Icons.quiz),
+                    );
+                  }
+                  return const Icon(Icons.quiz);
+                },
+              ),
               label: 'CBT Quiz',
             ),
           ],

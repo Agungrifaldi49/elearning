@@ -176,4 +176,41 @@ class GuruProvider with ChangeNotifier {
     });
     return res['success'] == true;
   }
+
+  List<dynamic> _susulanList = [];
+  List<dynamic> get susulanList => _susulanList;
+
+  Future<void> fetchSusulanRequests(int userId) async {
+    final res = await ApiService.get('guru/susulan_requests', params: {'user_id': userId.toString()});
+    if (res['success'] == true && res['data'] is List) {
+      _susulanList = res['data'];
+      notifyListeners();
+    }
+  }
+
+  Future<bool> approveSusulanRequest(int userId, int requestId) async {
+    final res = await ApiService.post('guru/approve_susulan', {
+      'user_id': userId,
+      'request_id': requestId,
+    });
+    if (res['success'] == true) {
+      await fetchSusulanRequests(userId);
+      await fetchQuiz(userId);
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> rejectSusulanRequest(int userId, int requestId) async {
+    final res = await ApiService.post('guru/reject_susulan', {
+      'user_id': userId,
+      'request_id': requestId,
+    });
+    if (res['success'] == true) {
+      await fetchSusulanRequests(userId);
+      await fetchQuiz(userId);
+      return true;
+    }
+    return false;
+  }
 }

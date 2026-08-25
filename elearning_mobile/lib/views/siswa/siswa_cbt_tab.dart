@@ -142,7 +142,7 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppTheme.primaryColor.withOpacity(0.1),
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.shield_outlined, color: AppTheme.primaryColor),
@@ -247,7 +247,9 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
     final detailData = await Provider.of<SiswaProvider>(context, listen: false)
         .fetchQuizDetail(user.id, quiz.id);
 
-    if (detailData == null || !mounted) {
+    if (!mounted) return;
+
+    if (detailData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(quiz.accessReason ?? 'Gagal memuat soal quiz atau akses ujian telah disuspend/terkunci.'),
@@ -273,7 +275,53 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
       MaterialPageRoute(
         builder: (_) => CbtExamEngineScreen(quiz: quiz, soalList: soalList),
       ),
-    ).then((_) => _loadQuiz());
+    ).then((result) {
+      _loadQuiz();
+      if (result == 'disqualified' && mounted) {
+        _showDisqualifiedAlert(quiz);
+      }
+    });
+  }
+
+  void _showDisqualifiedAlert(QuizModel quiz) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.cancel_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '🚫 DISUSPEND & DIBATALKAN!',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Anda telah melanggar aturan ujian sebanyak 2 kali (berpindah aplikasi / keluar fullscreen).\n\nPengerjaan kuis Anda secara otomatis DIBERHENTIKAN dan DISUSPEND. Silakan ajukan izin ke Guru Pengampu untuk pengerjaan susulan.',
+          style: TextStyle(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _showRequestPermissionModal(quiz);
+            },
+            icon: const Icon(Icons.mark_email_unread_rounded, size: 16),
+            label: const Text('Minta Izin Guru Pengampu 📩'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -411,7 +459,7 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: isLulus ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15),
+          color: isLulus ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
@@ -427,7 +475,7 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.purple.withOpacity(0.15),
+          color: Colors.purple.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(8),
         ),
         child: const Text(
@@ -591,40 +639,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
       // Force exit and auto suspend exam on 2nd violation
       _isExamActive = false;
       _timer.cancel();
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.cancel_rounded, color: Colors.red, size: 28),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '🚫 DISUSPEND & DIBATALKAN!',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.red),
-                ),
-              ),
-            ],
-          ),
-          content: const Text(
-            'Anda telah melanggar aturan ujian sebanyak 2 kali (berpindah aplikasi / keluar fullscreen).\n\nPengerjaan kuis Anda secara otomatis DIBERHENTIKAN dan DISUSPEND. Silakan ajukan izin ke Guru Pengampu untuk pengerjaan susulan.',
-            style: TextStyle(fontSize: 13),
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _submitExam(isForceDisqualified: true);
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Kembali ke Menu CBT'),
-            ),
-          ],
-        ),
-      );
+      _submitExam(isForceDisqualified: true);
     }
   }
 
@@ -660,7 +675,15 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
 
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user == null) {
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context, isForceDisqualified ? 'disqualified' : null);
+      return;
+    }
+
+    if (isForceDisqualified) {
+      // Instantly pop back to SiswaCbtTab without keeping user on exam screen
+      if (mounted) Navigator.pop(context, 'disqualified');
+      Provider.of<SiswaProvider>(context, listen: false)
+          .submitQuiz(user.id, widget.quiz.id, _answers);
       return;
     }
 
@@ -762,7 +785,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               margin: const EdgeInsets.only(right: 12),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -815,7 +838,7 @@ class _CbtExamEngineScreenState extends State<CbtExamEngineScreen> with WidgetsB
                     final pil = soal.pilihan[idx];
                     final isSelected = _answers[soal.id] == pil.id;
                     return Card(
-                      color: isSelected ? AppTheme.primaryColor.withOpacity(0.15) : null,
+                      color: isSelected ? AppTheme.primaryColor.withValues(alpha: 0.15) : null,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                         side: isSelected
