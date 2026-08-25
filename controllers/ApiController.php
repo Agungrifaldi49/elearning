@@ -372,7 +372,15 @@ class ApiController {
                     FROM quiz q 
                     JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
                     JOIN guru g ON q.guru_id = g.id 
-                    LEFT JOIN hasil_quiz hq ON (hq.quiz_id = q.id AND hq.siswa_id = :sid)
+                    LEFT JOIN (
+                        SELECT h1.* FROM hasil_quiz h1
+                        INNER JOIN (
+                            SELECT quiz_id, siswa_id, MAX(id) as max_id 
+                            FROM hasil_quiz 
+                            WHERE siswa_id = :sid 
+                            GROUP BY quiz_id, siswa_id
+                        ) h2 ON h1.id = h2.max_id
+                    ) hq ON hq.quiz_id = q.id
                     WHERE q.kelas_id = :kid AND q.status = 'published'
                     ORDER BY q.created_at DESC
                 ");
@@ -472,7 +480,6 @@ class ApiController {
 
             case 'record_violation':
                 require_once ROOT_PATH . 'models/ExamModel.php';
-                require_once ROOT_PATH . 'models/CommunicationModel.php';
                 $examModel = new ExamModel();
                 $input = $this->getPostInput();
                 $quizId = intval($input['quiz_id'] ?? $_GET['quiz_id'] ?? 0);
@@ -481,25 +488,8 @@ class ApiController {
                     $this->jsonResponse(false, 'Quiz ID tidak valid', null, 400);
                 }
 
-                $resViolation = $examModel->recordPelanggaran($siswa['id'], $quizId);
-
-                if (!empty($resViolation['is_disqualified'])) {
-                    try {
-                        $commModel = new CommunicationModel();
-                        $uName = $siswa['nama_lengkap'] ?? 'Siswa';
-                        $commModel->sendNotificationToTeacherByQuiz(
-                            $quizId,
-                            '🚨 Diskualifikasi Ujian Online Mobile (CBT)',
-                            "Siswa {$uName} didiskualifikasi dari Ujian karena 2x melanggar aturan di aplikasi mobile (berpindah aplikasi / keluar fullscreen).",
-                            'index.php?url=guru/quiz'
-                        );
-                    } catch (\Throwable $eN) {}
-                }
-
-                $this->jsonResponse(true, 'Pelanggaran keamanan kuis berhasil dicatat', [
-                    'pelanggaran_count' => $resViolation['pelanggaran_count'],
-                    'is_disqualified' => $resViolation['is_disqualified']
-                ]);
+                $res = $examModel->recordViolation($quizId, $siswa['id']);
+                $this->jsonResponse(true, 'Pelanggaran dicatat', $res);
                 break;
 
             case 'request_susulan':
@@ -547,9 +537,12 @@ class ApiController {
                 $skorDapat = 0;
 
                 foreach ($allSoal as $soal) {
-                    $totalBobot += ($soal['bobot'] ?? 10);
+                    $bobot = floatval($soal['bobot'] ?? 10);
+                    if ($bobot <= 0) $bobot = 10;
+                    $totalBobot += $bobot;
+
                     $soalId = $soal['id'];
-                    $pilihanId = intval($answers[$soalId] ?? 0);
+                    $pilihanId = intval($answers[$soalId] ?? $answers[strval($soalId)] ?? 0);
 
                     // Check if answer correct
                     $isBenar = 0;
@@ -557,43 +550,79 @@ class ApiController {
                         $stmtCheck = $this->db->prepare("SELECT is_benar FROM pilihan_jawaban WHERE id = :pid LIMIT 1");
                         $stmtCheck->execute(['pid' => $pilihanId]);
                         $pj = $stmtCheck->fetch();
-                        if ($pj && $pj['is_benar'] == 1) {
+                        if ($pj && ($pj['is_benar'] == 1 || $pj['is_benar'] === '1' || $pj['is_benar'] === true)) {
                             $isBenar = 1;
-                            $skorDapat += ($soal['bobot'] ?? 10);
+                            $skorDapat += $bobot;
                         }
                     }
 
-                    // Save student answer
-                    $stmtJ = $this->db->prepare("
-                        INSERT INTO jawaban_siswa (siswa_id, quiz_id, soal_id, pilihan_id, is_benar, nilai) 
-                        VALUES (:sid, :qid, :soal_id, :pid, :ib, :nil)
-                        ON DUPLICATE KEY UPDATE pilihan_id = :pid, is_benar = :ib, nilai = :nil
-                    ");
-                    $stmtJ->execute([
-                        'sid' => $siswa['id'],
-                        'qid' => $quizId,
-                        'soal_id' => $soalId,
-                        'pid' => $pilihanId ?: null,
-                        'ib' => $isBenar,
-                        'nil' => $isBenar ? ($soal['bobot'] ?? 10) : 0
-                    ]);
+                    // Save or Update student answer
+                    $stmtCheckJ = $this->db->prepare("SELECT id FROM jawaban_siswa WHERE siswa_id = :sid AND quiz_id = :qid AND soal_id = :soal_id LIMIT 1");
+                    $stmtCheckJ->execute(['sid' => $siswa['id'], 'qid' => $quizId, 'soal_id' => $soalId]);
+                    $existingJ = $stmtCheckJ->fetch();
+
+                    if ($existingJ) {
+                        $stmtJ = $this->db->prepare("
+                            UPDATE jawaban_siswa 
+                            SET pilihan_id = :pid, is_benar = :ib, nilai = :nil 
+                            WHERE id = :jid
+                        ");
+                        $stmtJ->execute([
+                            'jid' => $existingJ['id'],
+                            'pid' => $pilihanId ?: null,
+                            'ib' => $isBenar,
+                            'nil' => $isBenar ? $bobot : 0
+                        ]);
+                    } else {
+                        $stmtJ = $this->db->prepare("
+                            INSERT INTO jawaban_siswa (siswa_id, quiz_id, soal_id, pilihan_id, is_benar, nilai) 
+                            VALUES (:sid, :qid, :soal_id, :pid, :ib, :nil)
+                        ");
+                        $stmtJ->execute([
+                            'sid' => $siswa['id'],
+                            'qid' => $quizId,
+                            'soal_id' => $soalId,
+                            'pid' => $pilihanId ?: null,
+                            'ib' => $isBenar,
+                            'nil' => $isBenar ? $bobot : 0
+                        ]);
+                    }
                 }
 
+                if ($totalBobot <= 0) {
+                    $totalBobot = count($allSoal) * 10;
+                }
                 $nilaiAkhir = ($totalBobot > 0) ? round(($skorDapat / $totalBobot) * 100, 2) : 0;
                 $statusLulus = ($nilaiAkhir >= 70) ? 'lulus' : 'tidak_lulus';
 
                 // Save or Update Hasil Quiz
-                $stmtH = $this->db->prepare("
-                    INSERT INTO hasil_quiz (siswa_id, quiz_id, total_nilai, status_lulus, finished_at) 
-                    VALUES (:sid, :qid, :tn, :sl, NOW())
-                    ON DUPLICATE KEY UPDATE total_nilai = :tn, status_lulus = :sl, finished_at = NOW()
-                ");
-                $stmtH->execute([
-                    'sid' => $siswa['id'],
-                    'qid' => $quizId,
-                    'tn' => $nilaiAkhir,
-                    'sl' => $statusLulus
-                ]);
+                $stmtCheckH = $this->db->prepare("SELECT id FROM hasil_quiz WHERE siswa_id = :sid AND quiz_id = :qid LIMIT 1");
+                $stmtCheckH->execute(['sid' => $siswa['id'], 'qid' => $quizId]);
+                $existingH = $stmtCheckH->fetch();
+
+                if ($existingH) {
+                    $stmtH = $this->db->prepare("
+                        UPDATE hasil_quiz 
+                        SET total_nilai = :tn, status_lulus = :sl, finished_at = NOW() 
+                        WHERE id = :hid
+                    ");
+                    $stmtH->execute([
+                        'hid' => $existingH['id'],
+                        'tn' => $nilaiAkhir,
+                        'sl' => $statusLulus
+                    ]);
+                } else {
+                    $stmtH = $this->db->prepare("
+                        INSERT INTO hasil_quiz (siswa_id, quiz_id, total_nilai, status_lulus, finished_at) 
+                        VALUES (:sid, :qid, :tn, :sl, NOW())
+                    ");
+                    $stmtH->execute([
+                        'sid' => $siswa['id'],
+                        'qid' => $quizId,
+                        'tn' => $nilaiAkhir,
+                        'sl' => $statusLulus
+                    ]);
+                }
 
                 $this->jsonResponse(true, 'Quiz berhasil dikirim!', [
                     'total_nilai' => $nilaiAkhir,

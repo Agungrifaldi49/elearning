@@ -435,128 +435,161 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
   }
 
   Widget _buildStatusBadge(QuizModel q) {
-    if (q.isSuspended) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.red.shade100,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.red.shade300),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.block, color: Colors.red, size: 12),
-            SizedBox(width: 4),
-            Text(
-              'DISUSPEND 🚫',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
-            ),
-          ],
-        ),
-      );
-    } else if (q.isCompleted) {
+    List<Widget> badges = [];
+
+    if (q.totalNilai != null || q.isCompleted) {
       final isLulus = q.statusLulus == 'lulus';
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: isLulus ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          'Nilai: ${q.totalNilai} (${q.statusLulus?.toUpperCase()})',
-          style: TextStyle(
-            color: isLulus ? Colors.green : Colors.red,
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: isLulus ? Colors.green.withValues(alpha: 0.15) : Colors.red.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
           ),
-        ),
-      );
-    } else {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.purple.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Text(
-          'Tersedia',
-          style: TextStyle(
-            color: Colors.purple,
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
+          child: Text(
+            'Nilai: ${q.totalNilai ?? "0.00"} (${(q.statusLulus ?? "tidak_lulus").toUpperCase()})',
+            style: TextStyle(
+              color: isLulus ? Colors.green : Colors.red,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
           ),
         ),
       );
     }
+
+    if (q.isSuspended) {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.red.shade100,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.red.shade300),
+          ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.block, color: Colors.red, size: 12),
+              SizedBox(width: 4),
+              Text(
+                'DISUSPEND 🚫',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (!q.isCompleted && q.totalNilai == null) {
+      badges.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.purple.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Text(
+            'Tersedia',
+            style: TextStyle(
+              color: Colors.purple,
+              fontWeight: FontWeight.bold,
+              fontSize: 11,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: badges,
+    );
   }
 
   Widget _buildActionButton(QuizModel q) {
+    List<Widget> buttons = [];
+
+    // Always allow viewing history if completed OR has score
+    if (q.isCompleted || q.totalNilai != null) {
+      buttons.add(
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SiswaQuizReviewScreen(quiz: q),
+              ),
+            );
+          },
+          icon: const Icon(Icons.analytics_rounded, size: 16),
+          label: const Text('Hasil & Pembahasan 📊'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+      );
+    }
+
     if (q.isSuspended) {
       if (q.susulanStatus == 'pending') {
-        return ElevatedButton.icon(
-          onPressed: () => _showRequestPermissionModal(q),
-          icon: const Icon(Icons.hourglass_top_rounded, size: 16),
-          label: const Text('Izin Terkirim ⏳ (Menunggu Guru)'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.amber.shade800,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        buttons.add(
+          ElevatedButton.icon(
+            onPressed: () => _showRequestPermissionModal(q),
+            icon: const Icon(Icons.hourglass_top_rounded, size: 16),
+            label: const Text('Izin Terkirim ⏳ (Menunggu Guru)'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber.shade800,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           ),
         );
       } else {
-        return ElevatedButton.icon(
-          onPressed: () => _showRequestPermissionModal(q),
-          icon: const Icon(Icons.mark_email_unread_rounded, size: 16),
-          label: const Text('Minta Izin Guru Pengampu 📩'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red.shade700,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        buttons.add(
+          ElevatedButton.icon(
+            onPressed: () => _showRequestPermissionModal(q),
+            icon: const Icon(Icons.mark_email_unread_rounded, size: 16),
+            label: const Text('Minta Izin Guru Pengampu 📩'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           ),
         );
       }
     } else if (q.isCompleted) {
-      return Wrap(
-        spacing: 8,
-        runSpacing: 6,
-        children: [
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SiswaQuizReviewScreen(quiz: q),
-                ),
-              );
-            },
-            icon: const Icon(Icons.analytics_rounded, size: 16),
-            label: const Text('Hasil & Pembahasan 📊'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
+      buttons.add(
+        ElevatedButton.icon(
+          onPressed: () => _confirmStartQuiz(q),
+          icon: const Icon(Icons.replay, size: 16),
+          label: const Text('Kerjakan Ulang'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.grey.shade700,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
-          ElevatedButton.icon(
-            onPressed: () => _confirmStartQuiz(q),
-            icon: const Icon(Icons.replay, size: 16),
-            label: const Text('Kerjakan Ulang'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.grey.shade700,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        ],
+        ),
       );
     } else {
-      return ElevatedButton.icon(
-        onPressed: () => _confirmStartQuiz(q),
-        icon: const Icon(Icons.play_arrow_rounded),
-        label: const Text('Mulai Ujian (Fullscreen)'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      buttons.add(
+        ElevatedButton.icon(
+          onPressed: () => _confirmStartQuiz(q),
+          icon: const Icon(Icons.play_arrow_rounded, size: 16),
+          label: const Text('Mulai Ujian (Fullscreen)'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryColor,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
         ),
       );
     }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      alignment: WrapAlignment.end,
+      children: buttons,
+    );
   }
 }
 
