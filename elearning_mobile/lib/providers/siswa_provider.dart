@@ -453,6 +453,7 @@ class SiswaProvider with ChangeNotifier {
         _chatContacts[index] = ChatContactModel(
           id: _chatContacts[index].id,
           fullName: _chatContacts[index].fullName,
+          avatar: _chatContacts[index].avatar,
           avatarUrl: _chatContacts[index].avatarUrl,
           roleName: _chatContacts[index].roleName,
           lastMessage: _chatContacts[index].lastMessage,
