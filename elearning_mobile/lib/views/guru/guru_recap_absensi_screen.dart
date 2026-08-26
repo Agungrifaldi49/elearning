@@ -94,6 +94,26 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
     return val < 10 ? '0$val' : '$val';
   }
 
+  List<Map<String, dynamic>> _getNormalizedMapelList() {
+    final Map<int, String> mapelMap = {};
+    for (var m in _mapelList) {
+      final mid = int.parse((m['id'] ?? m['mapel_id'] ?? 0).toString());
+      final mname = (m['nama_mapel'] ?? 'Mapel').toString();
+      if (mid > 0) mapelMap[mid] = mname;
+    }
+    return mapelMap.entries.map((e) => {'id': e.key, 'nama': e.value}).toList();
+  }
+
+  List<Map<String, dynamic>> _getNormalizedKelasList() {
+    final Map<int, String> kelasMap = {};
+    for (var k in _kelasList) {
+      final kid = int.parse((k['id'] ?? k['kelas_id'] ?? 0).toString());
+      final kname = (k['nama_kelas'] ?? 'Kelas').toString();
+      if (kid > 0) kelasMap[kid] = kname;
+    }
+    return kelasMap.entries.map((e) => {'id': e.key, 'nama': e.value}).toList();
+  }
+
   void _applySearchFilter() {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) {
@@ -120,10 +140,13 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
     final totalAlpa = _summary['total_alpa'] ?? 0;
     final avgPct = (_summary['avg_persentase'] ?? 0).toString();
 
-    final validMapelVal = (_selectedMapelId > 0 && _mapelList.any((m) => int.parse((m['id'] ?? 0).toString()) == _selectedMapelId))
+    final normalizedMapels = _getNormalizedMapelList();
+    final normalizedKelas = _getNormalizedKelasList();
+
+    final validMapelVal = (_selectedMapelId > 0 && normalizedMapels.any((m) => (m['id'] as int) == _selectedMapelId))
         ? _selectedMapelId
         : 0;
-    final validKelasVal = (_selectedKelasId > 0 && _kelasList.any((k) => int.parse((k['id'] ?? 0).toString()) == _selectedKelasId))
+    final validKelasVal = (_selectedKelasId > 0 && normalizedKelas.any((k) => (k['id'] as int) == _selectedKelasId))
         ? _selectedKelasId
         : 0;
 
@@ -177,7 +200,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                                 value: index + 1,
                                 child: Text(
                                   _monthNames[index],
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
                                 ),
                               );
                             }),
@@ -210,7 +233,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                             items: [2024, 2025, 2026, 2027].map((y) {
                               return DropdownMenuItem<int>(
                                 value: y,
-                                child: Text('$y', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                child: Text('$y', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87)),
                               );
                             }).toList(),
                             onChanged: (val) {
@@ -257,12 +280,11 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                                 value: 0,
                                 child: Text('Semua Mapel', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12)),
                               ),
-                              ..._mapelList.map((m) {
-                                final mid = int.parse((m['id'] ?? 0).toString());
+                              ...normalizedMapels.map((m) {
                                 return DropdownMenuItem<int>(
-                                  value: mid,
+                                  value: m['id'] as int,
                                   child: Text(
-                                    (m['nama_mapel'] ?? 'Mapel').toString(),
+                                    m['nama'] as String,
                                     style: const TextStyle(color: Colors.black87, fontSize: 12),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -271,7 +293,9 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                             ],
                             onChanged: (val) {
                               if (val != null) {
-                                setState(() => _selectedMapelId = val);
+                                setState(() {
+                                  _selectedMapelId = val;
+                                });
                                 _loadRecap();
                               }
                             },
@@ -308,12 +332,11 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                                 value: 0,
                                 child: Text('Semua Kelas', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12)),
                               ),
-                              ..._kelasList.map((k) {
-                                final kid = int.parse((k['id'] ?? 0).toString());
+                              ...normalizedKelas.map((k) {
                                 return DropdownMenuItem<int>(
-                                  value: kid,
+                                  value: k['id'] as int,
                                   child: Text(
-                                    (k['nama_kelas'] ?? 'Kelas').toString(),
+                                    k['nama'] as String,
                                     style: const TextStyle(color: Colors.black87, fontSize: 12),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -322,7 +345,9 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                             ],
                             onChanged: (val) {
                               if (val != null) {
-                                setState(() => _selectedKelasId = val);
+                                setState(() {
+                                  _selectedKelasId = val;
+                                });
                                 _loadRecap();
                               }
                             },

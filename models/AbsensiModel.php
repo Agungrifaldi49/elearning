@@ -996,19 +996,23 @@ class AbsensiModel extends BaseModel {
         $endDate = "$tahun-$bulan-" . sprintf('%02d', $numDays);
 
         $params = [];
-        $whereSql = " WHERE 1=1 ";
+        $whereConds = [];
+
+        if ($kelasId > 0) {
+            $whereConds[] = "s.kelas_id = ?";
+            $params[] = $kelasId;
+        }
 
         if ($mapelId > 0) {
-            $whereSql .= " AND sme.mapel_id = ? ";
+            $whereConds[] = "(sme.mapel_id = ? OR s.id IN (SELECT DISTINCT siswa_id FROM absensi WHERE tanggal >= ? AND tanggal <= ?))";
             $params[] = $mapelId;
-            if ($guruId > 0) {
-                $whereSql .= " AND (sme.guru_id = ? OR sme.guru_id IS NULL) ";
-                $params[] = $guruId;
-            }
+            $params[] = $startDate;
+            $params[] = $endDate;
         }
-        if ($kelasId > 0) {
-            $whereSql .= " AND s.kelas_id = ? ";
-            $params[] = $kelasId;
+
+        $whereSql = "";
+        if (!empty($whereConds)) {
+            $whereSql = " WHERE " . implode(" AND ", $whereConds);
         }
 
         $stmtS = $this->db->prepare("
@@ -1022,6 +1026,26 @@ class AbsensiModel extends BaseModel {
         ");
         $stmtS->execute($params);
         $siswaList = $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // Fallback: If mapel filter returns empty, show all students in class/school
+        if (empty($siswaList)) {
+            $fallbackParams = [];
+            $fallbackWhere = "";
+            if ($kelasId > 0) {
+                $fallbackWhere = " WHERE s.kelas_id = ? ";
+                $fallbackParams[] = $kelasId;
+            }
+            $stmtFB = $this->db->prepare("
+                SELECT DISTINCT s.id as siswa_id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas, j.nama_jurusan
+                FROM siswa s
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                LEFT JOIN jurusan j ON s.jurusan_id = j.id
+                {$fallbackWhere}
+                ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
+            ");
+            $stmtFB->execute($fallbackParams);
+            $siswaList = $stmtFB->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
 
         $stmtA = $this->db->prepare("
             SELECT siswa_id, tanggal, waktu_masuk, waktu_pulang, status
