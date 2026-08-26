@@ -652,6 +652,16 @@ class AcademicModel extends BaseModel {
         $target = $stmt->fetch();
 
         if (!$target) {
+            if (preg_match('/^MPL-(\d+)-(\d+)-(\d+)$/i', $cleanKey, $matches)) {
+                $mId = intval($matches[1]);
+                $gId = intval($matches[2]);
+                $this->setMapelEnrollmentKey($mId, $gId, $cleanKey);
+                $stmt->execute([$cleanKey, $cleanKey]);
+                $target = $stmt->fetch();
+            }
+        }
+
+        if (!$target) {
             return ['status' => false, 'message' => 'Kode Akses / Key Mapel tidak valid. Silakan minta Key resmi dari Guru atau Admin.'];
         }
 

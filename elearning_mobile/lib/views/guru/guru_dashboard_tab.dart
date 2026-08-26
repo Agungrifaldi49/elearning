@@ -9,13 +9,9 @@ import '../shared/kartu_digital_screen.dart';
 import '../shared/library_screen.dart';
 import '../shared/live_class_screen.dart';
 import '../shared/panduan_screen.dart';
-import 'guru_absensi_tab.dart';
 import 'guru_bank_soal_screen.dart';
 import 'guru_input_nilai_screen.dart';
-import 'guru_key_mapel_screen.dart';
-import 'guru_recap_absensi_screen.dart';
 import 'guru_scan_qr_screen.dart';
-import 'guru_siswa_enrolled_screen.dart';
 
 class GuruDashboardTab extends StatefulWidget {
   const GuruDashboardTab({super.key});
@@ -52,24 +48,6 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
     // Complete Features List for Guru
     final allFeatures = [
       _buildFeatureGridItem(
-        icon: Icons.how_to_reg_rounded,
-        label: 'Input Absensi',
-        color: Colors.teal,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab())),
-      ),
-      _buildFeatureGridItem(
-        icon: Icons.people_alt_rounded,
-        label: 'Siswa Terdaftar',
-        color: Colors.indigo.shade800,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruSiswaEnrolledScreen())),
-      ),
-      _buildFeatureGridItem(
-        icon: Icons.key_rounded,
-        label: 'Key Mapel',
-        color: Colors.amber.shade900,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruKeyMapelScreen())),
-      ),
-      _buildFeatureGridItem(
         icon: Icons.edit_note_rounded,
         label: 'Input Nilai',
         color: Colors.indigo,
@@ -98,12 +76,6 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
         label: 'Kartu Guru',
         color: Colors.blue.shade700,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
-      ),
-      _buildFeatureGridItem(
-        icon: Icons.assessment_rounded,
-        label: 'Rekap Absensi',
-        color: Colors.deepPurple,
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruRecapAbsensiScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.menu_book_rounded,
@@ -192,118 +164,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'Kelola Materi, Tugas, Quiz, & Absensi Siswa secara Praktis',
+                    'Kelola Materi, Tugas, Quiz, & Data Pembelajaran secara Praktis',
                     style: TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ],
               ),
             ),
-
-            if (!guruProvider.hasClockedInToday) ...[
-              const SizedBox(height: 12),
-              InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab())),
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.amber.shade700, Colors.orange.shade800],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.amber.shade900.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Colors.white24,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.access_time_filled_rounded, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '🔔 Belum Presensi Masuk Guru',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Ketuk untuk catat presensi kehadiran mengajar hari ini',
-                              style: TextStyle(color: Colors.white70, fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ] else if (guruProvider.hasClockedInToday && !guruProvider.hasClockedOutToday) ...[
-              const SizedBox(height: 12),
-              InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab())),
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.indigo.shade700, Colors.blue.shade900],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.indigo.shade900.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Colors.white24,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.home_work_rounded, color: Colors.white, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '🏠 Pengingat Presensi Pulang Guru',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Jam mengajar selesai (10-15m lagi). Catat presensi pulang!',
-                              style: TextStyle(color: Colors.white70, fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ],
 
             const SizedBox(height: 20),
 
