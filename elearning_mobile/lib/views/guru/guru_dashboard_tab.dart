@@ -13,6 +13,7 @@ import 'guru_bank_soal_screen.dart';
 import 'guru_input_absensi_screen.dart';
 import 'guru_input_nilai_screen.dart';
 import 'guru_key_mapel_screen.dart';
+import 'guru_recap_absensi_screen.dart';
 import 'guru_scan_qr_screen.dart';
 
 class GuruDashboardTab extends StatefulWidget {
@@ -66,6 +67,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
         label: 'Presensi Manual',
         color: Colors.green.shade700,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputAbsensiScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.bar_chart_rounded,
+        label: 'Rekap Presensi',
+        color: Colors.blue.shade800,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruRecapAbsensiScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.qr_code_scanner_rounded,

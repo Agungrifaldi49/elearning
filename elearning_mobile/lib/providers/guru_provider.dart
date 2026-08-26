@@ -564,4 +564,33 @@ class GuruProvider with ChangeNotifier {
     final res = await ApiService.post('guru/input_absensi', body);
     return res['success'] == true;
   }
+
+  Future<Map<String, dynamic>> fetchRecapAbsensiData(
+    int userId, {
+    String? bulan,
+    int? tahun,
+    int? mapelId,
+    int? kelasId,
+  }) async {
+    final params = <String, String>{
+      'user_id': userId.toString(),
+    };
+    if (bulan != null && bulan.isNotEmpty) params['bulan'] = bulan;
+    if (tahun != null && tahun > 0) params['tahun'] = tahun.toString();
+    if (mapelId != null && mapelId > 0) params['mapel_id'] = mapelId.toString();
+    if (kelasId != null && kelasId > 0) params['kelas_id'] = kelasId.toString();
+
+    final res = await ApiService.get('guru/recap_absensi', params: params);
+    if (res['success'] == true && res['data'] is Map) {
+      return Map<String, dynamic>.from(res['data']);
+    }
+    return {
+      'mapel_list': [],
+      'kelas_list': [],
+      'selected_mapel_id': 0,
+      'selected_kelas_id': 0,
+      'summary': {'total_hadir': 0, 'total_sakit': 0, 'total_izin': 0, 'total_alpa': 0, 'avg_persentase': 0},
+      'data': [],
+    };
+  }
 }

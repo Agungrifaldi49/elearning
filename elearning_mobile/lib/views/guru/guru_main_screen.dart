@@ -11,6 +11,7 @@ import 'guru_dashboard_tab.dart';
 import 'guru_input_absensi_screen.dart';
 import 'guru_input_nilai_screen.dart';
 import 'guru_key_mapel_screen.dart';
+import 'guru_recap_absensi_screen.dart';
 import 'guru_jadwal_tab.dart';
 import 'guru_materi_tab.dart';
 import 'guru_tugas_tab.dart';
@@ -173,6 +174,8 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen()));
               } else if (value == 'input_absensi') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputAbsensiScreen()));
+              } else if (value == 'recap_absensi') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruRecapAbsensiScreen()));
               } else if (value == 'absensi') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab()));
               } else if (value == 'library') {
@@ -187,7 +190,8 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
               const PopupMenuItem(value: 'key_mapel', child: Row(children: [Icon(Icons.vpn_key_rounded, size: 18, color: Colors.amber), SizedBox(width: 8), Text('Kode Key Mapel Virtual')])),
               const PopupMenuItem(value: 'input_nilai', child: Text('Input & Edit Nilai Siswa')),
               const PopupMenuItem(value: 'input_absensi', child: Row(children: [Icon(Icons.how_to_reg_rounded, size: 18, color: Colors.green), SizedBox(width: 8), Text('Input Presensi Manual')])),
-              const PopupMenuItem(value: 'absensi', child: Text('Rekap Presensi Kelas')),
+              const PopupMenuItem(value: 'recap_absensi', child: Row(children: [Icon(Icons.bar_chart_rounded, size: 18, color: Colors.blue), SizedBox(width: 8), Text('Rekap Presensi Bulanan')])),
+              const PopupMenuItem(value: 'absensi', child: Text('Jadwal & Absensi Kelas')),
               const PopupMenuItem(value: 'library', child: Text('Perpustakaan Digital')),
               const PopupMenuItem(value: 'game', child: Text('EduGame & Kuis Interaktif')),
               const PopupMenuDivider(),

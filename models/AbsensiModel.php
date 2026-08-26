@@ -983,4 +983,136 @@ class AbsensiModel extends BaseModel {
             return $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Guru']);
         }
     }
+
+    public function getMonthlyRecapForGuru($guruId, $bulan, $tahun, $mapelId = null, $kelasId = null) {
+        $guruId = (int)$guruId;
+        $bulan = sprintf('%02d', (int)$bulan);
+        $tahun = (int)$tahun;
+        $mapelId = (int)$mapelId;
+        $kelasId = (int)$kelasId;
+
+        $numDays = (int)date('t', strtotime("$tahun-$bulan-01"));
+        $startDate = "$tahun-$bulan-01";
+        $endDate = "$tahun-$bulan-" . sprintf('%02d', $numDays);
+
+        $params = [];
+        $whereSql = " WHERE 1=1 ";
+
+        if ($mapelId > 0) {
+            $whereSql .= " AND sme.mapel_id = ? ";
+            $params[] = $mapelId;
+            if ($guruId > 0) {
+                $whereSql .= " AND (sme.guru_id = ? OR sme.guru_id IS NULL) ";
+                $params[] = $guruId;
+            }
+        }
+        if ($kelasId > 0) {
+            $whereSql .= " AND s.kelas_id = ? ";
+            $params[] = $kelasId;
+        }
+
+        $stmtS = $this->db->prepare("
+            SELECT DISTINCT s.id as siswa_id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas, j.nama_jurusan
+            FROM siswa s
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            LEFT JOIN jurusan j ON s.jurusan_id = j.id
+            LEFT JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id
+            {$whereSql}
+            ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
+        ");
+        $stmtS->execute($params);
+        $siswaList = $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $stmtA = $this->db->prepare("
+            SELECT siswa_id, tanggal, waktu_masuk, waktu_pulang, status
+            FROM absensi
+            WHERE tanggal >= ? AND tanggal <= ?
+        ");
+        $stmtA->execute([$startDate, $endDate]);
+        $absensiRows = $stmtA->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $absMap = [];
+        foreach ($absensiRows as $row) {
+            $sId = $row['siswa_id'];
+            $dayNum = (int)date('j', strtotime($row['tanggal']));
+            if (!isset($absMap[$sId])) {
+                $absMap[$sId] = [];
+            }
+            $absMap[$sId][$dayNum] = $row;
+        }
+
+        $results = [];
+        $summaryHadir = 0;
+        $summarySakit = 0;
+        $summaryIzin = 0;
+        $summaryAlpa = 0;
+
+        foreach ($siswaList as $s) {
+            $sId = $s['siswa_id'];
+            $daily = [];
+            $hadir = 0;
+            $terlambat = 0;
+            $sakit = 0;
+            $izin = 0;
+            $alpa = 0;
+
+            for ($d = 1; $d <= $numDays; $d++) {
+                if (isset($absMap[$sId][$d])) {
+                    $rec = $absMap[$sId][$d];
+                    $st = strtolower($rec['status'] ?? 'hadir');
+                    if ($st === 'sakit') {
+                        $daily[$d] = 'S';
+                        $sakit++;
+                    } elseif ($st === 'izin') {
+                        $daily[$d] = 'I';
+                        $izin++;
+                    } elseif ($st === 'alpa' || $st === 'alpha') {
+                        $daily[$d] = 'A';
+                        $alpa++;
+                    } else {
+                        $daily[$d] = 'H';
+                        $hadir++;
+                    }
+                } else {
+                    $daily[$d] = '-';
+                }
+            }
+
+            $summaryHadir += $hadir;
+            $summarySakit += $sakit;
+            $summaryIzin += $izin;
+            $summaryAlpa += $alpa;
+
+            $totalRecorded = $hadir + $sakit + $izin + $alpa;
+            $percentage = ($totalRecorded > 0) ? round(($hadir / $totalRecorded) * 100, 1) : 0;
+
+            $results[] = array_merge($s, [
+                'daily' => $daily,
+                'total_hadir' => $hadir,
+                'total_terlambat' => $terlambat,
+                'total_sakit' => $sakit,
+                'total_izin' => $izin,
+                'total_alpa' => $alpa,
+                'persentase' => $percentage
+            ]);
+        }
+
+        $grandTotal = $summaryHadir + $summarySakit + $summaryIzin + $summaryAlpa;
+        $avgPercentage = ($grandTotal > 0) ? round(($summaryHadir / $grandTotal) * 100, 1) : 0;
+
+        return [
+            'num_days' => $numDays,
+            'bulan' => $bulan,
+            'tahun' => $tahun,
+            'total_students' => count($siswaList),
+            'summary' => [
+                'total_hadir' => $summaryHadir,
+                'total_sakit' => $summarySakit,
+                'total_izin' => $summaryIzin,
+                'total_alpa' => $summaryAlpa,
+                'avg_persentase' => $avgPercentage
+            ],
+            'data' => $results
+        ];
+    }
 }

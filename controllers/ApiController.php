@@ -1534,7 +1534,7 @@ class ApiController {
 
                 $monthlyRecapData = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId);
 
-                $stmtK = $this->db->query("SELECT id, nama_kelas, kode_kelas FROM kelas ORDER BY nama_kelas ASC");
+                $stmtK = $this->db->query("SELECT id, nama_kelas FROM kelas ORDER BY nama_kelas ASC");
                 $classList = $stmtK->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
                 $this->jsonResponse(true, 'Data Rekapitulasi Presensi Terdaftar', [
@@ -1681,6 +1681,33 @@ class ApiController {
                     'tanggal' => $tanggal,
                     'students' => $students
                 ]);
+                break;
+
+            case 'recap_absensi':
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                require_once ROOT_PATH . 'models/AbsensiModel.php';
+                $academicModel = new AcademicModel();
+                $absensiModel = new AbsensiModel();
+                $guruId = intval($guru['id'] ?? 0);
+
+                $bulan = sprintf('%02d', intval($_GET['bulan'] ?? date('m')));
+                $tahun = intval($_GET['tahun'] ?? date('Y'));
+                $mapelId = intval($_GET['mapel_id'] ?? 0);
+                $kelasId = intval($_GET['kelas_id'] ?? 0);
+
+                $myMapelList = $academicModel->getMapelByGuru($guruId);
+                $myKelasList = $academicModel->getKelasByGuru($guruId);
+
+                $recapData = $absensiModel->getMonthlyRecapForGuru($guruId, $bulan, $tahun, $mapelId, $kelasId);
+
+                $this->jsonResponse(true, 'Rekap Bulanan Presensi Siswa', array_merge([
+                    'mapel_list' => $myMapelList,
+                    'kelas_list' => $myKelasList,
+                    'selected_mapel_id' => $mapelId,
+                    'selected_kelas_id' => $kelasId,
+                    'bulan' => $bulan,
+                    'tahun' => $tahun,
+                ], $recapData));
                 break;
 
             case 'kartu':
