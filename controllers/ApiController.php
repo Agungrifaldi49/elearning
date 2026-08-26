@@ -1696,7 +1696,14 @@ class ApiController {
                 $kelasId = intval($_GET['kelas_id'] ?? 0);
 
                 $myMapelList = $academicModel->getMapelByGuru($guruId);
+                if (empty($myMapelList)) {
+                    $myMapelList = $academicModel->getMapel();
+                }
+
                 $myKelasList = $academicModel->getKelasByGuru($guruId);
+                if (empty($myKelasList)) {
+                    $myKelasList = $academicModel->getKelas();
+                }
 
                 $recapData = $absensiModel->getMonthlyRecapForGuru($guruId, $bulan, $tahun, $mapelId, $kelasId);
 

@@ -235,27 +235,37 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
                             value: validMapelVal,
                             isExpanded: true,
-                            dropdownColor: AppTheme.primaryColor,
-                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 18),
-                            style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                            dropdownColor: Colors.white,
+                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primaryColor, size: 18),
+                            style: const TextStyle(color: Colors.black87, fontSize: 11.5, fontWeight: FontWeight.bold),
                             items: [
                               const DropdownMenuItem<int>(
                                 value: 0,
-                                child: Text('Semua Mapel', style: TextStyle(color: Colors.black87)),
+                                child: Text('Semua Mapel', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12)),
                               ),
                               ..._mapelList.map((m) {
                                 final mid = int.parse((m['id'] ?? 0).toString());
                                 return DropdownMenuItem<int>(
                                   value: mid,
-                                  child: Text((m['nama_mapel'] ?? 'Mapel').toString(), style: const TextStyle(color: Colors.black87)),
+                                  child: Text(
+                                    (m['nama_mapel'] ?? 'Mapel').toString(),
+                                    style: const TextStyle(color: Colors.black87, fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 );
                               }),
                             ],
@@ -276,27 +286,37 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.15),
+                          color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
                             value: validKelasVal,
                             isExpanded: true,
-                            dropdownColor: AppTheme.primaryColor,
-                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white, size: 18),
-                            style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold),
+                            dropdownColor: Colors.white,
+                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primaryColor, size: 18),
+                            style: const TextStyle(color: Colors.black87, fontSize: 11.5, fontWeight: FontWeight.bold),
                             items: [
                               const DropdownMenuItem<int>(
                                 value: 0,
-                                child: Text('Semua Kelas', style: TextStyle(color: Colors.black87)),
+                                child: Text('Semua Kelas', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 12)),
                               ),
                               ..._kelasList.map((k) {
                                 final kid = int.parse((k['id'] ?? 0).toString());
                                 return DropdownMenuItem<int>(
                                   value: kid,
-                                  child: Text((k['nama_kelas'] ?? 'Kelas').toString(), style: const TextStyle(color: Colors.black87)),
+                                  child: Text(
+                                    (k['nama_kelas'] ?? 'Kelas').toString(),
+                                    style: const TextStyle(color: Colors.black87, fontSize: 12),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 );
                               }),
                             ],
