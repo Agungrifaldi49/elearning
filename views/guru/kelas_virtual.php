@@ -439,7 +439,10 @@
                         <label class="form-label small fw-bold text-dark">Pilih Mata Pelajaran Pengampuan <span class="text-danger">*</span></label>
                         <select name="mapel_id" class="form-select rounded-3" required>
                             <option value="">-- Pilih Mata Pelajaran --</option>
-                            <?php foreach ($mapelList as $m): ?>
+                            <?php 
+                            $listM = !empty($myMapelList) ? $myMapelList : $mapelList;
+                            foreach ($listM as $m): 
+                            ?>
                                 <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nama_mapel']) ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -449,7 +452,10 @@
                         <label class="form-label small fw-bold text-dark">Pilih Rombel Kelas (Opsional)</label>
                         <select name="kelas_id" class="form-select rounded-3">
                             <option value="">-- Semua Kelas Pengampuan --</option>
-                            <?php foreach ($kelasList as $k): ?>
+                            <?php 
+                            $listK = !empty($myKelasList) ? $myKelasList : $kelasList;
+                            foreach ($listK as $k): 
+                            ?>
                                 <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
                             <?php endforeach; ?>
                         </select>

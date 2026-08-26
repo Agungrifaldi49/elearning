@@ -1587,8 +1587,14 @@ class ApiController {
 
                 $guruId = intval($guru['id'] ?? 0);
                 $myKeys = $academicModel->getMapelEnrollmentKeys($guruId);
-                $mapelList = $academicModel->getMapel();
-                $classList = $academicModel->getKelas();
+                $mapelList = $academicModel->getMapelByGuru($guruId);
+                if (empty($mapelList)) {
+                    $mapelList = $academicModel->getMapel();
+                }
+                $classList = $academicModel->getKelasByGuru($guruId);
+                if (empty($classList)) {
+                    $classList = $academicModel->getKelas();
+                }
 
                 $this->jsonResponse(true, 'Data Key Mapel Guru', [
                     'keys' => $myKeys,

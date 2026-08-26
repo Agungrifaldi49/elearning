@@ -573,14 +573,16 @@ class AcademicModel extends BaseModel {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
 
-            // Seed default keys for any existing (mapel_id, guru_id) pairs
+            // Seed default keys ONLY for assigned (mapel_id, guru_id) pairs
             $pairs = $this->db->query("
                 SELECT DISTINCT mapel_id, guru_id, kelas_id FROM (
                     SELECT mapel_id, guru_id, kelas_id FROM jadwal WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
                     UNION
                     SELECT mapel_id, guru_id, kelas_id FROM materi WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
                     UNION
-                    SELECT mp.id as mapel_id, g.id as guru_id, NULL as kelas_id FROM mata_pelajaran mp CROSS JOIN guru g
+                    SELECT mapel_id, guru_id, kelas_id FROM tugas WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
+                    UNION
+                    SELECT mapel_id, guru_id, kelas_id FROM quiz WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
                 ) t
             ")->fetchAll();
 
