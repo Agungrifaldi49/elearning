@@ -1716,6 +1716,21 @@ class ApiController {
                     }
                 }
 
+                // Ensure default key mapel entries exist for this teacher
+                if ($guruId > 0) {
+                    $mapelAll = $this->db->query("SELECT id FROM mata_pelajaran")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    foreach ($mapelAll as $m) {
+                        $mId = (int)$m['id'];
+                        $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ?");
+                        $chk->execute([$mId, $guruId]);
+                        if (!$chk->fetch()) {
+                            $genKey = 'MPL-' . $mId . '-' . $guruId . '-' . rand(100, 999);
+                            $insKey = $this->db->prepare("INSERT INTO mapel_enrollment_keys (mapel_id, guru_id, kelas_id, enrollment_key, passcode) VALUES (?, ?, ?, ?, ?)");
+                            $insKey->execute([$mId, $guruId, null, $genKey, $genKey]);
+                        }
+                    }
+                }
+
                 $keys = $academicModel->getMapelEnrollmentKeys($guruId);
 
                 $stmtMapel = $this->db->query("SELECT id as mapel_id, nama_mapel, kode_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC");
@@ -1745,46 +1760,22 @@ class ApiController {
                 $teacherKeys = $academicModel->getMapelEnrollmentKeys($guruId);
 
                 // Strictly fetch students who ENROLLED via Key Mapel (siswa_mapel_enrollment)
-                $sqlEnrolled = "
-                    SELECT sme.id as enrollment_id, sme.siswa_id, sme.mapel_id, sme.guru_id, sme.enrolled_at,
-                           s.nama_lengkap, s.nis, s.nisn, s.kelas_id,
-                           COALESCE(k.nama_kelas, 'Tanpa Kelas') as nama_kelas,
-                           COALESCE(mp.nama_mapel, 'Mata Pelajaran') as nama_mapel,
-                           COALESCE(mp.kode_mapel, '') as kode_mapel,
-                           COALESCE(mek.enrollment_key, '-') as key_mapel
-                    FROM siswa_mapel_enrollment sme
-                    JOIN siswa s ON sme.siswa_id = s.id
-                    LEFT JOIN kelas k ON s.kelas_id = k.id
-                    LEFT JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
-                    LEFT JOIN mapel_enrollment_keys mek ON (sme.mapel_id = mek.mapel_id AND sme.guru_id = mek.guru_id)
-                    WHERE (sme.guru_id = :gid OR :gid_b = 0)
-                ";
-                $paramsEn = [
-                    'gid' => $guruId,
-                    'gid_b' => $guruId
-                ];
+                $enrolledStudents = $academicModel->getEnrolledStudentsForGuru(
+                    $guruId,
+                    $mapelId > 0 ? $mapelId : null,
+                    $kelasId > 0 ? $kelasId : null,
+                    null,
+                    $search !== '' ? $search : null
+                ) ?: [];
 
-                if ($mapelId > 0) {
-                    $sqlEnrolled .= " AND sme.mapel_id = :mid";
-                    $paramsEn['mid'] = $mapelId;
+                // Format fields for mobile JSON response
+                foreach ($enrolledStudents as &$es) {
+                    $es['id'] = intval($es['id'] ?? $es['siswa_id'] ?? 0);
+                    $es['siswa_id'] = intval($es['id'] ?? $es['siswa_id'] ?? 0);
+                    if (empty($es['key_mapel'])) {
+                        $es['key_mapel'] = $es['enrollment_key'] ?? $es['passcode'] ?? '-';
+                    }
                 }
-                if ($kelasId > 0) {
-                    $sqlEnrolled .= " AND s.kelas_id = :kid";
-                    $paramsEn['kid'] = $kelasId;
-                }
-                if ($search !== '') {
-                    $sqlEnrolled .= " AND (s.nama_lengkap LIKE :s1 OR s.nis LIKE :s2 OR s.nisn LIKE :s3 OR mp.nama_mapel LIKE :s4 OR k.nama_kelas LIKE :s5)";
-                    $paramsEn['s1'] = "%$search%";
-                    $paramsEn['s2'] = "%$search%";
-                    $paramsEn['s3'] = "%$search%";
-                    $paramsEn['s4'] = "%$search%";
-                    $paramsEn['s5'] = "%$search%";
-                }
-
-                $sqlEnrolled .= " ORDER BY mp.nama_mapel ASC, k.nama_kelas ASC, s.nama_lengkap ASC";
-                $stmtEn = $this->db->prepare($sqlEnrolled);
-                $stmtEn->execute($paramsEn);
-                $enrolledStudents = $stmtEn->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
                 $stmtK = $this->db->query("SELECT id, nama_kelas, kode_kelas FROM kelas ORDER BY nama_kelas ASC");
                 $classList = $stmtK->fetchAll(PDO::FETCH_ASSOC) ?: [];
