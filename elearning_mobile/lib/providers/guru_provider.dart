@@ -475,4 +475,35 @@ class GuruProvider with ChangeNotifier {
     _seenForumIds.add(forumId);
     notifyListeners();
   }
+
+  Future<Map<String, dynamic>> fetchEnrolledStudents(
+    int userId, {
+    int? mapelId,
+    int? kelasId,
+    String? search,
+  }) async {
+    final params = <String, String>{
+      'user_id': userId.toString(),
+    };
+    if (mapelId != null && mapelId > 0) {
+      params['mapel_id'] = mapelId.toString();
+    }
+    if (kelasId != null && kelasId > 0) {
+      params['kelas_id'] = kelasId.toString();
+    }
+    if (search != null && search.isNotEmpty) {
+      params['search'] = search;
+    }
+
+    final res = await ApiService.get('guru/siswa_enrolled', params: params);
+    if (res['success'] == true && res['data'] is Map) {
+      return Map<String, dynamic>.from(res['data']);
+    }
+    return {
+      'total_enrolled': 0,
+      'keys': [],
+      'classes': [],
+      'students': [],
+    };
+  }
 }

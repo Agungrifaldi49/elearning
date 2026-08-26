@@ -15,6 +15,7 @@ import 'guru_input_nilai_screen.dart';
 import 'guru_key_mapel_screen.dart';
 import 'guru_recap_absensi_screen.dart';
 import 'guru_scan_qr_screen.dart';
+import 'guru_siswa_enrolled_screen.dart';
 
 class GuruDashboardTab extends StatefulWidget {
   const GuruDashboardTab({super.key});
@@ -29,7 +30,9 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadData();
+    });
   }
 
   void _loadData() {
@@ -41,10 +44,10 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
 
   @override
   Widget build(BuildContext context) {
-    final guruProvider = Provider.of<GuruProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final stats = guruProvider.dashboardData?['stats'] ?? {'materi': 0, 'tugas': 0, 'quiz': 0};
-    final jadwalToday = guruProvider.dashboardData?['jadwal_hari_ini'] as List? ?? [];
+    final guruProvider = Provider.of<GuruProvider>(context);
+    final stats = (guruProvider.dashboardData?['stats'] as Map?) ?? {'materi': 0, 'tugas': 0, 'quiz': 0};
+    final jadwalToday = (guruProvider.dashboardData?['jadwal_hari_ini'] as List?) ?? [];
 
     // Complete Features List for Guru
     final allFeatures = [
@@ -53,6 +56,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
         label: 'Input Absensi',
         color: Colors.teal,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.people_alt_rounded,
+        label: 'Siswa Terdaftar',
+        color: Colors.indigo.shade800,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruSiswaEnrolledScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.key_rounded,
