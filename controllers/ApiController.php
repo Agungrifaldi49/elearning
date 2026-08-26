@@ -1732,6 +1732,9 @@ class ApiController {
                 }
 
                 $keys = $academicModel->getMapelEnrollmentKeys($guruId);
+                if (empty($keys)) {
+                    $keys = $academicModel->getMapelEnrollmentKeys(null);
+                }
 
                 $stmtMapel = $this->db->query("SELECT id as mapel_id, nama_mapel, kode_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC");
                 $mapelList = $stmtMapel->fetchAll(PDO::FETCH_ASSOC) ?: [];
