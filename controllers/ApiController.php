@@ -863,6 +863,25 @@ class ApiController {
                 $this->jsonResponse(true, 'Presensi berhasil dicatat!');
                 break;
 
+            case 'join_mapel':
+            case 'enroll_mapel':
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                $academicModel = new AcademicModel();
+                $input = $this->getPostInput();
+                $keyInput = trim($input['key_mapel'] ?? $input['enrollment_key'] ?? $_POST['key_mapel'] ?? $_POST['enrollment_key'] ?? '');
+
+                if (empty($keyInput)) {
+                    $this->jsonResponse(false, 'Kode Key Mapel wajib diisi!', null, 400);
+                }
+
+                $res = $academicModel->enrollSiswaByMapelKey($siswa['id'], $keyInput);
+                if ($res['status'] === true) {
+                    $this->jsonResponse(true, $res['message'], $res['enrollment'] ?? null);
+                } else {
+                    $this->jsonResponse(false, $res['message'], null, 400);
+                }
+                break;
+
             case 'nilai':
                 $stmtN = $this->db->prepare("
                     SELECT n.*, mp.nama_mapel, mp.kode_mapel 
@@ -1716,25 +1735,7 @@ class ApiController {
                     }
                 }
 
-                // Ensure default key mapel entries exist for this teacher
-                if ($guruId > 0) {
-                    $mapelAll = $this->db->query("SELECT id FROM mata_pelajaran")->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                    foreach ($mapelAll as $m) {
-                        $mId = (int)$m['id'];
-                        $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ?");
-                        $chk->execute([$mId, $guruId]);
-                        if (!$chk->fetch()) {
-                            $genKey = 'MPL-' . $mId . '-' . $guruId . '-' . rand(100, 999);
-                            $insKey = $this->db->prepare("INSERT INTO mapel_enrollment_keys (mapel_id, guru_id, kelas_id, enrollment_key, passcode) VALUES (?, ?, ?, ?, ?)");
-                            $insKey->execute([$mId, $guruId, null, $genKey, $genKey]);
-                        }
-                    }
-                }
-
                 $keys = $academicModel->getMapelEnrollmentKeys($guruId);
-                if (empty($keys)) {
-                    $keys = $academicModel->getMapelEnrollmentKeys(null);
-                }
 
                 $stmtMapel = $this->db->query("SELECT id as mapel_id, nama_mapel, kode_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC");
                 $mapelList = $stmtMapel->fetchAll(PDO::FETCH_ASSOC) ?: [];
