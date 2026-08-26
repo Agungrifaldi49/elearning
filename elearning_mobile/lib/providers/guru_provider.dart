@@ -258,20 +258,20 @@ class GuruProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> fetchRecapAbsensiData(
     int userId, {
-    int kelasId = 0,
-    int mapelId = 0,
+    int? kelasId,
+    int? mapelId,
     String? bulan,
-    String? tahun,
+    dynamic tahun,
     String? tanggal,
     String? search,
   }) async {
     final Map<String, String> params = {
       'user_id': userId.toString(),
     };
-    if (kelasId > 0) params['kelas_id'] = kelasId.toString();
-    if (mapelId > 0) params['mapel_id'] = mapelId.toString();
+    if (kelasId != null && kelasId > 0) params['kelas_id'] = kelasId.toString();
+    if (mapelId != null && mapelId > 0) params['mapel_id'] = mapelId.toString();
     if (bulan != null && bulan.isNotEmpty) params['bulan'] = bulan;
-    if (tahun != null && tahun.isNotEmpty) params['tahun'] = tahun;
+    if (tahun != null && tahun.toString().isNotEmpty) params['tahun'] = tahun.toString();
     if (tanggal != null && tanggal.isNotEmpty) params['tanggal'] = tanggal;
     if (search != null && search.isNotEmpty) params['search'] = search;
 
@@ -563,34 +563,5 @@ class GuruProvider with ChangeNotifier {
 
     final res = await ApiService.post('guru/input_absensi', body);
     return res['success'] == true;
-  }
-
-  Future<Map<String, dynamic>> fetchRecapAbsensiData(
-    int userId, {
-    String? bulan,
-    int? tahun,
-    int? mapelId,
-    int? kelasId,
-  }) async {
-    final params = <String, String>{
-      'user_id': userId.toString(),
-    };
-    if (bulan != null && bulan.isNotEmpty) params['bulan'] = bulan;
-    if (tahun != null && tahun > 0) params['tahun'] = tahun.toString();
-    if (mapelId != null && mapelId > 0) params['mapel_id'] = mapelId.toString();
-    if (kelasId != null && kelasId > 0) params['kelas_id'] = kelasId.toString();
-
-    final res = await ApiService.get('guru/recap_absensi', params: params);
-    if (res['success'] == true && res['data'] is Map) {
-      return Map<String, dynamic>.from(res['data']);
-    }
-    return {
-      'mapel_list': [],
-      'kelas_list': [],
-      'selected_mapel_id': 0,
-      'selected_kelas_id': 0,
-      'summary': {'total_hadir': 0, 'total_sakit': 0, 'total_izin': 0, 'total_alpa': 0, 'avg_persentase': 0},
-      'data': [],
-    };
   }
 }
