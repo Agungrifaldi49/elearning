@@ -133,13 +133,13 @@ class AcademicModel extends BaseModel {
             FROM mata_pelajaran m
             LEFT JOIN jurusan j ON m.jurusan_id = j.id
             WHERE m.id IN (
-                SELECT mapel_id FROM mapel_enrollment_keys WHERE guru_id = {$gId}
+                SELECT mapel_id FROM jadwal WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
                 UNION
-                SELECT mapel_id FROM jadwal WHERE guru_id = {$gId}
+                SELECT mapel_id FROM materi WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
                 UNION
-                SELECT mapel_id FROM materi WHERE guru_id = {$gId}
+                SELECT mapel_id FROM tugas WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
                 UNION
-                SELECT mapel_id FROM tugas WHERE guru_id = {$gId}
+                SELECT mapel_id FROM quiz WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
             )
             ORDER BY m.nama_mapel ASC
         ";
@@ -599,6 +599,22 @@ class AcademicModel extends BaseModel {
                     $ins->execute([$mId, $gId, $kId, $key, $key]);
                 }
             }
+
+            // Purge any unassigned keys in database
+            $this->db->exec("
+                DELETE FROM mapel_enrollment_keys 
+                WHERE (mapel_id, guru_id) NOT IN (
+                    SELECT mapel_id, guru_id FROM (
+                        SELECT mapel_id, guru_id FROM jadwal WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
+                        UNION
+                        SELECT mapel_id, guru_id FROM materi WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
+                        UNION
+                        SELECT mapel_id, guru_id FROM tugas WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
+                        UNION
+                        SELECT mapel_id, guru_id FROM quiz WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
+                    ) t
+                )
+            ");
         } catch (Exception $e) {}
     }
 
@@ -614,7 +630,27 @@ class AcademicModel extends BaseModel {
             WHERE 1=1
         ";
         if ($guru_id) {
-            $sql .= " AND mek.guru_id = " . (int)$guru_id;
+            $gId = (int)$guru_id;
+            $sql .= " AND mek.guru_id = {$gId}";
+            $sql .= " AND mek.mapel_id IN (
+                SELECT mapel_id FROM jadwal WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
+                UNION
+                SELECT mapel_id FROM materi WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
+                UNION
+                SELECT mapel_id FROM tugas WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
+                UNION
+                SELECT mapel_id FROM quiz WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
+            )";
+        } else {
+            $sql .= " AND (mek.mapel_id, mek.guru_id) IN (
+                SELECT mapel_id, guru_id FROM jadwal WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
+                UNION
+                SELECT mapel_id, guru_id FROM materi WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
+                UNION
+                SELECT mapel_id, guru_id FROM tugas WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
+                UNION
+                SELECT mapel_id, guru_id FROM quiz WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
+            )";
         }
         $sql .= " ORDER BY m.nama_mapel ASC, g.nama_lengkap ASC";
         return $this->db->query($sql)->fetchAll();
