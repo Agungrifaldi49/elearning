@@ -13,6 +13,7 @@ class GuruAbsensiTab extends StatefulWidget {
 
 class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
   List<dynamic> _jadwalList = [];
+  List<dynamic> _mapelList = [];
   List<dynamic> _classes = [];
   List<dynamic> _allStudents = [];
   List<dynamic> _filteredStudents = [];
@@ -22,8 +23,9 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
   final Map<int, TextEditingController> _ketControllers = {};
 
   int _selectedJadwalId = 0;
-  int _selectedClassId = 0; // 0 = Semua Kelas
-  String _selectedClassName = 'Semua Kelas';
+  int _selectedMapelId = 0; // 0 = Semua Mapel Terdaftar
+  int _selectedClassId = 0; // 0 = Semua Rombel
+  String _selectedClassName = 'Semua Rombel';
   String _selectedTanggal = DateTime.now().toString().split(' ')[0];
   
   bool _isLoading = true;
@@ -55,6 +57,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
       user.id,
       jadwalId: _selectedJadwalId,
       kelasId: _selectedClassId,
+      mapelId: _selectedMapelId,
       tanggal: _selectedTanggal,
     );
 
@@ -68,6 +71,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
           _selectedTanggal = data['tanggal'] as String;
         }
 
+        _mapelList = data['mapel_list'] as List? ?? [];
         _classes = data['classes'] as List? ?? [];
         _allStudents = data['students'] as List? ?? [];
         
@@ -271,7 +275,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
       ),
       body: Column(
         children: [
-          // Header Hero Card with Schedule & Date Selection
+          // Header Hero Card with Mapel, Schedule & Date Selection
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -290,7 +294,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                   children: [
                     const Expanded(
                       child: Text(
-                        '📋 Presensi Siswa KBM & QR Scan',
+                        '📋 Presensi Siswa Key Mapel & KBM',
                         style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -319,10 +323,54 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Data presensi terhubung langsung dengan Database & Hasil Scan QR Code',
+                  'Otomatis menampilkan siswa yang telah memasukkan Key Mapel / terdaftar pada mata pelajaran Anda',
                   style: TextStyle(color: Colors.white70, fontSize: 11),
                 ),
                 const SizedBox(height: 12),
+
+                // Mapel Dropdown Filter (Key Mapel Enrolled)
+                if (_mapelList.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white30),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: _selectedMapelId,
+                        dropdownColor: AppTheme.primaryColor,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white),
+                        isExpanded: true,
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                        items: [
+                          const DropdownMenuItem<int>(
+                            value: 0,
+                            child: Text('📚 Semua Mapel Terdaftar (Key Mapel)'),
+                          ),
+                          ..._mapelList.map((m) {
+                            final mid = int.parse((m['mapel_id'] ?? m['id'] ?? 0).toString());
+                            final mname = (m['nama_mapel'] ?? 'Mapel').toString();
+                            return DropdownMenuItem<int>(
+                              value: mid,
+                              child: Text('📘 Mapel: $mname'),
+                            );
+                          }),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() {
+                              _selectedMapelId = val;
+                            });
+                            _loadAbsensiData();
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
 
                 // Jadwal Mengajar Dropdown Filter
                 if (_jadwalList.isNotEmpty) ...[
@@ -505,9 +553,13 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                           children: [
                             Icon(Icons.how_to_reg_rounded, size: 54, color: Colors.grey.shade400),
                             const SizedBox(height: 12),
-                            Text(
-                              'Belum ada siswa terdaftar di jadwal/kelas $_selectedClassName.',
-                              style: TextStyle(color: Colors.grey.shade600),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: Text(
+                                'Belum ada siswa yang memasukkan Key Mapel / terdaftar di mata pelajaran Anda ($_selectedClassName).',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                              ),
                             ),
                           ],
                         ),
@@ -551,7 +603,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
-                                        '${studentsInClass.length} Siswa',
+                                        '${studentsInClass.length} Siswa Terdaftar',
                                         style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                                       ),
                                     ),
@@ -564,6 +616,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                                 final sid = int.parse((s['siswa_id'] ?? s['id'] ?? 0).toString());
                                 final name = (s['nama_lengkap'] ?? 'Siswa').toString();
                                 final nis = (s['nis'] ?? s['nisn'] ?? '-').toString();
+                                final enrolledMapel = (s['nama_mapel_enrolled'] ?? '').toString();
                                 final qrCode = (s['qr_code'] ?? '').toString();
                                 final waktuHadir = (s['waktu_hadir'] ?? s['waktu_masuk'] ?? '').toString();
                                 final isQrScan = qrCode.isNotEmpty;
@@ -628,6 +681,13 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                                                     'NIS: $nis • Rombel $className',
                                                     style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                                                   ),
+                                                  if (enrolledMapel.isNotEmpty) ...[
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      '📘 Mapel: $enrolledMapel',
+                                                      style: TextStyle(fontSize: 10, color: Colors.blue.shade700, fontWeight: FontWeight.w600),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
                                             ),
