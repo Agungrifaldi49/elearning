@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
+import '../../theme/app_theme.dart';
 
 class GuruSiswaEnrolledScreen extends StatefulWidget {
   final int? initialMapelId;
@@ -13,7 +14,6 @@ class GuruSiswaEnrolledScreen extends StatefulWidget {
 
 class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
   bool _isLoading = true;
-  int _groupMode = 0; // 0 = Per Mapel, 1 = Per Kelas
 
   List<dynamic> _keys = [];
   List<dynamic> _classes = [];
@@ -21,9 +21,7 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
   List<dynamic> _filteredStudents = [];
 
   int _selectedMapelId = 0; // 0 = Semua Mapel
-  int _selectedClassId = 0; // 0 = Semua Kelas
-  String _selectedClassName = 'Semua Kelas';
-
+  int _selectedClassId = 0; // 0 = Semua Rombel
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -89,13 +87,11 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
         final nis = (s['nis'] ?? s['nisn'] ?? '').toString().toLowerCase();
         final mapel = (s['nama_mapel'] ?? '').toString().toLowerCase();
         final kelas = (s['nama_kelas'] ?? '').toString().toLowerCase();
-        final keyMapel = (s['key_mapel'] ?? '').toString().toLowerCase();
 
         return name.contains(query) ||
             nis.contains(query) ||
             mapel.contains(query) ||
-            kelas.contains(query) ||
-            keyMapel.contains(query);
+            kelas.contains(query);
       }).toList();
     }
 
@@ -104,26 +100,6 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
     });
   }
 
-  // Group Students by Mapel or Class based on _groupMode
-  Map<String, List<dynamic>> _groupStudents() {
-    final Map<String, List<dynamic>> grouped = {};
-    for (var s in _filteredStudents) {
-      String groupKey = 'Tanpa Kelompok';
-      if (_groupMode == 0) {
-        groupKey = (s['nama_mapel'] ?? 'Mata Pelajaran').toString();
-      } else {
-        groupKey = (s['nama_kelas'] ?? 'Tanpa Kelas').toString();
-      }
-
-      if (!grouped.containsKey(groupKey)) {
-        grouped[groupKey] = [];
-      }
-      grouped[groupKey]!.add(s);
-    }
-    return grouped;
-  }
-
-  // Extract unique Mapels from _keys and _allStudents
   List<Map<String, dynamic>> _getUniqueMapels() {
     final Map<int, String> mapelMap = {};
     for (var k in _keys) {
@@ -141,271 +117,228 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final groupedData = _groupStudents();
     final uniqueMapels = _getUniqueMapels();
     final totalSiswa = _filteredStudents.length;
+    final isFiltered = _selectedMapelId > 0 || _selectedClassId > 0 || _searchController.text.isNotEmpty;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Siswa Terdaftar Mapel'),
-        backgroundColor: Colors.indigo.shade800,
+        title: const Text('Siswa Terdaftar Mapel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+        backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Muat Ulang Data',
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Muat Ulang',
             onPressed: _loadEnrolledStudents,
           ),
         ],
       ),
       body: Column(
         children: [
-          // Hero Container Header
+          // Header Card with Gradient & Integrated Search Box
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.indigo.shade800, Colors.indigo.shade600],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
+              color: AppTheme.primaryColor,
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '🎓 Data Siswa Terdaftar (Key Mapel)',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Daftar siswa yang telah memasukkan Kode Key Mapel pada pengampuan Anda',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
-                ),
-                const SizedBox(height: 12),
-
-                // Statistics Pills Row
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildStatBadge('👥 Total Siswa', '$totalSiswa Siswa', Colors.indigo.shade100, Colors.indigo.shade900),
-                    const SizedBox(width: 8),
-                    _buildStatBadge('📚 Total Mapel', '${uniqueMapels.length} Mapel', Colors.amber.shade100, Colors.amber.shade900),
-                    const SizedBox(width: 8),
-                    _buildStatBadge('🏫 Total Rombel', '${_classes.length} Kelas', Colors.teal.shade100, Colors.teal.shade900),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Search Bar
-                TextField(
-                  controller: _searchController,
-                  onChanged: (_) => _applyFilters(),
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: 'Cari Nama Siswa, NIS, Mapel, atau Kode Key...',
-                    hintStyle: const TextStyle(color: Colors.white60),
-                    prefixIcon: const Icon(Icons.search, color: Colors.white60),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.18),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
+                    Text(
+                      'Total Siswa Terdaftar',
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13, fontWeight: FontWeight.w500),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Grouping Toggle Segmented Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            color: Colors.white,
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => setState(() => _groupMode = 0),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 7),
-                          decoration: BoxDecoration(
-                            color: _groupMode == 0 ? Colors.indigo.shade700 : Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '📘 Kelompok Per Mapel',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: _groupMode == 0 ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => setState(() => _groupMode = 1),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 7),
-                          decoration: BoxDecoration(
-                            color: _groupMode == 1 ? Colors.indigo.shade700 : Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '🏫 Kelompok Per Kelas',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: _groupMode == 1 ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                        ),
+                      child: Text(
+                        '$totalSiswa Siswa',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
-
-                // Mapel Selection Chips Row
-                if (uniqueMapels.isNotEmpty) ...[
-                  SizedBox(
-                    height: 34,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: const Text('Semua Mapel'),
-                            selected: _selectedMapelId == 0,
-                            selectedColor: Colors.indigo.shade700,
-                            labelStyle: TextStyle(
-                              color: _selectedMapelId == 0 ? Colors.white : Colors.black87,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() {
-                                  _selectedMapelId = 0;
-                                  _applyFilters();
-                                });
-                              }
-                            },
-                          ),
-                        ),
-                        ...uniqueMapels.map((m) {
-                          final mid = m['id'] as int;
-                          final mname = m['nama'] as String;
-                          final isSelected = _selectedMapelId == mid;
-
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: ChoiceChip(
-                              label: Text(mname),
-                              selected: isSelected,
-                              selectedColor: Colors.indigo.shade700,
-                              labelStyle: TextStyle(
-                                color: isSelected ? Colors.white : Colors.black87,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
-                              onSelected: (selected) {
-                                if (selected) {
-                                  setState(() {
-                                    _selectedMapelId = mid;
-                                    _applyFilters();
-                                  });
-                                }
-                              },
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                ],
-
-                // Class Chips Row
-                SizedBox(
-                  height: 34,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: ChoiceChip(
-                          label: const Text('Semua Rombel'),
-                          selected: _selectedClassId == 0,
-                          selectedColor: Colors.indigo.shade700,
-                          labelStyle: TextStyle(
-                            color: _selectedClassId == 0 ? Colors.white : Colors.black87,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedClassId = 0;
-                                _selectedClassName = 'Semua Rombel';
-                                _applyFilters();
-                              });
-                            }
-                          },
-                        ),
+                const SizedBox(height: 12),
+                // Search Input Box
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                      ..._classes.map((c) {
-                        final cid = int.parse((c['id'] ?? 0).toString());
-                        final cname = (c['nama_kelas'] ?? 'Kelas').toString();
-                        final isSelected = _selectedClassId == cid;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(cname),
-                            selected: isSelected,
-                            selectedColor: Colors.indigo.shade700,
-                            labelStyle: TextStyle(
-                              color: isSelected ? Colors.white : Colors.black87,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() {
-                                  _selectedClassId = cid;
-                                  _selectedClassName = cname;
-                                  _applyFilters();
-                                });
-                              }
-                            },
-                          ),
-                        );
-                      }),
                     ],
                   ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (_) => _applyFilters(),
+                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                    decoration: InputDecoration(
+                      hintText: 'Cari Nama, NIS, atau Kelas...',
+                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                      prefixIcon: Icon(Icons.search_rounded, color: AppTheme.primaryColor, size: 20),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                _applyFilters();
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
 
-          // Main Student List Body
+          // Clean Filter Controls Bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                // Mapel Dropdown Filter Pill
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _selectedMapelId > 0 ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _selectedMapelId > 0 ? AppTheme.primaryColor : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: _selectedMapelId,
+                        isExpanded: true,
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: _selectedMapelId > 0 ? AppTheme.primaryColor : Colors.grey.shade600, size: 18),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _selectedMapelId > 0 ? FontWeight.bold : FontWeight.normal,
+                          color: _selectedMapelId > 0 ? AppTheme.primaryColor : Colors.grey.shade800,
+                        ),
+                        items: [
+                          const DropdownMenuItem<int>(
+                            value: 0,
+                            child: Text('Semua Mapel'),
+                          ),
+                          ...uniqueMapels.map((m) {
+                            return DropdownMenuItem<int>(
+                              value: m['id'] as int,
+                              child: Text(m['nama'] as String, overflow: TextOverflow.ellipsis),
+                            );
+                          }),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() {
+                              _selectedMapelId = val;
+                              _applyFilters();
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Kelas Dropdown Filter Pill
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _selectedClassId > 0 ? AppTheme.primaryColor.withValues(alpha: 0.1) : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _selectedClassId > 0 ? AppTheme.primaryColor : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: _selectedClassId,
+                        isExpanded: true,
+                        icon: Icon(Icons.keyboard_arrow_down_rounded, color: _selectedClassId > 0 ? AppTheme.primaryColor : Colors.grey.shade600, size: 18),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _selectedClassId > 0 ? FontWeight.bold : FontWeight.normal,
+                          color: _selectedClassId > 0 ? AppTheme.primaryColor : Colors.grey.shade800,
+                        ),
+                        items: [
+                          const DropdownMenuItem<int>(
+                            value: 0,
+                            child: Text('Semua Kelas'),
+                          ),
+                          ..._classes.map((c) {
+                            final cid = int.parse((c['id'] ?? 0).toString());
+                            final cname = (c['nama_kelas'] ?? 'Kelas').toString();
+                            return DropdownMenuItem<int>(
+                              value: cid,
+                              child: Text(cname, overflow: TextOverflow.ellipsis),
+                            );
+                          }),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() {
+                              _selectedClassId = val;
+                              _applyFilters();
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Reset Button if Filtered
+                if (isFiltered) ...[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedMapelId = 0;
+                        _selectedClassId = 0;
+                        _searchController.clear();
+                        _applyFilters();
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Icon(Icons.refresh_rounded, size: 18, color: Colors.red.shade700),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Enrolled Student List Body
           Expanded(
             child: RefreshIndicator(
               onRefresh: _loadEnrolledStudents,
@@ -416,196 +349,171 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.person_search_rounded, size: 54, color: Colors.grey.shade400),
-                              const SizedBox(height: 12),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 24),
-                                child: Text(
-                                  'Belum ada siswa yang terdaftar di $_selectedClassName.',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  shape: BoxShape.circle,
                                 ),
+                                child: Icon(Icons.person_search_rounded, size: 40, color: Colors.grey.shade400),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Tidak ada siswa terdaftar',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey.shade700),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Coba sesuaikan filter atau pencarian Anda',
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                               ),
                             ],
                           ),
                         )
-                      : ListView(
-                          padding: const EdgeInsets.all(12),
-                          children: groupedData.entries.map((entry) {
-                            final groupName = entry.key;
-                            final studentsInGroup = entry.value;
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                          itemCount: _filteredStudents.length,
+                          itemBuilder: (context, index) {
+                            final s = _filteredStudents[index];
+                            final name = (s['nama_lengkap'] ?? 'Siswa').toString();
+                            final nis = (s['nis'] ?? s['nisn'] ?? '-').toString();
+                            final className = (s['nama_kelas'] ?? 'Tanpa Kelas').toString();
+                            final jurusanName = (s['nama_jurusan'] ?? '-').toString();
+                            final mapelName = (s['nama_mapel'] ?? 'Mata Pelajaran').toString();
+                            final enrolledAt = (s['enrolled_at'] ?? '').toString();
 
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Group Section Header
-                                Container(
-                                  width: double.infinity,
-                                  margin: const EdgeInsets.only(top: 8, bottom: 8),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: _groupMode == 0 ? Colors.indigo.shade50 : Colors.amber.shade50,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: _groupMode == 0 ? Colors.indigo.shade200 : Colors.amber.shade200),
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade200),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.03),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        _groupMode == 0 ? Icons.menu_book_rounded : Icons.school_rounded,
-                                        size: 18,
-                                        color: _groupMode == 0 ? Colors.indigo.shade800 : Colors.amber.shade900,
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Row(
+                                  children: [
+                                    // Avatar Initial Circle
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [AppTheme.primaryColor.withValues(alpha: 0.15), AppTheme.primaryColor.withValues(alpha: 0.05)],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
+                                      child: Center(
                                         child: Text(
-                                          _groupMode == 0 ? 'Mapel: $groupName' : 'Kelas: $groupName',
+                                          name.isNotEmpty ? name[0].toUpperCase() : 'S',
                                           style: TextStyle(
-                                            fontSize: 14,
+                                            color: AppTheme.primaryColor,
                                             fontWeight: FontWeight.bold,
-                                            color: _groupMode == 0 ? Colors.indigo.shade800 : Colors.amber.shade900,
+                                            fontSize: 16,
                                           ),
                                         ),
                                       ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: _groupMode == 0 ? Colors.indigo.shade800 : Colors.amber.shade900,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          '${studentsInGroup.length} Siswa',
-                                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                    ),
+                                    const SizedBox(width: 12),
 
-                                // Student Cards
-                                ...studentsInGroup.map((s) {
-                                  final name = (s['nama_lengkap'] ?? 'Siswa').toString();
-                                  final nis = (s['nis'] ?? s['nisn'] ?? '-').toString();
-                                  final className = (s['nama_kelas'] ?? 'Tanpa Kelas').toString();
-                                  final jurusanName = (s['nama_jurusan'] ?? '-').toString();
-                                  final mapelName = (s['nama_mapel'] ?? 'Mata Pelajaran').toString();
-                                  final keyMapel = (s['key_mapel'] ?? s['enrollment_key'] ?? '-').toString();
-                                  final enrolledAt = (s['enrolled_at'] ?? '').toString();
-
-                                  return Card(
-                                    margin: const EdgeInsets.only(bottom: 8),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                    elevation: 1.5,
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(12),
-                                      child: Row(
+                                    // Student Main Details
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          CircleAvatar(
-                                            backgroundColor: Colors.indigo.shade50,
+                                          Text(
+                                            name,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey.shade100,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  'NIS: $nis',
+                                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue.shade50,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  className,
+                                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (jurusanName != '-' && jurusanName.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Jurusan: $jurusanName',
+                                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                            ),
+                                          ],
+                                          const SizedBox(height: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                                            decoration: BoxDecoration(
+                                              color: Colors.amber.shade50,
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: Colors.amber.shade200),
+                                            ),
                                             child: Text(
-                                              name.isNotEmpty ? name[0] : 'S',
-                                              style: TextStyle(color: Colors.indigo.shade800, fontWeight: FontWeight.bold),
+                                              '📘 $mapelName',
+                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
                                             ),
                                           ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  name,
-                                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                                                ),
-                                                const SizedBox(height: 2),
-                                                Text(
-                                                  'NIS: $nis  •  Kelas: $className',
-                                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
-                                                ),
-                                                if (jurusanName != '-' && jurusanName.isNotEmpty) ...[
-                                                  const SizedBox(height: 2),
-                                                  Text(
-                                                    'Jurusan: $jurusanName',
-                                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                                                  ),
-                                                ],
-                                                const SizedBox(height: 4),
-                                                Wrap(
-                                                  spacing: 6,
-                                                  runSpacing: 4,
-                                                  children: [
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.blue.shade50,
-                                                        border: Border.all(color: Colors.blue.shade200),
-                                                        borderRadius: BorderRadius.circular(6),
-                                                      ),
-                                                      child: Text(
-                                                        '📘 Mapel: $mapelName',
-                                                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
-                                                      ),
-                                                    ),
-                                                    if (keyMapel != '-')
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.amber.shade50,
-                                                          border: Border.all(color: Colors.amber.shade300),
-                                                          borderRadius: BorderRadius.circular(6),
-                                                        ),
-                                                        child: Text(
-                                                          '🔑 Key: $keyMapel',
-                                                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                                if (enrolledAt.isNotEmpty) ...[
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    'Terdaftar: ${enrolledAt.length >= 10 ? enrolledAt.substring(0, 10) : enrolledAt}',
-                                                    style: TextStyle(fontSize: 9, color: Colors.grey.shade500),
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
-                                          ),
-                                          const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
                                         ],
                                       ),
                                     ),
-                                  );
-                                }),
-                              ],
+
+                                    // Right Date & Status Badge
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18),
+                                        if (enrolledAt.isNotEmpty) ...[
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            enrolledAt.length >= 10 ? enrolledAt.substring(0, 10) : enrolledAt,
+                                            style: TextStyle(fontSize: 9, color: Colors.grey.shade400),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
-                          }).toList(),
+                          },
                         ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatBadge(String label, String value, Color bg, Color text) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: text),
-            ),
-            Text(
-              label,
-              style: TextStyle(fontSize: 9, color: text.withValues(alpha: 0.8), fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
       ),
     );
   }
