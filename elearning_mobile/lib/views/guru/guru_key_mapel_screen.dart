@@ -90,7 +90,14 @@ class _GuruKeyMapelScreenState extends State<GuruKeyMapelScreen> {
     if (user == null) return;
 
     int? selectedMapelId = item != null ? int.tryParse((item['mapel_id'] ?? 0).toString()) : (_mapelList.isNotEmpty ? int.tryParse((_mapelList[0]['id'] ?? 0).toString()) : null);
+    if (selectedMapelId != null && !_mapelList.any((m) => int.tryParse((m['id'] ?? 0).toString()) == selectedMapelId)) {
+      selectedMapelId = _mapelList.isNotEmpty ? int.tryParse((_mapelList[0]['id'] ?? 0).toString()) : null;
+    }
+
     int? selectedKelasId = item != null ? int.tryParse((item['kelas_id'] ?? 0).toString()) : null;
+    if (selectedKelasId != null && !_classList.any((c) => int.tryParse((c['id'] ?? 0).toString()) == selectedKelasId)) {
+      selectedKelasId = null;
+    }
 
     final keyController = TextEditingController(
       text: (item != null ? (item['enrollment_key'] ?? item['passcode'] ?? '') : '').toString(),
