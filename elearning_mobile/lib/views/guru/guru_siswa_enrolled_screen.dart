@@ -119,6 +119,8 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
   Widget build(BuildContext context) {
     final uniqueMapels = _getUniqueMapels();
     final totalSiswa = _filteredStudents.length;
+    final validMapelVal = (_selectedMapelId > 0 && uniqueMapels.any((m) => (m['id'] as int) == _selectedMapelId)) ? _selectedMapelId : 0;
+    final validClassVal = (_selectedClassId > 0 && _classes.any((c) => int.parse((c['id'] ?? 0).toString()) == _selectedClassId)) ? _selectedClassId : 0;
     final isFiltered = _selectedMapelId > 0 || _selectedClassId > 0 || _searchController.text.isNotEmpty;
 
     return Scaffold(
@@ -228,7 +230,7 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<int>(
-                        value: _selectedMapelId,
+                        value: validMapelVal,
                         isExpanded: true,
                         icon: Icon(Icons.keyboard_arrow_down_rounded, color: _selectedMapelId > 0 ? AppTheme.primaryColor : Colors.grey.shade600, size: 18),
                         style: TextStyle(
@@ -275,7 +277,7 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<int>(
-                        value: _selectedClassId,
+                        value: validClassVal,
                         isExpanded: true,
                         icon: Icon(Icons.keyboard_arrow_down_rounded, color: _selectedClassId > 0 ? AppTheme.primaryColor : Colors.grey.shade600, size: 18),
                         style: TextStyle(
