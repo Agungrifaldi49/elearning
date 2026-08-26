@@ -15,7 +15,7 @@ class ApiController {
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
             http_response_code(200);
             exit();
         }
@@ -1561,11 +1561,12 @@ class ApiController {
             case 'key_mapel':
             case 'kelas_virtual':
                 require_once ROOT_PATH . 'models/AcademicModel.php';
+                $academicModel = new AcademicModel();
 
-                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $input = $this->getPostInput();
                     $mapelId = intval($input['mapel_id'] ?? $_POST['mapel_id'] ?? 0);
-                    $kelasId = !empty($input['kelas_id'] ?? $_POST['kelas_id']) ? intval($input['kelas_id'] ?? $_POST['kelas_id']) : null;
+                    $kelasId = !empty($input['kelas_id'] ?? $_POST['kelas_id'] ?? null) ? intval($input['kelas_id'] ?? $_POST['kelas_id']) : null;
                     $key = Security::sanitize(trim($input['enrollment_key'] ?? $input['key_mapel'] ?? $_POST['enrollment_key'] ?? $_POST['key_mapel'] ?? ''));
 
                     if ($mapelId <= 0) {

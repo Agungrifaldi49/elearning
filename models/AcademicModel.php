@@ -632,25 +632,6 @@ class AcademicModel extends BaseModel {
         if ($guru_id) {
             $gId = (int)$guru_id;
             $sql .= " AND mek.guru_id = {$gId}";
-            $sql .= " AND mek.mapel_id IN (
-                SELECT mapel_id FROM jadwal WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
-                UNION
-                SELECT mapel_id FROM materi WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
-                UNION
-                SELECT mapel_id FROM tugas WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
-                UNION
-                SELECT mapel_id FROM quiz WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
-            )";
-        } else {
-            $sql .= " AND (mek.mapel_id, mek.guru_id) IN (
-                SELECT mapel_id, guru_id FROM jadwal WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                UNION
-                SELECT mapel_id, guru_id FROM materi WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                UNION
-                SELECT mapel_id, guru_id FROM tugas WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                UNION
-                SELECT mapel_id, guru_id FROM quiz WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-            )";
         }
         $sql .= " ORDER BY m.nama_mapel ASC, g.nama_lengkap ASC";
         return $this->db->query($sql)->fetchAll();
