@@ -4,7 +4,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 
 class GuruSiswaEnrolledScreen extends StatefulWidget {
-  const GuruSiswaEnrolledScreen({super.key});
+  final int? initialMapelId;
+  const GuruSiswaEnrolledScreen({super.key, this.initialMapelId});
 
   @override
   State<GuruSiswaEnrolledScreen> createState() => _GuruSiswaEnrolledScreenState();
@@ -28,6 +29,9 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialMapelId != null && widget.initialMapelId! > 0) {
+      _selectedMapelId = widget.initialMapelId!;
+    }
     _loadEnrolledStudents();
   }
 
@@ -482,8 +486,9 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
                                   final name = (s['nama_lengkap'] ?? 'Siswa').toString();
                                   final nis = (s['nis'] ?? s['nisn'] ?? '-').toString();
                                   final className = (s['nama_kelas'] ?? 'Tanpa Kelas').toString();
+                                  final jurusanName = (s['nama_jurusan'] ?? '-').toString();
                                   final mapelName = (s['nama_mapel'] ?? 'Mata Pelajaran').toString();
-                                  final keyMapel = (s['key_mapel'] ?? '-').toString();
+                                  final keyMapel = (s['key_mapel'] ?? s['enrollment_key'] ?? '-').toString();
                                   final enrolledAt = (s['enrolled_at'] ?? '').toString();
 
                                   return Card(
@@ -512,9 +517,16 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
                                                 ),
                                                 const SizedBox(height: 2),
                                                 Text(
-                                                  'NIS: $nis • Rombel $className',
-                                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                                  'NIS: $nis  •  Kelas: $className',
+                                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
                                                 ),
+                                                if (jurusanName != '-' && jurusanName.isNotEmpty) ...[
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    'Jurusan: $jurusanName',
+                                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                                  ),
+                                                ],
                                                 const SizedBox(height: 4),
                                                 Wrap(
                                                   spacing: 6,
@@ -528,7 +540,7 @@ class _GuruSiswaEnrolledScreenState extends State<GuruSiswaEnrolledScreen> {
                                                         borderRadius: BorderRadius.circular(6),
                                                       ),
                                                       child: Text(
-                                                        '📘 $mapelName',
+                                                        '📘 Mapel: $mapelName',
                                                         style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
                                                       ),
                                                     ),

@@ -1604,6 +1604,28 @@ class ApiController {
                 ]);
                 break;
 
+            case 'siswa_enrolled':
+            case 'enrolled_students':
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                $academicModel = new AcademicModel();
+
+                $mapelId = !empty($_GET['mapel_id'] ?? $_POST['mapel_id'] ?? null) ? intval($_GET['mapel_id'] ?? $_POST['mapel_id']) : null;
+                $kelasId = !empty($_GET['kelas_id'] ?? $_POST['kelas_id'] ?? null) ? intval($_GET['kelas_id'] ?? $_POST['kelas_id']) : null;
+                $search = !empty($_GET['search'] ?? $_POST['search'] ?? null) ? Security::sanitize($_GET['search'] ?? $_POST['search']) : null;
+
+                $guruId = intval($guru['id'] ?? 0);
+                $students = $academicModel->getEnrolledStudentsForGuru($guruId, $mapelId, $kelasId, null, $search);
+                $myKeys = $academicModel->getMapelEnrollmentKeys($guruId);
+                $myKelasList = $academicModel->getKelasByGuru($guruId);
+
+                $this->jsonResponse(true, 'Data Siswa Terdaftar Mapel Guru', [
+                    'total_enrolled' => count($students),
+                    'keys' => $myKeys,
+                    'classes' => $myKelasList,
+                    'students' => $students
+                ]);
+                break;
+
             case 'kartu':
                 $this->jsonResponse(true, 'Kartu Digital Guru', [
                     'nip' => $guru['nip'] ?? '-',

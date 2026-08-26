@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 import '../../theme/app_theme.dart';
+import 'guru_siswa_enrolled_screen.dart';
 
 class GuruKeyMapelScreen extends StatefulWidget {
   const GuruKeyMapelScreen({super.key});
@@ -501,23 +502,37 @@ class _GuruKeyMapelScreenState extends State<GuruKeyMapelScreen> {
                                             ],
                                           ),
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue.shade50,
-                                            border: Border.all(color: Colors.blue.shade200),
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(Icons.people_alt_rounded, size: 12, color: Colors.blue),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '$totalSiswa Siswa',
-                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                                        InkWell(
+                                          onTap: () {
+                                            final mapelId = int.tryParse((item['mapel_id'] ?? 0).toString());
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => GuruSiswaEnrolledScreen(initialMapelId: mapelId),
                                               ),
-                                            ],
+                                            );
+                                          },
+                                          borderRadius: BorderRadius.circular(10),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue.shade50,
+                                              border: Border.all(color: Colors.blue.shade300),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.people_alt_rounded, size: 13, color: Colors.blue),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  '$totalSiswa Siswa',
+                                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                                                ),
+                                                const SizedBox(width: 2),
+                                                const Icon(Icons.chevron_right_rounded, size: 14, color: Colors.blue),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ],
