@@ -933,6 +933,10 @@ class ApiController {
 
             case 'available_mapel':
                 try {
+                    require_once ROOT_PATH . 'models/AcademicModel.php';
+                    $academicModel = new AcademicModel();
+                    $academicModel->ensureEnrollmentTables();
+
                     $search = trim($_GET['search'] ?? $_POST['search'] ?? '');
                     $sql = "
                         SELECT mek.id as key_id, mek.mapel_id, mek.guru_id, mek.kelas_id, mek.enrollment_key,

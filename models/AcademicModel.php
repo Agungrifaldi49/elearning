@@ -579,6 +579,8 @@ class AcademicModel extends BaseModel {
                     SELECT mapel_id, guru_id, kelas_id FROM jadwal WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
                     UNION
                     SELECT mapel_id, guru_id, kelas_id FROM materi WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
+                    UNION
+                    SELECT mp.id as mapel_id, g.id as guru_id, NULL as kelas_id FROM mata_pelajaran mp CROSS JOIN guru g
                 ) t
             ")->fetchAll();
 
