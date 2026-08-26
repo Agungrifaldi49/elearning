@@ -350,13 +350,23 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                             final jurusanName = (s['nama_jurusan'] ?? '-').toString();
                             final currentStatus = _absensiMap[sid] ?? 'Hadir';
 
+                            final isQrScanned = (s['is_qr_scanned'] == 1 || s['is_qr_scanned'] == '1' || s['is_qr_scanned'] == true);
+                            final waktuHadir = (s['waktu_masuk'] ?? s['waktu_hadir'] ?? '').toString();
+                            String qrTimeStr = '';
+                            if (waktuHadir.length >= 16) {
+                              qrTimeStr = waktuHadir.substring(11, 16) + ' WIB';
+                            }
+
                             return Container(
                               margin: const EdgeInsets.only(bottom: 10),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: isQrScanned ? Colors.green.shade50.withValues(alpha: 0.4) : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: Colors.grey.shade200),
+                                border: Border.all(
+                                  color: isQrScanned ? Colors.green.shade300 : Colors.grey.shade200,
+                                  width: isQrScanned ? 1.5 : 1.0,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.03),
@@ -372,10 +382,16 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                                     children: [
                                       CircleAvatar(
                                         radius: 18,
-                                        backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                        backgroundColor: isQrScanned
+                                            ? Colors.green.shade100
+                                            : AppTheme.primaryColor.withValues(alpha: 0.1),
                                         child: Text(
                                           name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                                          style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 14),
+                                          style: TextStyle(
+                                            color: isQrScanned ? Colors.green.shade800 : AppTheme.primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 10),
@@ -383,9 +399,37 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(
-                                              name,
-                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    name,
+                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (isQrScanned) ...[
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.green.shade100,
+                                                      borderRadius: BorderRadius.circular(6),
+                                                      border: Border.all(color: Colors.green.shade400, width: 0.8),
+                                                    ),
+                                                    child: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        const Icon(Icons.qr_code_2_rounded, size: 12, color: Colors.green),
+                                                        const SizedBox(width: 3),
+                                                        Text(
+                                                          qrTimeStr.isNotEmpty ? 'Scan QR ($qrTimeStr)' : 'Scan QR',
+                                                          style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.green.shade900),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
@@ -397,6 +441,21 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                                       ),
                                     ],
                                   ),
+                                  if (isQrScanned) ...[
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.shade100.withValues(alpha: 0.6),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '⚡ Siswa ini telah melakukan presensi otomatis via Scan QR Code.',
+                                        style: TextStyle(fontSize: 10, color: Colors.green.shade900, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 10),
 
                                   // Status Radio Segment Buttons (Hadir, Izin, Sakit, Alpha)

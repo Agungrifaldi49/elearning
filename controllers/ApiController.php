@@ -1659,7 +1659,11 @@ class ApiController {
                         }
                     }
 
-                    $this->jsonResponse(true, "Presensi manual berhasil disimpan untuk {$saved} siswa!");
+                    if ($saved > 0) {
+                        $this->jsonResponse(true, "Presensi manual berhasil disimpan untuk {$saved} siswa!");
+                    } else {
+                        $this->jsonResponse(false, "Gagal menyimpan presensi manual. Silakan periksa kembali data siswa.", null, 400);
+                    }
                 }
 
                 $myMapelList = $academicModel->getMapelByGuru($guruId);

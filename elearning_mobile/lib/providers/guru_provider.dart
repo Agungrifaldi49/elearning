@@ -541,15 +541,25 @@ class GuruProvider with ChangeNotifier {
     Map<int, String> absensiMap, {
     Map<int, String>? keteranganMap,
   }) async {
+    final Map<String, dynamic> formattedAbsensi = {};
+    absensiMap.forEach((k, v) {
+      formattedAbsensi[k.toString()] = v;
+    });
+
+    final Map<String, dynamic> formattedKeterangan = {};
+    if (keteranganMap != null) {
+      keteranganMap.forEach((k, v) {
+        formattedKeterangan[k.toString()] = v;
+      });
+    }
+
     final Map<String, dynamic> body = {
       'user_id': userId,
       'mapel_id': mapelId,
       'tanggal': tanggal,
-      'absensi': absensiMap,
+      'absensi': formattedAbsensi,
+      'keterangan': formattedKeterangan,
     };
-    if (keteranganMap != null && keteranganMap.isNotEmpty) {
-      body['keterangan'] = keteranganMap;
-    }
 
     final res = await ApiService.post('guru/input_absensi', body);
     return res['success'] == true;

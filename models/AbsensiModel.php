@@ -924,16 +924,23 @@ class AbsensiModel extends BaseModel {
 
         $stmt = $this->db->prepare("
             SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, k.nama_kelas, j.nama_jurusan,
-                   COALESCE(a.status, 'Belum Absen') as status_absensi, a.keterangan, a.waktu_hadir
+                   COALESCE(a.status, 'Belum Absen') as status_absensi,
+                   a.keterangan, a.waktu_hadir, a.waktu_masuk, a.qr_code,
+                   CASE 
+                       WHEN a.qr_code IS NOT NULL AND (a.qr_code LIKE 'QR_%' OR a.qr_code LIKE 'GURU_%' OR a.qr_code LIKE 'SISWA_%') THEN 1
+                       WHEN a.keterangan LIKE '%Scan%' OR a.keterangan LIKE '%Digital%' OR a.keterangan LIKE '%QR%' THEN 1
+                       ELSE 0 
+                   END as is_qr_scanned
             FROM siswa_mapel_enrollment sme
             JOIN siswa s ON sme.siswa_id = s.id
             LEFT JOIN kelas k ON s.kelas_id = k.id
             LEFT JOIN jurusan j ON s.jurusan_id = j.id
             LEFT JOIN absensi a ON s.id = a.siswa_id AND a.tanggal = ?
-            WHERE sme.guru_id = ? AND sme.mapel_id = ?
+            WHERE sme.mapel_id = ? AND (sme.guru_id = ? OR sme.guru_id IS NULL)
+            GROUP BY s.id
             ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
         ");
-        $stmt->execute([$tanggal, $guruId, $mapelId]);
+        $stmt->execute([$tanggal, $mapelId, $guruId]);
         return $stmt->fetchAll();
     }
 
@@ -947,11 +954,16 @@ class AbsensiModel extends BaseModel {
             $status = 'Hadir';
         }
 
-        // Verify enrollment
-        $chk = $this->db->prepare("SELECT id FROM siswa_mapel_enrollment WHERE siswa_id = ? AND mapel_id = ? AND guru_id = ?");
-        $chk->execute([$siswaId, $mapelId, $guruId]);
+        // Verify enrollment with fallback
+        $chk = $this->db->prepare("SELECT id FROM siswa_mapel_enrollment WHERE siswa_id = ? AND mapel_id = ?");
+        $chk->execute([$siswaId, $mapelId]);
         if (!$chk->fetch()) {
-            return false;
+            // Check if student exists in database as last fallback
+            $chk2 = $this->db->prepare("SELECT id FROM siswa WHERE id = ?");
+            $chk2->execute([$siswaId]);
+            if (!$chk2->fetch()) {
+                return false;
+            }
         }
 
         $stmtExist = $this->db->prepare("SELECT id FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
