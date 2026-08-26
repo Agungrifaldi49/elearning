@@ -1400,8 +1400,8 @@ class ApiController {
                 $sqlSis = "
                     SELECT DISTINCT s.id as siswa_id, s.id, s.nis, s.nisn, s.nama_lengkap, s.kelas_id,
                            COALESCE(k.nama_kelas, 'Tanpa Kelas') as nama_kelas,
-                           COALESCE(mp.nama_mapel, 'Umum / semua Mapel') as nama_mapel,
-                           COALESCE(mp.nama_mapel, 'Umum / semua Mapel') as nama_mapel_enrolled,
+                           COALESCE(mp.nama_mapel, 'Umum / Semua Mapel') as nama_mapel,
+                           COALESCE(mp.nama_mapel, 'Umum / Semua Mapel') as nama_mapel_enrolled,
                            COALESCE(mp.id, 0) as mapel_id,
                            a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                     FROM siswa s
@@ -1436,22 +1436,30 @@ class ApiController {
                 $stmtSis->execute($paramsSis);
                 $students = $stmtSis->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-                // Fallback: If no students returned via enrollment table, fetch all students joined with absensi
+                // Fallback: Guaranteed to fetch active students if teacher-specific enrollment has 0 rows
                 if (empty($students)) {
                     $sqlFb = "
                         SELECT DISTINCT s.id as siswa_id, s.id, s.nis, s.nisn, s.nama_lengkap, s.kelas_id,
                                COALESCE(k.nama_kelas, 'Tanpa Kelas') as nama_kelas,
-                               'Umum / Semua Mapel' as nama_mapel,
-                               'Umum / Semua Mapel' as nama_mapel_enrolled,
+                               COALESCE(mp.nama_mapel, 'Umum / Semua Mapel') as nama_mapel,
+                               COALESCE(mp.nama_mapel, 'Umum / Semua Mapel') as nama_mapel_enrolled,
+                               COALESCE(mp.id, 0) as mapel_id,
                                a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                         FROM siswa s
                         LEFT JOIN kelas k ON s.kelas_id = k.id
+                        LEFT JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id
+                        LEFT JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
                         LEFT JOIN absensi a ON s.id = a.siswa_id AND a.tanggal = :tgl
+                        WHERE 1=1
                     ";
                     $paramsFb = ['tgl' => $tanggal];
                     if ($kelasId > 0) {
-                        $sqlFb .= " WHERE s.kelas_id = :kid";
+                        $sqlFb .= " AND s.kelas_id = :kid";
                         $paramsFb['kid'] = $kelasId;
+                    }
+                    if ($mapelId > 0) {
+                        $sqlFb .= " AND sme.mapel_id = :mid";
+                        $paramsFb['mid'] = $mapelId;
                     }
                     $sqlFb .= " ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC";
                     $stmtFb = $this->db->prepare($sqlFb);
@@ -1490,16 +1498,14 @@ class ApiController {
                     FROM absensi a 
                     JOIN siswa s ON a.siswa_id = s.id 
                     LEFT JOIN kelas k ON s.kelas_id = k.id 
-                    LEFT JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id AND sme.guru_id = :gid1
+                    LEFT JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id AND (sme.guru_id = :gid1 OR :gid1_b = 0)
                     LEFT JOIN jadwal j ON a.jadwal_id = j.id 
                     LEFT JOIN mata_pelajaran mp ON COALESCE(sme.mapel_id, j.mapel_id) = mp.id 
-                    WHERE (sme.guru_id = :gid2 OR j.guru_id = :gid3 OR :gid4 = 0)
+                    WHERE 1=1
                 ";
                 $params = [
                     'gid1' => $guruId,
-                    'gid2' => $guruId,
-                    'gid3' => $guruId,
-                    'gid4' => $guruId,
+                    'gid1_b' => $guruId,
                 ];
 
                 if ($kelasId > 0) {
@@ -1527,7 +1533,35 @@ class ApiController {
 
                 $stmtRec = $this->db->prepare($sql);
                 $stmtRec->execute($params);
-                $recaps = $stmtRec->fetchAll() ?: [];
+                $recaps = $stmtRec->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                // Fallback for recaps if teacher specific search is empty
+                if (empty($recaps)) {
+                    $sqlFb = "
+                        SELECT DISTINCT a.id, a.siswa_id, a.tanggal, a.status, a.keterangan, a.waktu_masuk, a.waktu_pulang, a.waktu_hadir, a.qr_code, a.created_at,
+                               s.nama_lengkap, s.nis, s.nisn, s.kelas_id, COALESCE(k.nama_kelas, 'Umum') as nama_kelas,
+                               COALESCE(mp.nama_mapel, 'Umum') as nama_mapel
+                        FROM absensi a 
+                        JOIN siswa s ON a.siswa_id = s.id 
+                        LEFT JOIN kelas k ON s.kelas_id = k.id 
+                        LEFT JOIN jadwal j ON a.jadwal_id = j.id 
+                        LEFT JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
+                        WHERE 1=1
+                    ";
+                    $paramsFb = [];
+                    if ($kelasId > 0) {
+                        $sqlFb .= " AND s.kelas_id = :kid";
+                        $paramsFb['kid'] = $kelasId;
+                    }
+                    if ($tanggal !== '') {
+                        $sqlFb .= " AND a.tanggal = :tgl";
+                        $paramsFb['tgl'] = $tanggal;
+                    }
+                    $sqlFb .= " ORDER BY a.tanggal DESC, a.id DESC LIMIT 300";
+                    $stmtRecFb = $this->db->prepare($sqlFb);
+                    $stmtRecFb->execute($paramsFb);
+                    $recaps = $stmtRecFb->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                }
 
                 $totalHadir = 0;
                 $totalIzin = 0;
