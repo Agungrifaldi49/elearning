@@ -1400,7 +1400,9 @@ class ApiController {
                 $sqlSis = "
                     SELECT DISTINCT s.id as siswa_id, s.id, s.nis, s.nisn, s.nama_lengkap, s.kelas_id,
                            COALESCE(k.nama_kelas, 'Tanpa Kelas') as nama_kelas,
-                           mp.nama_mapel as nama_mapel_enrolled,
+                           COALESCE(mp.nama_mapel, 'Umum / semua Mapel') as nama_mapel,
+                           COALESCE(mp.nama_mapel, 'Umum / semua Mapel') as nama_mapel_enrolled,
+                           COALESCE(mp.id, 0) as mapel_id,
                            a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                     FROM siswa s
                     LEFT JOIN kelas k ON s.kelas_id = k.id
@@ -1439,6 +1441,8 @@ class ApiController {
                     $sqlFb = "
                         SELECT DISTINCT s.id as siswa_id, s.id, s.nis, s.nisn, s.nama_lengkap, s.kelas_id,
                                COALESCE(k.nama_kelas, 'Tanpa Kelas') as nama_kelas,
+                               'Umum / Semua Mapel' as nama_mapel,
+                               'Umum / Semua Mapel' as nama_mapel_enrolled,
                                a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                         FROM siswa s
                         LEFT JOIN kelas k ON s.kelas_id = k.id
@@ -1480,25 +1484,32 @@ class ApiController {
                 $guruId = intval($guru['id'] ?? 0);
 
                 $sql = "
-                    SELECT a.id, a.siswa_id, a.tanggal, a.status, a.keterangan, a.waktu_masuk, a.waktu_pulang, a.waktu_hadir, a.qr_code, a.created_at,
+                    SELECT DISTINCT a.id, a.siswa_id, a.tanggal, a.status, a.keterangan, a.waktu_masuk, a.waktu_pulang, a.waktu_hadir, a.qr_code, a.created_at,
                            s.nama_lengkap, s.nis, s.nisn, s.kelas_id, COALESCE(k.nama_kelas, 'Umum') as nama_kelas,
                            COALESCE(mp.nama_mapel, 'Umum') as nama_mapel
                     FROM absensi a 
                     JOIN siswa s ON a.siswa_id = s.id 
                     LEFT JOIN kelas k ON s.kelas_id = k.id 
+                    LEFT JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id AND sme.guru_id = :gid1
                     LEFT JOIN jadwal j ON a.jadwal_id = j.id 
-                    LEFT JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
-                    WHERE 1=1
+                    LEFT JOIN mata_pelajaran mp ON COALESCE(sme.mapel_id, j.mapel_id) = mp.id 
+                    WHERE (sme.guru_id = :gid2 OR j.guru_id = :gid3 OR :gid4 = 0)
                 ";
-                $params = [];
+                $params = [
+                    'gid1' => $guruId,
+                    'gid2' => $guruId,
+                    'gid3' => $guruId,
+                    'gid4' => $guruId,
+                ];
 
                 if ($kelasId > 0) {
                     $sql .= " AND s.kelas_id = :kid";
                     $params['kid'] = $kelasId;
                 }
                 if ($mapelId > 0) {
-                    $sql .= " AND j.mapel_id = :mid";
+                    $sql .= " AND (sme.mapel_id = :mid OR j.mapel_id = :mid2)";
                     $params['mid'] = $mapelId;
+                    $params['mid2'] = $mapelId;
                 }
                 if ($tanggal !== '') {
                     $sql .= " AND a.tanggal = :tgl";

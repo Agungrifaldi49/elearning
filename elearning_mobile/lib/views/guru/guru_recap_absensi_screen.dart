@@ -13,6 +13,7 @@ class GuruRecapAbsensiScreen extends StatefulWidget {
 class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
   bool _isLoading = true;
   int _viewMode = 0; // 0 = Riwayat Harian, 1 = Matriks Bulanan
+  int _groupMode = 0; // 0 = Per Kelas, 1 = Per Mapel
 
   List<dynamic> _classes = [];
   List<dynamic> _allRecords = [];
@@ -148,6 +149,25 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
         'alpa': alpa,
       };
     });
+  }
+
+  // Group Records by Class or Mapel
+  Map<String, List<dynamic>> _groupRecords() {
+    final Map<String, List<dynamic>> grouped = {};
+    for (var r in _filteredRecords) {
+      String groupKey = 'Tanpa Kelompok';
+      if (_groupMode == 0) {
+        groupKey = (r['nama_kelas'] ?? 'Umum').toString();
+      } else {
+        groupKey = (r['nama_mapel'] ?? 'Mata Pelajaran').toString();
+      }
+
+      if (!grouped.containsKey(groupKey)) {
+        grouped[groupKey] = [];
+      }
+      grouped[groupKey]!.add(r);
+    }
+    return grouped;
   }
 
   @override
@@ -299,13 +319,13 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
             ),
           ),
 
-          // View Mode Selector & Class Filter Chips Bar
+          // View Mode Selector & Grouping Toggle Bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             color: Colors.white,
             child: Column(
               children: [
-                // View Mode Toggle Segmented Control
+                // View Mode Toggle Segmented Control (Riwayat vs Matriks)
                 Row(
                   children: [
                     Expanded(
@@ -313,7 +333,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                         onTap: () => setState(() => _viewMode = 0),
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 7),
                           decoration: BoxDecoration(
                             color: _viewMode == 0 ? Colors.teal.shade700 : Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(8),
@@ -322,7 +342,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                             '📋 Log Riwayat Presensi',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: _viewMode == 0 ? Colors.white : Colors.black87,
                             ),
@@ -336,7 +356,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                         onTap: () => setState(() => _viewMode = 1),
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.symmetric(vertical: 7),
                           decoration: BoxDecoration(
                             color: _viewMode == 1 ? Colors.teal.shade700 : Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(8),
@@ -345,7 +365,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                             '📅 Matriks Rekap Bulanan',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: _viewMode == 1 ? Colors.white : Colors.black87,
                             ),
@@ -357,9 +377,63 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                 ),
                 const SizedBox(height: 6),
 
+                // Grouping Mode Segmented Control (Per Kelas vs Per Mapel)
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _groupMode = 0),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _groupMode == 0 ? Colors.teal.shade50 : Colors.grey.shade50,
+                            border: Border.all(color: _groupMode == 0 ? Colors.teal : Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '🏫 Kelompok Per Kelas',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: _groupMode == 0 ? Colors.teal.shade800 : Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _groupMode = 1),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _groupMode == 1 ? Colors.amber.shade50 : Colors.grey.shade50,
+                            border: Border.all(color: _groupMode == 1 ? Colors.amber.shade800 : Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            '📘 Kelompok Per Mapel',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: _groupMode == 1 ? Colors.amber.shade900 : Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+
                 // Class Chips Row
                 SizedBox(
-                  height: 38,
+                  height: 34,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     children: [
@@ -461,14 +535,14 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
             ),
           ),
 
-          // Main View (Mode 0: Riwayat Logs, Mode 1: Matriks Bulanan)
+          // Main View (Mode 0: Riwayat Logs Grouped, Mode 1: Matriks Bulanan)
           Expanded(
             child: RefreshIndicator(
               onRefresh: _fetchRecap,
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _viewMode == 0
-                      ? _buildDailyLogView()
+                      ? _buildGroupedDailyLogView()
                       : _buildMonthlyMatrixView(),
             ),
           ),
@@ -477,7 +551,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
     );
   }
 
-  Widget _buildDailyLogView() {
+  Widget _buildGroupedDailyLogView() {
     if (_filteredRecords.isEmpty) {
       return Center(
         child: Column(
@@ -494,167 +568,221 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
       );
     }
 
-    return ListView.builder(
+    final groupedData = _groupRecords();
+
+    return ListView(
       padding: const EdgeInsets.all(12),
-      itemCount: _filteredRecords.length,
-      itemBuilder: (context, index) {
-        final r = _filteredRecords[index];
-        final name = (r['nama_lengkap'] ?? 'Siswa').toString();
-        final nis = (r['nis'] ?? r['nisn'] ?? '-').toString();
-        final className = (r['nama_kelas'] ?? 'Umum').toString();
-        final status = (r['status'] ?? 'Hadir').toString();
-        final date = (r['tanggal'] ?? '-').toString();
-        final mapelName = (r['nama_mapel'] ?? '').toString();
-        final waktuMasuk = (r['waktu_masuk'] ?? r['waktu_hadir'] ?? '').toString();
-        final waktuPulang = (r['waktu_pulang'] ?? '').toString();
-        final keterangan = (r['keterangan'] ?? '').toString();
-        final qrCode = (r['qr_code'] ?? '').toString();
+      children: groupedData.entries.map((entry) {
+        final groupName = entry.key;
+        final recordsInGroup = entry.value;
 
-        Color statusColor = Colors.green;
-        final st = status.toLowerCase();
-        if (st.contains('izin')) {
-          statusColor = Colors.blue;
-        } else if (st.contains('sakit')) {
-          statusColor = Colors.orange;
-        } else if (st.contains('alpa') || st.contains('alpha')) {
-          statusColor = Colors.red;
-        }
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          elevation: 1.5,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: statusColor.withValues(alpha: 0.15),
-                      child: Text(
-                        name.isNotEmpty ? name[0] : 'S',
-                        style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Section Header (Class or Mapel)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 8, bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _groupMode == 0 ? Colors.teal.shade50 : Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _groupMode == 0 ? Colors.teal.shade200 : Colors.amber.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _groupMode == 0 ? Icons.school_rounded : Icons.menu_book_rounded,
+                    size: 18,
+                    color: _groupMode == 0 ? Colors.teal.shade800 : Colors.amber.shade900,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _groupMode == 0 ? 'Kelas: $groupName' : 'Mapel: $groupName',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: _groupMode == 0 ? Colors.teal.shade800 : Colors.amber.shade900,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _groupMode == 0 ? Colors.teal.shade800 : Colors.amber.shade900,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${recordsInGroup.length} Record',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Record Cards
+            ...recordsInGroup.map((r) {
+              final name = (r['nama_lengkap'] ?? 'Siswa').toString();
+              final nis = (r['nis'] ?? r['nisn'] ?? '-').toString();
+              final className = (r['nama_kelas'] ?? 'Umum').toString();
+              final status = (r['status'] ?? 'Hadir').toString();
+              final date = (r['tanggal'] ?? '-').toString();
+              final mapelName = (r['nama_mapel'] ?? '').toString();
+              final waktuMasuk = (r['waktu_masuk'] ?? r['waktu_hadir'] ?? '').toString();
+              final waktuPulang = (r['waktu_pulang'] ?? '').toString();
+              final keterangan = (r['keterangan'] ?? '').toString();
+              final qrCode = (r['qr_code'] ?? '').toString();
+
+              Color statusColor = Colors.green;
+              final st = status.toLowerCase();
+              if (st.contains('izin')) {
+                statusColor = Colors.blue;
+              } else if (st.contains('sakit')) {
+                statusColor = Colors.orange;
+              } else if (st.contains('alpa') || st.contains('alpha')) {
+                statusColor = Colors.red;
+              }
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 1.5,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  name,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: statusColor,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  status,
-                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
+                          CircleAvatar(
+                            backgroundColor: statusColor.withValues(alpha: 0.15),
+                            child: Text(
+                              name.isNotEmpty ? name[0] : 'S',
+                              style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'NIS: $nis • Rombel $className',
-                            style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        name,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: statusColor,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        status,
+                                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'NIS: $nis • Rombel $className',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
+                      const SizedBox(height: 8),
 
-                if (mapelName.isNotEmpty) ...[
-                  Text(
-                    '📘 Mapel: $mapelName',
-                    style: TextStyle(fontSize: 11, color: Colors.teal.shade800, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 4),
-                ],
-
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey.shade600),
-                    const SizedBox(width: 4),
-                    Text(
-                      date,
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
-                    ),
-                    if (waktuMasuk.isNotEmpty) ...[
-                      const SizedBox(width: 10),
-                      Icon(Icons.access_time_rounded, size: 12, color: Colors.grey.shade600),
-                      const SizedBox(width: 2),
-                      Text(
-                        'Masuk: ${waktuMasuk.length >= 16 ? waktuMasuk.substring(11, 16) : waktuMasuk} WIB',
-                        style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-                      ),
-                    ],
-                    if (waktuPulang.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        '• Pulang: ${waktuPulang.length >= 16 ? waktuPulang.substring(11, 16) : waktuPulang} WIB',
-                        style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ],
-                ),
-
-                if (qrCode.isNotEmpty || keterangan.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      if (qrCode.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            border: Border.all(color: Colors.green.shade200),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.qr_code_scanner, size: 11, color: Colors.green),
-                              SizedBox(width: 3),
-                              Text('Presensi QR Digital', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
+                      if (mapelName.isNotEmpty) ...[
+                        Text(
+                          '📘 Mapel: $mapelName',
+                          style: TextStyle(fontSize: 11, color: Colors.teal.shade800, fontWeight: FontWeight.w600),
                         ),
-                      if (keterangan.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(6),
+                        const SizedBox(height: 4),
+                      ],
+
+                      Row(
+                        children: [
+                          Icon(Icons.calendar_today_rounded, size: 12, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Text(
+                            date,
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
                           ),
-                          child: Text(
-                            'Catatan: $keterangan',
-                            style: TextStyle(fontSize: 9, color: Colors.grey.shade800),
-                          ),
+                          if (waktuMasuk.isNotEmpty) ...[
+                            const SizedBox(width: 10),
+                            Icon(Icons.access_time_rounded, size: 12, color: Colors.grey.shade600),
+                            const SizedBox(width: 2),
+                            Text(
+                              'Masuk: ${waktuMasuk.length >= 16 ? waktuMasuk.substring(11, 16) : waktuMasuk} WIB',
+                              style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                            ),
+                          ],
+                          if (waktuPulang.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              '• Pulang: ${waktuPulang.length >= 16 ? waktuPulang.substring(11, 16) : waktuPulang} WIB',
+                              style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ],
+                      ),
+
+                      if (qrCode.isNotEmpty || keterangan.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            if (qrCode.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  border: Border.all(color: Colors.green.shade200),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.qr_code_scanner, size: 11, color: Colors.green),
+                                    SizedBox(width: 3),
+                                    Text('Presensi QR Digital', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            if (keterangan.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'Catatan: $keterangan',
+                                  style: TextStyle(fontSize: 9, color: Colors.grey.shade800),
+                                ),
+                              ),
+                          ],
                         ),
+                      ],
                     ],
                   ),
-                ],
-              ],
-            ),
-          ),
+                ),
+              );
+            }),
+          ],
         );
-      },
+      }).toList(),
     );
   }
 

@@ -22,6 +22,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
   final Map<int, String> _keterangan = {}; // [siswa_id => keterangan]
   final Map<int, TextEditingController> _ketControllers = {};
 
+  int _groupMode = 0; // 0 = Per Kelas, 1 = Per Mata Pelajaran
   int _selectedJadwalId = 0;
   int _selectedMapelId = 0; // 0 = Semua Mapel Terdaftar
   int _selectedClassId = 0; // 0 = Semua Rombel
@@ -118,11 +119,19 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
       }).toList();
     }
 
+    if (_selectedMapelId > 0) {
+      list = list.where((s) {
+        final mid = int.parse((s['mapel_id'] ?? 0).toString());
+        return mid == _selectedMapelId;
+      }).toList();
+    }
+
     if (query.isNotEmpty) {
       list = list.where((s) {
         final name = (s['nama_lengkap'] ?? '').toString().toLowerCase();
         final nis = (s['nis'] ?? s['nisn'] ?? '').toString().toLowerCase();
-        return name.contains(query) || nis.contains(query);
+        final mapel = (s['nama_mapel'] ?? s['nama_mapel_enrolled'] ?? '').toString().toLowerCase();
+        return name.contains(query) || nis.contains(query) || mapel.contains(query);
       }).toList();
     }
 
@@ -241,15 +250,21 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
     return {'hadir': hadir, 'izin': izin, 'sakit': sakit, 'alpa': alpa};
   }
 
-  // Group Students by Class Name
-  Map<String, List<dynamic>> _groupStudentsByClass() {
+  // Group Students by Class or Mapel based on _groupMode
+  Map<String, List<dynamic>> _groupStudents() {
     final Map<String, List<dynamic>> grouped = {};
     for (var s in _filteredStudents) {
-      final className = (s['nama_kelas'] ?? 'Tanpa Kelas').toString();
-      if (!grouped.containsKey(className)) {
-        grouped[className] = [];
+      String groupKey = 'Tanpa Kelompok';
+      if (_groupMode == 0) {
+        groupKey = (s['nama_kelas'] ?? 'Tanpa Kelas').toString();
+      } else {
+        groupKey = (s['nama_mapel'] ?? s['nama_mapel_enrolled'] ?? 'Mata Pelajaran').toString();
       }
-      grouped[className]!.add(s);
+
+      if (!grouped.containsKey(groupKey)) {
+        grouped[groupKey] = [];
+      }
+      grouped[groupKey]!.add(s);
     }
     return grouped;
   }
@@ -257,7 +272,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
   @override
   Widget build(BuildContext context) {
     final stats = _getSummaryStats();
-    final groupedData = _groupStudentsByClass();
+    final groupedData = _groupStudents();
 
     return Scaffold(
       appBar: AppBar(
@@ -323,7 +338,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Otomatis menampilkan siswa yang telah memasukkan Key Mapel / terdaftar pada mata pelajaran Anda',
+                  'Menampilkan siswa yang terdaftar via Key Mapel / Rombel Pengampuan Anda',
                   style: TextStyle(color: Colors.white70, fontSize: 11),
                 ),
                 const SizedBox(height: 12),
@@ -347,7 +362,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                         items: [
                           const DropdownMenuItem<int>(
                             value: 0,
-                            child: Text('📚 Semua Mapel Terdaftar (Key Mapel)'),
+                            child: Text('📚 Semua Mata Pelajaran Saya'),
                           ),
                           ..._mapelList.map((m) {
                             final mid = int.parse((m['mapel_id'] ?? m['id'] ?? 0).toString());
@@ -424,7 +439,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                   onChanged: (_) => _applyFilters(),
                   style: const TextStyle(color: Colors.white, fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: 'Cari Nama Siswa atau NIS...',
+                    hintText: 'Cari Nama Siswa, NIS, atau Mapel...',
                     hintStyle: const TextStyle(color: Colors.white60),
                     prefixIcon: const Icon(Icons.search, color: Colors.white60),
                     filled: true,
@@ -440,88 +455,143 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
             ),
           ),
 
-          // Class Filter Chips & Set Semua Hadir Row
+          // Grouping Toggle Segmented Control Bar (Per Kelas vs Per Mapel)
           Container(
-            height: 48,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             color: Colors.white,
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: ChoiceChip(
-                          label: const Text('Semua Rombel'),
-                          selected: _selectedClassId == 0,
-                          selectedColor: AppTheme.primaryColor,
-                          labelStyle: TextStyle(
-                            color: _selectedClassId == 0 ? Colors.white : Colors.black87,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _groupMode = 0),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _groupMode == 0 ? AppTheme.primaryColor : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          onSelected: (selected) {
-                            if (selected) {
-                              setState(() {
-                                _selectedClassId = 0;
-                                _selectedClassName = 'Semua Rombel';
-                                _applyFilters();
-                              });
-                            }
-                          },
+                          child: Text(
+                            '🏫 Kelompok Per Kelas',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _groupMode == 0 ? Colors.white : Colors.black87,
+                            ),
+                          ),
                         ),
                       ),
-
-                      ..._classes.map((c) {
-                        final cid = int.parse((c['id'] ?? 0).toString());
-                        final cname = (c['nama_kelas'] ?? 'Kelas').toString();
-                        final isSelected = _selectedClassId == cid;
-
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 6),
-                          child: ChoiceChip(
-                            label: Text(cname),
-                            selected: isSelected,
-                            selectedColor: AppTheme.primaryColor,
-                            labelStyle: TextStyle(
-                              color: isSelected ? Colors.white : Colors.black87,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() {
-                                  _selectedClassId = cid;
-                                  _selectedClassName = cname;
-                                  _applyFilters();
-                                });
-                              }
-                            },
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => _groupMode = 1),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _groupMode == 1 ? AppTheme.primaryColor : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        );
-                      }),
-                    ],
-                  ),
+                          child: Text(
+                            '📘 Kelompok Per Mapel',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _groupMode == 1 ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 6),
 
-                // Set Semua Hadir Button
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: TextButton.icon(
-                    onPressed: _filteredStudents.isEmpty ? null : _setSemuaHadir,
-                    icon: const Icon(Icons.done_all_rounded, size: 16, color: Colors.green),
-                    label: const Text(
-                      'Semua Hadir',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green),
+                // Class Chips Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 36,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: ChoiceChip(
+                                label: const Text('Semua Rombel'),
+                                selected: _selectedClassId == 0,
+                                selectedColor: AppTheme.primaryColor,
+                                labelStyle: TextStyle(
+                                  color: _selectedClassId == 0 ? Colors.white : Colors.black87,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                ),
+                                onSelected: (selected) {
+                                  if (selected) {
+                                    setState(() {
+                                      _selectedClassId = 0;
+                                      _selectedClassName = 'Semua Rombel';
+                                      _applyFilters();
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+
+                            ..._classes.map((c) {
+                              final cid = int.parse((c['id'] ?? 0).toString());
+                              final cname = (c['nama_kelas'] ?? 'Kelas').toString();
+                              final isSelected = _selectedClassId == cid;
+
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: ChoiceChip(
+                                  label: Text(cname),
+                                  selected: isSelected,
+                                  selectedColor: AppTheme.primaryColor,
+                                  labelStyle: TextStyle(
+                                    color: isSelected ? Colors.white : Colors.black87,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                  onSelected: (selected) {
+                                    if (selected) {
+                                      setState(() {
+                                        _selectedClassId = cid;
+                                        _selectedClassName = cname;
+                                        _applyFilters();
+                                      });
+                                    }
+                                  },
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
                     ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      backgroundColor: Colors.green.shade50,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+
+                    // Set Semua Hadir Button
+                    TextButton.icon(
+                      onPressed: _filteredStudents.isEmpty ? null : _setSemuaHadir,
+                      icon: const Icon(Icons.done_all_rounded, size: 16, color: Colors.green),
+                      label: const Text(
+                        'Semua Hadir',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        backgroundColor: Colors.green.shade50,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -542,7 +612,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
             ),
           ),
 
-          // Main Student List Grouped by Class
+          // Main Student List Grouped by Class or Mapel
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -556,7 +626,7 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 24),
                               child: Text(
-                                'Belum ada siswa yang memasukkan Key Mapel / terdaftar di mata pelajaran Anda ($_selectedClassName).',
+                                'Belum ada siswa yang memasukkan Key Mapel / terdaftar di $_selectedClassName.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                               ),
@@ -567,43 +637,48 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                     : ListView(
                         padding: const EdgeInsets.all(12),
                         children: groupedData.entries.map((entry) {
-                          final className = entry.key;
-                          final studentsInClass = entry.value;
+                          final groupName = entry.key;
+                          final studentsInGroup = entry.value;
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Class Section Header
+                              // Group Section Header (Class or Mapel)
                               Container(
                                 width: double.infinity,
                                 margin: const EdgeInsets.only(top: 8, bottom: 8),
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
+                                  color: _groupMode == 0 ? Colors.blue.shade50 : Colors.amber.shade50,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.blue.shade100),
+                                  border: Border.all(color: _groupMode == 0 ? Colors.blue.shade100 : Colors.amber.shade200),
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(Icons.school_rounded, size: 18, color: AppTheme.primaryColor),
+                                    Icon(
+                                      _groupMode == 0 ? Icons.school_rounded : Icons.menu_book_rounded,
+                                      size: 18,
+                                      color: _groupMode == 0 ? AppTheme.primaryColor : Colors.amber.shade900,
+                                    ),
                                     const SizedBox(width: 8),
-                                    Text(
-                                      'Kelas: $className',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.primaryColor,
+                                    Expanded(
+                                      child: Text(
+                                        _groupMode == 0 ? 'Kelas: $groupName' : 'Mapel: $groupName',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: _groupMode == 0 ? AppTheme.primaryColor : Colors.amber.shade900,
+                                        ),
                                       ),
                                     ),
-                                    const Spacer(),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.primaryColor,
+                                        color: _groupMode == 0 ? AppTheme.primaryColor : Colors.amber.shade900,
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
-                                        '${studentsInClass.length} Siswa Terdaftar',
+                                        '${studentsInGroup.length} Siswa Terdaftar',
                                         style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                                       ),
                                     ),
@@ -612,11 +687,12 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                               ),
 
                               // Student Cards
-                              ...studentsInClass.map((s) {
+                              ...studentsInGroup.map((s) {
                                 final sid = int.parse((s['siswa_id'] ?? s['id'] ?? 0).toString());
                                 final name = (s['nama_lengkap'] ?? 'Siswa').toString();
                                 final nis = (s['nis'] ?? s['nisn'] ?? '-').toString();
-                                final enrolledMapel = (s['nama_mapel_enrolled'] ?? '').toString();
+                                final className = (s['nama_kelas'] ?? 'Tanpa Kelas').toString();
+                                final enrolledMapel = (s['nama_mapel'] ?? s['nama_mapel_enrolled'] ?? '').toString();
                                 final qrCode = (s['qr_code'] ?? '').toString();
                                 final waktuHadir = (s['waktu_hadir'] ?? s['waktu_masuk'] ?? '').toString();
                                 final isQrScan = qrCode.isNotEmpty;
