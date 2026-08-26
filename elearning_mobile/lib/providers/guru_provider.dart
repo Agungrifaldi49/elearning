@@ -300,6 +300,30 @@ class GuruProvider with ChangeNotifier {
     };
   }
 
+  Future<Map<String, dynamic>> fetchKeyMapelData(int userId) async {
+    final res = await ApiService.get('guru/key_mapel', params: {
+      'user_id': userId.toString(),
+    });
+    if (res['success'] == true && res['data'] is Map) {
+      return Map<String, dynamic>.from(res['data']);
+    }
+    return {'keys': [], 'mapel_list': [], 'classes': []};
+  }
+
+  Future<bool> updateKeyMapel(int userId, int mapelId, String key, {int? kelasId}) async {
+    final Map<String, dynamic> body = {
+      'user_id': userId,
+      'mapel_id': mapelId,
+      'enrollment_key': key,
+    };
+    if (kelasId != null && kelasId > 0) {
+      body['kelas_id'] = kelasId;
+    }
+
+    final res = await ApiService.post('guru/key_mapel', body);
+    return res['success'] == true;
+  }
+
   List<dynamic> _susulanList = [];
   List<dynamic> get susulanList => _susulanList;
 

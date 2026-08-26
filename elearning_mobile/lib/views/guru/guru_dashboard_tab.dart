@@ -12,6 +12,7 @@ import '../shared/panduan_screen.dart';
 import 'guru_absensi_tab.dart';
 import 'guru_bank_soal_screen.dart';
 import 'guru_input_nilai_screen.dart';
+import 'guru_key_mapel_screen.dart';
 import 'guru_recap_absensi_screen.dart';
 import 'guru_scan_qr_screen.dart';
 
@@ -45,13 +46,19 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
     final stats = guruProvider.dashboardData?['stats'] ?? {'materi': 0, 'tugas': 0, 'quiz': 0};
     final jadwalToday = guruProvider.dashboardData?['jadwal_hari_ini'] as List? ?? [];
 
-    // Complete 11 Features List for Guru
+    // Complete Features List for Guru
     final allFeatures = [
       _buildFeatureGridItem(
         icon: Icons.how_to_reg_rounded,
         label: 'Input Absensi',
         color: Colors.teal,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.key_rounded,
+        label: 'Key Mapel',
+        color: Colors.amber.shade900,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruKeyMapelScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.edit_note_rounded,

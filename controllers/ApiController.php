@@ -1563,6 +1563,46 @@ class ApiController {
                 ]);
                 break;
 
+            case 'key_mapel':
+            case 'kelas_virtual':
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                $academicModel = new AcademicModel();
+
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    $input = $this->getPostInput();
+                    $mapelId = intval($input['mapel_id'] ?? $_POST['mapel_id'] ?? 0);
+                    $kelasId = !empty($input['kelas_id'] ?? $_POST['kelas_id']) ? intval($input['kelas_id'] ?? $_POST['kelas_id']) : null;
+                    $key = Security::sanitize(trim($input['enrollment_key'] ?? $input['key_mapel'] ?? $_POST['enrollment_key'] ?? $_POST['key_mapel'] ?? ''));
+
+                    if ($mapelId <= 0) {
+                        $this->jsonResponse(false, 'Mata pelajaran harus dipilih', null, 400);
+                    }
+                    if (empty($key)) {
+                        $this->jsonResponse(false, 'Kode Key Mapel tidak boleh kosong', null, 400);
+                    }
+
+                    $guruId = intval($guru['id'] ?? 0);
+                    $ok = $academicModel->setMapelEnrollmentKey($mapelId, $guruId, $key, $kelasId);
+
+                    if ($ok) {
+                        $this->jsonResponse(true, 'Kode Key Mapel pengampuan Anda berhasil diperbarui!');
+                    } else {
+                        $this->jsonResponse(false, 'Gagal memperbarui Key Mapel', null, 500);
+                    }
+                }
+
+                $guruId = intval($guru['id'] ?? 0);
+                $myKeys = $academicModel->getMapelEnrollmentKeys($guruId);
+                $mapelList = $academicModel->getMapel();
+                $classList = $academicModel->getKelas();
+
+                $this->jsonResponse(true, 'Data Key Mapel Guru', [
+                    'keys' => $myKeys,
+                    'mapel_list' => $mapelList,
+                    'classes' => $classList
+                ]);
+                break;
+
             case 'kartu':
                 $this->jsonResponse(true, 'Kartu Digital Guru', [
                     'nip' => $guru['nip'] ?? '-',
