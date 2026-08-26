@@ -916,4 +916,59 @@ class AbsensiModel extends BaseModel {
             'data' => $results
         ];
     }
+
+    public function getEnrolledStudentsForAttendance($guruId, $mapelId, $tanggal = null) {
+        $guruId = (int)$guruId;
+        $mapelId = (int)$mapelId;
+        if (!$tanggal) $tanggal = date('Y-m-d');
+
+        $stmt = $this->db->prepare("
+            SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, k.nama_kelas, j.nama_jurusan,
+                   COALESCE(a.status, 'Belum Absen') as status_absensi, a.keterangan, a.waktu_hadir
+            FROM siswa_mapel_enrollment sme
+            JOIN siswa s ON sme.siswa_id = s.id
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            LEFT JOIN jurusan j ON s.jurusan_id = j.id
+            LEFT JOIN absensi a ON s.id = a.siswa_id AND a.tanggal = ?
+            WHERE sme.guru_id = ? AND sme.mapel_id = ?
+            ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
+        ");
+        $stmt->execute([$tanggal, $guruId, $mapelId]);
+        return $stmt->fetchAll();
+    }
+
+    public function saveManualAttendance($guruId, $mapelId, $siswaId, $tanggal, $status, $keterangan = '') {
+        $guruId = (int)$guruId;
+        $mapelId = (int)$mapelId;
+        $siswaId = (int)$siswaId;
+        $tanggal = Security::sanitize($tanggal ?: date('Y-m-d'));
+        $status = ucfirst(strtolower(trim($status)));
+        if (!in_array($status, ['Hadir', 'Izin', 'Sakit', 'Alpha'])) {
+            $status = 'Hadir';
+        }
+
+        // Verify enrollment
+        $chk = $this->db->prepare("SELECT id FROM siswa_mapel_enrollment WHERE siswa_id = ? AND mapel_id = ? AND guru_id = ?");
+        $chk->execute([$siswaId, $mapelId, $guruId]);
+        if (!$chk->fetch()) {
+            return false;
+        }
+
+        $stmtExist = $this->db->prepare("SELECT id FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
+        $stmtExist->execute([$siswaId, $tanggal]);
+        $exist = $stmtExist->fetch();
+
+        $now = date('Y-m-d H:i:s');
+        if ($exist) {
+            $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, keterangan = ? WHERE id = ?");
+            return $stmt->execute([$guruId, $status, $keterangan, $exist['id']]);
+        } else {
+            $qrCodeVal = "MANUAL_" . $siswaId . "_" . date('YmdHis');
+            $stmt = $this->db->prepare("
+                INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_hadir, status, qr_code, keterangan) 
+                VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            return $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Guru']);
+        }
+    }
 }

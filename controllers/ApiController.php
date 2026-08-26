@@ -1626,6 +1626,59 @@ class ApiController {
                 ]);
                 break;
 
+            case 'input_absensi':
+            case 'presensi_manual':
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                require_once ROOT_PATH . 'models/AbsensiModel.php';
+                $academicModel = new AcademicModel();
+                $absensiModel = new AbsensiModel();
+                $guruId = intval($guru['id'] ?? 0);
+
+                if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+                    $input = $this->getPostInput();
+                    $mapelId = intval($input['mapel_id'] ?? $_POST['mapel_id'] ?? 0);
+                    $tanggal = Security::sanitize($input['tanggal'] ?? $_POST['tanggal'] ?? date('Y-m-d'));
+                    $presensi = $input['absensi'] ?? $_POST['absensi'] ?? [];
+                    $keteranganMap = $input['keterangan'] ?? $_POST['keterangan'] ?? [];
+
+                    if ($mapelId <= 0) {
+                        $this->jsonResponse(false, 'Mata pelajaran harus dipilih', null, 400);
+                    }
+                    if (empty($presensi) || !is_array($presensi)) {
+                        $this->jsonResponse(false, 'Data presensi siswa tidak boleh kosong', null, 400);
+                    }
+
+                    $saved = 0;
+                    foreach ($presensi as $siswaId => $status) {
+                        $sId = intval($siswaId);
+                        $ket = Security::sanitize($keteranganMap[$siswaId] ?? '');
+                        if ($sId > 0 && !empty($status)) {
+                            if ($absensiModel->saveManualAttendance($guruId, $mapelId, $sId, $tanggal, $status, $ket)) {
+                                $saved++;
+                            }
+                        }
+                    }
+
+                    $this->jsonResponse(true, "Presensi manual berhasil disimpan untuk {$saved} siswa!");
+                }
+
+                $myMapelList = $academicModel->getMapelByGuru($guruId);
+                $selectedMapelId = intval($_GET['mapel_id'] ?? $_POST['mapel_id'] ?? ($myMapelList[0]['id'] ?? 0));
+                $tanggal = Security::sanitize($_GET['tanggal'] ?? $_POST['tanggal'] ?? date('Y-m-d'));
+
+                $students = [];
+                if ($selectedMapelId > 0) {
+                    $students = $absensiModel->getEnrolledStudentsForAttendance($guruId, $selectedMapelId, $tanggal);
+                }
+
+                $this->jsonResponse(true, 'Data Presensi Manual Guru', [
+                    'mapel_list' => $myMapelList,
+                    'selected_mapel_id' => $selectedMapelId,
+                    'tanggal' => $tanggal,
+                    'students' => $students
+                ]);
+                break;
+
             case 'kartu':
                 $this->jsonResponse(true, 'Kartu Digital Guru', [
                     'nip' => $guru['nip'] ?? '-',

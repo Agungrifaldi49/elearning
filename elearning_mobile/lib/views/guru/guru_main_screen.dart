@@ -8,6 +8,7 @@ import '../shared/edugame_screen.dart';
 import '../shared/kartu_digital_screen.dart';
 import '../shared/library_screen.dart';
 import 'guru_dashboard_tab.dart';
+import 'guru_input_absensi_screen.dart';
 import 'guru_input_nilai_screen.dart';
 import 'guru_key_mapel_screen.dart';
 import 'guru_jadwal_tab.dart';
@@ -170,6 +171,8 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruKeyMapelScreen()));
               } else if (value == 'input_nilai') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen()));
+              } else if (value == 'input_absensi') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputAbsensiScreen()));
               } else if (value == 'absensi') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab()));
               } else if (value == 'library') {
@@ -183,7 +186,8 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
               const PopupMenuItem(value: 'kartu', child: Text('Kartu Guru Digital')),
               const PopupMenuItem(value: 'key_mapel', child: Row(children: [Icon(Icons.vpn_key_rounded, size: 18, color: Colors.amber), SizedBox(width: 8), Text('Kode Key Mapel Virtual')])),
               const PopupMenuItem(value: 'input_nilai', child: Text('Input & Edit Nilai Siswa')),
-              const PopupMenuItem(value: 'absensi', child: Text('Input Absensi Kelas')),
+              const PopupMenuItem(value: 'input_absensi', child: Row(children: [Icon(Icons.how_to_reg_rounded, size: 18, color: Colors.green), SizedBox(width: 8), Text('Input Presensi Manual')])),
+              const PopupMenuItem(value: 'absensi', child: Text('Rekap Presensi Kelas')),
               const PopupMenuItem(value: 'library', child: Text('Perpustakaan Digital')),
               const PopupMenuItem(value: 'game', child: Text('EduGame & Kuis Interaktif')),
               const PopupMenuDivider(),

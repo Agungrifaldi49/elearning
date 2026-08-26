@@ -506,4 +506,52 @@ class GuruProvider with ChangeNotifier {
       'students': [],
     };
   }
+
+  Future<Map<String, dynamic>> fetchInputAbsensiData(
+    int userId, {
+    int? mapelId,
+    String? tanggal,
+  }) async {
+    final params = <String, String>{
+      'user_id': userId.toString(),
+    };
+    if (mapelId != null && mapelId > 0) {
+      params['mapel_id'] = mapelId.toString();
+    }
+    if (tanggal != null && tanggal.isNotEmpty) {
+      params['tanggal'] = tanggal;
+    }
+
+    final res = await ApiService.get('guru/input_absensi', params: params);
+    if (res['success'] == true && res['data'] is Map) {
+      return Map<String, dynamic>.from(res['data']);
+    }
+    return {
+      'mapel_list': [],
+      'selected_mapel_id': 0,
+      'tanggal': tanggal ?? DateTime.now().toString().substring(0, 10),
+      'students': [],
+    };
+  }
+
+  Future<bool> saveManualAttendance(
+    int userId,
+    int mapelId,
+    String tanggal,
+    Map<int, String> absensiMap, {
+    Map<int, String>? keteranganMap,
+  }) async {
+    final Map<String, dynamic> body = {
+      'user_id': userId,
+      'mapel_id': mapelId,
+      'tanggal': tanggal,
+      'absensi': absensiMap,
+    };
+    if (keteranganMap != null && keteranganMap.isNotEmpty) {
+      body['keterangan'] = keteranganMap;
+    }
+
+    final res = await ApiService.post('guru/input_absensi', body);
+    return res['success'] == true;
+  }
 }

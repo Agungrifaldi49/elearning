@@ -10,6 +10,7 @@ import '../shared/library_screen.dart';
 import '../shared/live_class_screen.dart';
 import '../shared/panduan_screen.dart';
 import 'guru_bank_soal_screen.dart';
+import 'guru_input_absensi_screen.dart';
 import 'guru_input_nilai_screen.dart';
 import 'guru_key_mapel_screen.dart';
 import 'guru_scan_qr_screen.dart';
@@ -59,6 +60,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
         label: 'Input Nilai',
         color: Colors.indigo,
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.how_to_reg_rounded,
+        label: 'Presensi Manual',
+        color: Colors.green.shade700,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputAbsensiScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.qr_code_scanner_rounded,
