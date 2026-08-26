@@ -19,7 +19,7 @@ class GuruProvider with ChangeNotifier {
   List<ChatContactModel> _chatContacts = [];
   final StreamController<List<ChatContactModel>> _chatContactsController = StreamController<List<ChatContactModel>>.broadcast();
 
-  Set<int> _seenForumIds = {};
+  final Set<int> _seenForumIds = {};
   int _unreadChatCount = 0;
 
   bool get isLoading => _isLoading;
@@ -187,14 +187,20 @@ class GuruProvider with ChangeNotifier {
     return [];
   }
 
-  Future<Map<String, dynamic>> fetchAbsensiData(int userId, int kelasId, {int mapelId = 0}) async {
+  Future<Map<String, dynamic>> fetchAbsensiData(
+    int userId, {
+    int jadwalId = 0,
+    int kelasId = 0,
+    int mapelId = 0,
+    String? tanggal,
+  }) async {
     final Map<String, String> params = {
       'user_id': userId.toString(),
-      'kelas_id': kelasId.toString(),
     };
-    if (mapelId > 0) {
-      params['mapel_id'] = mapelId.toString();
-    }
+    if (jadwalId > 0) params['jadwal_id'] = jadwalId.toString();
+    if (kelasId > 0) params['kelas_id'] = kelasId.toString();
+    if (mapelId > 0) params['mapel_id'] = mapelId.toString();
+    if (tanggal != null && tanggal.isNotEmpty) params['tanggal'] = tanggal;
 
     final res = await ApiService.get('guru/absensi', params: params);
     if (res['success'] == true && res['data'] != null) {
@@ -202,27 +208,96 @@ class GuruProvider with ChangeNotifier {
         return Map<String, dynamic>.from(res['data']);
       } else if (res['data'] is List) {
         return {
+          'jadwal_list': [],
+          'selected_jadwal_id': 0,
+          'tanggal': tanggal ?? '',
           'mapel_list': [],
           'classes': [],
           'students': res['data'],
         };
       }
     }
-    return {'mapel_list': [], 'classes': [], 'students': []};
+    return {
+      'jadwal_list': [],
+      'selected_jadwal_id': 0,
+      'tanggal': tanggal ?? '',
+      'mapel_list': [],
+      'classes': [],
+      'students': []
+    };
   }
 
-  Future<bool> saveAbsensi(int userId, int jadwalId, Map<int, String> records) async {
+  Future<bool> saveAbsensi(
+    int userId,
+    int jadwalId,
+    String tanggal,
+    Map<int, String> records,
+    Map<int, String> keterangan,
+  ) async {
     final Map<String, String> formattedRecords = {};
     records.forEach((key, value) {
       formattedRecords[key.toString()] = value;
     });
 
+    final Map<String, String> formattedKeterangan = {};
+    keterangan.forEach((key, value) {
+      if (value.trim().isNotEmpty) {
+        formattedKeterangan[key.toString()] = value.trim();
+      }
+    });
+
     final res = await ApiService.post('guru/absensi', {
       'user_id': userId,
       'jadwal_id': jadwalId,
+      'tanggal': tanggal,
       'records': formattedRecords,
+      'keterangan': formattedKeterangan,
     });
     return res['success'] == true;
+  }
+
+  Future<Map<String, dynamic>> fetchRecapAbsensiData(
+    int userId, {
+    int kelasId = 0,
+    int mapelId = 0,
+    String? bulan,
+    String? tahun,
+    String? tanggal,
+    String? search,
+  }) async {
+    final Map<String, String> params = {
+      'user_id': userId.toString(),
+    };
+    if (kelasId > 0) params['kelas_id'] = kelasId.toString();
+    if (mapelId > 0) params['mapel_id'] = mapelId.toString();
+    if (bulan != null && bulan.isNotEmpty) params['bulan'] = bulan;
+    if (tahun != null && tahun.isNotEmpty) params['tahun'] = tahun;
+    if (tanggal != null && tanggal.isNotEmpty) params['tanggal'] = tanggal;
+    if (search != null && search.isNotEmpty) params['search'] = search;
+
+    final res = await ApiService.get('guru/recap_absensi', params: params);
+    if (res['success'] == true && res['data'] != null) {
+      if (res['data'] is Map) {
+        return Map<String, dynamic>.from(res['data']);
+      } else if (res['data'] is List) {
+        return {
+          'summary': {
+            'total_records': (res['data'] as List).length,
+            'hadir': 0,
+            'izin': 0,
+            'sakit': 0,
+            'alpa': 0,
+          },
+          'classes': [],
+          'records': res['data'],
+        };
+      }
+    }
+    return {
+      'summary': {'total_records': 0, 'hadir': 0, 'izin': 0, 'sakit': 0, 'alpa': 0},
+      'classes': [],
+      'records': [],
+    };
   }
 
   List<dynamic> _susulanList = [];
