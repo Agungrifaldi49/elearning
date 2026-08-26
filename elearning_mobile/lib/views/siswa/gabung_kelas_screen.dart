@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
@@ -339,6 +340,46 @@ class _GabungKelasScreenState extends State<GabungKelasScreen> {
                                     Text("Guru Pengampu: ${m['nama_guru'] ?? '-'}", style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
                                     if (m['nama_kelas'] != null)
                                       Text("Kelas Target: ${m['nama_kelas']}", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                                    if (mapelKey.isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.shade50,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.amber.shade200),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.key_rounded, size: 14, color: Colors.amber.shade900),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              "Kode Key: $mapelKey",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.amber.shade900,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            InkWell(
+                                              onTap: () {
+                                                Clipboard.setData(ClipboardData(text: mapelKey));
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Kode Key "$mapelKey" disalin!'),
+                                                    duration: const Duration(seconds: 2),
+                                                  ),
+                                                );
+                                              },
+                                              child: Icon(Icons.copy_rounded, size: 14, color: Colors.amber.shade900),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                     const SizedBox(height: 12),
                                     Align(
                                       alignment: Alignment.centerRight,
@@ -349,7 +390,7 @@ class _GabungKelasScreenState extends State<GabungKelasScreen> {
                                               backgroundColor: Color(0xFFE8F5E9),
                                             )
                                           : ElevatedButton.icon(
-                                              onPressed: () => _showEnrollMapelDialog(''),
+                                              onPressed: () => _showEnrollMapelDialog(mapelKey),
                                               icon: const Icon(Icons.key, size: 16),
                                               label: const Text('Masukkan Key Mapel'),
                                               style: ElevatedButton.styleFrom(

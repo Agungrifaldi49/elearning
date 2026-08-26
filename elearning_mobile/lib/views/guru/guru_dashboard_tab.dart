@@ -11,6 +11,7 @@ import '../shared/live_class_screen.dart';
 import '../shared/panduan_screen.dart';
 import 'guru_bank_soal_screen.dart';
 import 'guru_input_nilai_screen.dart';
+import 'guru_key_mapel_screen.dart';
 import 'guru_scan_qr_screen.dart';
 
 class GuruDashboardTab extends StatefulWidget {
@@ -47,6 +48,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
 
     // Complete Features List for Guru
     final allFeatures = [
+      _buildFeatureGridItem(
+        icon: Icons.vpn_key_rounded,
+        label: 'Kode Key Mapel',
+        color: Colors.amber.shade800,
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruKeyMapelScreen())),
+      ),
       _buildFeatureGridItem(
         icon: Icons.edit_note_rounded,
         label: 'Input Nilai',

@@ -9,6 +9,7 @@ import '../shared/kartu_digital_screen.dart';
 import '../shared/library_screen.dart';
 import 'guru_dashboard_tab.dart';
 import 'guru_input_nilai_screen.dart';
+import 'guru_key_mapel_screen.dart';
 import 'guru_jadwal_tab.dart';
 import 'guru_materi_tab.dart';
 import 'guru_tugas_tab.dart';
@@ -165,6 +166,8 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
               } else if (value == 'kartu') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
+              } else if (value == 'key_mapel') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruKeyMapelScreen()));
               } else if (value == 'input_nilai') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen()));
               } else if (value == 'absensi') {
@@ -178,6 +181,7 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'profil', child: Row(children: [Icon(Icons.person, size: 20), SizedBox(width: 8), Text('Edit & Update Profil')])),
               const PopupMenuItem(value: 'kartu', child: Text('Kartu Guru Digital')),
+              const PopupMenuItem(value: 'key_mapel', child: Row(children: [Icon(Icons.vpn_key_rounded, size: 18, color: Colors.amber), SizedBox(width: 8), Text('Kode Key Mapel Virtual')])),
               const PopupMenuItem(value: 'input_nilai', child: Text('Input & Edit Nilai Siswa')),
               const PopupMenuItem(value: 'absensi', child: Text('Input Absensi Kelas')),
               const PopupMenuItem(value: 'library', child: Text('Perpustakaan Digital')),
