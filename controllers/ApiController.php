@@ -2900,110 +2900,13 @@ class ApiController {
                     $b['file_url'] = $baseUrl . 'assets/docs/panduan.pdf';
                 }
                 $b['rating'] = 4.8;
-                $b['views_count'] = intval($b['views_count'] ?? rand(120, 850));
-            }
-
-            if (empty($books)) {
-                $books = $this->getDefaultLibraryFallback($search, $kategori);
+                $b['views_count'] = intval($b['view_count'] ?? $b['views_count'] ?? 0);
             }
 
             $this->jsonResponse(true, 'Daftar Buku Digital / Perpustakaan', $books);
         } catch (\Throwable $e) {
-            $this->jsonResponse(true, 'Daftar Buku Digital / Perpustakaan', $this->getDefaultLibraryFallback('', ''));
+            $this->jsonResponse(false, 'Gagal memuat perpustakaan dari database: ' . $e->getMessage(), [], 500);
         }
-    }
-
-    private function getDefaultLibraryFallback($search = '', $kategori = '') {
-        $sampleBooks = [
-            [
-                'id' => 1,
-                'judul' => 'Buku Panduan Pembelajaran Digital SMK',
-                'penulis' => 'Tim Kurikulum SMK Muthia Harapan',
-                'kategori' => 'Panduan',
-                'deskripsi' => 'Panduan resmi penggunaan LMS Mobile, kelas virtual, presensi QR Code, dan e-learning interaktif SMK Muthia Harapan Cicalengka.',
-                'file_path' => 'assets/docs/panduan.pdf',
-                'file_url' => 'https://smkmuthiaharapancicalengka.my.id/assets/docs/panduan.pdf',
-                'file_type' => 'pdf',
-                'file_size' => 2450000,
-                'is_featured' => 1,
-                'rating' => 4.9,
-                'views_count' => 1420,
-            ],
-            [
-                'id' => 2,
-                'judul' => 'Modul Pemrograman Web & Mobile Framework',
-                'penulis' => 'Tim IT & Rekayasa Perangkat Lunak',
-                'kategori' => 'Teknologi Informasi',
-                'deskripsi' => 'Modul praktikum komprehensif pengembangan aplikasi Web modern berbasis PHP MySQL & Flutter Mobile Engine.',
-                'file_path' => 'assets/docs/modul_web.pdf',
-                'file_url' => 'https://smkmuthiaharapancicalengka.my.id/assets/docs/modul_web.pdf',
-                'file_type' => 'pdf',
-                'file_size' => 3800000,
-                'is_featured' => 1,
-                'rating' => 4.8,
-                'views_count' => 980,
-            ],
-            [
-                'id' => 3,
-                'judul' => 'Dasar-Dasar Kejuruan & Otomasi Industri',
-                'penulis' => 'Tim Pendidik Kejuruan',
-                'kategori' => 'Kejuruan',
-                'deskripsi' => 'Materi standar kompetensi keahlian teknik, dasar otomasi, keselamatan kerja (K3LH), dan etika profesi kejuruan.',
-                'file_path' => 'assets/docs/kejuruan.pdf',
-                'file_url' => 'https://smkmuthiaharapancicalengka.my.id/assets/docs/kejuruan.pdf',
-                'file_type' => 'pdf',
-                'file_size' => 1950000,
-                'is_featured' => 0,
-                'rating' => 4.7,
-                'views_count' => 650,
-            ],
-            [
-                'id' => 4,
-                'judul' => 'Kewirausahaan Digital & Startup SMK',
-                'penulis' => 'Dr. H. Ahmad Fauzi, M.Pd.',
-                'kategori' => 'Umum',
-                'deskripsi' => 'Panduan membangun bisnis startup digital, strategi pemasaran online, dan pengelolaan finansial bagi siswa SMK.',
-                'file_path' => 'assets/docs/kewirausahaan.pdf',
-                'file_url' => 'https://smkmuthiaharapancicalengka.my.id/assets/docs/panduan.pdf',
-                'file_type' => 'pdf',
-                'file_size' => 2100000,
-                'is_featured' => 1,
-                'rating' => 4.9,
-                'views_count' => 890,
-            ],
-            [
-                'id' => 5,
-                'judul' => 'Metodologi Penelitian & Karya Ilmiah Remaja',
-                'penulis' => 'Dra. Hj. Nurjanah, M.Si.',
-                'kategori' => 'Sains',
-                'deskripsi' => 'Pedoman penyusunan laporan tugas akhir, karya ilmiah remaja (KIR), dan penelitian terapan tingkat kejuruan.',
-                'file_path' => 'assets/docs/kir.pdf',
-                'file_url' => 'https://smkmuthiaharapancicalengka.my.id/assets/docs/panduan.pdf',
-                'file_type' => 'pdf',
-                'file_size' => 1600000,
-                'is_featured' => 0,
-                'rating' => 4.6,
-                'views_count' => 410,
-            ]
-        ];
-
-        if (!empty($search)) {
-            $q = strtolower($search);
-            $sampleBooks = array_values(array_filter($sampleBooks, function($b) use ($q) {
-                return strpos(strtolower($b['judul']), $q) !== false || 
-                       strpos(strtolower($b['penulis']), $q) !== false || 
-                       strpos(strtolower($b['deskripsi']), $q) !== false;
-            }));
-        }
-
-        if (!empty($kategori) && strtolower($kategori) !== 'semua') {
-            $kat = strtolower($kategori);
-            $sampleBooks = array_values(array_filter($sampleBooks, function($b) use ($kat) {
-                return strtolower($b['kategori']) === $kat;
-            }));
-        }
-
-        return $sampleBooks;
     }
 
     public function game($endpoint = 'list') {

@@ -117,3 +117,11 @@ INSERT INTO komentar (id, forum_id, user_id, parent_id, komentar) VALUES
 INSERT INTO chat (id, sender_id, receiver_id, message, is_read) VALUES
 (1, 3, 2, 'Assalamu alaikum Pak Ahmad, mau bertanya terkait deadline tugas 1 web.', 1),
 (2, 2, 3, 'Wa alaikumussalam Rizky, deadline tugas 1 diset sampai minggu depan jam 23:59 WIB ya.', 1);
+
+-- 19. Insert Library (Perpustakaan Digital)
+INSERT INTO library (id, judul, penulis, deskripsi, kategori, kelas_target, file_type, file_path, file_size, uploader_id, view_count, download_count) VALUES
+(1, 'Buku Panduan Pembelajaran Digital SMK', 'Tim Kurikulum SMK Muthia Harapan', 'Panduan resmi penggunaan LMS Mobile, kelas virtual, presensi QR Code, dan e-learning interaktif SMK Muthia Harapan Cicalengka.', 'Panduan', 'Semua Kelas', 'pdf', 'assets/docs/panduan.pdf', 2450000, 1, 1420, 350),
+(2, 'Modul Pemrograman Web & Mobile Framework', 'Tim IT & Rekayasa Perangkat Lunak', 'Modul praktikum komprehensif pengembangan aplikasi Web modern berbasis PHP MySQL & Flutter Mobile Engine.', 'Teknologi Informasi', 'XII RPL 1', 'pdf', 'assets/docs/modul_web.pdf', 3800000, 2, 980, 210),
+(3, 'Dasar-Dasar Kejuruan & Otomasi Industri', 'Tim Pendidik Kejuruan', 'Buku referensi konsep dasar otomasi industri, kelistrikan, dan teknik mekanik otomotif SMK.', 'Kejuruan', 'X & XI TKR', 'pdf', 'assets/docs/modul_kejuruan.pdf', 4100000, 2, 750, 180),
+(4, 'Ensiklopedia Sains & Teknologi Modern', 'Dr. Ir. Hendra Gunawan', 'Ensiklopedia sains populer mengenai kecerdasan buatan, IoT, Cloud Computing, dan fisika terapan.', 'Sains', 'Semua Kelas', 'pdf', 'assets/docs/ensiklopedia_sains.pdf', 5200000, 1, 1100, 420),
+(5, 'Modul Bahasa Indonesia & Literasi Industri', 'Dra. Endang Rahayu', 'Modul komprehensif tata bahasa Indonesia, penulisan laporan ilmiah, dan komunikasi bisnis industri.', 'Umum', 'Semua Kelas', 'pdf', 'assets/docs/modul_bindo.pdf', 1900000, 1, 620, 140);

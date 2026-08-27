@@ -53,7 +53,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         });
       } else {
         setState(() {
-          _books = _getDefaultFallbackBooks();
+          _books = [];
           _applyFilter();
           _isLoading = false;
         });
@@ -76,76 +76,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
         return matchesSearch && matchesKat;
       }).toList();
     });
-  }
-
-  List<dynamic> _getDefaultFallbackBooks() {
-    return [
-      {
-        'id': 1,
-        'judul': 'Buku Panduan Pembelajaran Digital SMK',
-        'penulis': 'Tim Kurikulum SMK Muthia Harapan',
-        'kategori': 'Panduan',
-        'deskripsi': 'Panduan resmi penggunaan LMS Mobile, kelas virtual, presensi QR Code, dan e-learning interaktif SMK Muthia Harapan Cicalengka.',
-        'file_url': 'https://smkmuthiaharapancicalengka.my.id/assets/docs/panduan.pdf',
-        'file_type': 'pdf',
-        'file_size': 2450000,
-        'is_featured': 1,
-        'rating': 4.9,
-        'views_count': 1420,
-      },
-      {
-        'id': 2,
-        'judul': 'Modul Pemrograman Web & Mobile Framework',
-        'penulis': 'Tim IT & Rekayasa Perangkat Lunak',
-        'kategori': 'Teknologi Informasi',
-        'deskripsi': 'Modul praktikum komprehensif pengembangan aplikasi Web modern berbasis PHP MySQL & Flutter Mobile Engine.',
-        'file_url': 'https://smkmuthiaharapancicalengka.my.id/assets/docs/modul_web.pdf',
-        'file_type': 'pdf',
-        'file_size': 3800000,
-        'is_featured': 1,
-        'rating': 4.8,
-        'views_count': 980,
-      },
-      {
-        'id': 3,
-        'judul': 'Dasar-Dasar Kejuruan & Otomasi Industri',
-        'penulis': 'Tim Pendidik Kejuruan',
-        'kategori': 'Kejuruan',
-        'deskripsi': 'Materi standar kompetensi keahlian teknik, dasar otomasi, keselamatan kerja (K3LH), dan etika profesi kejuruan.',
-        'file_url': 'https://smkmuthiaharapancicalengka.my.id/assets/docs/kejuruan.pdf',
-        'file_type': 'pdf',
-        'file_size': 1950000,
-        'is_featured': 0,
-        'rating': 4.7,
-        'views_count': 650,
-      },
-      {
-        'id': 4,
-        'judul': 'Kewirausahaan Digital & Startup SMK',
-        'penulis': 'Dr. H. Ahmad Fauzi, M.Pd.',
-        'kategori': 'Umum',
-        'deskripsi': 'Panduan membangun bisnis startup digital, strategi pemasaran online, dan pengelolaan finansial bagi siswa SMK.',
-        'file_url': 'https://smkmuthiaharapancicalengka.my.id/assets/docs/panduan.pdf',
-        'file_type': 'pdf',
-        'file_size': 2100000,
-        'is_featured': 1,
-        'rating': 4.9,
-        'views_count': 890,
-      },
-      {
-        'id': 5,
-        'judul': 'Metodologi Penelitian & Karya Ilmiah Remaja',
-        'penulis': 'Dra. Hj. Nurjanah, M.Si.',
-        'kategori': 'Sains',
-        'deskripsi': 'Pedoman penyusunan laporan tugas akhir, karya ilmiah remaja (KIR), dan penelitian terapan tingkat kejuruan.',
-        'file_url': 'https://smkmuthiaharapancicalengka.my.id/assets/docs/panduan.pdf',
-        'file_type': 'pdf',
-        'file_size': 1600000,
-        'is_featured': 0,
-        'rating': 4.6,
-        'views_count': 410,
-      }
-    ];
   }
 
   void _showBookDetail(Map<String, dynamic> book) {
