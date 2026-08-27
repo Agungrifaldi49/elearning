@@ -576,16 +576,23 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     IconData categoryIcon = Icons.book_rounded;
     String categoryText = 'Modul Materi';
 
+    final String statusText = (item['status_text'] ?? (isCompleted ? 'Selesai 🎉' : 'Belum Selesai ⏳')).toString();
+
     if (type == 'tugas') {
       categoryBg = Colors.purple.shade50;
       categoryFg = Colors.purple.shade900;
       categoryIcon = Icons.assignment_rounded;
       categoryText = 'Penugasan KBM';
-    } else if (type == 'quiz' || type == 'ujian') {
+    } else if (type == 'quiz') {
       categoryBg = Colors.amber.shade50;
       categoryFg = Colors.amber.shade900;
       categoryIcon = Icons.quiz_rounded;
-      categoryText = 'Evaluasi CBT';
+      categoryText = 'Kuis CBT';
+    } else if (type == 'uts' || type == 'uas' || type == 'cbt') {
+      categoryBg = Colors.red.shade50;
+      categoryFg = Colors.red.shade900;
+      categoryIcon = Icons.stars_rounded;
+      categoryText = type.toUpperCase();
     }
 
     return Container(
@@ -612,7 +619,9 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -629,7 +638,6 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
@@ -637,7 +645,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isCompleted ? 'Selesai 🎉' : 'Belum Selesai ⏳',
+                        statusText,
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,

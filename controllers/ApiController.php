@@ -342,23 +342,65 @@ class ApiController {
                     $stmtQz->execute(['mid' => $mId, 'kid' => $kelasId, 'sid' => $siswaId]);
                     $quizRows = $stmtQz->fetchAll();
 
+                    $stmtUj = $this->db->prepare("
+                        SELECT u.*, COALESCE(g.nama_lengkap, us.full_name, 'Guru Pengampu') as nama_guru,
+                               hu.id as hasil_id, hu.total_nilai, hu.status as status_hasil, hu.finished_at
+                        FROM ujian u
+                        LEFT JOIN guru g ON u.guru_id = g.id
+                        LEFT JOIN users us ON g.user_id = us.id
+                        LEFT JOIN (
+                            SELECT * FROM hasil_ujian WHERE siswa_id = :sid
+                        ) hu ON hu.ujian_id = u.id
+                        WHERE u.mapel_id = :mid
+                          AND (u.kelas_id = :kid OR u.kelas_id IS NULL OR u.kelas_id = 0)
+                          AND u.is_active = 1
+                        ORDER BY u.id ASC
+                    ");
+                    $stmtUj->execute(['mid' => $mId, 'kid' => $kelasId, 'sid' => $siswaId]);
+                    $ujianRows = $stmtUj->fetchAll();
+
                     $sequenceItems = [];
 
+                    // 1. Real Materi added by Guru
                     foreach ($materiRows as $mItem) {
+                        $fileUrl = !empty($mItem['file_path']) 
+                            ? (str_starts_with($mItem['file_path'], 'http') ? $mItem['file_path'] : 'https://smkmuthiaharapancicalengka.my.id/' . ltrim($mItem['file_path'], '/'))
+                            : null;
+
                         $sequenceItems[] = [
                             'id' => intval($mItem['id']),
                             'type' => 'materi',
                             'title' => $mItem['judul'],
                             'desc' => $mItem['deskripsi'] ?: 'Modul materi pembelajaran KBM.',
                             'guru' => $mItem['nama_guru'] ?: $namaGuru,
+                            'file_url' => $fileUrl,
                             'is_completed' => true,
+                            'status_text' => 'Tersedia',
                             'action_label' => 'Buka Materi',
                             'action_type' => 'materi'
                         ];
                     }
 
+                    // 2. Real Tugas added by Guru & Student Submission History
                     foreach ($tugasRows as $tItem) {
                         $isSub = !empty($tItem['submission_id']);
+                        $nilai = ($tItem['nilai'] !== null) ? floatval($tItem['nilai']) : null;
+                        $submittedAt = $tItem['submitted_at'] ?? null;
+                        $komentarGuru = $tItem['komentar_guru'] ?? null;
+
+                        $statusText = 'Belum Dikerjakan';
+                        $actionLabel = 'Kirim Tugas';
+
+                        if ($isSub) {
+                            if ($nilai !== null) {
+                                $statusText = "Sudah Dinilai: $nilai / 100";
+                                $actionLabel = "History Tugas (Nilai: $nilai)";
+                            } else {
+                                $statusText = "Terkirim: " . ($submittedAt ? date('d/m/Y H:i', strtotime($submittedAt)) : 'Menunggu Nilai');
+                                $actionLabel = "History Pengerjaan";
+                            }
+                        }
+
                         $sequenceItems[] = [
                             'id' => intval($tItem['id']),
                             'type' => 'tugas',
@@ -366,57 +408,71 @@ class ApiController {
                             'desc' => $tItem['deskripsi'] ?: 'Tugas KBM & Praktikum.',
                             'guru' => $tItem['nama_guru'] ?: $namaGuru,
                             'is_completed' => $isSub,
-                            'action_label' => $isSub ? 'Tugas Terkirim' : 'Kirim Tugas',
+                            'submission_id' => $tItem['submission_id'] ? intval($tItem['submission_id']) : null,
+                            'nilai' => $nilai,
+                            'submitted_at' => $submittedAt,
+                            'komentar_guru' => $komentarGuru,
+                            'status_text' => $statusText,
+                            'action_label' => $actionLabel,
                             'action_type' => 'tugas'
                         ];
                     }
 
+                    // 3. Real Quiz added by Guru & Completion History
                     foreach ($quizRows as $qItem) {
                         $isFin = !empty($qItem['finished_at']) || !empty($qItem['hasil_id']);
+                        $totalNilai = ($qItem['total_nilai'] !== null) ? floatval($qItem['total_nilai']) : null;
+                        $statusLulus = $qItem['status_lulus'] ?? null;
+
+                        $statusText = 'Belum Diikuti';
+                        $actionLabel = 'Ikuti Kuis';
+
+                        if ($isFin) {
+                            $statusText = "Selesai (" . ($statusLulus == 'lulus' ? 'Lulus' : 'Selesai') . "): " . ($totalNilai !== null ? $totalNilai : 0) . " / 100";
+                            $actionLabel = "History Kuis" . ($totalNilai !== null ? " ($totalNilai)" : "");
+                        }
+
                         $sequenceItems[] = [
                             'id' => intval($qItem['id']),
                             'type' => 'quiz',
-                            'title' => 'Evaluasi CBT: ' . $qItem['judul'],
-                            'desc' => 'Ujian / Kuis Online Berbasis CBT.',
+                            'title' => 'Evaluasi Kuis: ' . $qItem['judul'],
+                            'desc' => 'Kuis Online Berbasis CBT.',
                             'guru' => $qItem['nama_guru'] ?: $namaGuru,
                             'is_completed' => $isFin,
-                            'action_label' => $isFin ? 'Hasil Kuis' : 'Ikuti Kuis',
+                            'hasil_id' => $qItem['hasil_id'] ? intval($qItem['hasil_id']) : null,
+                            'total_nilai' => $totalNilai,
+                            'status_lulus' => $statusLulus,
+                            'status_text' => $statusText,
+                            'action_label' => $actionLabel,
                             'action_type' => 'quiz'
                         ];
                     }
 
-                    if (empty($sequenceItems)) {
-                        $sequenceItems = [
-                            [
-                                'id' => 1,
-                                'type' => 'materi',
-                                'title' => 'Pembekalan Modul Teori ' . $namaMapel,
-                                'desc' => 'Pelajari silabus dan materi pendahuluan KBM.',
-                                'guru' => $namaGuru,
-                                'is_completed' => true,
-                                'action_label' => 'Buka Materi',
-                                'action_type' => 'materi'
-                            ],
-                            [
-                                'id' => 2,
-                                'type' => 'tugas',
-                                'title' => 'Penugasan Praktikum & Latihan KBM',
-                                'desc' => 'Selesaikan penugasan mandiri atau kelompok.',
-                                'guru' => $namaGuru,
-                                'is_completed' => false,
-                                'action_label' => 'Kirim Tugas',
-                                'action_type' => 'tugas'
-                            ],
-                            [
-                                'id' => 3,
-                                'type' => 'quiz',
-                                'title' => 'Evaluasi Kuis CBT Online',
-                                'desc' => 'Uji pemahaman KBM bab kurikulum.',
-                                'guru' => $namaGuru,
-                                'is_completed' => false,
-                                'action_label' => 'Ikuti Kuis',
-                                'action_type' => 'quiz'
-                            ]
+                    // 4. Real Ujian (UTS / UAS / PAT) added by Guru & Exam History
+                    foreach ($ujianRows as $uItem) {
+                        $isFin = !empty($uItem['finished_at']) || ($uItem['status_hasil'] ?? '') === 'selesai';
+                        $totalNilai = ($uItem['total_nilai'] !== null) ? floatval($uItem['total_nilai']) : null;
+                        $jenisUjian = strtoupper($uItem['jenis_ujian'] ?? 'UTS');
+
+                        $statusText = 'Belum Diikuti';
+                        $actionLabel = 'Ikuti ' . $jenisUjian;
+
+                        if ($isFin) {
+                            $statusText = "Selesai: " . ($totalNilai !== null ? $totalNilai : 0) . " / 100";
+                            $actionLabel = "History $jenisUjian" . ($totalNilai !== null ? " ($totalNilai)" : "");
+                        }
+
+                        $sequenceItems[] = [
+                            'id' => intval($uItem['id']),
+                            'type' => strtolower($jenisUjian),
+                            'title' => $jenisUjian . ': ' . $uItem['nama_ujian'],
+                            'desc' => 'Ujian Resmi Semester Berbasis CBT.',
+                            'guru' => $uItem['nama_guru'] ?: $namaGuru,
+                            'is_completed' => $isFin,
+                            'total_nilai' => $totalNilai,
+                            'status_text' => $statusText,
+                            'action_label' => $actionLabel,
+                            'action_type' => 'cbt'
                         ];
                     }
 
