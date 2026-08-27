@@ -51,13 +51,13 @@ class NilaiModel {
         $stmt->execute([$siswaId]);
         $enrolledNilai = $stmt->fetchAll();
 
-        // Fallback for students with un-enrolled non-zero grades
+        // Fallback for students with un-enrolled mapels
         if (empty($enrolledNilai)) {
             $stmtFallback = $this->db->prepare("
                 SELECT n.*, mp.nama_mapel, COALESCE(mp.kkm, 75) as kkm
                 FROM nilai_rapor n
                 JOIN mata_pelajaran mp ON n.mapel_id = mp.id
-                WHERE n.siswa_id = ? AND (n.nilai_tugas > 0 OR n.nilai_quiz > 0 OR n.nilai_uts > 0 OR n.nilai_uas > 0)
+                WHERE n.siswa_id = ?
                 ORDER BY mp.nama_mapel ASC
             ");
             $stmtFallback->execute([$siswaId]);

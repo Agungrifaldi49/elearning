@@ -446,6 +446,17 @@ class SiswaController {
         $siswa = $this->getSiswaInfo();
         $siswaId = $siswa['id'];
 
+        $nilaiModel = new NilaiModel();
+        $academicModel = new AcademicModel();
+
+        // Auto-sync real-time scores for all enrolled mapels for student
+        $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
+        if (!empty($enrolledList)) {
+            foreach ($enrolledList as $em) {
+                $nilaiModel->syncSiswaMapelNilai($siswaId, (int)$em['mapel_id']);
+            }
+        }
+
         $db = Database::getConnection();
         $stmt = $db->prepare("
             SELECT hq.*, q.judul as nama_quiz, q.durasi_menit, m.nama_mapel, g.nama_lengkap as nama_guru 

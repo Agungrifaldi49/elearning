@@ -433,12 +433,47 @@ class SiswaProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final res = await ApiService.get('siswa/nilai', params: {'user_id': userId.toString()});
-    if (res['success'] == true && res['data'] is List) {
-      _nilaiList = (res['data'] as List).map((e) => NilaiModel.fromJson(e)).toList();
+    try {
+      final res = await ApiService.get('siswa/nilai', params: {'user_id': userId.toString()});
+      debugPrint("SiswaProvider.fetchNilai raw response: $res");
+
+      List<dynamic> rawList = [];
+      if (res['success'] == true && res['data'] != null) {
+        if (res['data'] is List) {
+          rawList = res['data'];
+        } else if (res['data'] is Map) {
+          final map = res['data'] as Map;
+          if (map['nilai'] is List) {
+            rawList = map['nilai'];
+          } else if (map['rapor'] is List) {
+            rawList = map['rapor'];
+          } else if (map['data'] is List) {
+            rawList = map['data'];
+          }
+        }
+      }
+
+      final List<NilaiModel> parsed = [];
+      for (var item in rawList) {
+        try {
+          if (item is Map<String, dynamic>) {
+            parsed.add(NilaiModel.fromJson(item));
+          } else if (item is Map) {
+            parsed.add(NilaiModel.fromJson(Map<String, dynamic>.from(item)));
+          }
+        } catch (eItem) {
+          debugPrint("Gagal parse item NilaiModel: $item | Error: $eItem");
+        }
+      }
+
+      _nilaiList = parsed;
+    } catch (e, stack) {
+      debugPrint("Error fetchNilai: $e");
+      debugPrint("Stacktrace: $stack");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    _isLoading = false;
-    notifyListeners();
   }
 
   Timer? _realtimeTimer;

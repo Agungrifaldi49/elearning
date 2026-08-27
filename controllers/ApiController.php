@@ -1229,16 +1229,73 @@ class ApiController {
                 break;
 
             case 'nilai':
-                $stmtN = $this->db->prepare("
-                    SELECT n.*, mp.nama_mapel, mp.kode_mapel 
-                    FROM nilai n 
-                    JOIN mata_pelajaran mp ON n.mapel_id = mp.id 
-                    WHERE n.siswa_id = :sid
-                ");
-                $stmtN->execute(['sid' => $siswa['id']]);
-                $nilaiList = $stmtN->fetchAll();
+            case 'rapor':
+                require_once ROOT_PATH . 'models/NilaiModel.php';
+                require_once ROOT_PATH . 'models/AcademicModel.php';
 
-                $this->jsonResponse(true, 'Rekap Nilai Siswa', $nilaiList);
+                $nilaiModel = new NilaiModel();
+                $academicModel = new AcademicModel();
+
+                $siswaId = intval($siswa['id']);
+
+                // Auto-sync real-time scores for all enrolled/class mapels for this student
+                try {
+                    $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
+                    $mapelIdsToSync = [];
+                    if (!empty($enrolledList)) {
+                        foreach ($enrolledList as $em) {
+                            if (!empty($em['mapel_id'])) {
+                                $mapelIdsToSync[] = (int)$em['mapel_id'];
+                            }
+                        }
+                    }
+
+                    if (empty($mapelIdsToSync)) {
+                        $stmtMapelClass = $this->db->prepare("SELECT id FROM mata_pelajaran WHERE kelas_id = ? OR kelas_id IS NULL OR kelas_id = 0");
+                        $stmtMapelClass->execute([$siswa['kelas_id'] ?? 0]);
+                        $mapelIdsToSync = $stmtMapelClass->fetchAll(PDO::FETCH_COLUMN);
+
+                        if (empty($mapelIdsToSync)) {
+                            $stmtAllMapels = $this->db->query("SELECT id FROM mata_pelajaran");
+                            $mapelIdsToSync = $stmtAllMapels->fetchAll(PDO::FETCH_COLUMN);
+                        }
+                    }
+
+                    foreach ($mapelIdsToSync as $mId) {
+                        $nilaiModel->syncSiswaMapelNilai($siswaId, (int)$mId);
+                    }
+                } catch (\Throwable $eSync) {}
+
+                $nilaiList = $nilaiModel->getNilaiBySiswa($siswaId);
+
+                // Format & enrich response data with predikat & ketuntasan
+                $formattedNilai = [];
+                foreach ($nilaiList as $n) {
+                    $kkm = intval($n['kkm'] ?? 75);
+                    $nilaiAkhir = floatval($n['nilai_akhir'] ?? 0);
+                    $predikatInfo = NilaiModel::getPredikat($nilaiAkhir);
+                    $isTuntas = ($nilaiAkhir >= $kkm);
+
+                    $formattedNilai[] = [
+                        'id' => intval($n['id']),
+                        'siswa_id' => intval($n['siswa_id']),
+                        'mapel_id' => intval($n['mapel_id']),
+                        'nama_mapel' => $n['nama_mapel'] ?? '',
+                        'kode_mapel' => $n['kode_mapel'] ?? ('MP' . $n['mapel_id']),
+                        'kkm' => $kkm,
+                        'nilai_tugas' => floatval($n['nilai_tugas'] ?? 0),
+                        'nilai_quiz' => floatval($n['nilai_quiz'] ?? 0),
+                        'nilai_uts' => floatval($n['nilai_uts'] ?? 0),
+                        'nilai_uas' => floatval($n['nilai_uas'] ?? 0),
+                        'nilai_akhir' => $nilaiAkhir,
+                        'predikat' => $predikatInfo['grade'],
+                        'predikat_label' => $predikatInfo['label'],
+                        'is_tuntas' => $isTuntas,
+                        'status_ketuntasan' => $isTuntas ? 'TUNTAS' : 'BELUM TUNTAS'
+                    ];
+                }
+
+                $this->jsonResponse(true, 'Rekap Nilai & E-Rapor Digital Siswa', $formattedNilai);
                 break;
 
             case 'kartu':
@@ -1250,31 +1307,6 @@ class ApiController {
                     'foto' => $siswa['foto'] ?? null,
                     'qr_code' => 'SISWA-' . ($siswa['nis'] ?? $siswa['id'])
                 ]);
-                break;
-
-            case 'rapor':
-                try {
-                    $stmtRap = $this->db->prepare("
-                        SELECT r.*, mp.nama_mapel 
-                        FROM rapor r 
-                        LEFT JOIN mata_pelajaran mp ON r.mapel_id = mp.id 
-                        WHERE r.siswa_id = :sid
-                    ");
-                    $stmtRap->execute(['sid' => $siswa['id']]);
-                    $rapor = $stmtRap->fetchAll();
-                    $this->jsonResponse(true, 'Data Rapor Siswa', $rapor);
-                } catch (\Throwable $eR) {
-                    // Fallback using nilai table as rapor
-                    $stmtN = $this->db->prepare("
-                        SELECT n.*, mp.nama_mapel, mp.kode_mapel 
-                        FROM nilai n 
-                        JOIN mata_pelajaran mp ON n.mapel_id = mp.id 
-                        WHERE n.siswa_id = :sid
-                    ");
-                    $stmtN->execute(['sid' => $siswa['id']]);
-                    $nilaiList = $stmtN->fetchAll();
-                    $this->jsonResponse(true, 'Data Rapor Siswa (Rekap Nilai)', $nilaiList);
-                }
                 break;
 
             case 'available_mapel':
