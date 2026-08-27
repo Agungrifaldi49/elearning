@@ -359,6 +359,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     final int progressPct = int.tryParse((m['progress_percent'] ?? 0).toString()) ?? 0;
     final int currentStep = int.tryParse((m['current_step'] ?? 1).toString()) ?? 1;
     final List steps = (m['steps'] is List) ? m['steps'] : [];
+    final List sequenceItems = (m['sequence_items'] is List) ? m['sequence_items'] : [];
     final bool isExpanded = _expandedMapelIds.contains(mapelId);
 
     Color badgeBg = Colors.amber.shade50;
@@ -468,7 +469,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
             ),
           ),
 
-          // Expanded Roadmap 5-Step Section
+          // Expanded Roadmap & Sequence Items Section
           if (isExpanded) ...[
             const Divider(height: 1),
             Container(
@@ -477,10 +478,46 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (sequenceItems.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          '📋 Tahapan Modul & Evaluasi Pembelajaran:',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.deepPurple.shade100,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${sequenceItems.length} Item',
+                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.deepPurple.shade900),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: sequenceItems.length,
+                      itemBuilder: (context, itemIdx) {
+                        final item = sequenceItems[itemIdx];
+                        return _buildSequenceItemRow(item, itemIdx + 1);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+                  ],
+
                   const Padding(
                     padding: EdgeInsets.only(bottom: 12),
                     child: Text(
-                      '🗺️ Alur 5 Tahap Pembelajaran Mapel Ini:',
+                      '🗺️ Ringkasan Alur 5 Tahap Pembelajaran:',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ),
@@ -498,6 +535,134 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSequenceItemRow(dynamic item, int stepNo) {
+    final String type = (item['type'] ?? 'materi').toString();
+    final String title = (item['title'] ?? 'Item Pembelajaran').toString();
+    final String desc = (item['desc'] ?? '').toString();
+    final String guru = (item['guru'] ?? 'Guru Pengampu').toString();
+    final bool isCompleted = item['is_completed'] == true;
+    final String actionLabel = (item['action_label'] ?? 'Akses').toString();
+    final String actionType = (item['action_type'] ?? type).toString();
+
+    Color categoryBg = Colors.blue.shade50;
+    Color categoryFg = Colors.blue.shade900;
+    IconData categoryIcon = Icons.book_rounded;
+    String categoryText = 'Modul Materi';
+
+    if (type == 'tugas') {
+      categoryBg = Colors.purple.shade50;
+      categoryFg = Colors.purple.shade900;
+      categoryIcon = Icons.assignment_rounded;
+      categoryText = 'Penugasan KBM';
+    } else if (type == 'quiz' || type == 'ujian') {
+      categoryBg = Colors.amber.shade50;
+      categoryFg = Colors.amber.shade900;
+      categoryIcon = Icons.quiz_rounded;
+      categoryText = 'Evaluasi CBT';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isCompleted ? Colors.green.shade200 : Colors.grey.shade200),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: isCompleted ? Colors.green.shade600 : Colors.deepPurple.shade900,
+            child: Text(
+              '$stepNo',
+              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: categoryBg,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(categoryIcon, size: 11, color: categoryFg),
+                          const SizedBox(width: 4),
+                          Text(categoryText, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: categoryFg)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isCompleted ? Colors.green.shade50 : Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isCompleted ? 'Selesai 🎉' : 'Belum Selesai ⏳',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isCompleted ? Colors.green.shade800 : Colors.amber.shade900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                if (desc.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    desc,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  '✍️ $guru',
+                  style: TextStyle(fontSize: 10.5, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 30,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _handleStepAction(actionType),
+                    icon: Icon(isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded, size: 14),
+                    label: Text(actionLabel, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isCompleted ? Colors.green.shade700 : Colors.deepPurple.shade800,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

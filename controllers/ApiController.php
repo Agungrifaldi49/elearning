@@ -1257,6 +1257,85 @@ class ApiController {
                             }
                         }
 
+                        // Fetch real individual sequence items for this mapel (matching Web E-Learning learning_path.php)
+                        $sequenceItems = [];
+
+                        // 1. Materials
+                        $stmtMatItems = $this->db->prepare("
+                            SELECT m.*, g.nama_lengkap as nama_guru
+                            FROM materi m
+                            LEFT JOIN guru g ON m.guru_id = g.id
+                            WHERE m.mapel_id = :mid AND (m.kelas_id = :kid OR m.kelas_id IS NULL OR m.kelas_id = 0)
+                            ORDER BY m.created_at ASC
+                        ");
+                        $stmtMatItems->execute(['mid' => $mid, 'kid' => $kelasId]);
+                        $materiItems = $stmtMatItems->fetchAll();
+                        foreach ($materiItems as $mat) {
+                            $sequenceItems[] = [
+                                'type' => 'materi',
+                                'title' => $mat['judul'],
+                                'desc' => !empty($mat['deskripsi']) ? $mat['deskripsi'] : 'Modul materi digital KBM.',
+                                'guru' => !empty($mat['nama_guru']) ? $mat['nama_guru'] : $namaGuru,
+                                'is_completed' => true,
+                                'action_type' => 'materi',
+                                'action_label' => 'Pelajari Materi'
+                            ];
+                        }
+
+                        // 2. Tasks
+                        $stmtTugItems = $this->db->prepare("
+                            SELECT t.*, g.nama_lengkap as nama_guru
+                            FROM tugas t
+                            LEFT JOIN guru g ON t.guru_id = g.id
+                            WHERE t.mapel_id = :mid AND (t.kelas_id = :kid OR t.kelas_id IS NULL OR t.kelas_id = 0)
+                            ORDER BY t.created_at ASC
+                        ");
+                        $stmtTugItems->execute(['mid' => $mid, 'kid' => $kelasId]);
+                        $tugasItems = $stmtTugItems->fetchAll();
+                        foreach ($tugasItems as $tug) {
+                            $tId = intval($tug['id']);
+                            $chkSub = $this->db->prepare("SELECT id FROM pengumpulan_tugas WHERE tugas_id = :tid AND siswa_id = :sid LIMIT 1");
+                            $chkSub->execute(['tid' => $tId, 'sid' => $siswaId]);
+                            $isSubmitted = (bool)$chkSub->fetch();
+
+                            $sequenceItems[] = [
+                                'type' => 'tugas',
+                                'title' => 'Penugasan: ' . $tug['judul'],
+                                'desc' => !empty($tug['deskripsi']) ? $tug['deskripsi'] : 'Tugas praktikum / teori KBM.',
+                                'guru' => !empty($tug['nama_guru']) ? $tug['nama_guru'] : $namaGuru,
+                                'is_completed' => $isSubmitted,
+                                'action_type' => 'tugas',
+                                'action_label' => $isSubmitted ? 'Lihat Tugas' : 'Kirim Tugas'
+                            ];
+                        }
+
+                        // 3. Quiz / CBT
+                        $stmtQzItems = $this->db->prepare("
+                            SELECT q.*, g.nama_lengkap as nama_guru
+                            FROM quiz q
+                            LEFT JOIN guru g ON q.guru_id = g.id
+                            WHERE q.mapel_id = :mid AND (q.kelas_id = :kid OR q.kelas_id IS NULL OR q.kelas_id = 0) AND (q.status IS NULL OR q.status = 'published')
+                            ORDER BY q.created_at ASC
+                        ");
+                        $stmtQzItems->execute(['mid' => $mid, 'kid' => $kelasId]);
+                        $quizItems = $stmtQzItems->fetchAll();
+                        foreach ($quizItems as $qz) {
+                            $qId = intval($qz['id']);
+                            $chkQzDone = $this->db->prepare("SELECT id FROM hasil_quiz WHERE quiz_id = :qid AND siswa_id = :sid LIMIT 1");
+                            $chkQzDone->execute(['qid' => $qId, 'sid' => $siswaId]);
+                            $isQzDone = (bool)$chkQzDone->fetch();
+
+                            $sequenceItems[] = [
+                                'type' => 'quiz',
+                                'title' => 'Evaluasi CBT: ' . $qz['judul'],
+                                'desc' => !empty($qz['deskripsi']) ? $qz['deskripsi'] : 'Ujian / Kuis Online Berbasis CBT.',
+                                'guru' => !empty($qz['nama_guru']) ? $qz['nama_guru'] : $namaGuru,
+                                'is_completed' => $isQzDone,
+                                'action_type' => 'kuis',
+                                'action_label' => $isQzDone ? 'Lihat Hasil Kuis' : 'Ikuti Kuis'
+                            ];
+                        }
+
                         $mapelList[] = [
                             'mapel_id' => $mid,
                             'nama_mapel' => $namaMapel,
@@ -1266,6 +1345,9 @@ class ApiController {
                             'status_label' => $statusLabel,
                             'progress_percent' => $mapelPct,
                             'current_step' => $currentStepIndex,
+                            'total_items' => count($sequenceItems),
+                            'completed_items' => $doneItemsMapel,
+                            'sequence_items' => $sequenceItems,
                             'steps' => [
                                 [
                                     'step' => 1,
