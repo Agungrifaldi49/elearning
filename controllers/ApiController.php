@@ -3092,8 +3092,8 @@ class ApiController {
 
             try {
                 $stmt = $this->db->prepare("
-                    INSERT INTO chat (sender_id, receiver_id, message, created_at) 
-                    VALUES (:sid, :rid, :msg, NOW())
+                    INSERT INTO chat (sender_id, receiver_id, message, created_at, is_read) 
+                    VALUES (:sid, :rid, :msg, NOW(), 0)
                 ");
                 $stmt->execute([
                     'sid' => $userId,

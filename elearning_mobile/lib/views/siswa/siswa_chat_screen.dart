@@ -24,7 +24,12 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
   @override
   void initState() {
     super.initState();
-    _loadContacts();
+    // Safe async post frame callback to prevent 'setState during build' exception
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadContacts();
+      }
+    });
   }
 
   @override
@@ -37,19 +42,23 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user == null) return;
 
-    if (showLoading && _contacts.isEmpty) {
+    if (showLoading && _contacts.isEmpty && mounted) {
       setState(() => _isLoading = true);
     }
 
-    List<ChatContactModel> list;
-    if (user.roleName.toLowerCase().contains('guru')) {
-      final guruProvider = Provider.of<GuruProvider>(context, listen: false);
-      await guruProvider.fetchChatContactsSilent(user.id);
-      list = guruProvider.chatContacts;
-    } else {
-      final siswaProvider = Provider.of<SiswaProvider>(context, listen: false);
-      await siswaProvider.fetchChatContactsSilent(user.id);
-      list = siswaProvider.chatContacts;
+    List<ChatContactModel> list = [];
+    try {
+      if (user.roleName.toLowerCase().contains('guru')) {
+        final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+        await guruProvider.fetchChatContactsSilent(user.id);
+        list = guruProvider.chatContacts;
+      } else {
+        final siswaProvider = Provider.of<SiswaProvider>(context, listen: false);
+        await siswaProvider.fetchChatContactsSilent(user.id);
+        list = siswaProvider.chatContacts;
+      }
+    } catch (e) {
+      debugPrint("Error loading chat contacts: $e");
     }
 
     if (mounted) {
@@ -77,7 +86,9 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
       ),
     );
 
-    _loadContacts(showLoading: false);
+    if (mounted) {
+      _loadContacts(showLoading: false);
+    }
   }
 
   String _formatChatTime(String? rawTime) {
@@ -272,6 +283,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                 final bool isGuru = c.roleName.toLowerCase().contains('guru');
                                 final timeStr = _formatChatTime(c.lastTime);
 
+                                // Explicit Print Debug Logging requested by user
                                 // ignore: avoid_print
                                 print("DEBUG UNREAD: ${c.fullName} -> ${c.unreadCount} (hasUnread: ${c.hasUnread})");
 
@@ -386,7 +398,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                                   Text(
                                                     c.lastMessage != null && c.lastMessage!.isNotEmpty
                                                         ? ProfanityService.filter(c.lastMessage)
-                                                        : 'Ketuk untuk memulai percakapan...',
+                                                        : 'Ketuk untuk membaca...',
                                                     maxLines: 1,
                                                     overflow: TextOverflow.ellipsis,
                                                     style: TextStyle(
@@ -477,10 +489,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _triggerMarkAsRead();
+        _loadMessages();
       }
     });
-    _loadMessages();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) => _loadMessages(showLoading: false));
+    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (mounted) {
+        _loadMessages(showLoading: false);
+      }
+    });
   }
 
   void _triggerMarkAsRead() {
@@ -506,30 +522,36 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user == null) return;
 
-    if (showLoading && _messages.isEmpty) {
+    if (showLoading && _messages.isEmpty && mounted) {
       setState(() => _isLoading = true);
     }
 
-    final res = await ApiService.get('chat/messages', params: {
-      'user_id': user.id.toString(),
-      'receiver_id': widget.contact.id.toString(),
-    });
+    try {
+      final res = await ApiService.get('chat/messages', params: {
+        'user_id': user.id.toString(),
+        'receiver_id': widget.contact.id.toString(),
+      });
 
-    if (mounted) {
-      if (res['success'] == true && res['data'] is List) {
-        final newMessages = (res['data'] as List).map((e) => ChatMessageModel.fromJson(e)).toList();
-        final isFirstLoad = _messages.isEmpty;
-        final hasNewCount = newMessages.length != _messages.length;
+      if (mounted) {
+        if (res['success'] == true && res['data'] is List) {
+          final newMessages = (res['data'] as List).map((e) => ChatMessageModel.fromJson(e)).toList();
+          final isFirstLoad = _messages.isEmpty;
+          final hasNewCount = newMessages.length != _messages.length;
 
-        setState(() {
-          _messages = newMessages;
-          _isLoading = false;
-        });
+          setState(() {
+            _messages = newMessages;
+            _isLoading = false;
+          });
 
-        if (isFirstLoad || hasNewCount) {
-          _scrollToBottom();
+          if (isFirstLoad || hasNewCount) {
+            _scrollToBottom();
+          }
+        } else {
+          setState(() => _isLoading = false);
         }
-      } else {
+      }
+    } catch (e) {
+      if (mounted) {
         setState(() => _isLoading = false);
       }
     }
@@ -537,7 +559,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (mounted && _scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: const Duration(milliseconds: 250),
