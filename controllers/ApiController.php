@@ -3132,6 +3132,19 @@ class ApiController {
             } catch (\Throwable $eH) {
                 $this->jsonResponse(true, 'Riwayat Chat Direct', []);
             }
+        } elseif ($endpoint === 'mark_read' || $endpoint === 'read') {
+            $contactId = intval($input['contact_id'] ?? $input['receiver_id'] ?? $_GET['contact_id'] ?? $_GET['receiver_id'] ?? 0);
+            if ($contactId > 0 && $userId > 0) {
+                try {
+                    $updRead = $this->db->prepare("UPDATE chat SET is_read = 1 WHERE sender_id = :cid AND receiver_id = :uid");
+                    $updRead->execute(['cid' => $contactId, 'uid' => $userId]);
+                    $this->jsonResponse(true, 'Chat berhasil ditandai terbaca');
+                } catch (\Throwable $eMark) {
+                    $this->jsonResponse(false, 'Gagal mark read: ' . $eMark->getMessage(), null, 500);
+                }
+            } else {
+                $this->jsonResponse(false, 'Contact ID & User ID required', null, 400);
+            }
         } else {
             // contacts list
             try {

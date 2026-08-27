@@ -441,6 +441,16 @@ class GuruProvider with ChangeNotifier {
     final res = await ApiService.get('chat/contacts', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
       final list = (res['data'] as List).map((e) => ChatContactModel.fromJson(e)).toList();
+
+      // Auto-sort contacts: unread count first, then latest message time, then alphabetical
+      list.sort((a, b) {
+        if (a.unreadCount > 0 && b.unreadCount == 0) return -1;
+        if (a.unreadCount == 0 && b.unreadCount > 0) return 1;
+        final timeComp = b.lastMessageTime.compareTo(a.lastMessageTime);
+        if (timeComp != 0) return timeComp;
+        return a.fullName.compareTo(b.fullName);
+      });
+
       _chatContacts = list;
       if (!_chatContactsController.isClosed) {
         _chatContactsController.add(list);
@@ -461,27 +471,27 @@ class GuruProvider with ChangeNotifier {
     if (index != -1) {
       final oldUnread = _chatContacts[index].unreadCount;
       if (oldUnread > 0) {
-        _chatContacts[index] = ChatContactModel(
-          id: _chatContacts[index].id,
-          fullName: _chatContacts[index].fullName,
-          avatar: _chatContacts[index].avatar,
-          avatarUrl: _chatContacts[index].avatarUrl,
-          roleName: _chatContacts[index].roleName,
-          lastMessage: _chatContacts[index].lastMessage,
-          lastTime: _chatContacts[index].lastTime,
-          unreadCount: 0,
-        );
+        _chatContacts[index] = _chatContacts[index].copyWith(unreadCount: 0);
         _unreadChatCount = _unreadChatCount - oldUnread;
         if (_unreadChatCount < 0) _unreadChatCount = 0;
+
+        _chatContacts.sort((a, b) {
+          if (a.unreadCount > 0 && b.unreadCount == 0) return -1;
+          if (a.unreadCount == 0 && b.unreadCount > 0) return 1;
+          final timeComp = b.lastMessageTime.compareTo(a.lastMessageTime);
+          if (timeComp != 0) return timeComp;
+          return a.fullName.compareTo(b.fullName);
+        });
+
         if (!_chatContactsController.isClosed) {
           _chatContactsController.add(_chatContacts);
         }
         notifyListeners();
       }
     }
-    await ApiService.get('chat/messages', params: {
-      'user_id': userId.toString(),
-      'receiver_id': contactId.toString(),
+    await ApiService.post('chat/mark_read', {
+      'user_id': userId,
+      'contact_id': contactId,
     });
   }
 
