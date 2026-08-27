@@ -91,7 +91,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
         final minute = dt.minute.toString().padLeft(2, '0');
         return '$hour:$minute';
       }
-      
+
       final yesterday = now.subtract(const Duration(days: 1));
       if (dt.year == yesterday.year && dt.month == yesterday.month && dt.day == yesterday.day) {
         return 'Kemarin';
@@ -139,7 +139,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.red,
+                  color: Colors.redAccent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -217,8 +217,12 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
 
                 // Automatic Real-Time Sorting (Unread -> Latest Message Time -> Name)
                 displayList.sort((a, b) {
-                  if (a.unreadCount > 0 && b.unreadCount == 0) return -1;
-                  if (a.unreadCount == 0 && b.unreadCount > 0) return 1;
+                  if (a.hasUnread && !b.hasUnread) return -1;
+                  if (!a.hasUnread && b.hasUnread) return 1;
+                  if (a.hasUnread && b.hasUnread) {
+                    final unreadComp = b.unreadCount.compareTo(a.unreadCount);
+                    if (unreadComp != 0) return unreadComp;
+                  }
                   final timeComp = b.lastMessageTime.compareTo(a.lastMessageTime);
                   if (timeComp != 0) return timeComp;
                   return a.fullName.compareTo(b.fullName);
@@ -266,8 +270,10 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                               itemBuilder: (context, index) {
                                 final c = displayList[index];
                                 final bool isGuru = c.roleName.toLowerCase().contains('guru');
-                                final hasUnread = c.unreadCount > 0;
                                 final timeStr = _formatChatTime(c.lastTime);
+
+                                // ignore: avoid_print
+                                print("DEBUG UNREAD: ${c.fullName} -> ${c.unreadCount} (hasUnread: ${c.hasUnread})");
 
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 8),
@@ -275,13 +281,13 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: hasUnread ? const Color(0xFFEF4444) : const Color(0xFFE2E8F0),
-                                      width: hasUnread ? 1.5 : 1.0,
+                                      color: c.hasUnread ? Colors.redAccent : const Color(0xFFE2E8F0),
+                                      width: c.hasUnread ? 1.5 : 1.0,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: hasUnread
-                                            ? const Color(0xFFEF4444).withValues(alpha: 0.08)
+                                        color: c.hasUnread
+                                            ? Colors.redAccent.withValues(alpha: 0.08)
                                             : Colors.black.withValues(alpha: 0.02),
                                         blurRadius: 8,
                                         offset: const Offset(0, 3),
@@ -298,7 +304,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                         padding: const EdgeInsets.all(12.0),
                                         child: Row(
                                           children: [
-                                            // Avatar Container with Online & Unread Badge
+                                            // Avatar Container with Online & Unread Indicator
                                             Stack(
                                               children: [
                                                 CircleAvatar(
@@ -320,7 +326,6 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                                         )
                                                       : null,
                                                 ),
-                                                // Online indicator dot
                                                 if (c.isOnline)
                                                   Positioned(
                                                     right: 0,
@@ -354,7 +359,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                                           overflow: TextOverflow.ellipsis,
                                                           style: TextStyle(
                                                             fontSize: 14,
-                                                            fontWeight: hasUnread ? FontWeight.w800 : FontWeight.bold,
+                                                            fontWeight: c.hasUnread ? FontWeight.w800 : FontWeight.bold,
                                                             color: const Color(0xFF0F172A),
                                                           ),
                                                         ),
@@ -386,8 +391,8 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                                     overflow: TextOverflow.ellipsis,
                                                     style: TextStyle(
                                                       fontSize: 12,
-                                                      fontWeight: hasUnread ? FontWeight.bold : FontWeight.normal,
-                                                      color: hasUnread ? const Color(0xFF1E293B) : const Color(0xFF64748B),
+                                                      fontWeight: c.hasUnread ? FontWeight.bold : FontWeight.normal,
+                                                      color: c.hasUnread ? const Color(0xFF1E293B) : const Color(0xFF64748B),
                                                     ),
                                                   ),
                                                 ],
@@ -396,29 +401,16 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
 
                                             const SizedBox(width: 8),
 
-                                            // Time & Unread Badge Column
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.end,
-                                              children: [
-                                                if (timeStr.isNotEmpty)
-                                                  Text(
-                                                    timeStr,
-                                                    style: TextStyle(
-                                                      fontSize: 11,
-                                                      fontWeight: hasUnread ? FontWeight.bold : FontWeight.w500,
-                                                      color: hasUnread ? const Color(0xFFEF4444) : const Color(0xFF94A3B8),
-                                                    ),
-                                                  ),
-                                                const SizedBox(height: 4),
-                                                if (hasUnread)
-                                                  Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            // Trailing Unread Badge Widget
+                                            c.hasUnread
+                                                ? Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                     decoration: BoxDecoration(
-                                                      color: const Color(0xFFEF4444),
+                                                      color: Colors.redAccent,
                                                       borderRadius: BorderRadius.circular(12),
                                                       boxShadow: [
                                                         BoxShadow(
-                                                          color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+                                                          color: Colors.redAccent.withValues(alpha: 0.3),
                                                           blurRadius: 4,
                                                           offset: const Offset(0, 2),
                                                         ),
@@ -428,15 +420,23 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                                       '${c.unreadCount}',
                                                       style: const TextStyle(
                                                         color: Colors.white,
-                                                        fontSize: 11,
-                                                        fontWeight: FontWeight.w900,
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.bold,
                                                       ),
                                                     ),
                                                   )
-                                                else
-                                                  const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFFCBD5E1)),
-                                              ],
-                                            ),
+                                                : Column(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                                    children: [
+                                                      if (timeStr.isNotEmpty)
+                                                        Text(
+                                                          timeStr,
+                                                          style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                                                        ),
+                                                      const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFFCBD5E1)),
+                                                    ],
+                                                  ),
                                           ],
                                         ),
                                       ),

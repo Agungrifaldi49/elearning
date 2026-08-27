@@ -3071,6 +3071,7 @@ class ApiController {
 
         try {
             $this->db->exec("ALTER TABLE chat ADD COLUMN is_read TINYINT(1) DEFAULT 0");
+            $this->db->exec("UPDATE chat SET is_read = 0 WHERE is_read IS NULL");
         } catch (\Throwable $eIgn) {}
 
         if (file_exists(ROOT_PATH . 'helpers/ProfanityFilterHelper.php')) {
@@ -3155,7 +3156,7 @@ class ApiController {
                            COALESCE(r.name, 'Pengguna') as role_name,
                            (SELECT message FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid1) OR (sender_id = :uid2 AND receiver_id = u.id)) ORDER BY id DESC LIMIT 1) as last_message,
                            (SELECT created_at FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid3) OR (sender_id = :uid4 AND receiver_id = u.id)) ORDER BY id DESC LIMIT 1) as last_time,
-                           (SELECT COUNT(*) FROM chat WHERE sender_id = u.id AND receiver_id = :uid_unr AND is_read = 0) as unread_count
+                           (SELECT COUNT(*) FROM chat WHERE sender_id = u.id AND receiver_id = :uid_unr AND (is_read = 0 OR is_read IS NULL OR is_read = '0')) as unread_count
                     FROM users u
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
@@ -3171,7 +3172,7 @@ class ApiController {
                     'uid_unr' => $userId,
                     'uid5' => $userId
                 ]);
-                $contacts = $stmt->fetchAll();
+                $contacts = $stmt->fetchAll(PDO::FETCH_ASSOC);
             } catch (\Throwable $eCt) {
                 try {
                     $stmtFB = $this->db->prepare("
@@ -3182,13 +3183,18 @@ class ApiController {
                         ORDER BY u.full_name ASC
                     ");
                     $stmtFB->execute(['uid' => $userId]);
-                    $contacts = $stmtFB->fetchAll();
+                    $contacts = $stmtFB->fetchAll(PDO::FETCH_ASSOC);
                 } catch (\Throwable $eFB) {
                     $contacts = [];
                 }
             }
 
             foreach ($contacts as &$c) {
+                $c['id'] = (int)$c['id'];
+                $c['unread_count'] = (int)($c['unread_count'] ?? 0);
+                $c['nama'] = $c['full_name'] ?? '';
+                $c['updated_at'] = $c['last_time'] ?? '';
+
                 $avFile = $c['avatar_file'] ?? '';
                 if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
                     $c['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
@@ -3196,6 +3202,7 @@ class ApiController {
                     $c['avatar_url'] = null;
                 }
             }
+            unset($c);
             $this->jsonResponse(true, 'Daftar Kontak Direct Chat', $contacts);
         }
     }

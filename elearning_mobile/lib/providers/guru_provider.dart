@@ -442,10 +442,19 @@ class GuruProvider with ChangeNotifier {
     if (res['success'] == true && res['data'] is List) {
       final list = (res['data'] as List).map((e) => ChatContactModel.fromJson(e)).toList();
 
+      for (var c in list) {
+        // ignore: avoid_print
+        print("DEBUG UNREAD: ${c.fullName} -> ${c.unreadCount}");
+      }
+
       // Auto-sort contacts: unread count first, then latest message time, then alphabetical
       list.sort((a, b) {
-        if (a.unreadCount > 0 && b.unreadCount == 0) return -1;
-        if (a.unreadCount == 0 && b.unreadCount > 0) return 1;
+        if (a.hasUnread && !b.hasUnread) return -1;
+        if (!a.hasUnread && b.hasUnread) return 1;
+        if (a.hasUnread && b.hasUnread) {
+          final unreadComp = b.unreadCount.compareTo(a.unreadCount);
+          if (unreadComp != 0) return unreadComp;
+        }
         final timeComp = b.lastMessageTime.compareTo(a.lastMessageTime);
         if (timeComp != 0) return timeComp;
         return a.fullName.compareTo(b.fullName);

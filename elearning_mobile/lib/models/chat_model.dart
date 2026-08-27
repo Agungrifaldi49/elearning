@@ -74,6 +74,15 @@ class ChatContactModel {
     this.isOnline = false,
   });
 
+  /// Robust getter for unread status
+  bool get hasUnread => unreadCount > 0;
+
+  /// Alias getter for nama contact
+  String get nama => fullName;
+
+  /// Alias getter for updated_at / timestamp
+  String? get updatedAt => lastTime;
+
   static int _parseInt(dynamic val, [int defaultVal = 0]) {
     if (val == null) return defaultVal;
     if (val is int) return val;
@@ -111,15 +120,17 @@ class ChatContactModel {
       isOnlineBool = _parseInt(rawOnline) == 1 || rawOnline.toString().toLowerCase() == 'true';
     }
 
+    final parsedUnread = int.tryParse((json['unread_count'] ?? json['unread'] ?? json['unreadCount'] ?? 0).toString()) ?? 0;
+
     return ChatContactModel(
       id: _parseInt(json['id'] ?? json['user_id']),
-      fullName: (json['full_name'] ?? json['nama_lengkap'] ?? json['name'] ?? 'Pengguna').toString(),
+      fullName: (json['full_name'] ?? json['nama'] ?? json['nama_lengkap'] ?? json['name'] ?? 'Pengguna').toString(),
       avatar: (rawAv ?? 'default_avatar.png').toString(),
       avatarUrl: avUrl,
       roleName: (json['role_name'] ?? json['role'] ?? 'Member').toString(),
       lastMessage: json['last_message']?.toString(),
-      lastTime: json['last_time']?.toString() ?? json['last_message_time']?.toString(),
-      unreadCount: _parseInt(json['unread_count'] ?? json['unread'] ?? 0),
+      lastTime: (json['last_time'] ?? json['updated_at'] ?? json['last_message_time'])?.toString(),
+      unreadCount: parsedUnread,
       isOnline: isOnlineBool,
     );
   }
