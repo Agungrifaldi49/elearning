@@ -1118,6 +1118,16 @@ class ApiController {
                 $stmtJ->execute(['gid' => $guru['id'], 'hari' => $today]);
                 $jadwalToday = $stmtJ->fetchAll();
 
+                // Check Guru Today Attendance
+                $todayDate = date('Y-m-d');
+                $stmtAbsG = $this->db->prepare("SELECT * FROM absensi_guru WHERE guru_id = ? AND tanggal = ? LIMIT 1");
+                $stmtAbsG->execute([$guru['id'], $todayDate]);
+                $absGuru = $stmtAbsG->fetch(PDO::FETCH_ASSOC) ?: [];
+
+                $hasClockedIn = !empty($absGuru['waktu_masuk']) || !empty($absGuru['waktu_hadir']);
+                $hasClockedOut = !empty($absGuru['waktu_pulang']);
+                $absGuruStatus = $absGuru['status'] ?? 'Belum Absen';
+
                 $this->jsonResponse(true, 'Dashboard Guru Overview', [
                     'guru' => $guru,
                     'stats' => [
@@ -1125,7 +1135,14 @@ class ApiController {
                         'tugas' => $totalTugas,
                         'quiz' => $totalQuiz
                     ],
-                    'jadwal_hari_ini' => $jadwalToday
+                    'jadwal_hari_ini' => $jadwalToday,
+                    'absensi_today' => [
+                        'has_clocked_in' => $hasClockedIn,
+                        'has_clocked_out' => $hasClockedOut,
+                        'status' => $absGuruStatus,
+                        'waktu_masuk' => $absGuru['waktu_masuk'] ?? $absGuru['waktu_hadir'] ?? null,
+                        'waktu_pulang' => $absGuru['waktu_pulang'] ?? null,
+                    ]
                 ]);
                 break;
 

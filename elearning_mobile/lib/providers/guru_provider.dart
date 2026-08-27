@@ -45,8 +45,13 @@ class GuruProvider with ChangeNotifier {
     notifyListeners();
 
     final res = await ApiService.get('guru/dashboard', params: {'user_id': userId.toString()});
-    if (res['success'] == true) {
+    if (res['success'] == true && res['data'] != null) {
       _dashboardData = res['data'];
+      if (res['data']['absensi_today'] != null) {
+        final abs = res['data']['absensi_today'];
+        _hasClockedInToday = abs['has_clocked_in'] == true || abs['has_clocked_in'] == 1;
+        _hasClockedOutToday = abs['has_clocked_out'] == true || abs['has_clocked_out'] == 1;
+      }
     }
     _isLoading = false;
     notifyListeners();
