@@ -56,11 +56,16 @@ class SiswaProvider with ChangeNotifier {
   int get unreadJadwalCount => _jadwalList.where((j) => !_seenJadwalIds.contains(j.id)).length;
   int get unreadForumCount => _forumTopicList.where((f) => !_seenForumIds.contains(f.id)).length;
 
+  bool _hasClockedInToday = false;
+  bool _hasClockedOutToday = false;
+  bool _isAbsentToday = false;
+
   bool get isAbsentToday {
+    if (_isAbsentToday) return true;
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final todayRec = _absensiList.firstWhere(
-      (a) => a.tanggal.contains(todayStr),
+      (a) => a.tanggal.contains(todayStr) || (a.waktuMasuk != null && a.waktuMasuk!.contains(todayStr)),
       orElse: () => AbsensiModel(id: 0, jadwalId: 0, siswaId: 0, tanggal: '', status: ''),
     );
     if (todayRec.id > 0) {
@@ -71,10 +76,11 @@ class SiswaProvider with ChangeNotifier {
   }
 
   bool get hasClockedInToday {
+    if (_hasClockedInToday) return true;
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final todayRec = _absensiList.firstWhere(
-      (a) => a.tanggal.contains(todayStr),
+      (a) => a.tanggal.contains(todayStr) || (a.waktuMasuk != null && a.waktuMasuk!.contains(todayStr)),
       orElse: () => AbsensiModel(id: 0, jadwalId: 0, siswaId: 0, tanggal: '', status: ''),
     );
     if (todayRec.id > 0) {
@@ -88,10 +94,11 @@ class SiswaProvider with ChangeNotifier {
   }
 
   bool get hasClockedOutToday {
+    if (_hasClockedOutToday) return true;
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final todayRec = _absensiList.firstWhere(
-      (a) => a.tanggal.contains(todayStr),
+      (a) => a.tanggal.contains(todayStr) || (a.waktuMasuk != null && a.waktuMasuk!.contains(todayStr)),
       orElse: () => AbsensiModel(id: 0, jadwalId: 0, siswaId: 0, tanggal: '', status: ''),
     );
     if (todayRec.id > 0) {
@@ -221,8 +228,14 @@ class SiswaProvider with ChangeNotifier {
     notifyListeners();
 
     final res = await ApiService.get('siswa/dashboard', params: {'user_id': userId.toString()});
-    if (res['success'] == true) {
+    if (res['success'] == true && res['data'] != null) {
       _dashboardData = res['data'];
+      final absToday = res['data']['absensi_today'];
+      if (absToday is Map) {
+        _hasClockedInToday = absToday['has_clocked_in'] == true;
+        _hasClockedOutToday = absToday['has_clocked_out'] == true;
+        _isAbsentToday = absToday['is_absent'] == true;
+      }
     }
     _isLoading = false;
     notifyListeners();
@@ -376,6 +389,27 @@ class SiswaProvider with ChangeNotifier {
         _absensiList = list.map((e) => AbsensiModel.fromJson(e)).toList();
       } else if (res['data'] is List) {
         _absensiList = (res['data'] as List).map((e) => AbsensiModel.fromJson(e)).toList();
+      }
+
+      final now = DateTime.now();
+      final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final todayRec = _absensiList.firstWhere(
+        (a) => a.tanggal.contains(todayStr) || (a.waktuMasuk != null && a.waktuMasuk!.contains(todayStr)),
+        orElse: () => AbsensiModel(id: 0, jadwalId: 0, siswaId: 0, tanggal: '', status: ''),
+      );
+      if (todayRec.id > 0) {
+        final st = todayRec.status.toLowerCase();
+        if (st == 'izin' || st == 'sakit' || st == 'alpha' || st == 'alpa') {
+          _isAbsentToday = true;
+          _hasClockedInToday = false;
+          _hasClockedOutToday = false;
+        } else {
+          _hasClockedInToday = true;
+          _isAbsentToday = false;
+          if (todayRec.waktuPulang != null && todayRec.waktuPulang!.isNotEmpty) {
+            _hasClockedOutToday = true;
+          }
+        }
       }
     }
     _isLoading = false;

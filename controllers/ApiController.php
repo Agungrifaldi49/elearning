@@ -218,6 +218,34 @@ class ApiController {
                 $stmtJ->execute(['kid' => $siswa['kelas_id'], 'hari' => $today]);
                 $jadwalToday = $stmtJ->fetchAll();
 
+                // Presensi Hari Ini
+                $tglNow = date('Y-m-d');
+                $stmtAbsToday = $this->db->prepare("
+                    SELECT * FROM absensi 
+                    WHERE siswa_id = :sid AND (tanggal = :tgl1 OR DATE(created_at) = :tgl2 OR DATE(waktu_masuk) = :tgl3)
+                    ORDER BY id DESC LIMIT 1
+                ");
+                $stmtAbsToday->execute(['sid' => $siswa['id'], 'tgl1' => $tglNow, 'tgl2' => $tglNow, 'tgl3' => $tglNow]);
+                $absToday = $stmtAbsToday->fetch();
+
+                $hasClockedIn = false;
+                $hasClockedOut = false;
+                $isAbsent = false;
+                $statusToday = null;
+
+                if ($absToday) {
+                    $st = strtolower($absToday['status'] ?? '');
+                    $statusToday = $absToday['status'];
+                    if ($st === 'izin' || $st === 'sakit' || $st === 'alpha' || $st === 'alpa') {
+                        $isAbsent = true;
+                    } else {
+                        $hasClockedIn = true;
+                        if (!empty($absToday['waktu_pulang'])) {
+                            $hasClockedOut = true;
+                        }
+                    }
+                }
+
                 $this->jsonResponse(true, 'Data Dashboard Siswa', [
                     'siswa' => $siswa,
                     'stats' => [
@@ -226,7 +254,15 @@ class ApiController {
                         'quiz' => $totalQuiz
                     ],
                     'pengumuman' => $pengumuman,
-                    'jadwal_hari_ini' => $jadwalToday
+                    'jadwal_hari_ini' => $jadwalToday,
+                    'absensi_today' => [
+                        'has_clocked_in' => $hasClockedIn,
+                        'has_clocked_out' => $hasClockedOut,
+                        'is_absent' => $isAbsent,
+                        'status' => $statusToday,
+                        'waktu_masuk' => $absToday['waktu_masuk'] ?? null,
+                        'waktu_pulang' => $absToday['waktu_pulang'] ?? null,
+                    ]
                 ]);
                 break;
 
