@@ -1067,37 +1067,18 @@ class ApiController {
                 try {
                     $kelasId = intval($siswa['kelas_id'] ?? 0);
                     $siswaId = intval($siswa['id'] ?? 0);
-                    $jurusanId = intval($siswa['jurusan_id'] ?? 0);
 
-                    // Fetch subjects from DB matching student's enrollment, schedule, or department
+                    // Fetch STRICTLY enrolled subjects for this student (matching AcademicModel->getSiswaEnrolledMapels)
                     $stmtMapel = $this->db->prepare("
-                        SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru
-                        FROM mata_pelajaran mp
-                        LEFT JOIN siswa_mapel_enrollment sme ON (sme.mapel_id = mp.id AND sme.siswa_id = :sid)
-                        LEFT JOIN jadwal j ON (j.mapel_id = mp.id AND j.kelas_id = :kid)
-                        LEFT JOIN guru g ON (sme.guru_id = g.id OR j.guru_id = g.id)
-                        WHERE (sme.siswa_id = :sid2)
-                           OR (j.kelas_id = :kid2)
-                           OR (mp.jurusan_id = :jid OR mp.jurusan_id IS NULL)
-                        ORDER BY mp.id ASC
+                        SELECT sme.mapel_id, mp.nama_mapel, mp.kode_mapel, g.nama_lengkap as nama_guru
+                        FROM siswa_mapel_enrollment sme
+                        JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+                        JOIN guru g ON sme.guru_id = g.id
+                        WHERE sme.siswa_id = :sid
+                        ORDER BY sme.id ASC
                     ");
-                    $stmtMapel->execute([
-                        'sid' => $siswaId,
-                        'kid' => $kelasId,
-                        'sid2' => $siswaId,
-                        'kid2' => $kelasId,
-                        'jid' => $jurusanId
-                    ]);
+                    $stmtMapel->execute(['sid' => $siswaId]);
                     $enrolledMapel = $stmtMapel->fetchAll();
-
-                    if (empty($enrolledMapel)) {
-                        $stmtMapelAll = $this->db->query("
-                            SELECT id as mapel_id, nama_mapel, kode_mapel, 'Guru Pengampu' as nama_guru 
-                            FROM mata_pelajaran 
-                            ORDER BY id ASC
-                        ");
-                        $enrolledMapel = $stmtMapelAll->fetchAll();
-                    }
 
                     $mapelList = [];
                     $totalMapelCount = count($enrolledMapel);

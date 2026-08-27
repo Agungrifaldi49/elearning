@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import 'gabung_kelas_screen.dart';
 
 class LearningPathScreen extends StatefulWidget {
   const LearningPathScreen({super.key});
@@ -88,6 +89,18 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
         backgroundColor: Colors.deepPurple.shade900,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Input Key Mapel',
+            icon: const Icon(Icons.vpn_key_rounded, color: Colors.amberAccent),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GabungKelasScreen()),
+              ).then((_) => _fetchPath());
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.deepPurple))
@@ -113,6 +126,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -125,16 +139,33 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                                   style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                                 ),
                               ),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const GabungKelasScreen()),
+                                  ).then((_) => _fetchPath());
+                                },
+                                icon: const Icon(Icons.add_rounded, size: 16, color: Colors.black87),
+                                label: const Text('Key Mapel', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.black87)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.amber,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _data['tingkat'] ?? 'Kelas XII',
+                            _data['tingkat'] ?? 'Kelas Siswa',
                             style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _data['jurusan'] ?? 'Rekayasa Perangkat Lunak & Game',
+                            _data['jurusan'] ?? 'Teknik & Kejuruan',
                             style: const TextStyle(color: Colors.white70, fontSize: 12),
                           ),
                           const SizedBox(height: 16),
@@ -174,36 +205,109 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       ),
                     ),
 
-                    // Subject Cards List
-                    filteredMapel.isEmpty
-                        ? Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 40),
-                            child: Center(
-                              child: Column(
-                                children: [
-                                  Icon(Icons.folder_off_outlined, size: 54, color: Colors.grey.shade400),
-                                  const SizedBox(height: 10),
-                                  const Text('Tidak ada mata pelajaran di kategori ini.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                ],
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: filteredMapel.length,
-                            itemBuilder: (context, index) {
-                              final mapel = filteredMapel[index];
-                              return _buildSubjectCard(mapel, isDark);
-                            },
+                    // Subject Cards List or Empty State
+                    if (mapelListRaw.isEmpty)
+                      _buildEmptyEnrolledState()
+                    else if (filteredMapel.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 40),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.folder_off_outlined, size: 54, color: Colors.grey.shade400),
+                              const SizedBox(height: 10),
+                              const Text('Tidak ada mata pelajaran di kategori ini.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            ],
                           ),
+                        ),
+                      )
+                    else
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: filteredMapel.length,
+                        itemBuilder: (context, index) {
+                          final mapel = filteredMapel[index];
+                          return _buildSubjectCard(mapel, isDark);
+                        },
+                      ),
 
                     const SizedBox(height: 30),
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildEmptyEnrolledState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.indigo.shade100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.indigo.withValues(alpha: 0.06),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.amber.shade200, width: 2),
+              ),
+              child: Icon(Icons.vpn_key_rounded, size: 36, color: Colors.amber.shade900),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Belum Ada Mapel Terdaftar',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Anda belum mendaftar di mata pelajaran apapun. Silakan masukkan Passcode Key resmi dari Guru Pengampu untuk mendaftar mapel dan melihat alur pembelajaran.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const GabungKelasScreen()),
+                  ).then((_) => _fetchPath());
+                },
+                icon: const Icon(Icons.key_rounded, color: Colors.white, size: 20),
+                label: const Text(
+                  '🔑 Input Passcode Key Mapel Baru',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amber.shade800,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
