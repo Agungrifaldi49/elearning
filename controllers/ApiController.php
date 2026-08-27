@@ -1068,7 +1068,7 @@ class ApiController {
                     $kelasId = intval($siswa['kelas_id'] ?? 0);
                     $siswaId = intval($siswa['id'] ?? 0);
 
-                    // Fetch enrolled subjects or subjects available in student's class
+                    // Fetch enrolled subjects or subjects available in student's class from DB
                     $stmtMapel = $this->db->prepare("
                         SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, g.nama_lengkap as nama_guru
                         FROM siswa_mapel_enrollment sme
@@ -1081,21 +1081,24 @@ class ApiController {
 
                     if (empty($enrolledMapel) && $kelasId > 0) {
                         $stmtMapelClass = $this->db->prepare("
-                            SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, 'Guru Pengampu' as nama_guru
-                            FROM mata_pelajaran mp
-                            LIMIT 10
+                            SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru
+                            FROM jadwal j
+                            JOIN mata_pelajaran mp ON j.mapel_id = mp.id
+                            LEFT JOIN guru g ON j.guru_id = g.id
+                            WHERE j.kelas_id = :kid
                         ");
-                        $stmtMapelClass->execute();
+                        $stmtMapelClass->execute(['kid' => $kelasId]);
                         $enrolledMapel = $stmtMapelClass->fetchAll();
                     }
 
                     if (empty($enrolledMapel)) {
-                        $enrolledMapel = [
-                            ['mapel_id' => 1, 'nama_mapel' => 'Pemrograman Web & Mobile', 'kode_mapel' => 'RPL-01', 'nama_guru' => 'Guru Pengampu RPL'],
-                            ['mapel_id' => 2, 'nama_mapel' => 'Basis Data & SQL Engine', 'kode_mapel' => 'RPL-02', 'nama_guru' => 'Guru Pengampu Basis Data'],
-                            ['mapel_id' => 3, 'nama_mapel' => 'Matematika Terapan SMK', 'kode_mapel' => 'UM-01', 'nama_guru' => 'Tim Guru Matematika'],
-                            ['mapel_id' => 4, 'nama_mapel' => 'Bahasa Inggris Industri', 'kode_mapel' => 'UM-02', 'nama_guru' => 'Tim Guru Bahasa'],
-                        ];
+                        $stmtMapelAll = $this->db->query("
+                            SELECT id as mapel_id, nama_mapel, kode_mapel, 'Guru Pengampu' as nama_guru 
+                            FROM mata_pelajaran 
+                            ORDER BY id ASC 
+                            LIMIT 10
+                        ");
+                        $enrolledMapel = $stmtMapelAll->fetchAll();
                     }
 
                     $mapelList = [];
@@ -1108,8 +1111,8 @@ class ApiController {
                     foreach ($enrolledMapel as $m) {
                         $mid = intval($m['mapel_id']);
                         $namaMapel = $m['nama_mapel'];
-                        $kodeMapel = $m['kode_mapel'] ?? 'MP-' . $mid;
-                        $namaGuru = $m['nama_guru'] ?? 'Guru Pengampu';
+                        $kodeMapel = !empty($m['kode_mapel']) ? $m['kode_mapel'] : 'MP-' . $mid;
+                        $namaGuru = !empty($m['nama_guru']) ? $m['nama_guru'] : 'Guru Pengampu';
 
                         // 1. Materi
                         $stmtMat = $this->db->prepare("SELECT COUNT(*) FROM materi WHERE mapel_id = :mid");
@@ -1181,16 +1184,16 @@ class ApiController {
                         $stmtUasDone->execute(['sid' => $siswaId, 'mid' => $mid]);
                         $doneUas = intval($stmtUasDone->fetchColumn());
 
-                        // Compute percentages per step
-                        $matPct = $totMat > 0 ? 100 : 100;
-                        $tugPct = $totTug > 0 ? min(100, intval(($doneTug / $totTug) * 100)) : 100;
-                        $qzPct = $totQz > 0 ? min(100, intval(($doneQz / $totQz) * 100)) : 100;
+                        // Percentages based on real DB counts
+                        $matPct = $totMat > 0 ? 100 : 0;
+                        $tugPct = $totTug > 0 ? min(100, intval(($doneTug / $totTug) * 100)) : 0;
+                        $qzPct = $totQz > 0 ? min(100, intval(($doneQz / $totQz) * 100)) : 0;
                         $utsPct = $totUts > 0 ? min(100, intval(($doneUts / $totUts) * 100)) : 0;
                         $uasPct = $totUas > 0 ? min(100, intval(($doneUas / $totUas) * 100)) : 0;
 
-                        $totItemsMapel = max(1, max($totMat, 1) + max($totTug, 1) + max($totQz, 1) + max($totUts, 1) + max($totUas, 1));
-                        $doneItemsMapel = max($totMat, 1) + $doneTug + $doneQz + $doneUts + $doneUas;
-                        $mapelPct = min(100, intval(($doneItemsMapel / $totItemsMapel) * 100));
+                        $totItemsMapel = $totMat + $totTug + $totQz + $totUts + $totUas;
+                        $doneItemsMapel = ($totMat > 0 ? $totMat : 0) + $doneTug + $doneQz + $doneUts + $doneUas;
+                        $mapelPct = $totItemsMapel > 0 ? min(100, intval(($doneItemsMapel / $totItemsMapel) * 100)) : 0;
                         $sumOverallPct += $mapelPct;
 
                         // Categorize mapel status
@@ -1198,12 +1201,12 @@ class ApiController {
                         $statusLabel = '🟡 Dalam Proses';
                         $currentStepIndex = 1;
 
-                        if ($doneTug == 0 && $doneQz == 0 && $doneUts == 0 && $doneUas == 0) {
+                        if ($totItemsMapel == 0 || ($doneTug == 0 && $doneQz == 0 && $doneUts == 0 && $doneUas == 0)) {
                             $statusCategory = 'belum_dimulai';
                             $statusLabel = '🔒 Belum Dimulai';
                             $currentStepIndex = 1;
                             $belumCount++;
-                        } elseif ($mapelPct >= 100 || ($doneTug >= $totTug && $doneQz >= $totQz && $doneUts >= $totUts && $doneUas >= $totUas && ($totTug > 0 || $totQz > 0))) {
+                        } elseif ($mapelPct >= 100 || ($doneTug >= $totTug && $doneQz >= $totQz && $doneUts >= $totUts && $doneUas >= $totUas && $totItemsMapel > 0)) {
                             $statusCategory = 'selesai';
                             $statusLabel = '🎉 Selesai Tuntas';
                             $currentStepIndex = 5;
@@ -1218,7 +1221,7 @@ class ApiController {
                             } elseif ($doneQz < $totQz && $totQz > 0) {
                                 $currentStepIndex = 3;
                                 $statusLabel = '🟡 Tahap 3: Kuis';
-                            } elseif ($doneUts < max($totUts, 1)) {
+                            } elseif ($doneUts < $totUts && $totUts > 0) {
                                 $currentStepIndex = 4;
                                 $statusLabel = '🟡 Tahap 4: UTS';
                             } else {
@@ -1241,10 +1244,10 @@ class ApiController {
                                     'step' => 1,
                                     'judul' => '📘 1. Memahami Materi Pembelajaran',
                                     'sub' => 'Modul, e-book, & video KBM',
-                                    'completed_count' => max($totMat, 1),
-                                    'total_count' => max($totMat, 1),
-                                    'percent' => 100,
-                                    'is_completed' => true,
+                                    'completed_count' => $totMat,
+                                    'total_count' => $totMat,
+                                    'percent' => $matPct,
+                                    'is_completed' => ($totMat > 0),
                                     'is_active' => false,
                                     'is_locked' => false,
                                     'action_type' => 'materi',
@@ -1255,7 +1258,7 @@ class ApiController {
                                     'judul' => '📝 2. Pengerjaan Tugas & Latihan',
                                     'sub' => 'PR & tugas praktikum kejuruan',
                                     'completed_count' => $doneTug,
-                                    'total_count' => max($totTug, 1),
+                                    'total_count' => $totTug,
                                     'percent' => $tugPct,
                                     'is_completed' => ($doneTug >= $totTug && $totTug > 0),
                                     'is_active' => ($doneTug < $totTug && $totTug > 0),
@@ -1268,10 +1271,10 @@ class ApiController {
                                     'judul' => '💡 3. Kuis Harian & Formatif',
                                     'sub' => 'Kuis harian & review bab',
                                     'completed_count' => $doneQz,
-                                    'total_count' => max($totQz, 1),
+                                    'total_count' => $totQz,
                                     'percent' => $qzPct,
                                     'is_completed' => ($doneQz >= $totQz && $totQz > 0),
-                                    'is_active' => ($doneTug >= $totTug && $doneQz < $totQz),
+                                    'is_active' => ($doneTug >= $totTug && $doneQz < $totQz && $totQz > 0),
                                     'is_locked' => false,
                                     'action_type' => 'kuis',
                                     'action_label' => 'Ikuti Kuis Harian'
@@ -1281,10 +1284,10 @@ class ApiController {
                                     'judul' => '🎯 4. Ujian Tengah Semester (UTS)',
                                     'sub' => 'CBT Evaluasi Tengah Semester',
                                     'completed_count' => $doneUts,
-                                    'total_count' => max($totUts, 1),
+                                    'total_count' => $totUts,
                                     'percent' => $utsPct,
-                                    'is_completed' => ($doneUts >= max($totUts, 1) && $totUts > 0),
-                                    'is_active' => ($doneQz >= $totQz && $doneUts < max($totUts, 1)),
+                                    'is_completed' => ($doneUts >= $totUts && $totUts > 0),
+                                    'is_active' => ($doneQz >= $totQz && $doneUts < $totUts && $totUts > 0),
                                     'is_locked' => false,
                                     'action_type' => 'cbt',
                                     'action_label' => 'Ikuti UTS'
@@ -1294,10 +1297,10 @@ class ApiController {
                                     'judul' => '🏆 5. Ujian Akhir Semester (UAS)',
                                     'sub' => 'CBT Ujian Akhir & Kelulusan',
                                     'completed_count' => $doneUas,
-                                    'total_count' => max($totUas, 1),
+                                    'total_count' => $totUas,
                                     'percent' => $uasPct,
-                                    'is_completed' => ($doneUas >= max($totUas, 1) && $totUas > 0),
-                                    'is_active' => ($doneUts >= max($totUts, 1) && $doneUas < max($totUas, 1)),
+                                    'is_completed' => ($doneUas >= $totUas && $totUas > 0),
+                                    'is_active' => ($doneUts >= $totUts && $doneUas < $totUas && $totUas > 0),
                                     'is_locked' => false,
                                     'action_type' => 'cbt',
                                     'action_label' => 'Ikuti UAS'
@@ -1306,10 +1309,10 @@ class ApiController {
                         ];
                     }
 
-                    $avgOverallPct = $totalMapelCount > 0 ? intval($sumOverallPct / $totalMapelCount) : 75;
+                    $avgOverallPct = $totalMapelCount > 0 ? intval($sumOverallPct / $totalMapelCount) : 0;
 
                     $this->jsonResponse(true, 'Alur Pembelajaran & Learning Path per Mapel', [
-                        'tingkat' => $siswa['nama_kelas'] ?? 'Kelas X',
+                        'tingkat' => $siswa['nama_kelas'] ?? 'Kelas Siswa',
                         'jurusan' => $siswa['nama_jurusan'] ?? 'Teknik & Kejuruan',
                         'capaian_persen' => $avgOverallPct,
                         'total_mapel' => $totalMapelCount,
@@ -1319,16 +1322,7 @@ class ApiController {
                         'mapel_list' => $mapelList
                     ]);
                 } catch (\Throwable $eLp) {
-                    $this->jsonResponse(true, 'Alur Pembelajaran & Learning Path per Mapel', [
-                        'tingkat' => $siswa['nama_kelas'] ?? 'Kelas X',
-                        'jurusan' => $siswa['nama_jurusan'] ?? 'Umum',
-                        'capaian_persen' => 75,
-                        'total_mapel' => 4,
-                        'selesai_count' => 1,
-                        'proses_count' => 2,
-                        'belum_count' => 1,
-                        'mapel_list' => []
-                    ]);
+                    $this->jsonResponse(false, 'Gagal memuat learning path dari database: ' . $eLp->getMessage(), null, 500);
                 }
                 break;
 
