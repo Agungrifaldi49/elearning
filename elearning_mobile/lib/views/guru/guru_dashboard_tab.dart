@@ -195,7 +195,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
             if (!guruProvider.hasClockedInToday) ...[
               const SizedBox(height: 14),
               InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruScanQRScreen())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -233,7 +233,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Ketuk untuk scan QR atau presensi masuk hari ini',
+                              'Ketuk untuk membuka Kartu Guru Digital & presensi masuk',
                               style: TextStyle(color: Colors.white70, fontSize: 11),
                             ),
                           ],
@@ -247,7 +247,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
             ] else if (guruProvider.hasClockedInToday && !guruProvider.hasClockedOutToday) ...[
               const SizedBox(height: 14),
               InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruScanQRScreen())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -285,7 +285,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Jangan lupa untuk mencatat presensi pulang Anda hari ini',
+                              'Ketuk untuk membuka Kartu Guru Digital & presensi pulang',
                               style: TextStyle(color: Colors.white70, fontSize: 11),
                             ),
                           ],

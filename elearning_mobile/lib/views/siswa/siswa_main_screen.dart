@@ -61,6 +61,7 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
               isGuru: false,
               hasClockedInToday: siswaProvider.hasClockedInToday,
               hasClockedOutToday: siswaProvider.hasClockedOutToday,
+              isAbsentToday: siswaProvider.isAbsentToday,
             );
           }
         });

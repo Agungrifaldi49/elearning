@@ -37,8 +37,10 @@ class GuruProvider with ChangeNotifier {
 
   bool _hasClockedInToday = false;
   bool _hasClockedOutToday = false;
+  bool _isAbsentToday = false;
   bool get hasClockedInToday => _hasClockedInToday;
   bool get hasClockedOutToday => _hasClockedOutToday;
+  bool get isAbsentToday => _isAbsentToday;
 
   Future<void> fetchDashboard(int userId) async {
     _isLoading = true;
@@ -49,8 +51,15 @@ class GuruProvider with ChangeNotifier {
       _dashboardData = res['data'];
       if (res['data']['absensi_today'] != null) {
         final abs = res['data']['absensi_today'];
-        _hasClockedInToday = abs['has_clocked_in'] == true || abs['has_clocked_in'] == 1;
-        _hasClockedOutToday = abs['has_clocked_out'] == true || abs['has_clocked_out'] == 1;
+        final st = (abs['status'] ?? '').toString().toLowerCase();
+        _isAbsentToday = st == 'izin' || st == 'sakit' || st == 'alpha' || st == 'alpa';
+        if (_isAbsentToday) {
+          _hasClockedInToday = false;
+          _hasClockedOutToday = false;
+        } else {
+          _hasClockedInToday = abs['has_clocked_in'] == true || abs['has_clocked_in'] == 1;
+          _hasClockedOutToday = abs['has_clocked_out'] == true || abs['has_clocked_out'] == 1;
+        }
       }
     }
     _isLoading = false;

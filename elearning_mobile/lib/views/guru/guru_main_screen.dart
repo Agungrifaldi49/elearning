@@ -47,24 +47,23 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
       final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         final guruProvider = Provider.of<GuruProvider>(context, listen: false);
-        guruProvider.fetchDashboard(user.id);
-        guruProvider.fetchQuiz(user.id);
-        guruProvider.fetchSusulanRequests(user.id);
-        guruProvider.fetchTugas(user.id);
-        guruProvider.fetchForumSilent(user.id);
-        guruProvider.fetchChatContactsSilent(user.id);
-        guruProvider.startRealtimeSync(user.id);
-        
-        Future.delayed(const Duration(milliseconds: 1500), () {
+        guruProvider.fetchDashboard(user.id).then((_) {
           if (mounted) {
             AttendanceReminderService.checkAndShowReminder(
               context: context,
               isGuru: true,
               hasClockedInToday: guruProvider.hasClockedInToday,
               hasClockedOutToday: guruProvider.hasClockedOutToday,
+              isAbsentToday: guruProvider.isAbsentToday,
             );
           }
         });
+        guruProvider.fetchQuiz(user.id);
+        guruProvider.fetchSusulanRequests(user.id);
+        guruProvider.fetchTugas(user.id);
+        guruProvider.fetchForumSilent(user.id);
+        guruProvider.fetchChatContactsSilent(user.id);
+        guruProvider.startRealtimeSync(user.id);
       }
     });
   }

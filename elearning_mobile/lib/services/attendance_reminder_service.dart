@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
-import '../views/siswa/siswa_absensi_tab.dart';
-import '../views/guru/guru_absensi_tab.dart';
+import '../views/shared/kartu_digital_screen.dart';
 
 class AttendanceReminderService {
   static Future<void> checkAndShowReminder({
@@ -10,15 +9,17 @@ class AttendanceReminderService {
     required bool isGuru,
     required bool hasClockedInToday,
     required bool hasClockedOutToday,
+    bool isAbsentToday = false,
   }) async {
+    // If student/teacher is marked Sakit, Izin, or Alpha today, do not show check-in or check-out popup dialogs
+    if (isAbsentToday) return;
+
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final prefs = await SharedPreferences.getInstance();
 
     final lastEntryReminder = prefs.getString('last_entry_reminder_$todayStr');
     final lastExitReminder = prefs.getString('last_exit_reminder_$todayStr');
-
-    final hour = now.hour;
 
     // 1. Belum Absen Masuk Reminder (Entry check-in)
     if (!hasClockedInToday && lastEntryReminder == null) {
@@ -65,14 +66,14 @@ class AttendanceReminderService {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  '🔔 Pengingat Presensi Masuk',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  isGuru ? '🔔 Pengingat Presensi Masuk Guru' : '🔔 Pengingat Presensi Masuk',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Halo! Anda belum mencatat presensi masuk hari ini. Yuk catat presensi sekarang agar kehadiran Anda tercatat secara resmi!',
+                  'Halo! Anda belum mencatat presensi masuk hari ini. Yuk buka Kartu Digital sekarang untuk mencatat presensi masuk secara resmi!',
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.4),
                   textAlign: TextAlign.center,
                 ),
@@ -97,12 +98,12 @@ class AttendanceReminderService {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => isGuru ? const GuruAbsensiTab() : const SiswaAbsensiTab(),
+                              builder: (_) => const KartuDigitalScreen(),
                             ),
                           );
                         },
                         icon: const Icon(Icons.qr_code_scanner, size: 18),
-                        label: const Text('Presensi Masuk', style: TextStyle(fontWeight: FontWeight.bold)),
+                        label: const Text('Kartu Digital', style: TextStyle(fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryColor,
                           foregroundColor: Colors.white,
@@ -147,14 +148,14 @@ class AttendanceReminderService {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  '🏠 Pengingat Presensi Pulang',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  isGuru ? '🏠 Pengingat Presensi Pulang Guru' : '🏠 Pengingat Presensi Pulang',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Jam pelajaran akan segera berakhir (10 menit lagi jam pulang). Jangan lupa untuk mencatat presensi kepulangan Anda hari ini!',
+                  'Waktu kegiatan telah mendekati jam pulang. Jangan lupa untuk membuka Kartu Digital dan mencatat presensi kepulangan Anda hari ini!',
                   style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.4),
                   textAlign: TextAlign.center,
                 ),
@@ -179,12 +180,12 @@ class AttendanceReminderService {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => isGuru ? const GuruAbsensiTab() : const SiswaAbsensiTab(),
+                              builder: (_) => const KartuDigitalScreen(),
                             ),
                           );
                         },
                         icon: const Icon(Icons.directions_run_rounded, size: 18),
-                        label: const Text('Absen Pulang', style: TextStyle(fontWeight: FontWeight.bold)),
+                        label: const Text('Kartu Digital', style: TextStyle(fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.indigo.shade800,
                           foregroundColor: Colors.white,

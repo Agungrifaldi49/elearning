@@ -187,7 +187,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
             if (!siswaProvider.hasClockedInToday) ...[
               const SizedBox(height: 12),
               InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaAbsensiTab())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -215,7 +215,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                         child: const Icon(Icons.access_time_filled_rounded, color: Colors.white, size: 24),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -225,7 +225,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Ketuk untuk catat presensi masuk hari ini',
+                              'Ketuk untuk membuka Kartu Pelajar & presensi masuk',
                               style: TextStyle(color: Colors.white70, fontSize: 11),
                             ),
                           ],
@@ -239,7 +239,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
             ] else if (siswaProvider.hasClockedInToday && !siswaProvider.hasClockedOutToday) ...[
               const SizedBox(height: 12),
               InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaAbsensiTab())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -267,7 +267,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                         child: const Icon(Icons.home_work_rounded, color: Colors.white, size: 24),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -277,7 +277,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Mau masuk jam pulang (10-15m lagi). Jangan lupa absen!',
+                              'Ketuk untuk membuka Kartu Pelajar & presensi pulang',
                               style: TextStyle(color: Colors.white70, fontSize: 11),
                             ),
                           ],

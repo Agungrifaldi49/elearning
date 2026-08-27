@@ -56,16 +56,52 @@ class SiswaProvider with ChangeNotifier {
   int get unreadJadwalCount => _jadwalList.where((j) => !_seenJadwalIds.contains(j.id)).length;
   int get unreadForumCount => _forumTopicList.where((f) => !_seenForumIds.contains(f.id)).length;
 
+  bool get isAbsentToday {
+    final now = DateTime.now();
+    final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    final todayRec = _absensiList.firstWhere(
+      (a) => a.tanggal.contains(todayStr),
+      orElse: () => AbsensiModel(id: 0, jadwalId: 0, siswaId: 0, tanggal: '', status: ''),
+    );
+    if (todayRec.id > 0) {
+      final st = todayRec.status.toLowerCase();
+      return st == 'izin' || st == 'sakit' || st == 'alpha' || st == 'alpa';
+    }
+    return false;
+  }
+
   bool get hasClockedInToday {
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-    return _absensiList.any((a) => a.tanggal.contains(todayStr));
+    final todayRec = _absensiList.firstWhere(
+      (a) => a.tanggal.contains(todayStr),
+      orElse: () => AbsensiModel(id: 0, jadwalId: 0, siswaId: 0, tanggal: '', status: ''),
+    );
+    if (todayRec.id > 0) {
+      final st = todayRec.status.toLowerCase();
+      if (st == 'izin' || st == 'sakit' || st == 'alpha' || st == 'alpa') {
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
 
   bool get hasClockedOutToday {
     final now = DateTime.now();
     final todayStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-    return _absensiList.any((a) => a.tanggal.contains(todayStr) && a.waktuPulang != null && a.waktuPulang!.isNotEmpty);
+    final todayRec = _absensiList.firstWhere(
+      (a) => a.tanggal.contains(todayStr),
+      orElse: () => AbsensiModel(id: 0, jadwalId: 0, siswaId: 0, tanggal: '', status: ''),
+    );
+    if (todayRec.id > 0) {
+      final st = todayRec.status.toLowerCase();
+      if (st == 'izin' || st == 'sakit' || st == 'alpha' || st == 'alpa') {
+        return false;
+      }
+      return todayRec.waktuPulang != null && todayRec.waktuPulang!.isNotEmpty;
+    }
+    return false;
   }
 
   Future<void> loadSeenState() async {
