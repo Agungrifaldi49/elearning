@@ -2861,7 +2861,7 @@ class ApiController {
             $search = trim($_GET['search'] ?? $_POST['search'] ?? '');
             $kategori = trim($_GET['kategori'] ?? $_POST['kategori'] ?? '');
 
-            $sql = "SELECT l.*, u.nama_lengkap as nama_uploader 
+            $sql = "SELECT l.*, COALESCE(u.full_name, 'Admin') as nama_uploader 
                     FROM library l 
                     LEFT JOIN users u ON l.uploader_id = u.id";
             $params = [];
@@ -2888,7 +2888,13 @@ class ApiController {
             $stmt->execute($params);
             $books = $stmt->fetchAll();
 
-            $baseUrl = 'https://smkmuthiaharapancicalengka.my.id/';
+            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'smkmuthiaharapancicalengka.my.id';
+            $baseUrl = "{$scheme}://{$host}/";
+            if (strpos($host, 'smkmuthia') === false && strpos($host, 'localhost') === false) {
+                $baseUrl = 'https://smkmuthiaharapancicalengka.my.id/';
+            }
+
             foreach ($books as &$b) {
                 if (!empty($b['file_path'])) {
                     if (strpos($b['file_path'], 'http') !== 0) {
@@ -2901,6 +2907,7 @@ class ApiController {
                 }
                 $b['rating'] = 4.8;
                 $b['views_count'] = intval($b['view_count'] ?? $b['views_count'] ?? 0);
+                $b['is_featured'] = intval($b['is_featured'] ?? (intval($b['view_count'] ?? 0) >= 800 ? 1 : 0));
             }
 
             $this->jsonResponse(true, 'Daftar Buku Digital / Perpustakaan', $books);

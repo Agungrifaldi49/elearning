@@ -40,10 +40,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _fetchLibraryData() async {
     setState(() => _isLoading = true);
-    final res = await ApiService.get('library', params: {
-      'search': _searchController.text.trim(),
-      'kategori': _selectedCategory,
-    });
+    final res = await ApiService.get('library');
     if (mounted) {
       if (res['success'] == true && res['data'] is List) {
         setState(() {
