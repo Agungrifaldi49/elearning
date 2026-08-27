@@ -1638,6 +1638,7 @@ class ApiController {
                     $input = $this->getPostInput();
                     $mapelId = intval($input['mapel_id'] ?? $_POST['mapel_id'] ?? 0);
                     $tanggal = Security::sanitize($input['tanggal'] ?? $_POST['tanggal'] ?? date('Y-m-d'));
+                    $kategori = Security::sanitize($input['kategori'] ?? $_POST['kategori'] ?? $_GET['kategori'] ?? 'masuk');
                     $presensi = $input['absensi'] ?? $_POST['absensi'] ?? [];
                     $keteranganMap = $input['keterangan'] ?? $_POST['keterangan'] ?? [];
 
@@ -1653,7 +1654,7 @@ class ApiController {
                         $sId = intval($siswaId);
                         $ket = Security::sanitize($keteranganMap[$siswaId] ?? '');
                         if ($sId > 0 && !empty($status)) {
-                            if ($absensiModel->saveManualAttendance($guruId, $mapelId, $sId, $tanggal, $status, $ket)) {
+                            if ($absensiModel->saveManualAttendance($guruId, $mapelId, $sId, $tanggal, $status, $ket, $kategori)) {
                                 $saved++;
                             }
                         }

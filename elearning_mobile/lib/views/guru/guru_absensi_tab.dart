@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 import '../../theme/app_theme.dart';
+import 'guru_input_absensi_screen.dart';
 
 class GuruAbsensiTab extends StatefulWidget {
   const GuruAbsensiTab({super.key});
@@ -449,6 +450,38 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                       borderSide: BorderSide.none,
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                InkWell(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => GuruInputAbsensiScreen(initialMapelId: _selectedMapelId)));
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade700,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.edit_calendar_rounded, size: 16, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text(
+                          '⚡ Input Presensi Manual (Absen Masuk & Pulang)',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

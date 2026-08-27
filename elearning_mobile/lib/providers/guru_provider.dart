@@ -540,6 +540,7 @@ class GuruProvider with ChangeNotifier {
     String tanggal,
     Map<int, String> absensiMap, {
     Map<int, String>? keteranganMap,
+    String kategori = 'masuk',
   }) async {
     final Map<String, dynamic> formattedAbsensi = {};
     absensiMap.forEach((k, v) {
@@ -557,6 +558,7 @@ class GuruProvider with ChangeNotifier {
       'user_id': userId,
       'mapel_id': mapelId,
       'tanggal': tanggal,
+      'kategori': kategori,
       'absensi': formattedAbsensi,
       'keterangan': formattedKeterangan,
     };

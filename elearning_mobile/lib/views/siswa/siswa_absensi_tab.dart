@@ -161,6 +161,143 @@ class _SiswaAbsensiTabState extends State<SiswaAbsensiTab> {
                   ],
                 ),
               ),
+              const SizedBox(height: 14),
+
+              // Status & Pengingat Presensi Hari Ini (Masuk & Pulang)
+              if (siswaProvider.absensiList.any((a) {
+                final todayStr = DateTime.now().toString().substring(0, 10);
+                final isToday = (a.tanggal ?? '').toString().startsWith(todayStr);
+                final st = (a.status ?? '').toString().toLowerCase();
+                return isToday && ['sakit', 'izin', 'alpa', 'alpha'].contains(st);
+              })) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.orange.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline_rounded, color: Colors.orange.shade900, size: 24),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ℹ️ Status Presensi Hari Ini: Tidak Hadir Ke Sekolah',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.orange.shade900),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Anda tercatat tidak hadir ke sekolah hari ini (Sakit/Izin/Alpha). Pengingat presensi pulang dinonaktifkan.',
+                              style: TextStyle(fontSize: 11, color: Colors.orange.shade900),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (!siswaProvider.hasClockedInToday) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.amber.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.amber.shade900, size: 24),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '🔔 Pengingat Presensi Masuk',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber.shade900),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Anda belum mencatat presensi masuk hari ini. Tunjukkan Kartu Pelajar Digital / Scan QR ke Guru/Piket.',
+                              style: TextStyle(fontSize: 11, color: Colors.amber.shade900),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (siswaProvider.hasClockedInToday && !siswaProvider.hasClockedOutToday) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.shade50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.indigo.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.home_work_rounded, color: Colors.indigo.shade900, size: 24),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '🏠 Pengingat Presensi Pulang',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.indigo.shade900),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Presensi masuk sudah tercatat. Jangan lupa scan QR kepulangan Anda sebelum meninggalkan sekolah!',
+                              style: TextStyle(fontSize: 11, color: Colors.indigo.shade900),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.green.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded, color: Colors.green.shade800, size: 24),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '🎉 Presensi Hari Ini Lengkap',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.green.shade900),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Presensi Masuk dan Presensi Pulang Anda hari ini telah lengkap tercatat di sistem.',
+                              style: TextStyle(fontSize: 11, color: Colors.green.shade900),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
 
               // Summary Stats Report Header

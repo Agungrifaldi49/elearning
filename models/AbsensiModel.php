@@ -925,7 +925,7 @@ class AbsensiModel extends BaseModel {
         $stmt = $this->db->prepare("
             SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, k.nama_kelas, j.nama_jurusan,
                    COALESCE(a.status, 'Belum Absen') as status_absensi,
-                   a.keterangan, a.waktu_hadir, a.waktu_masuk, a.qr_code,
+                   a.keterangan, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code,
                    CASE 
                        WHEN a.qr_code IS NOT NULL AND (a.qr_code LIKE 'QR_%' OR a.qr_code LIKE 'GURU_%' OR a.qr_code LIKE 'SISWA_%') THEN 1
                        WHEN a.keterangan LIKE '%Scan%' OR a.keterangan LIKE '%Digital%' OR a.keterangan LIKE '%QR%' THEN 1
@@ -944,7 +944,7 @@ class AbsensiModel extends BaseModel {
         return $stmt->fetchAll();
     }
 
-    public function saveManualAttendance($guruId, $mapelId, $siswaId, $tanggal, $status, $keterangan = '') {
+    public function saveManualAttendance($guruId, $mapelId, $siswaId, $tanggal, $status, $keterangan = '', $kategori = 'masuk') {
         $guruId = (int)$guruId;
         $mapelId = (int)$mapelId;
         $siswaId = (int)$siswaId;
@@ -952,6 +952,10 @@ class AbsensiModel extends BaseModel {
         $status = ucfirst(strtolower(trim($status)));
         if (!in_array($status, ['Hadir', 'Izin', 'Sakit', 'Alpha'])) {
             $status = 'Hadir';
+        }
+        $kategori = strtolower(trim($kategori));
+        if (!in_array($kategori, ['masuk', 'pulang'])) {
+            $kategori = 'masuk';
         }
 
         // Verify enrollment with fallback
@@ -966,21 +970,44 @@ class AbsensiModel extends BaseModel {
             }
         }
 
-        $stmtExist = $this->db->prepare("SELECT id FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
+        $stmtExist = $this->db->prepare("SELECT id, waktu_masuk, waktu_pulang FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
         $stmtExist->execute([$siswaId, $tanggal]);
         $exist = $stmtExist->fetch();
 
+        $isAbsent = in_array($status, ['Izin', 'Sakit', 'Alpha']);
         $now = date('Y-m-d H:i:s');
         if ($exist) {
-            $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, keterangan = ? WHERE id = ?");
-            return $stmt->execute([$guruId, $status, $keterangan, $exist['id']]);
+            if ($isAbsent) {
+                $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_pulang = NULL, keterangan = ? WHERE id = ?");
+                return $stmt->execute([$guruId, $status, $keterangan ?: 'Tidak Hadir Ke Sekolah (' . $status . ')', $exist['id']]);
+            } else if ($kategori === 'pulang') {
+                $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_pulang = COALESCE(waktu_pulang, ?), keterangan = ? WHERE id = ?");
+                return $stmt->execute([$guruId, $status, $now, $keterangan ?: 'Presensi Manual Pulang Guru', $exist['id']]);
+            } else {
+                $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_masuk = COALESCE(waktu_masuk, ?), keterangan = ? WHERE id = ?");
+                return $stmt->execute([$guruId, $status, $now, $keterangan ?: 'Presensi Manual Masuk Guru', $exist['id']]);
+            }
         } else {
             $qrCodeVal = "MANUAL_" . $siswaId . "_" . date('YmdHis');
-            $stmt = $this->db->prepare("
-                INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_hadir, status, qr_code, keterangan) 
-                VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            return $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Guru']);
+            if ($isAbsent) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
+                    VALUES (NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)
+                ");
+                return $stmt->execute([$siswaId, $guruId, $tanggal, $now, $status, $qrCodeVal, $keterangan ?: 'Tidak Hadir Ke Sekolah (' . $status . ')']);
+            } else if ($kategori === 'pulang') {
+                $stmt = $this->db->prepare("
+                    INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
+                    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                return $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Pulang Guru']);
+            } else {
+                $stmt = $this->db->prepare("
+                    INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
+                    VALUES (NULL, ?, ?, ?, ?, NULL, ?, ?, ?, ?)
+                ");
+                return $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Masuk Guru']);
+            }
         }
     }
 
