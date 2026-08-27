@@ -3104,11 +3104,12 @@ class ApiController {
             } catch (\Throwable $eMsg) {
                 $this->jsonResponse(false, 'Gagal mengirim pesan: ' . $eMsg->getMessage(), null, 500);
             }
-        } elseif ($endpoint === 'messages') {
+        } elseif ($endpoint === 'messages' || $endpoint === 'detail') {
             $receiverId = intval($_GET['receiver_id'] ?? $_GET['contact_id'] ?? 0);
             try {
+                // Fetch direct messages between user and contact
                 $stmt = $this->db->prepare("
-                    SELECT c.id, c.sender_id, c.receiver_id, c.message as pesan, c.created_at,
+                    SELECT c.id, c.sender_id, c.receiver_id, c.message as pesan, c.created_at, c.is_read,
                            u1.full_name as sender_name, u2.full_name as receiver_name
                     FROM chat c
                     JOIN users u1 ON c.sender_id = u1.id
@@ -3123,11 +3124,13 @@ class ApiController {
                     'rec2' => $receiverId,
                     'uid2' => $userId
                 ]);
-                $messages = $stmt->fetchAll();
+                $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                // Mark messages as read
-                $updRead = $this->db->prepare("UPDATE chat SET is_read = 1 WHERE sender_id = :rec AND receiver_id = :uid");
-                $updRead->execute(['rec' => $receiverId, 'uid' => $userId]);
+                // Mark messages from contact to current user as read (is_read = 1)
+                if ($receiverId > 0 && $userId > 0) {
+                    $updRead = $this->db->prepare("UPDATE chat SET is_read = 1 WHERE sender_id = :rec AND receiver_id = :uid AND (is_read = 0 OR is_read IS NULL OR is_read = '0')");
+                    $updRead->execute(['rec' => $receiverId, 'uid' => $userId]);
+                }
 
                 $this->jsonResponse(true, 'Riwayat Chat Direct', $messages);
             } catch (\Throwable $eH) {
@@ -3137,7 +3140,7 @@ class ApiController {
             $contactId = intval($input['contact_id'] ?? $input['receiver_id'] ?? $_GET['contact_id'] ?? $_GET['receiver_id'] ?? 0);
             if ($contactId > 0 && $userId > 0) {
                 try {
-                    $updRead = $this->db->prepare("UPDATE chat SET is_read = 1 WHERE sender_id = :cid AND receiver_id = :uid");
+                    $updRead = $this->db->prepare("UPDATE chat SET is_read = 1 WHERE sender_id = :cid AND receiver_id = :uid AND (is_read = 0 OR is_read IS NULL OR is_read = '0')");
                     $updRead->execute(['cid' => $contactId, 'uid' => $userId]);
                     $this->jsonResponse(true, 'Chat berhasil ditandai terbaca');
                 } catch (\Throwable $eMark) {
@@ -3147,7 +3150,7 @@ class ApiController {
                 $this->jsonResponse(false, 'Contact ID & User ID required', null, 400);
             }
         } else {
-            // contacts list
+            // contacts list with unread_count calculation
             try {
                 $stmt = $this->db->prepare("
                     SELECT u.id, 
