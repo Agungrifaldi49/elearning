@@ -89,6 +89,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = Provider.of<AuthProvider>(context).currentUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final int capaianPct = int.tryParse((_data['capaian_persen'] ?? 0).toString()) ?? 0;
     final int totalMapel = int.tryParse((_data['total_mapel'] ?? 0).toString()) ?? 0;
@@ -181,12 +182,12 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _data['tingkat'] ?? 'Kelas Siswa',
+                            (_data['nama_kelas'] ?? _data['kelas'] ?? _data['tingkat'] ?? user?.namaKelas ?? 'Kelas Siswa').toString(),
                             style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            _data['jurusan'] ?? 'Teknik & Kejuruan',
+                            (_data['nama_jurusan'] ?? _data['jurusan'] ?? user?.namaJurusan ?? 'Teknik & Kejuruan').toString(),
                             style: const TextStyle(color: Colors.white70, fontSize: 12),
                           ),
                           const SizedBox(height: 16),

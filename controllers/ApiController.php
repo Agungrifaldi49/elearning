@@ -159,38 +159,31 @@ class ApiController {
     public function siswa($endpoint = 'dashboard') {
         $endpoint = strtolower(explode('?', $endpoint)[0]);
         $input = $this->getPostInput();
-        $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
-        $stmtS = $this->db->prepare("
-            SELECT s.*, k.nama_kelas, j.nama_jurusan 
-            FROM siswa s 
-            LEFT JOIN kelas k ON s.kelas_id = k.id 
-            LEFT JOIN jurusan j ON s.jurusan_id = j.id 
-            WHERE s.user_id = :uid LIMIT 1
-        ");
-        $stmtS->execute(['uid' => $userId]);
-        $siswa = $stmtS->fetch();
-
-        if (!$siswa && $userId > 0) {
-            $stmtS2 = $this->db->prepare("
+        $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? $_GET['siswa_id'] ?? $_POST['siswa_id'] ?? $input['siswa_id'] ?? 0);
+        
+        $siswa = null;
+        if ($userId > 0) {
+            $stmtS = $this->db->prepare("
                 SELECT s.*, k.nama_kelas, j.nama_jurusan 
                 FROM siswa s 
                 LEFT JOIN kelas k ON s.kelas_id = k.id 
                 LEFT JOIN jurusan j ON s.jurusan_id = j.id 
-                WHERE s.id = :sid LIMIT 1
+                WHERE s.user_id = :uid LIMIT 1
             ");
-            $stmtS2->execute(['sid' => $userId]);
-            $siswa = $stmtS2->fetch();
-        }
+            $stmtS->execute(['uid' => $userId]);
+            $siswa = $stmtS->fetch();
 
-        if (!$siswa) {
-            $stmtFB = $this->db->query("
-                SELECT s.*, k.nama_kelas, j.nama_jurusan 
-                FROM siswa s 
-                LEFT JOIN kelas k ON s.kelas_id = k.id 
-                LEFT JOIN jurusan j ON s.jurusan_id = j.id 
-                ORDER BY s.id ASC LIMIT 1
-            ");
-            $siswa = $stmtFB->fetch();
+            if (!$siswa) {
+                $stmtS2 = $this->db->prepare("
+                    SELECT s.*, k.nama_kelas, j.nama_jurusan 
+                    FROM siswa s 
+                    LEFT JOIN kelas k ON s.kelas_id = k.id 
+                    LEFT JOIN jurusan j ON s.jurusan_id = j.id 
+                    WHERE s.id = :sid LIMIT 1
+                ");
+                $stmtS2->execute(['sid' => $userId]);
+                $siswa = $stmtS2->fetch();
+            }
         }
 
         if (!$siswa) {
