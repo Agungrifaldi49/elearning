@@ -1067,36 +1067,34 @@ class ApiController {
                 try {
                     $kelasId = intval($siswa['kelas_id'] ?? 0);
                     $siswaId = intval($siswa['id'] ?? 0);
+                    $jurusanId = intval($siswa['jurusan_id'] ?? 0);
 
-                    // Fetch enrolled subjects or subjects available in student's class from DB
+                    // Fetch subjects from DB matching student's enrollment, schedule, or department
                     $stmtMapel = $this->db->prepare("
-                        SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, g.nama_lengkap as nama_guru
-                        FROM siswa_mapel_enrollment sme
-                        JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
-                        LEFT JOIN guru g ON sme.guru_id = g.id
-                        WHERE sme.siswa_id = :sid
+                        SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru
+                        FROM mata_pelajaran mp
+                        LEFT JOIN siswa_mapel_enrollment sme ON (sme.mapel_id = mp.id AND sme.siswa_id = :sid)
+                        LEFT JOIN jadwal j ON (j.mapel_id = mp.id AND j.kelas_id = :kid)
+                        LEFT JOIN guru g ON (sme.guru_id = g.id OR j.guru_id = g.id)
+                        WHERE (sme.siswa_id = :sid2)
+                           OR (j.kelas_id = :kid2)
+                           OR (mp.jurusan_id = :jid OR mp.jurusan_id IS NULL)
+                        ORDER BY mp.id ASC
                     ");
-                    $stmtMapel->execute(['sid' => $siswaId]);
+                    $stmtMapel->execute([
+                        'sid' => $siswaId,
+                        'kid' => $kelasId,
+                        'sid2' => $siswaId,
+                        'kid2' => $kelasId,
+                        'jid' => $jurusanId
+                    ]);
                     $enrolledMapel = $stmtMapel->fetchAll();
-
-                    if (empty($enrolledMapel) && $kelasId > 0) {
-                        $stmtMapelClass = $this->db->prepare("
-                            SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru
-                            FROM jadwal j
-                            JOIN mata_pelajaran mp ON j.mapel_id = mp.id
-                            LEFT JOIN guru g ON j.guru_id = g.id
-                            WHERE j.kelas_id = :kid
-                        ");
-                        $stmtMapelClass->execute(['kid' => $kelasId]);
-                        $enrolledMapel = $stmtMapelClass->fetchAll();
-                    }
 
                     if (empty($enrolledMapel)) {
                         $stmtMapelAll = $this->db->query("
                             SELECT id as mapel_id, nama_mapel, kode_mapel, 'Guru Pengampu' as nama_guru 
                             FROM mata_pelajaran 
-                            ORDER BY id ASC 
-                            LIMIT 10
+                            ORDER BY id ASC
                         ");
                         $enrolledMapel = $stmtMapelAll->fetchAll();
                     }
@@ -1111,24 +1109,30 @@ class ApiController {
                     foreach ($enrolledMapel as $m) {
                         $mid = intval($m['mapel_id']);
                         $namaMapel = $m['nama_mapel'];
-                        $kodeMapel = !empty($m['kode_mapel']) ? $m['kode_mapel'] : 'MP-' . $mid;
+                        $kodeMapel = !empty($m['kode_mapel']) ? $m['kode_mapel'] : 'MP-' . sprintf("%02d", $mid);
                         $namaGuru = !empty($m['nama_guru']) ? $m['nama_guru'] : 'Guru Pengampu';
 
                         // 1. Materi
-                        $stmtMat = $this->db->prepare("SELECT COUNT(*) FROM materi WHERE mapel_id = :mid");
-                        $stmtMat->execute(['mid' => $mid]);
+                        $stmtMat = $this->db->prepare("
+                            SELECT COUNT(*) FROM materi 
+                            WHERE mapel_id = :mid AND (kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)
+                        ");
+                        $stmtMat->execute(['mid' => $mid, 'kid' => $kelasId]);
                         $totMat = intval($stmtMat->fetchColumn());
 
                         // 2. Tugas
-                        $stmtTug = $this->db->prepare("SELECT COUNT(*) FROM tugas WHERE mapel_id = :mid");
-                        $stmtTug->execute(['mid' => $mid]);
+                        $stmtTug = $this->db->prepare("
+                            SELECT COUNT(*) FROM tugas 
+                            WHERE mapel_id = :mid AND (kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)
+                        ");
+                        $stmtTug->execute(['mid' => $mid, 'kid' => $kelasId]);
                         $totTug = intval($stmtTug->fetchColumn());
 
                         $stmtTugDone = $this->db->prepare("
-                            SELECT COUNT(DISTINCT ts.tugas_id) 
-                            FROM tugas_siswa ts
-                            JOIN tugas t ON ts.tugas_id = t.id
-                            WHERE ts.siswa_id = :sid AND t.mapel_id = :mid AND ts.file_tugas IS NOT NULL AND ts.file_tugas != ''
+                            SELECT COUNT(DISTINCT pt.tugas_id) 
+                            FROM pengumpulan_tugas pt
+                            JOIN tugas t ON pt.tugas_id = t.id
+                            WHERE pt.siswa_id = :sid AND t.mapel_id = :mid
                         ");
                         $stmtTugDone->execute(['sid' => $siswaId, 'mid' => $mid]);
                         $doneTug = intval($stmtTugDone->fetchColumn());
@@ -1136,52 +1140,60 @@ class ApiController {
                         // 3. Quiz Harian
                         $stmtQz = $this->db->prepare("
                             SELECT COUNT(*) FROM quiz 
-                            WHERE mapel_id = :mid AND status = 'published' AND UPPER(judul) NOT LIKE '%UTS%' AND UPPER(judul) NOT LIKE '%UAS%'
+                            WHERE mapel_id = :mid AND (kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status IS NULL OR status = 'published') AND UPPER(judul) NOT LIKE '%UTS%' AND UPPER(judul) NOT LIKE '%UAS%'
                         ");
-                        $stmtQz->execute(['mid' => $mid]);
+                        $stmtQz->execute(['mid' => $mid, 'kid' => $kelasId]);
                         $totQz = intval($stmtQz->fetchColumn());
 
                         $stmtQzDone = $this->db->prepare("
-                            SELECT COUNT(DISTINCT qh.quiz_id) 
-                            FROM quiz_hasil qh
-                            JOIN quiz q ON qh.quiz_id = q.id
-                            WHERE qh.siswa_id = :sid AND q.mapel_id = :mid AND UPPER(q.judul) NOT LIKE '%UTS%' AND UPPER(q.judul) NOT LIKE '%UAS%'
+                            SELECT COUNT(DISTINCT hq.quiz_id) 
+                            FROM hasil_quiz hq
+                            JOIN quiz q ON hq.quiz_id = q.id
+                            WHERE hq.siswa_id = :sid AND q.mapel_id = :mid AND UPPER(q.judul) NOT LIKE '%UTS%' AND UPPER(q.judul) NOT LIKE '%UAS%'
                         ");
                         $stmtQzDone->execute(['sid' => $siswaId, 'mid' => $mid]);
                         $doneQz = intval($stmtQzDone->fetchColumn());
 
-                        // 4. UTS
+                        // 4. UTS (Quiz UTS or Ujian UTS)
                         $stmtUts = $this->db->prepare("
-                            SELECT COUNT(*) FROM quiz 
-                            WHERE mapel_id = :mid AND status = 'published' AND UPPER(judul) LIKE '%UTS%'
+                            SELECT 
+                              (SELECT COUNT(*) FROM quiz WHERE mapel_id = :mid AND (kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status IS NULL OR status = 'published') AND UPPER(judul) LIKE '%UTS%')
+                              +
+                              (SELECT COUNT(*) FROM ujian WHERE mapel_id = :mid2 AND (kelas_id = :kid2 OR kelas_id IS NULL OR kelas_id = 0) AND jenis_ujian = 'UTS')
+                            as total_uts
                         ");
-                        $stmtUts->execute(['mid' => $mid]);
+                        $stmtUts->execute(['mid' => $mid, 'kid' => $kelasId, 'mid2' => $mid, 'kid2' => $kelasId]);
                         $totUts = intval($stmtUts->fetchColumn());
 
                         $stmtUtsDone = $this->db->prepare("
-                            SELECT COUNT(DISTINCT qh.quiz_id) 
-                            FROM quiz_hasil qh
-                            JOIN quiz q ON qh.quiz_id = q.id
-                            WHERE qh.siswa_id = :sid AND q.mapel_id = :mid AND UPPER(q.judul) LIKE '%UTS%'
+                            SELECT 
+                              (SELECT COUNT(DISTINCT hq.quiz_id) FROM hasil_quiz hq JOIN quiz q ON hq.quiz_id = q.id WHERE hq.siswa_id = :sid AND q.mapel_id = :mid AND UPPER(q.judul) LIKE '%UTS%')
+                              +
+                              (SELECT COUNT(DISTINCT hu.ujian_id) FROM hasil_ujian hu JOIN ujian u ON hu.ujian_id = u.id WHERE hu.siswa_id = :sid2 AND u.mapel_id = :mid2 AND u.jenis_ujian = 'UTS')
+                            as done_uts
                         ");
-                        $stmtUtsDone->execute(['sid' => $siswaId, 'mid' => $mid]);
+                        $stmtUtsDone->execute(['sid' => $siswaId, 'mid' => $mid, 'sid2' => $siswaId, 'mid2' => $mid]);
                         $doneUts = intval($stmtUtsDone->fetchColumn());
 
-                        // 5. UAS
+                        // 5. UAS (Quiz UAS or Ujian UAS)
                         $stmtUas = $this->db->prepare("
-                            SELECT COUNT(*) FROM quiz 
-                            WHERE mapel_id = :mid AND status = 'published' AND UPPER(judul) LIKE '%UAS%'
+                            SELECT 
+                              (SELECT COUNT(*) FROM quiz WHERE mapel_id = :mid AND (kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status IS NULL OR status = 'published') AND UPPER(judul) LIKE '%UAS%')
+                              +
+                              (SELECT COUNT(*) FROM ujian WHERE mapel_id = :mid2 AND (kelas_id = :kid2 OR kelas_id IS NULL OR kelas_id = 0) AND jenis_ujian = 'UAS')
+                            as total_uas
                         ");
-                        $stmtUas->execute(['mid' => $mid]);
+                        $stmtUas->execute(['mid' => $mid, 'kid' => $kelasId, 'mid2' => $mid, 'kid2' => $kelasId]);
                         $totUas = intval($stmtUas->fetchColumn());
 
                         $stmtUasDone = $this->db->prepare("
-                            SELECT COUNT(DISTINCT qh.quiz_id) 
-                            FROM quiz_hasil qh
-                            JOIN quiz q ON qh.quiz_id = q.id
-                            WHERE qh.siswa_id = :sid AND q.mapel_id = :mid AND UPPER(q.judul) LIKE '%UAS%'
+                            SELECT 
+                              (SELECT COUNT(DISTINCT hq.quiz_id) FROM hasil_quiz hq JOIN quiz q ON hq.quiz_id = q.id WHERE hq.siswa_id = :sid AND q.mapel_id = :mid AND UPPER(q.judul) LIKE '%UAS%')
+                              +
+                              (SELECT COUNT(DISTINCT hu.ujian_id) FROM hasil_ujian hu JOIN ujian u ON hu.ujian_id = u.id WHERE hu.siswa_id = :sid2 AND u.mapel_id = :mid2 AND u.jenis_ujian = 'UAS')
+                            as done_uas
                         ");
-                        $stmtUasDone->execute(['sid' => $siswaId, 'mid' => $mid]);
+                        $stmtUasDone->execute(['sid' => $siswaId, 'mid' => $mid, 'sid2' => $siswaId, 'mid2' => $mid]);
                         $doneUas = intval($stmtUasDone->fetchColumn());
 
                         // Percentages based on real DB counts
