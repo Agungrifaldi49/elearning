@@ -92,7 +92,7 @@ class _SiswaAbsensiTabState extends State<SiswaAbsensiTab> {
       'total_hadir': absensiList.length,
       'tepat_waktu': absensiList.where((a) => a.status.toLowerCase().contains('tepat') || a.status.toLowerCase() == 'hadir').length,
       'terlambat': absensiList.where((a) => a.status.toLowerCase().contains('telat') || a.status.toLowerCase().contains('terlambat')).length,
-      'sudah_pulang': absensiList.where((a) => a.status.toLowerCase().contains('pulang')).length,
+      'sudah_pulang': absensiList.where((a) => a.waktuPulang != null && a.waktuPulang!.isNotEmpty).length,
       'izin_sakit_alpha': absensiList.where((a) => ['sakit', 'izin', 'alpa', 'alpha'].contains(a.status.toLowerCase())).length,
     };
 
@@ -166,8 +166,8 @@ class _SiswaAbsensiTabState extends State<SiswaAbsensiTab> {
               // Status & Pengingat Presensi Hari Ini (Masuk & Pulang)
               if (siswaProvider.absensiList.any((a) {
                 final todayStr = DateTime.now().toString().substring(0, 10);
-                final isToday = (a.tanggal ?? '').toString().startsWith(todayStr);
-                final st = (a.status ?? '').toString().toLowerCase();
+                final isToday = a.tanggal.startsWith(todayStr);
+                final st = a.status.toLowerCase();
                 return isToday && ['sakit', 'izin', 'alpa', 'alpha'].contains(st);
               })) ...[
                 Container(
@@ -455,8 +455,16 @@ class _SiswaAbsensiTabState extends State<SiswaAbsensiTab> {
                                             children: [
                                               const Text('Jam Masuk / Pre-KBM:', style: TextStyle(fontSize: 11, color: Colors.grey)),
                                               Text(
-                                                a.waktuMasuk ?? a.jamMulai ?? '06:45 WIB',
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                                                ['sakit', 'izin', 'alpa', 'alpha'].contains(st)
+                                                    ? '-'
+                                                    : (a.waktuMasuk != null && a.waktuMasuk!.isNotEmpty
+                                                        ? a.waktuMasuk!
+                                                        : (a.jamMulai ?? '-')),
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                  color: ['sakit', 'izin', 'alpa', 'alpha'].contains(st) ? Colors.grey : Colors.black87,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -467,8 +475,18 @@ class _SiswaAbsensiTabState extends State<SiswaAbsensiTab> {
                                             children: [
                                               const Text('Jam Pulang / Selesai:', style: TextStyle(fontSize: 11, color: Colors.grey)),
                                               Text(
-                                                a.waktuPulang ?? '15:00 WIB',
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                                                ['sakit', 'izin', 'alpa', 'alpha'].contains(st)
+                                                    ? '-'
+                                                    : (a.waktuPulang != null && a.waktuPulang!.isNotEmpty
+                                                        ? a.waktuPulang!
+                                                        : 'Belum Pulang'),
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 13,
+                                                  color: (a.waktuPulang != null && a.waktuPulang!.isNotEmpty)
+                                                      ? Colors.blue.shade900
+                                                      : (['sakit', 'izin', 'alpa', 'alpha'].contains(st) ? Colors.grey : Colors.orange.shade800),
+                                                ),
                                               ),
                                             ],
                                           ),

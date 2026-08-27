@@ -844,17 +844,16 @@ class ApiController {
 
                     foreach ($history as $h) {
                         $st = strtolower($h['status'] ?? '');
-                        if (strpos($st, 'tepat') !== false || $st === 'hadir') {
-                            $tepatWaktu++;
-                            $totalHadir++;
+                        if (!empty($h['waktu_pulang'])) {
+                            $sudahPulang++;
+                        }
+                        if ($st === 'sakit' || $st === 'izin' || $st === 'alpha' || $st === 'alpa') {
+                            $izinSakit++;
                         } elseif (strpos($st, 'telat') !== false || strpos($st, 'terlambat') !== false) {
                             $terlambat++;
                             $totalHadir++;
-                        } elseif (strpos($st, 'pulang') !== false) {
-                            $sudahPulang++;
-                        } elseif ($st === 'sakit' || $st === 'izin' || $st === 'alpha' || $st === 'alpa') {
-                            $izinSakit++;
                         } else {
+                            $tepatWaktu++;
                             $totalHadir++;
                         }
                     }
