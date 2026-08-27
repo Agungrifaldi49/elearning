@@ -165,10 +165,22 @@ class ApiController {
             FROM siswa s 
             LEFT JOIN kelas k ON s.kelas_id = k.id 
             LEFT JOIN jurusan j ON s.jurusan_id = j.id 
-            WHERE s.user_id = :uid OR s.id = :uid2 LIMIT 1
+            WHERE s.user_id = :uid LIMIT 1
         ");
-        $stmtS->execute(['uid' => $userId, 'uid2' => $userId]);
+        $stmtS->execute(['uid' => $userId]);
         $siswa = $stmtS->fetch();
+
+        if (!$siswa && $userId > 0) {
+            $stmtS2 = $this->db->prepare("
+                SELECT s.*, k.nama_kelas, j.nama_jurusan 
+                FROM siswa s 
+                LEFT JOIN kelas k ON s.kelas_id = k.id 
+                LEFT JOIN jurusan j ON s.jurusan_id = j.id 
+                WHERE s.id = :sid LIMIT 1
+            ");
+            $stmtS2->execute(['sid' => $userId]);
+            $siswa = $stmtS2->fetch();
+        }
 
         if (!$siswa) {
             $stmtFB = $this->db->query("
@@ -1068,17 +1080,39 @@ class ApiController {
                     $kelasId = intval($siswa['kelas_id'] ?? 0);
                     $siswaId = intval($siswa['id'] ?? 0);
 
-                    // Fetch STRICTLY enrolled subjects for this student (matching AcademicModel->getSiswaEnrolledMapels)
+                    // Fetch enrolled subjects (siswa_mapel_enrollment) AND class schedule subjects (jadwal for student's kelas_id)
                     $stmtMapel = $this->db->prepare("
-                        SELECT sme.mapel_id, mp.nama_mapel, mp.kode_mapel, g.nama_lengkap as nama_guru
-                        FROM siswa_mapel_enrollment sme
-                        JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
-                        JOIN guru g ON sme.guru_id = g.id
-                        WHERE sme.siswa_id = :sid
-                        ORDER BY sme.id ASC
+                        SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru
+                        FROM mata_pelajaran mp
+                        LEFT JOIN siswa_mapel_enrollment sme ON (sme.mapel_id = mp.id AND sme.siswa_id = :sid)
+                        LEFT JOIN jadwal j ON (j.mapel_id = mp.id AND j.kelas_id = :kid)
+                        LEFT JOIN guru g ON (sme.guru_id = g.id OR j.guru_id = g.id)
+                        WHERE (sme.siswa_id = :sid2)
+                           OR (j.kelas_id = :kid2 AND :kid3 > 0)
+                        ORDER BY mp.id ASC
                     ");
-                    $stmtMapel->execute(['sid' => $siswaId]);
+                    $stmtMapel->execute([
+                        'sid' => $siswaId,
+                        'kid' => $kelasId,
+                        'sid2' => $siswaId,
+                        'kid2' => $kelasId,
+                        'kid3' => $kelasId
+                    ]);
                     $enrolledMapel = $stmtMapel->fetchAll();
+
+                    if (empty($enrolledMapel) && $siswaId > 0) {
+                        // Fallback: check if student enrolled via key without guru_id constraint
+                        $stmtMapelFB = $this->db->prepare("
+                            SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru
+                            FROM siswa_mapel_enrollment sme
+                            JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+                            LEFT JOIN guru g ON sme.guru_id = g.id
+                            WHERE sme.siswa_id = :sid
+                            ORDER BY mp.id ASC
+                        ");
+                        $stmtMapelFB->execute(['sid' => $siswaId]);
+                        $enrolledMapel = $stmtMapelFB->fetchAll();
+                    }
 
                     $mapelList = [];
                     $totalMapelCount = count($enrolledMapel);
