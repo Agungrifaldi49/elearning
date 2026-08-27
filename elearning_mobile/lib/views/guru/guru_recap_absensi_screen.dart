@@ -194,7 +194,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                           child: DropdownButton<int>(
                             value: _selectedMonth,
                             isExpanded: true,
-                            icon: Icon(Icons.calendar_month_rounded, color: AppTheme.primaryColor, size: 18),
+                            icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.primaryColor, size: 18),
                             items: List.generate(12, (index) {
                               return DropdownMenuItem<int>(
                                 value: index + 1,
@@ -229,7 +229,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                           child: DropdownButton<int>(
                             value: _selectedYear,
                             isExpanded: true,
-                            icon: Icon(Icons.arrow_drop_down_rounded, color: AppTheme.primaryColor, size: 20),
+                            icon: const Icon(Icons.arrow_drop_down_rounded, color: AppTheme.primaryColor, size: 20),
                             items: [2024, 2025, 2026, 2027].map((y) {
                               return DropdownMenuItem<int>(
                                 value: y,
@@ -273,7 +273,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                             value: validMapelVal,
                             isExpanded: true,
                             dropdownColor: Colors.white,
-                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primaryColor, size: 18),
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primaryColor, size: 18),
                             style: const TextStyle(color: Colors.black87, fontSize: 11.5, fontWeight: FontWeight.bold),
                             items: [
                               const DropdownMenuItem<int>(
@@ -325,7 +325,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                             value: validKelasVal,
                             isExpanded: true,
                             dropdownColor: Colors.white,
-                            icon: Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primaryColor, size: 18),
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primaryColor, size: 18),
                             style: const TextStyle(color: Colors.black87, fontSize: 11.5, fontWeight: FontWeight.bold),
                             items: [
                               const DropdownMenuItem<int>(
@@ -399,11 +399,11 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.pie_chart_rounded, color: Colors.white, size: 20),
-                          const SizedBox(width: 8),
-                          const Text(
+                          Icon(Icons.pie_chart_rounded, color: Colors.white, size: 20),
+                          SizedBox(width: 8),
+                          Text(
                             'Rata-Rata Kehadiran Rombel:',
                             style: TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w600),
                           ),
@@ -417,7 +417,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                         ),
                         child: Text(
                           '$avgPct%',
-                          style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 13),
+                          style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ),
                     ],
@@ -530,7 +530,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                                         backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
                                         child: Text(
                                           name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                                          style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 14),
+                                          style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold, fontSize: 14),
                                         ),
                                       ),
                                       const SizedBox(width: 10),

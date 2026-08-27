@@ -1471,91 +1471,38 @@ class ApiController {
 
             case 'recap_absensi':
             case 'rekap_absensi':
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                require_once ROOT_PATH . 'models/AbsensiModel.php';
+                $academicModel = new AcademicModel();
+                $absensiModel = new AbsensiModel();
+                $guruId = intval($guru['id'] ?? 0);
+
                 $input = $this->getPostInput();
                 $kelasId = intval($_GET['kelas_id'] ?? $_POST['kelas_id'] ?? $input['kelas_id'] ?? 0);
                 $mapelId = intval($_GET['mapel_id'] ?? $_POST['mapel_id'] ?? $input['mapel_id'] ?? 0);
-                $search = trim($_GET['search'] ?? $_POST['search'] ?? $input['search'] ?? '');
-                $tanggal = trim($_GET['tanggal'] ?? $_POST['tanggal'] ?? $input['tanggal'] ?? '');
                 $bulan = sprintf('%02d', (int)($_GET['bulan'] ?? $_POST['bulan'] ?? $input['bulan'] ?? date('m')));
                 $tahun = (int)($_GET['tahun'] ?? $_POST['tahun'] ?? $input['tahun'] ?? date('Y'));
-                $guruId = intval($guru['id'] ?? 0);
 
-                require_once ROOT_PATH . 'models/AbsensiModel.php';
-                $absensiModel = new AbsensiModel();
-
-                $sql = "
-                    SELECT DISTINCT a.id, a.siswa_id, a.tanggal, a.status, a.keterangan, a.waktu_masuk, a.waktu_pulang, a.waktu_hadir, a.qr_code, a.created_at,
-                           s.nama_lengkap, s.nis, s.nisn, s.kelas_id, COALESCE(k.nama_kelas, 'Umum') as nama_kelas,
-                           COALESCE(mp.nama_mapel, 'Umum') as nama_mapel
-                    FROM absensi a 
-                    JOIN siswa s ON a.siswa_id = s.id 
-                    LEFT JOIN kelas k ON s.kelas_id = k.id 
-                    LEFT JOIN jadwal j ON a.jadwal_id = j.id 
-                    LEFT JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
-                    WHERE 1=1
-                ";
-                $params = [];
-
-                if ($kelasId > 0) {
-                    $sql .= " AND s.kelas_id = :kid";
-                    $params['kid'] = $kelasId;
-                }
-                if ($mapelId > 0) {
-                    $sql .= " AND j.mapel_id = :mid";
-                    $params['mid'] = $mapelId;
-                }
-                if ($tanggal !== '') {
-                    $sql .= " AND a.tanggal = :tgl";
-                    $params['tgl'] = $tanggal;
-                }
-                
-                $sql .= " ORDER BY a.tanggal DESC, a.id DESC LIMIT 300";
-
-                $stmtRec = $this->db->prepare($sql);
-                $stmtRec->execute($params);
-                $recaps = $stmtRec->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-                $totalHadir = 0;
-                $totalIzin = 0;
-                $totalSakit = 0;
-                $totalAlpa = 0;
-                foreach ($recaps as $r) {
-                    $st = strtolower($r['status'] ?? '');
-                    if (strpos($st, 'hadir') !== false || strpos($st, 'tepat') !== false) {
-                        $totalHadir++;
-                    } elseif (strpos($st, 'izin') !== false) {
-                        $totalIzin++;
-                    } elseif (strpos($st, 'sakit') !== false) {
-                        $totalSakit++;
-                    } else {
-                        $totalAlpa++;
-                    }
+                $myMapelList = $academicModel->getMapelByGuru($guruId);
+                if (empty($myMapelList)) {
+                    $myMapelList = $academicModel->getMapel();
                 }
 
-                $monthlyRecapData = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId);
+                $myKelasList = $academicModel->getKelasByGuru($guruId);
+                if (empty($myKelasList)) {
+                    $myKelasList = $academicModel->getKelas();
+                }
 
-                $stmtK = $this->db->query("SELECT id, nama_kelas FROM kelas ORDER BY nama_kelas ASC");
-                $classList = $stmtK->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $recapData = $absensiModel->getMonthlyRecapForGuru($guruId, $bulan, $tahun, $mapelId, $kelasId);
 
-                $this->jsonResponse(true, 'Data Rekapitulasi Presensi Terdaftar', [
-                    'summary' => [
-                        'total_records' => count($recaps),
-                        'hadir' => $totalHadir,
-                        'izin' => $totalIzin,
-                        'sakit' => $totalSakit,
-                        'alpa' => $totalAlpa,
-                    ],
+                $this->jsonResponse(true, 'Rekap Bulanan Presensi Siswa', array_merge([
+                    'mapel_list' => $myMapelList,
+                    'kelas_list' => $myKelasList,
+                    'selected_mapel_id' => $mapelId,
+                    'selected_kelas_id' => $kelasId,
                     'bulan' => $bulan,
                     'tahun' => $tahun,
-                    'classes' => $classList,
-                    'records' => $recaps,
-                    'monthly_recap' => [
-                        'bulan' => $bulan,
-                        'tahun' => $tahun,
-                        'num_days' => (int)date('t', strtotime("$tahun-$bulan-01")),
-                        'data' => $monthlyRecapData
-                    ]
-                ]);
+                ], $recapData));
                 break;
 
             case 'key_mapel':
@@ -1682,40 +1629,6 @@ class ApiController {
                     'tanggal' => $tanggal,
                     'students' => $students
                 ]);
-                break;
-
-            case 'recap_absensi':
-                require_once ROOT_PATH . 'models/AcademicModel.php';
-                require_once ROOT_PATH . 'models/AbsensiModel.php';
-                $academicModel = new AcademicModel();
-                $absensiModel = new AbsensiModel();
-                $guruId = intval($guru['id'] ?? 0);
-
-                $bulan = sprintf('%02d', intval($_GET['bulan'] ?? date('m')));
-                $tahun = intval($_GET['tahun'] ?? date('Y'));
-                $mapelId = intval($_GET['mapel_id'] ?? 0);
-                $kelasId = intval($_GET['kelas_id'] ?? 0);
-
-                $myMapelList = $academicModel->getMapelByGuru($guruId);
-                if (empty($myMapelList)) {
-                    $myMapelList = $academicModel->getMapel();
-                }
-
-                $myKelasList = $academicModel->getKelasByGuru($guruId);
-                if (empty($myKelasList)) {
-                    $myKelasList = $academicModel->getKelas();
-                }
-
-                $recapData = $absensiModel->getMonthlyRecapForGuru($guruId, $bulan, $tahun, $mapelId, $kelasId);
-
-                $this->jsonResponse(true, 'Rekap Bulanan Presensi Siswa', array_merge([
-                    'mapel_list' => $myMapelList,
-                    'kelas_list' => $myKelasList,
-                    'selected_mapel_id' => $mapelId,
-                    'selected_kelas_id' => $kelasId,
-                    'bulan' => $bulan,
-                    'tahun' => $tahun,
-                ], $recapData));
                 break;
 
             case 'kartu':
