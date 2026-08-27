@@ -276,6 +276,8 @@ class ApiController {
                         'waktu_pulang' => $absToday['waktu_pulang'] ?? null,
                     ]
                 ]);
+                break;
+
             case 'learning_path':
             case 'learningpath':
                 require_once ROOT_PATH . 'models/AcademicModel.php';
@@ -284,37 +286,12 @@ class ApiController {
                 $siswaId = intval($siswa['id'] ?? 0);
                 $kelasId = intval($siswa['kelas_id'] ?? 0);
 
+                // Strictly get ONLY enrolled mapels registered via Key Mapel for this specific student
                 $enrolledList = [];
                 try {
                     $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
-                } catch (\Throwable $eEnr) {}
-
-                if (empty($enrolledList)) {
-                    try {
-                        $stmtMapel = $this->db->prepare("
-                            SELECT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, 
-                                   COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
-                                   COALESCE(g.id, 1) as guru_id
-                            FROM mata_pelajaran mp
-                            LEFT JOIN jadwal j ON j.mapel_id = mp.id
-                            LEFT JOIN guru g ON j.guru_id = g.id
-                            LEFT JOIN users u ON g.user_id = u.id
-                            WHERE (j.kelas_id = :kid OR :kid2 = 0)
-                            GROUP BY mp.id
-                        ");
-                        $stmtMapel->execute(['kid' => $kelasId, 'kid2' => $kelasId]);
-                        $enrolledList = $stmtMapel->fetchAll();
-                    } catch (\Throwable $eM) {
-                        try {
-                            $stmtMapelAll = $this->db->query("
-                                SELECT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, 'Guru Pengampu' as nama_guru, 1 as guru_id
-                                FROM mata_pelajaran mp
-                            ");
-                            $enrolledList = $stmtMapelAll->fetchAll();
-                        } catch (\Throwable $eAll) {
-                            $enrolledList = [];
-                        }
-                    }
+                } catch (\Throwable $eEnr) {
+                    $enrolledList = [];
                 }
 
                 $mapelList = [];
@@ -334,7 +311,7 @@ class ApiController {
                         FROM materi m
                         LEFT JOIN guru g ON m.guru_id = g.id
                         LEFT JOIN users u ON g.user_id = u.id
-                        WHERE (m.mapel_id = :mid OR m.mapel_id IS NULL OR m.mapel_id = 0)
+                        WHERE m.mapel_id = :mid
                           AND (m.kelas_id = :kid OR m.kelas_id IS NULL OR m.kelas_id = 0)
                         ORDER BY m.id ASC
                     ");
@@ -348,7 +325,7 @@ class ApiController {
                         LEFT JOIN guru g ON t.guru_id = g.id
                         LEFT JOIN users u ON g.user_id = u.id
                         LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = :sid)
-                        WHERE (t.mapel_id = :mid OR t.mapel_id IS NULL OR t.mapel_id = 0)
+                        WHERE t.mapel_id = :mid
                           AND (t.kelas_id = :kid OR t.kelas_id IS NULL OR t.kelas_id = 0)
                         ORDER BY t.id ASC
                     ");
@@ -364,7 +341,7 @@ class ApiController {
                         LEFT JOIN (
                             SELECT * FROM hasil_quiz WHERE siswa_id = :sid
                         ) hq ON hq.quiz_id = q.id
-                        WHERE (q.mapel_id = :mid OR q.mapel_id IS NULL OR q.mapel_id = 0)
+                        WHERE q.mapel_id = :mid
                           AND (q.kelas_id = :kid OR q.kelas_id IS NULL OR q.kelas_id = 0)
                           AND q.status = 'published'
                         ORDER BY q.id ASC
