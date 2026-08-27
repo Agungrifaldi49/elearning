@@ -421,7 +421,7 @@ class _SiswaAbsensiTabState extends State<SiswaAbsensiTab> {
                                             Icon(Icons.calendar_today_rounded, size: 16, color: Colors.indigo.shade900),
                                             const SizedBox(width: 6),
                                             Text(
-                                              "${a.hari ?? ''} ${a.tanggal}".trim(),
+                                              a.formattedTanggal,
                                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                             ),
                                           ],
@@ -455,15 +455,11 @@ class _SiswaAbsensiTabState extends State<SiswaAbsensiTab> {
                                             children: [
                                               const Text('Jam Masuk / Pre-KBM:', style: TextStyle(fontSize: 11, color: Colors.grey)),
                                               Text(
-                                                ['sakit', 'izin', 'alpa', 'alpha'].contains(st)
-                                                    ? '-'
-                                                    : (a.waktuMasuk != null && a.waktuMasuk!.isNotEmpty
-                                                        ? a.waktuMasuk!
-                                                        : (a.jamMulai ?? '-')),
+                                                a.formattedJamMasuk,
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 13,
-                                                  color: ['sakit', 'izin', 'alpa', 'alpha'].contains(st) ? Colors.grey : Colors.black87,
+                                                  color: a.isAbsent ? Colors.grey : Colors.black87,
                                                 ),
                                               ),
                                             ],
@@ -475,17 +471,13 @@ class _SiswaAbsensiTabState extends State<SiswaAbsensiTab> {
                                             children: [
                                               const Text('Jam Pulang / Selesai:', style: TextStyle(fontSize: 11, color: Colors.grey)),
                                               Text(
-                                                ['sakit', 'izin', 'alpa', 'alpha'].contains(st)
-                                                    ? '-'
-                                                    : (a.waktuPulang != null && a.waktuPulang!.isNotEmpty
-                                                        ? a.waktuPulang!
-                                                        : 'Belum Pulang'),
+                                                a.formattedJamPulang,
                                                 style: TextStyle(
                                                   fontWeight: FontWeight.bold,
                                                   fontSize: 13,
                                                   color: (a.waktuPulang != null && a.waktuPulang!.isNotEmpty)
                                                       ? Colors.blue.shade900
-                                                      : (['sakit', 'izin', 'alpa', 'alpha'].contains(st) ? Colors.grey : Colors.orange.shade800),
+                                                      : (a.isAbsent ? Colors.grey : Colors.orange.shade800),
                                                 ),
                                               ),
                                             ],
