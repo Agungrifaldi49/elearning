@@ -63,16 +63,254 @@ class GameModel extends BaseModel {
                     FOREIGN KEY (game_id) REFERENCES game_edukasi(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+
+            $this->seedDefaultGamesIfEmpty();
+        } catch (Exception $e) {}
+    }
+
+    public function seedDefaultGamesIfEmpty() {
+        try {
+            $cnt = (int)$this->db->query("SELECT COUNT(*) FROM game_edukasi")->fetchColumn();
+            if ($cnt > 0) return;
+
+            $guruId = (int)($this->db->query("SELECT id FROM guru LIMIT 1")->fetchColumn() ?: 1);
+            $mapelId = (int)($this->db->query("SELECT id FROM mata_pelajaran LIMIT 1")->fetchColumn() ?: 1);
+
+            // Game 1: Kuis Speed
+            $g1 = [
+                'guru_id' => $guruId,
+                'mapel_id' => $mapelId,
+                'kelas_id' => null,
+                'judul' => 'Kuis Cerdas Cermat SMK & Kejuruan',
+                'deskripsi' => 'Uji wawasan keahlian vokasi dan pengetahuan umummu dalam kuis kecepatan interaktif!',
+                'tipe_game' => 'quiz_speed',
+                'durasi_per_soal' => 15,
+                'kkm' => 75
+            ];
+            $soal1 = [
+                [
+                    'pertanyaan' => 'Apa tujuan utama dari proses perencanaan proyek dalam bidang kejuruan?',
+                    'opsi_a' => 'Meminimalkan risiko dan memastikan efisiensi pelaksanaan kerja',
+                    'opsi_b' => 'Memperpanjang durasi waktu pengerjaan proyek',
+                    'opsi_c' => 'Menambah alokasi biaya pengeluaran bahan',
+                    'opsi_d' => 'Mengabaikan standar keselamatan kerja industri',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'Perencanaan proyek bertujuan meminimalkan kendala teknis dan memastikan efisiensi efisiensi waktu serta biaya.'
+                ],
+                [
+                    'pertanyaan' => 'Sikap profesional manakah yang sangat diutamakan dalam dunia kerja industri?',
+                    'opsi_a' => 'Integritas, Disiplin, Tanggung Jawab, & Kerja Sama Tim',
+                    'opsi_b' => 'Apatis terhadap pencapaian target tim',
+                    'opsi_c' => 'Mengabaikan Prosedur Operasional Standar (SOP)',
+                    'opsi_d' => 'Bekerja tanpa mematuhi tenggat waktu',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'Kedisiplinan, kejujuran, dan kerjasama tim adalah pilar utama etika kerja profesional di industri.'
+                ],
+                [
+                    'pertanyaan' => 'Tahapan penting manakah yang wajib dilakukan setelah penyelesaian tugas atau produk?',
+                    'opsi_a' => 'Pengujian (Testing) & Reviu Kualitas Umpan Balik',
+                    'opsi_b' => 'Langsung didistribusikan tanpa tahap pemeriksaan',
+                    'opsi_c' => 'Menghapus dokumentasi hasil kerja',
+                    'opsi_d' => 'Menghentikan seluruh proses evaluasi karya',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'Tahap pengujian dan evaluasi umpan balik memastikan produk memenuhi standar mutu yang ditentukan.'
+                ],
+                [
+                    'pertanyaan' => 'Mengapa penerapan K3 (Keselamatan & Kesehatan Kerja) sangat krusial di bengkel/laboratorium?',
+                    'opsi_a' => 'Mencegah kecelakaan kerja dan melindungi keselamatan tenaga kerja',
+                    'opsi_b' => 'Hanya sekadar formalitas syarat administratif',
+                    'opsi_c' => 'Memperlambat proses produksi barang',
+                    'opsi_d' => 'Menambah risiko kerusakan alat produksi',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'K3 menjamin perlindungan keselamatan jiwa dan lingkungan kerja yang kondusif.'
+                ]
+            ];
+            $this->createGame($g1, $soal1);
+
+            // Game 2: Spin Wheel Quiz
+            $g2 = [
+                'guru_id' => $guruId,
+                'mapel_id' => $mapelId,
+                'kelas_id' => null,
+                'judul' => 'Tebak Istilah Vokasi & Teknologi',
+                'deskripsi' => 'Tebak istilah populer keahlian dan kejuruan SMK dalam mode kuis pilihan cepat!',
+                'tipe_game' => 'spin_wheel',
+                'durasi_per_soal' => 20,
+                'kkm' => 70
+            ];
+            $soal2 = [
+                [
+                    'pertanyaan' => 'Istilah manakah yang merujuk pada dokumen standar langkah-langkah kerja operasional?',
+                    'opsi_a' => 'SOP (Standard Operating Procedure)',
+                    'opsi_b' => 'KTSP (Kurikulum Tingkat Satuan Pendidikan)',
+                    'opsi_c' => 'CV (Curriculum Vitae)',
+                    'opsi_d' => 'MOU (Memorandum of Understanding)',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'SOP adalah panduan acuan baku pelaksanaan urutan pengerjaan tugas.'
+                ],
+                [
+                    'pertanyaan' => 'Apakah fungsi dari proses Troubleshooting dalam pemeliharaan sarana prasarana?',
+                    'opsi_a' => 'Mendeteksi, mendiagnosis, dan merawat/memperbaiki kerusakan sistem',
+                    'opsi_b' => 'Menghapus seluruh file cadangan data',
+                    'opsi_c' => 'Membuat masalah baru pada perangkat',
+                    'opsi_d' => 'Menjual sisa bahan produksi',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'Troubleshooting adalah langkah pemecahan masalah teknis untuk memulihkan fungsi sistem.'
+                ],
+                [
+                    'pertanyaan' => 'Istilah industri apakah yang menggambarkan pengujian mutu produk akhir?',
+                    'opsi_a' => 'Quality Control (QC)',
+                    'opsi_b' => 'Human Resources (HR)',
+                    'opsi_c' => 'Public Relations (PR)',
+                    'opsi_d' => 'Supply Chain (SC)',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'Quality Control bertugas memeriksa dan menjamin produk sesuai spesifikasi standar.'
+                ],
+                [
+                    'pertanyaan' => 'Konsep belajar berbasis proyek nyata di SMK sering disebut dengan istilah?',
+                    'opsi_a' => 'Project-Based Learning (PjBL)',
+                    'opsi_b' => 'Rote Learning (Hafalan)',
+                    'opsi_c' => 'Passive Learning',
+                    'opsi_d' => 'Single-Subject Study',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'PjBL mendorong pembelajaran praktis berbasis proyek nyata industri.'
+                ]
+            ];
+            $this->createGame($g2, $soal2);
+
+            // Game 3: Memory Match
+            $g3 = [
+                'guru_id' => $guruId,
+                'mapel_id' => $mapelId,
+                'kelas_id' => null,
+                'judul' => 'Memory Match Kosa Kata & Konsep SMK',
+                'deskripsi' => 'Uji daya ingat dan pemahaman konsep keahlianmu dalam tantangan Memory Match!',
+                'tipe_game' => 'memory_match',
+                'durasi_per_soal' => 20,
+                'kkm' => 75
+            ];
+            $soal3 = [
+                [
+                    'pertanyaan' => 'Manakah yang merupakan komponen utama dalam perancangan produk unggulan?',
+                    'opsi_a' => 'Fungsionalitas, Estetika, Ergonomi & Kualitas Bahan',
+                    'opsi_b' => 'Harga mahal tanpa jaminan kualitas',
+                    'opsi_c' => 'Desain rumit yang sulit digunakan',
+                    'opsi_d' => 'Bahan bekas yang membahayakan pengguna',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'Produk unggulan menggabungkan aspek fungsionalitas, kenyamanan, serta kualitas bahan.'
+                ],
+                [
+                    'pertanyaan' => 'Keterampilan abad 21 manakah yang paling dibutuhkan lulusan SMK?',
+                    'opsi_a' => 'Berpikir Kritis, Kreativitas, Komunikasi, & Kolaborasi',
+                    'opsi_b' => 'Ketergantungan penuh pada instruksi guru',
+                    'opsi_c' => 'Menutup diri dari perkembangan teknologi',
+                    'opsi_d' => 'Menghindari kerja kelompok',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => '4C (Critical Thinking, Creativity, Communication, Collaboration) adalah softskill utama.'
+                ],
+                [
+                    'pertanyaan' => 'Prinsip 5R/5S di lingkungan kerja laboratorium/bengkel meliputi?',
+                    'opsi_a' => 'Ringkas, Rapi, Resik, Rawat, Rajin',
+                    'opsi_b' => 'Ragu, Rusak, Runtuh, Raba, Reka',
+                    'opsi_c' => 'Rencana, Realisasi, Reviu, Rangkum, Rilis',
+                    'opsi_d' => 'Rintis, Rancang, Rakit, Rawat, Rusak',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'Budaya 5R/5S memastikan tempat kerja tertata, bersih, dan produktif.'
+                ],
+                [
+                    'pertanyaan' => 'Apa manfaat dari pelaksanaan Praktik Kerja Lapangan (PKL) bagi siswa SMK?',
+                    'opsi_a' => 'Mendapatkan pengalaman kerja nyata dan budaya industri',
+                    'opsi_b' => 'Mengurangi jam istirahat sekolah',
+                    'opsi_c' => 'Mengganti ujian nasional semata',
+                    'opsi_d' => 'Menghindari kegiatan pembelajaran kelas',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'PKL memberikan kesempatan mengaplikasikan ilmu langsung di Dunia Usaha/Dunia Industri (DUDI).'
+                ]
+            ];
+            $this->createGame($g3, $soal3);
+
+            // Game 4: Mario Runner
+            $g4 = [
+                'guru_id' => $guruId,
+                'mapel_id' => $mapelId,
+                'kelas_id' => null,
+                'judul' => 'Runner Quiz Kecepatan Kejuruan',
+                'deskripsi' => 'Berlari cepat dan jawab tantangan kuis keahlian kejuruan sebelum waktu habis!',
+                'tipe_game' => 'mario_run',
+                'durasi_per_soal' => 15,
+                'kkm' => 75
+            ];
+            $soal4 = [
+                [
+                    'pertanyaan' => 'Tindakan pertama jika melihat bahaya listrik atau percikan api di laboratorium adalah?',
+                    'opsi_a' => 'Mematikan Sakelar Utama / MCB dan melapor pada instruktur',
+                    'opsi_b' => 'Menyiram listrik dengan air biasa',
+                    'opsi_c' => 'Membiarkan percikan api membesar',
+                    'opsi_d' => 'Menyentuh kabel yang terkelupas',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'Mematikan pasokan listrik utama adalah prosedur darurat utama dalam penanganan bahaya kelistrikan.'
+                ],
+                [
+                    'pertanyaan' => 'Alat Pelindung Diri (APD) standar saat bekerja dengan mesin atau bahan kimia adalah?',
+                    'opsi_a' => 'Kacamata Safety, Sarung Tangan, Masker, & Sepatu Safety',
+                    'opsi_b' => 'Sandal jepit dan kaus tipis',
+                    'opsi_c' => 'Kacamata hitam biasa dan perhiasan',
+                    'opsi_d' => 'Tanpa menggunakan APD apapun',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'APD standar melindungi mata, pernapasan, serta fisik dari paparan bahan berbahaya.'
+                ],
+                [
+                    'pertanyaan' => 'Manakah yang termasuk contoh sumber daya terbuka (Open Source) dalam bidang teknologi?',
+                    'opsi_a' => 'Linux, Python, & VS Code',
+                    'opsi_b' => 'Software berlisensi rahasia berbayar mahal',
+                    'opsi_c' => 'Perangkat keras buatan sendiri tanpa skema',
+                    'opsi_d' => 'Dokumentasi tertutup tanpa izin baca',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'Open source mengizinkan akses dan pengembangan kode secara kolaboratif.'
+                ],
+                [
+                    'pertanyaan' => 'Apa arti dari istilah "Benchmarking" dalam evaluasi kualitas produk?',
+                    'opsi_a' => 'Membandingkan kinerja produk dengan standar terbaik di pasaran',
+                    'opsi_b' => 'Menurunkan mutu produk agar lebih murah',
+                    'opsi_c' => 'Mengabaikan produk pesaing industri',
+                    'opsi_d' => 'Menghapus garansi resmi produk',
+                    'kunci_jawaban' => 'a',
+                    'poin' => 25,
+                    'penjelasan' => 'Benchmarking dilakukan untuk membandingkan standar kualitas dengan acuan terbaik.'
+                ]
+            ];
+            $this->createGame($g4, $soal4);
+
         } catch (Exception $e) {}
     }
 
     public function getAllGames($guruId = null, $kelasId = null) {
+        $this->seedDefaultGamesIfEmpty();
+
         $sql = "
-            SELECT g.*, m.nama_mapel, k.nama_kelas, gr.nama_lengkap as nama_guru,
+            SELECT g.*, 
+                   COALESCE(m.nama_mapel, 'Pengetahuan & Kejuruan') as nama_mapel, 
+                   COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, 
+                   COALESCE(gr.nama_lengkap, 'Tim Kurikulum SMK') as nama_guru,
                    (SELECT COUNT(*) FROM game_soal WHERE game_id = g.id) as total_soal,
                    (SELECT COUNT(*) FROM game_skor WHERE game_id = g.id) as total_pemain
             FROM game_edukasi g
-            JOIN mata_pelajaran m ON g.mapel_id = m.id
+            LEFT JOIN mata_pelajaran m ON g.mapel_id = m.id
             LEFT JOIN kelas k ON g.kelas_id = k.id
             LEFT JOIN guru gr ON g.guru_id = gr.id
             WHERE 1=1
@@ -80,7 +318,7 @@ class GameModel extends BaseModel {
         $params = [];
 
         if ($guruId) {
-            $sql .= " AND (g.guru_id = ? OR g.kelas_id IS NULL OR g.kelas_id = 0)";
+            $sql .= " AND (g.guru_id = ? OR g.kelas_id IS NULL OR g.kelas_id = 0 OR g.guru_id = 0)";
             $params[] = (int)$guruId;
         }
 
@@ -92,7 +330,26 @@ class GameModel extends BaseModel {
         $sql .= " ORDER BY g.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll();
+        $games = $stmt->fetchAll();
+
+        if (empty($games)) {
+            $stmtFallback = $this->db->query("
+                SELECT g.*, 
+                       COALESCE(m.nama_mapel, 'Pengetahuan & Kejuruan') as nama_mapel, 
+                       COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, 
+                       COALESCE(gr.nama_lengkap, 'Tim Kurikulum SMK') as nama_guru,
+                       (SELECT COUNT(*) FROM game_soal WHERE game_id = g.id) as total_soal,
+                       (SELECT COUNT(*) FROM game_skor WHERE game_id = g.id) as total_pemain
+                FROM game_edukasi g
+                LEFT JOIN mata_pelajaran m ON g.mapel_id = m.id
+                LEFT JOIN kelas k ON g.kelas_id = k.id
+                LEFT JOIN guru gr ON g.guru_id = gr.id
+                ORDER BY g.id DESC
+            ");
+            $games = $stmtFallback->fetchAll();
+        }
+
+        return $games;
     }
 
     public function importGameSoalFromExcel($gameId, $filePath) {

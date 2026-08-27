@@ -47,7 +47,7 @@ class _EduGameScreenState extends State<EduGameScreen> {
 
     final res = await ApiService.get('game', params: {'user_id': userId.toString()});
     if (mounted) {
-      if (res['success'] == true && res['data'] is List) {
+      if (res['success'] == true && res['data'] is List && (res['data'] as List).isNotEmpty) {
         setState(() {
           _games = res['data'];
           _applyFilters();
@@ -55,39 +55,69 @@ class _EduGameScreenState extends State<EduGameScreen> {
         });
       } else {
         setState(() {
-          _games = [
-            {
-              'id': 1,
-              'judul': 'Kuis Cerdas Cermat SMK',
-              'deskripsi': 'Uji wawasan umum dan kejuruanmu di kuis interaktif!',
-              'nama_mapel': 'Pengetahuan Umum & Kejuruan',
-              'nama_guru': 'Tim Kurikulum SMK',
-              'tipe_game': 'quiz_speed',
-              'total_soal': 5,
-              'durasi_per_soal': 15,
-              'kkm': 75,
-              'my_best_score': 100,
-              'my_status': 'lulus'
-            },
-            {
-              'id': 2,
-              'judul': 'Tebak Istilah IT & Kejuruan',
-              'deskripsi': 'Game tebak kata seputar istilah keahlian SMK.',
-              'nama_mapel': 'Keahlian IT & Vokasi',
-              'nama_guru': 'Tim Kurikulum SMK',
-              'tipe_game': 'spin_wheel',
-              'total_soal': 4,
-              'durasi_per_soal': 20,
-              'kkm': 70,
-              'my_best_score': null,
-              'my_status': null
-            }
-          ];
+          _games = _getDefaultGamesFallback();
           _applyFilters();
           _isLoading = false;
         });
       }
     }
+  }
+
+  List<Map<String, dynamic>> _getDefaultGamesFallback() {
+    return [
+      {
+        'id': 1,
+        'judul': 'Kuis Cerdas Cermat SMK & Kejuruan',
+        'deskripsi': 'Uji wawasan keahlian vokasi dan pengetahuan umummu dalam kuis kecepatan interaktif!',
+        'nama_mapel': 'Pengetahuan Umum & Kejuruan',
+        'nama_guru': 'Tim Kurikulum SMK',
+        'tipe_game': 'quiz_speed',
+        'total_soal': 4,
+        'durasi_per_soal': 15,
+        'kkm': 75,
+        'my_best_score': 100,
+        'my_status': 'lulus'
+      },
+      {
+        'id': 2,
+        'judul': 'Tebak Istilah Vokasi & Teknologi',
+        'deskripsi': 'Tebak istilah populer keahlian dan kejuruan SMK dalam mode kuis pilihan cepat!',
+        'nama_mapel': 'Keahlian IT & Vokasi',
+        'nama_guru': 'Tim Kurikulum SMK',
+        'tipe_game': 'spin_wheel',
+        'total_soal': 4,
+        'durasi_per_soal': 20,
+        'kkm': 70,
+        'my_best_score': null,
+        'my_status': null
+      },
+      {
+        'id': 3,
+        'judul': 'Memory Match Kosa Kata & Konsep SMK',
+        'deskripsi': 'Uji daya ingat dan pemahaman konsep keahlianmu dalam tantangan Memory Match!',
+        'nama_mapel': 'Konsentrasi Keahlian',
+        'nama_guru': 'Tim Kurikulum SMK',
+        'tipe_game': 'memory_match',
+        'total_soal': 4,
+        'durasi_per_soal': 20,
+        'kkm': 75,
+        'my_best_score': 75,
+        'my_status': 'lulus'
+      },
+      {
+        'id': 4,
+        'judul': 'Runner Quiz Kecepatan Kejuruan',
+        'deskripsi': 'Berlari cepat dan jawab tantangan kuis keahlian kejuruan sebelum waktu habis!',
+        'nama_mapel': 'Dasar Keahlian SMK',
+        'nama_guru': 'Tim Kurikulum SMK',
+        'tipe_game': 'mario_run',
+        'total_soal': 4,
+        'durasi_per_soal': 15,
+        'kkm': 75,
+        'my_best_score': null,
+        'my_status': null
+      }
+    ];
   }
 
   void _applyFilters() {

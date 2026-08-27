@@ -939,7 +939,7 @@ class ApiController {
 
                     $search = trim($_GET['search'] ?? $_POST['search'] ?? '');
                     $sql = "
-                        SELECT mek.id as key_id, mek.mapel_id, mek.guru_id, mek.kelas_id, mek.enrollment_key,
+                        SELECT mek.id as key_id, mek.mapel_id, mek.guru_id, mek.kelas_id,
                                mp.nama_mapel, mp.kode_mapel, g.nama_lengkap as nama_guru, k.nama_kelas,
                                (SELECT COUNT(*) FROM siswa_mapel_enrollment sme WHERE sme.mapel_id = mek.mapel_id AND sme.guru_id = mek.guru_id AND sme.siswa_id = :sid) as is_enrolled
                         FROM mapel_enrollment_keys mek
@@ -1004,25 +1004,26 @@ class ApiController {
                         $this->jsonResponse(false, 'Gagal terdaftar ke mapel: ' . $eEn->getMessage(), null, 500);
                     }
                 } else {
-                    if (empty($kodeKelas)) {
-                        $this->jsonResponse(false, 'Kode Rombel Kelas wajib diisi!', null, 400);
+                    require_once ROOT_PATH . 'models/AcademicModel.php';
+                    $academicModel = new AcademicModel();
+
+                    $kelasIdInput = intval($input['kelas_id'] ?? $_POST['kelas_id'] ?? 0);
+                    $kodeKelas = trim($input['kode_kelas'] ?? $input['kode_rombel'] ?? $_POST['kode_kelas'] ?? '');
+
+                    if (empty($kodeKelas) && $kelasIdInput <= 0) {
+                        $this->jsonResponse(false, 'Kode Akses Rombel / Pilihan Kelas wajib diisi!', null, 400);
                     }
-                    try {
-                        $cleanKode = strtoupper($kodeKelas);
-                        if (strpos($cleanKode, 'MH-') === 0) {
-                            $cleanKode = substr($cleanKode, 3);
-                        }
-                        $stmtK = $this->db->prepare("SELECT id, nama_kelas FROM kelas WHERE kode_kelas = :kode OR UPPER(nama_kelas) = :nk LIMIT 1");
-                        $stmtK->execute(['kode' => $cleanKode, 'nk' => $cleanKode]);
-                        $kelas = $stmtK->fetch();
-                        if (!$kelas) {
-                            $this->jsonResponse(false, 'Kode Rombel Kelas tidak valid atau tidak ditemukan.', null, 404);
-                        }
-                        $stmtUpd = $this->db->prepare("UPDATE siswa SET kelas_id = :kid WHERE id = :sid");
-                        $stmtUpd->execute(['kid' => $kelas['id'], 'sid' => $siswa['id']]);
-                        $this->jsonResponse(true, 'Berhasil bergabung ke Rombel Kelas ' . $kelas['nama_kelas']);
-                    } catch (\Throwable $eG) {
-                        $this->jsonResponse(false, 'Gagal bergabung ke kelas: ' . $eG->getMessage(), null, 500);
+
+                    if ($kelasIdInput > 0) {
+                        $res = $academicModel->joinKelasById($siswa['id'], $kelasIdInput);
+                    } else {
+                        $res = $academicModel->joinKelasByCode($siswa['id'], $kodeKelas);
+                    }
+
+                    if ($res['status']) {
+                        $this->jsonResponse(true, $res['message'], $res['kelas'] ?? null);
+                    } else {
+                        $this->jsonResponse(false, $res['message'], null, 400);
                     }
                 }
                 break;

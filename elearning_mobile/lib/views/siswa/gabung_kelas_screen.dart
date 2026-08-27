@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
@@ -22,6 +21,12 @@ class _GabungKelasScreenState extends State<GabungKelasScreen> {
   void initState() {
     super.initState();
     _fetchAvailableMapel();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchAvailableMapel([String search = '']) async {
@@ -63,13 +68,14 @@ class _GabungKelasScreenState extends State<GabungKelasScreen> {
     }
   }
 
-  void _showEnrollMapelDialog([String initialKey = '']) {
-    final keyController = TextEditingController(text: initialKey);
+  void _showEnrollMapelDialog() {
+    final keyController = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
-          children: const [
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
             Icon(Icons.key_outlined, color: Colors.amber),
             SizedBox(width: 8),
             Text('Passcode Key Mapel', style: TextStyle(fontSize: 16)),
@@ -133,8 +139,9 @@ class _GabungKelasScreenState extends State<GabungKelasScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
-          children: const [
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
             Icon(Icons.meeting_room_outlined, color: Colors.blue),
             SizedBox(width: 8),
             Text('Kode Rombel Kelas Utama', style: TextStyle(fontSize: 16)),
@@ -173,13 +180,35 @@ class _GabungKelasScreenState extends State<GabungKelasScreen> {
               });
 
               if (!mounted) return;
+              final bool isSuccess = res['success'] == true;
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(res['message'] ?? 'Status pendaftaran rombel diproses'),
-                  backgroundColor: res['success'] == true ? Colors.green : Colors.red,
+                  backgroundColor: isSuccess ? Colors.green : Colors.red,
                 ),
               );
+
+              if (isSuccess) {
+                if (res['data'] != null && res['data']['nama_kelas'] != null) {
+                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                  final curr = authProvider.currentUser;
+                  if (curr != null) {
+                    final newDetails = Map<String, dynamic>.from(curr.details ?? {});
+                    newDetails['nama_kelas'] = res['data']['nama_kelas'];
+                    final userData = {
+                      'id': curr.id,
+                      'role_id': curr.roleId,
+                      'username': curr.username,
+                      'email': curr.email,
+                      'full_name': curr.fullName,
+                      'avatar': curr.avatar,
+                    };
+                    authProvider.updateUser(userData, newDetails, curr.roleName);
+                  }
+                }
+                _fetchAvailableMapel();
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
             child: const Text('Verifikasi Rombel'),
@@ -192,220 +221,333 @@ class _GabungKelasScreenState extends State<GabungKelasScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gabung Rombel & Enrol Mapel'),
-        backgroundColor: Colors.indigo.shade900,
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
-        children: [
-          // Hero Banner Card
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.indigo.shade900, Colors.blue.shade900],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+    final enrolledList = _filteredMapelList.where((m) => (m['is_enrolled'] != null && int.parse(m['is_enrolled'].toString()) > 0)).toList();
+    final notEnrolledList = _filteredMapelList.where((m) => (m['is_enrolled'] == null || int.parse(m['is_enrolled'].toString()) == 0)).toList();
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Gabung Rombel & Enrol Mapel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+          backgroundColor: Colors.indigo.shade900,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: Column(
+          children: [
+            // Hero Banner Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.indigo.shade900, Colors.blue.shade900],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text('Passcode Key Protection', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                       ),
-                      child: const Text('Passcode Key Protection', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Pendaftaran Mapel & Rombel Digital',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user?.namaKelas != null ? "Rombel Kelas Utama: ${user!.namaKelas}" : "Anda belum memilih rombel kelas utama.",
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showEnrollMapelDialog(),
-                        icon: const Icon(Icons.key, size: 16),
-                        label: const Text('Input Key Mapel', style: TextStyle(fontSize: 13)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.amber.shade700,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Pendaftaran Mapel & Rombel Digital',
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    user?.namaKelas != null ? "Rombel Kelas Utama: ${user!.namaKelas}" : "Anda belum memilih rombel kelas utama.",
+                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showEnrollMapelDialog(),
+                          icon: const Icon(Icons.key, size: 16),
+                          label: const Text('Input Key Mapel', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber.shade700,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _showJoinKodeKelasDialog,
-                        icon: const Icon(Icons.class_outlined, size: 16, color: Colors.white),
-                        label: const Text('Kode Rombel', style: TextStyle(fontSize: 13, color: Colors.white)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.white54),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _showJoinKodeKelasDialog,
+                          icon: const Icon(Icons.class_outlined, size: 16, color: Colors.white),
+                          label: const Text('Kode Rombel', style: TextStyle(fontSize: 13, color: Colors.white)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.white54),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Search Field
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _filterMapel,
-              decoration: InputDecoration(
-                hintText: 'Cari mata pelajaran atau nama guru...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
 
-          // Mapel List
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredMapelList.isEmpty
-                    ? const Center(child: Text('Mata pelajaran tidak ditemukan.'))
-                    : RefreshIndicator(
-                        onRefresh: _fetchAvailableMapel,
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _filteredMapelList.length,
-                          itemBuilder: (context, index) {
-                            final m = _filteredMapelList[index];
-                            final bool isEnrolled = (m['is_enrolled'] != null && int.parse(m['is_enrolled'].toString()) > 0);
-                            final String mapelKey = m['enrollment_key'] ?? '';
+            // Search Field
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _filterMapel,
+                decoration: InputDecoration(
+                  hintText: 'Cari mata pelajaran atau nama guru...',
+                  prefixIcon: const Icon(Icons.search, color: Colors.indigo),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            ),
 
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 2,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+            // Tab Bar Grouping Headers
+            Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.indigo.shade50,
+                border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
+              ),
+              child: TabBar(
+                labelColor: Colors.indigo.shade900,
+                unselectedLabelColor: Colors.grey.shade600,
+                indicatorColor: Colors.indigo.shade900,
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                tabs: [
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.check_circle_rounded, color: Colors.green, size: 16),
+                        const SizedBox(width: 6),
+                        Text('Sudah Terdaftar (${enrolledList.length})'),
+                      ],
+                    ),
+                  ),
+                  Tab(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.lock_rounded, color: Colors.orange.shade800, size: 16),
+                        const SizedBox(width: 6),
+                        Text('Belum Terdaftar (${notEnrolledList.length})'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // TabBarView Body
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Colors.indigo))
+                  : TabBarView(
+                      children: [
+                        // Tab 1: Enrolled Mapel List
+                        RefreshIndicator(
+                          onRefresh: _fetchAvailableMapel,
+                          child: enrolledList.isEmpty
+                              ? ListView(
                                   children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            m['nama_mapel'] ?? 'Mata Pelajaran',
-                                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                    const SizedBox(height: 60),
+                                    Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.assignment_turned_in_outlined, size: 54, color: Colors.grey.shade400),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            'Belum ada mata pelajaran terdaftar.',
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                           ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: isEnrolled ? Colors.green.withValues(alpha: 0.15) : Colors.orange.withValues(alpha: 0.15),
-                                            borderRadius: BorderRadius.circular(8),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Gunakan tombol "Input Key Mapel" untuk mendaftar.',
+                                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                                           ),
-                                          child: Text(
-                                            isEnrolled ? 'Terdaftar' : 'Terkunci',
-                                            style: TextStyle(
-                                              color: isEnrolled ? Colors.green : Colors.orange.shade800,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text("Guru Pengampu: ${m['nama_guru'] ?? '-'}", style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
-                                    if (m['nama_kelas'] != null)
-                                      Text("Kelas Target: ${m['nama_kelas']}", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                                    if (mapelKey.isNotEmpty) ...[
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: Colors.amber.shade50,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.amber.shade200),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.key_rounded, size: 14, color: Colors.amber.shade900),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              "Kode Key: $mapelKey",
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.amber.shade900,
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            InkWell(
-                                              onTap: () {
-                                                Clipboard.setData(ClipboardData(text: mapelKey));
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Kode Key "$mapelKey" disalin!'),
-                                                    duration: const Duration(seconds: 2),
-                                                  ),
-                                                );
-                                              },
-                                              child: Icon(Icons.copy_rounded, size: 14, color: Colors.amber.shade900),
-                                            ),
-                                          ],
-                                        ),
+                                        ],
                                       ),
-                                    ],
-                                    const SizedBox(height: 12),
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: isEnrolled
-                                          ? const Chip(
-                                              avatar: Icon(Icons.check_circle, color: Colors.green, size: 16),
-                                              label: Text('Sudah Terdaftar', style: TextStyle(fontSize: 12, color: Colors.green)),
-                                              backgroundColor: Color(0xFFE8F5E9),
-                                            )
-                                          : ElevatedButton.icon(
-                                              onPressed: () => _showEnrollMapelDialog(mapelKey),
-                                              icon: const Icon(Icons.key, size: 16),
-                                              label: const Text('Masukkan Key Mapel'),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.amber.shade800,
-                                                foregroundColor: Colors.white,
-                                              ),
-                                            ),
                                     ),
                                   ],
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: enrolledList.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildMapelCard(enrolledList[index], isEnrolled: true, isDark: isDark);
+                                  },
                                 ),
-                              ),
-                            );
-                          },
                         ),
+
+                        // Tab 2: Not Enrolled Mapel List
+                        RefreshIndicator(
+                          onRefresh: _fetchAvailableMapel,
+                          child: notEnrolledList.isEmpty
+                              ? ListView(
+                                  children: [
+                                    const SizedBox(height: 60),
+                                    Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.task_alt_rounded, size: 54, color: Colors.green.shade300),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            'Seluruh mata pelajaran tersedia telah Anda terdaftar!',
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Tidak ada mata pelajaran terkunci saat ini.',
+                                            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: notEnrolledList.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildMapelCard(notEnrolledList[index], isEnrolled: false, isDark: isDark);
+                                  },
+                                ),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMapelCard(dynamic m, {required bool isEnrolled, required bool isDark}) {
+    final namaMapel = (m['nama_mapel'] ?? 'Mata Pelajaran').toString();
+    final namaGuru = (m['nama_guru'] ?? '-').toString();
+    final namaKelas = m['nama_kelas'];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isEnrolled ? Colors.green.shade200 : Colors.orange.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  namaMapel,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isEnrolled ? Colors.green.shade50 : Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: isEnrolled ? Colors.green.shade300 : Colors.orange.shade300),
+                ),
+                child: Text(
+                  isEnrolled ? 'Terdaftar' : 'Terkunci',
+                  style: TextStyle(
+                    color: isEnrolled ? Colors.green.shade900 : Colors.orange.shade900,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text("👨‍🏫 Guru Pengampu: $namaGuru", style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+          if (namaKelas != null)
+            Text("🏫 Kelas Target: $namaKelas", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+          
+          if (!isEnrolled) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 14, color: Colors.amber.shade900),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      "Mintalah Passcode Key kepada Guru Pengampu untuk mendaftar mapel ini.",
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: Colors.amber.shade900,
                       ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: isEnrolled
+                ? const Chip(
+                    avatar: Icon(Icons.check_circle, color: Colors.green, size: 16),
+                    label: Text('Sudah Terdaftar', style: TextStyle(fontSize: 12, color: Colors.green, fontWeight: FontWeight.bold)),
+                    backgroundColor: Color(0xFFE8F5E9),
+                  )
+                : ElevatedButton.icon(
+                    onPressed: () => _showEnrollMapelDialog(),
+                    icon: const Icon(Icons.key, size: 16),
+                    label: const Text('Masukkan Key Mapel', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber.shade800,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
           ),
         ],
       ),

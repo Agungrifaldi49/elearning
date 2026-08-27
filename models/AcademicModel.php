@@ -73,20 +73,29 @@ class AcademicModel extends BaseModel {
     }
 
     public function joinKelasByCode($siswaId, $kodeInput) {
+        $rawUpper = strtoupper(trim($kodeInput));
         $cleanCode = strtoupper(trim(str_replace('MH-', '', $kodeInput)));
         $kelasList = $this->getKelas();
         $targetKelas = null;
 
         foreach ($kelasList as $k) {
             $codeCalculated = strtoupper(substr(md5($k['id']), 0, 6));
-            if ($cleanCode === $codeCalculated || $cleanCode === (string)$k['id']) {
+            $dbKode = strtoupper(trim($k['kode_kelas'] ?? ''));
+            $namaKelasUpper = strtoupper(trim($k['nama_kelas'] ?? ''));
+
+            if ($cleanCode === $codeCalculated || 
+                $rawUpper === $codeCalculated || 
+                $cleanCode === (string)$k['id'] || 
+                (!empty($dbKode) && ($rawUpper === $dbKode || $cleanCode === $dbKode)) ||
+                $rawUpper === $namaKelasUpper ||
+                $cleanCode === $namaKelasUpper) {
                 $targetKelas = $k;
                 break;
             }
         }
 
         if (!$targetKelas) {
-            return ['status' => false, 'message' => 'Kode Kelas Virtual tidak ditemukan atau tidak valid. Silakan periksa kembali kode dari Guru/Wali Kelas.'];
+            return ['status' => false, 'message' => 'Kode Rombel Kelas tidak ditemukan atau tidak valid. Silakan periksa kembali kode dari Wali Kelas/Guru.'];
         }
 
         return $this->joinKelasById($siswaId, $targetKelas['id']);
