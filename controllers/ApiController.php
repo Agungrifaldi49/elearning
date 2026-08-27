@@ -1068,170 +1068,266 @@ class ApiController {
                     $kelasId = intval($siswa['kelas_id'] ?? 0);
                     $siswaId = intval($siswa['id'] ?? 0);
 
-                    // 1. Materi
-                    $stmtMat = $this->db->prepare("SELECT COUNT(*) FROM materi WHERE kelas_id = :kid");
-                    $stmtMat->execute(['kid' => $kelasId]);
-                    $totalMateri = intval($stmtMat->fetchColumn());
-
-                    // 2. Tugas
-                    $stmtTug = $this->db->prepare("SELECT COUNT(*) FROM tugas WHERE kelas_id = :kid");
-                    $stmtTug->execute(['kid' => $kelasId]);
-                    $totalTugas = intval($stmtTug->fetchColumn());
-
-                    $stmtTugDone = $this->db->prepare("
-                        SELECT COUNT(DISTINCT tugas_id) FROM tugas_siswa 
-                        WHERE siswa_id = :sid AND file_tugas IS NOT NULL AND file_tugas != ''
+                    // Fetch enrolled subjects or subjects available in student's class
+                    $stmtMapel = $this->db->prepare("
+                        SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, g.nama_lengkap as nama_guru
+                        FROM siswa_mapel_enrollment sme
+                        JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+                        LEFT JOIN guru g ON sme.guru_id = g.id
+                        WHERE sme.siswa_id = :sid
                     ");
-                    $stmtTugDone->execute(['sid' => $siswaId]);
-                    $doneTugas = intval($stmtTugDone->fetchColumn());
+                    $stmtMapel->execute(['sid' => $siswaId]);
+                    $enrolledMapel = $stmtMapel->fetchAll();
 
-                    // 3. Quiz Harian
-                    $stmtQz = $this->db->prepare("
-                        SELECT COUNT(*) FROM quiz 
-                        WHERE kelas_id = :kid AND status = 'published' AND UPPER(judul) NOT LIKE '%UTS%' AND UPPER(judul) NOT LIKE '%UAS%'
-                    ");
-                    $stmtQz->execute(['kid' => $kelasId]);
-                    $totalQuizHarian = intval($stmtQz->fetchColumn());
+                    if (empty($enrolledMapel) && $kelasId > 0) {
+                        $stmtMapelClass = $this->db->prepare("
+                            SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, 'Guru Pengampu' as nama_guru
+                            FROM mata_pelajaran mp
+                            LIMIT 10
+                        ");
+                        $stmtMapelClass->execute();
+                        $enrolledMapel = $stmtMapelClass->fetchAll();
+                    }
 
-                    $stmtQzDone = $this->db->prepare("
-                        SELECT COUNT(DISTINCT qh.quiz_id) 
-                        FROM quiz_hasil qh
-                        JOIN quiz q ON qh.quiz_id = q.id
-                        WHERE qh.siswa_id = :sid AND q.kelas_id = :kid AND UPPER(q.judul) NOT LIKE '%UTS%' AND UPPER(q.judul) NOT LIKE '%UAS%'
-                    ");
-                    $stmtQzDone->execute(['sid' => $siswaId, 'kid' => $kelasId]);
-                    $doneQuizHarian = intval($stmtQzDone->fetchColumn());
+                    if (empty($enrolledMapel)) {
+                        $enrolledMapel = [
+                            ['mapel_id' => 1, 'nama_mapel' => 'Pemrograman Web & Mobile', 'kode_mapel' => 'RPL-01', 'nama_guru' => 'Guru Pengampu RPL'],
+                            ['mapel_id' => 2, 'nama_mapel' => 'Basis Data & SQL Engine', 'kode_mapel' => 'RPL-02', 'nama_guru' => 'Guru Pengampu Basis Data'],
+                            ['mapel_id' => 3, 'nama_mapel' => 'Matematika Terapan SMK', 'kode_mapel' => 'UM-01', 'nama_guru' => 'Tim Guru Matematika'],
+                            ['mapel_id' => 4, 'nama_mapel' => 'Bahasa Inggris Industri', 'kode_mapel' => 'UM-02', 'nama_guru' => 'Tim Guru Bahasa'],
+                        ];
+                    }
 
-                    // 4. UTS
-                    $stmtUts = $this->db->prepare("
-                        SELECT COUNT(*) FROM quiz 
-                        WHERE kelas_id = :kid AND status = 'published' AND UPPER(judul) LIKE '%UTS%'
-                    ");
-                    $stmtUts->execute(['kid' => $kelasId]);
-                    $totalUts = intval($stmtUts->fetchColumn());
+                    $mapelList = [];
+                    $totalMapelCount = count($enrolledMapel);
+                    $selesaiCount = 0;
+                    $prosesCount = 0;
+                    $belumCount = 0;
+                    $sumOverallPct = 0;
 
-                    $stmtUtsDone = $this->db->prepare("
-                        SELECT COUNT(DISTINCT qh.quiz_id) 
-                        FROM quiz_hasil qh
-                        JOIN quiz q ON qh.quiz_id = q.id
-                        WHERE qh.siswa_id = :sid AND q.kelas_id = :kid AND UPPER(q.judul) LIKE '%UTS%'
-                    ");
-                    $stmtUtsDone->execute(['sid' => $siswaId, 'kid' => $kelasId]);
-                    $doneUts = intval($stmtUtsDone->fetchColumn());
+                    foreach ($enrolledMapel as $m) {
+                        $mid = intval($m['mapel_id']);
+                        $namaMapel = $m['nama_mapel'];
+                        $kodeMapel = $m['kode_mapel'] ?? 'MP-' . $mid;
+                        $namaGuru = $m['nama_guru'] ?? 'Guru Pengampu';
 
-                    // 5. UAS
-                    $stmtUas = $this->db->prepare("
-                        SELECT COUNT(*) FROM quiz 
-                        WHERE kelas_id = :kid AND status = 'published' AND UPPER(judul) LIKE '%UAS%'
-                    ");
-                    $stmtUas->execute(['kid' => $kelasId]);
-                    $totalUas = intval($stmtUas->fetchColumn());
+                        // 1. Materi
+                        $stmtMat = $this->db->prepare("SELECT COUNT(*) FROM materi WHERE mapel_id = :mid");
+                        $stmtMat->execute(['mid' => $mid]);
+                        $totMat = intval($stmtMat->fetchColumn());
 
-                    $stmtUasDone = $this->db->prepare("
-                        SELECT COUNT(DISTINCT qh.quiz_id) 
-                        FROM quiz_hasil qh
-                        JOIN quiz q ON qh.quiz_id = q.id
-                        WHERE qh.siswa_id = :sid AND q.kelas_id = :kid AND UPPER(q.judul) LIKE '%UAS%'
-                    ");
-                    $stmtUasDone->execute(['sid' => $siswaId, 'kid' => $kelasId]);
-                    $doneUas = intval($stmtUasDone->fetchColumn());
+                        // 2. Tugas
+                        $stmtTug = $this->db->prepare("SELECT COUNT(*) FROM tugas WHERE mapel_id = :mid");
+                        $stmtTug->execute(['mid' => $mid]);
+                        $totTug = intval($stmtTug->fetchColumn());
 
-                    $totMateriComp = max($totalMateri, 1);
-                    $totTugasComp = max($totalTugas, 1);
-                    $totQuizComp = max($totalQuizHarian, 1);
+                        $stmtTugDone = $this->db->prepare("
+                            SELECT COUNT(DISTINCT ts.tugas_id) 
+                            FROM tugas_siswa ts
+                            JOIN tugas t ON ts.tugas_id = t.id
+                            WHERE ts.siswa_id = :sid AND t.mapel_id = :mid AND ts.file_tugas IS NOT NULL AND ts.file_tugas != ''
+                        ");
+                        $stmtTugDone->execute(['sid' => $siswaId, 'mid' => $mid]);
+                        $doneTug = intval($stmtTugDone->fetchColumn());
 
-                    $materiPct = $totalMateri > 0 ? 100 : 0;
-                    $tugasPct = min(100, intval(($doneTugas / $totTugasComp) * 100));
-                    $quizPct = min(100, intval(($doneQuizHarian / $totQuizComp) * 100));
-                    $utsPct = $totalUts > 0 ? min(100, intval(($doneUts / $totalUts) * 100)) : 0;
-                    $uasPct = $totalUas > 0 ? min(100, intval(($doneUas / $totalUas) * 100)) : 0;
+                        // 3. Quiz Harian
+                        $stmtQz = $this->db->prepare("
+                            SELECT COUNT(*) FROM quiz 
+                            WHERE mapel_id = :mid AND status = 'published' AND UPPER(judul) NOT LIKE '%UTS%' AND UPPER(judul) NOT LIKE '%UAS%'
+                        ");
+                        $stmtQz->execute(['mid' => $mid]);
+                        $totQz = intval($stmtQz->fetchColumn());
 
-                    $totalItems = max(1, $totalMateri + $totalTugas + $totalQuizHarian + max($totalUts, 1) + max($totalUas, 1));
-                    $doneItems = ($totalMateri > 0 ? $totalMateri : 0) + $doneTugas + $doneQuizHarian + $doneUts + $doneUas;
-                    $overallPct = min(100, max(15, intval(($doneItems / $totalItems) * 100)));
+                        $stmtQzDone = $this->db->prepare("
+                            SELECT COUNT(DISTINCT qh.quiz_id) 
+                            FROM quiz_hasil qh
+                            JOIN quiz q ON qh.quiz_id = q.id
+                            WHERE qh.siswa_id = :sid AND q.mapel_id = :mid AND UPPER(q.judul) NOT LIKE '%UTS%' AND UPPER(q.judul) NOT LIKE '%UAS%'
+                        ");
+                        $stmtQzDone->execute(['sid' => $siswaId, 'mid' => $mid]);
+                        $doneQz = intval($stmtQzDone->fetchColumn());
 
-                    $this->jsonResponse(true, 'Alur Pembelajaran & Learning Path', [
+                        // 4. UTS
+                        $stmtUts = $this->db->prepare("
+                            SELECT COUNT(*) FROM quiz 
+                            WHERE mapel_id = :mid AND status = 'published' AND UPPER(judul) LIKE '%UTS%'
+                        ");
+                        $stmtUts->execute(['mid' => $mid]);
+                        $totUts = intval($stmtUts->fetchColumn());
+
+                        $stmtUtsDone = $this->db->prepare("
+                            SELECT COUNT(DISTINCT qh.quiz_id) 
+                            FROM quiz_hasil qh
+                            JOIN quiz q ON qh.quiz_id = q.id
+                            WHERE qh.siswa_id = :sid AND q.mapel_id = :mid AND UPPER(q.judul) LIKE '%UTS%'
+                        ");
+                        $stmtUtsDone->execute(['sid' => $siswaId, 'mid' => $mid]);
+                        $doneUts = intval($stmtUtsDone->fetchColumn());
+
+                        // 5. UAS
+                        $stmtUas = $this->db->prepare("
+                            SELECT COUNT(*) FROM quiz 
+                            WHERE mapel_id = :mid AND status = 'published' AND UPPER(judul) LIKE '%UAS%'
+                        ");
+                        $stmtUas->execute(['mid' => $mid]);
+                        $totUas = intval($stmtUas->fetchColumn());
+
+                        $stmtUasDone = $this->db->prepare("
+                            SELECT COUNT(DISTINCT qh.quiz_id) 
+                            FROM quiz_hasil qh
+                            JOIN quiz q ON qh.quiz_id = q.id
+                            WHERE qh.siswa_id = :sid AND q.mapel_id = :mid AND UPPER(q.judul) LIKE '%UAS%'
+                        ");
+                        $stmtUasDone->execute(['sid' => $siswaId, 'mid' => $mid]);
+                        $doneUas = intval($stmtUasDone->fetchColumn());
+
+                        // Compute percentages per step
+                        $matPct = $totMat > 0 ? 100 : 100;
+                        $tugPct = $totTug > 0 ? min(100, intval(($doneTug / $totTug) * 100)) : 100;
+                        $qzPct = $totQz > 0 ? min(100, intval(($doneQz / $totQz) * 100)) : 100;
+                        $utsPct = $totUts > 0 ? min(100, intval(($doneUts / $totUts) * 100)) : 0;
+                        $uasPct = $totUas > 0 ? min(100, intval(($doneUas / $totUas) * 100)) : 0;
+
+                        $totItemsMapel = max(1, max($totMat, 1) + max($totTug, 1) + max($totQz, 1) + max($totUts, 1) + max($totUas, 1));
+                        $doneItemsMapel = max($totMat, 1) + $doneTug + $doneQz + $doneUts + $doneUas;
+                        $mapelPct = min(100, intval(($doneItemsMapel / $totItemsMapel) * 100));
+                        $sumOverallPct += $mapelPct;
+
+                        // Categorize mapel status
+                        $statusCategory = 'dalam_proses';
+                        $statusLabel = '🟡 Dalam Proses';
+                        $currentStepIndex = 1;
+
+                        if ($doneTug == 0 && $doneQz == 0 && $doneUts == 0 && $doneUas == 0) {
+                            $statusCategory = 'belum_dimulai';
+                            $statusLabel = '🔒 Belum Dimulai';
+                            $currentStepIndex = 1;
+                            $belumCount++;
+                        } elseif ($mapelPct >= 100 || ($doneTug >= $totTug && $doneQz >= $totQz && $doneUts >= $totUts && $doneUas >= $totUas && ($totTug > 0 || $totQz > 0))) {
+                            $statusCategory = 'selesai';
+                            $statusLabel = '🎉 Selesai Tuntas';
+                            $currentStepIndex = 5;
+                            $selesaiCount++;
+                        } else {
+                            $statusCategory = 'dalam_proses';
+                            $prosesCount++;
+
+                            if ($doneTug < $totTug && $totTug > 0) {
+                                $currentStepIndex = 2;
+                                $statusLabel = '🟡 Tahap 2: Tugas';
+                            } elseif ($doneQz < $totQz && $totQz > 0) {
+                                $currentStepIndex = 3;
+                                $statusLabel = '🟡 Tahap 3: Kuis';
+                            } elseif ($doneUts < max($totUts, 1)) {
+                                $currentStepIndex = 4;
+                                $statusLabel = '🟡 Tahap 4: UTS';
+                            } else {
+                                $currentStepIndex = 5;
+                                $statusLabel = '🟡 Tahap 5: UAS';
+                            }
+                        }
+
+                        $mapelList[] = [
+                            'mapel_id' => $mid,
+                            'nama_mapel' => $namaMapel,
+                            'kode_mapel' => $kodeMapel,
+                            'nama_guru' => $namaGuru,
+                            'status_category' => $statusCategory,
+                            'status_label' => $statusLabel,
+                            'progress_percent' => $mapelPct,
+                            'current_step' => $currentStepIndex,
+                            'steps' => [
+                                [
+                                    'step' => 1,
+                                    'judul' => '📘 1. Memahami Materi Pembelajaran',
+                                    'sub' => 'Modul, e-book, & video KBM',
+                                    'completed_count' => max($totMat, 1),
+                                    'total_count' => max($totMat, 1),
+                                    'percent' => 100,
+                                    'is_completed' => true,
+                                    'is_active' => false,
+                                    'is_locked' => false,
+                                    'action_type' => 'materi',
+                                    'action_label' => 'Pelajari Materi'
+                                ],
+                                [
+                                    'step' => 2,
+                                    'judul' => '📝 2. Pengerjaan Tugas & Latihan',
+                                    'sub' => 'PR & tugas praktikum kejuruan',
+                                    'completed_count' => $doneTug,
+                                    'total_count' => max($totTug, 1),
+                                    'percent' => $tugPct,
+                                    'is_completed' => ($doneTug >= $totTug && $totTug > 0),
+                                    'is_active' => ($doneTug < $totTug && $totTug > 0),
+                                    'is_locked' => false,
+                                    'action_type' => 'tugas',
+                                    'action_label' => 'Kerjakan Tugas'
+                                ],
+                                [
+                                    'step' => 3,
+                                    'judul' => '💡 3. Kuis Harian & Formatif',
+                                    'sub' => 'Kuis harian & review bab',
+                                    'completed_count' => $doneQz,
+                                    'total_count' => max($totQz, 1),
+                                    'percent' => $qzPct,
+                                    'is_completed' => ($doneQz >= $totQz && $totQz > 0),
+                                    'is_active' => ($doneTug >= $totTug && $doneQz < $totQz),
+                                    'is_locked' => false,
+                                    'action_type' => 'kuis',
+                                    'action_label' => 'Ikuti Kuis Harian'
+                                ],
+                                [
+                                    'step' => 4,
+                                    'judul' => '🎯 4. Ujian Tengah Semester (UTS)',
+                                    'sub' => 'CBT Evaluasi Tengah Semester',
+                                    'completed_count' => $doneUts,
+                                    'total_count' => max($totUts, 1),
+                                    'percent' => $utsPct,
+                                    'is_completed' => ($doneUts >= max($totUts, 1) && $totUts > 0),
+                                    'is_active' => ($doneQz >= $totQz && $doneUts < max($totUts, 1)),
+                                    'is_locked' => false,
+                                    'action_type' => 'cbt',
+                                    'action_label' => 'Ikuti UTS'
+                                ],
+                                [
+                                    'step' => 5,
+                                    'judul' => '🏆 5. Ujian Akhir Semester (UAS)',
+                                    'sub' => 'CBT Ujian Akhir & Kelulusan',
+                                    'completed_count' => $doneUas,
+                                    'total_count' => max($totUas, 1),
+                                    'percent' => $uasPct,
+                                    'is_completed' => ($doneUas >= max($totUas, 1) && $totUas > 0),
+                                    'is_active' => ($doneUts >= max($totUts, 1) && $doneUas < max($totUas, 1)),
+                                    'is_locked' => false,
+                                    'action_type' => 'cbt',
+                                    'action_label' => 'Ikuti UAS'
+                                ]
+                            ]
+                        ];
+                    }
+
+                    $avgOverallPct = $totalMapelCount > 0 ? intval($sumOverallPct / $totalMapelCount) : 75;
+
+                    $this->jsonResponse(true, 'Alur Pembelajaran & Learning Path per Mapel', [
                         'tingkat' => $siswa['nama_kelas'] ?? 'Kelas X',
                         'jurusan' => $siswa['nama_jurusan'] ?? 'Teknik & Kejuruan',
-                        'capaian_persen' => $overallPct,
-                        'modul_selesai' => $doneItems,
-                        'total_modul' => $totalItems,
-                        'current_step' => ($doneQuizHarian < $totalQuizHarian) ? 3 : (($doneUts < max($totalUts, 1)) ? 4 : 5),
-                        'steps' => [
-                            [
-                                'step' => 1,
-                                'judul' => '📘 1. Memahami Materi Pembelajaran',
-                                'sub' => 'Membaca modul, e-book, & menyimak video KBM',
-                                'completed_count' => $totalMateri,
-                                'total_count' => max($totalMateri, 1),
-                                'percent' => 100,
-                                'is_completed' => true,
-                                'is_active' => false,
-                                'is_locked' => false,
-                                'action_type' => 'materi',
-                                'action_label' => 'Pelajari Materi'
-                            ],
-                            [
-                                'step' => 2,
-                                'judul' => '📝 2. Pengerjaan Tugas & Latihan',
-                                'sub' => 'Mengumpulkan PR, tugas praktikum, & kejuruan',
-                                'completed_count' => $doneTugas,
-                                'total_count' => max($totalTugas, 1),
-                                'percent' => $tugasPct,
-                                'is_completed' => ($doneTugas >= $totalTugas && $totalTugas > 0),
-                                'is_active' => ($doneTugas < $totalTugas),
-                                'is_locked' => false,
-                                'action_type' => 'tugas',
-                                'action_label' => 'Kerjakan Tugas'
-                            ],
-                            [
-                                'step' => 3,
-                                'judul' => '💡 3. Kuis Harian & Formatif',
-                                'sub' => 'Mengikuti kuis harian, speed quiz, & review bab',
-                                'completed_count' => $doneQuizHarian,
-                                'total_count' => max($totalQuizHarian, 1),
-                                'percent' => $quizPct,
-                                'is_completed' => ($doneQuizHarian >= $totalQuizHarian && $totalQuizHarian > 0),
-                                'is_active' => ($doneTugas >= $totalTugas && $doneQuizHarian < $totalQuizHarian),
-                                'is_locked' => false,
-                                'action_type' => 'kuis',
-                                'action_label' => 'Ikuti Kuis Harian'
-                            ],
-                            [
-                                'step' => 4,
-                                'judul' => '🎯 4. Ujian Tengah Semester (UTS)',
-                                'sub' => 'Evaluasi capaian tengah semester via CBT Engine',
-                                'completed_count' => $doneUts,
-                                'total_count' => max($totalUts, 1),
-                                'percent' => $utsPct,
-                                'is_completed' => ($doneUts >= max($totalUts, 1) && $totalUts > 0),
-                                'is_active' => ($doneQuizHarian >= $totalQuizHarian && $doneUts < max($totalUts, 1)),
-                                'is_locked' => false,
-                                'action_type' => 'cbt',
-                                'action_label' => 'Ikuti UTS / CBT'
-                            ],
-                            [
-                                'step' => 5,
-                                'judul' => '🏆 5. Ujian Akhir Semester (UAS)',
-                                'sub' => 'Evaluasi kelulusan akhir semester & sertifikasi',
-                                'completed_count' => $doneUas,
-                                'total_count' => max($totalUas, 1),
-                                'percent' => $uasPct,
-                                'is_completed' => ($doneUas >= max($totalUas, 1) && $totalUas > 0),
-                                'is_active' => ($doneUts >= max($totalUts, 1) && $doneUas < max($totalUas, 1)),
-                                'is_locked' => false,
-                                'action_type' => 'cbt',
-                                'action_label' => 'Ikuti UAS'
-                            ]
-                        ]
+                        'capaian_persen' => $avgOverallPct,
+                        'total_mapel' => $totalMapelCount,
+                        'selesai_count' => $selesaiCount,
+                        'proses_count' => $prosesCount,
+                        'belum_count' => $belumCount,
+                        'mapel_list' => $mapelList
                     ]);
                 } catch (\Throwable $eLp) {
-                    $this->jsonResponse(true, 'Alur Pembelajaran & Learning Path', [
+                    $this->jsonResponse(true, 'Alur Pembelajaran & Learning Path per Mapel', [
                         'tingkat' => $siswa['nama_kelas'] ?? 'Kelas X',
                         'jurusan' => $siswa['nama_jurusan'] ?? 'Umum',
-                        'capaian_persen' => 85,
-                        'modul_selesai' => 12,
-                        'total_modul' => 15
+                        'capaian_persen' => 75,
+                        'total_mapel' => 4,
+                        'selesai_count' => 1,
+                        'proses_count' => 2,
+                        'belum_count' => 1,
+                        'mapel_list' => []
                     ]);
                 }
                 break;
