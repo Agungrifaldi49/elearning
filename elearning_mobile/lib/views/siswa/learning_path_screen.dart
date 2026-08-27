@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import 'gabung_kelas_screen.dart';
+import 'siswa_materi_tab.dart';
+import 'siswa_tugas_tab.dart';
+import 'siswa_cbt_tab.dart';
 
 class LearningPathScreen extends StatefulWidget {
   const LearningPathScreen({super.key});
@@ -63,7 +66,25 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
   }
 
   void _handleStepAction(String actionType) {
-    Navigator.pop(context);
+    final type = actionType.toLowerCase();
+    if (type == 'materi') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
+        appBar: AppBar(title: const Text('Materi Pembelajaran'), backgroundColor: Colors.indigo.shade900, foregroundColor: Colors.white),
+        body: const SiswaMateriTab(),
+      )));
+    } else if (type == 'tugas') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
+        appBar: AppBar(title: const Text('Tugas & Penugasan KBM'), backgroundColor: Colors.indigo.shade900, foregroundColor: Colors.white),
+        body: const SiswaTugasTab(),
+      )));
+    } else if (type == 'quiz' || type == 'cbt' || type == 'ujian') {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
+        appBar: AppBar(title: const Text('Kuis & Ujian CBT Online'), backgroundColor: Colors.indigo.shade900, foregroundColor: Colors.white),
+        body: const SiswaCbtTab(),
+      )));
+    } else {
+      _fetchPath();
+    }
   }
 
   @override

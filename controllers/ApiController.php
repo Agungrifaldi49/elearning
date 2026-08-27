@@ -276,6 +276,279 @@ class ApiController {
                         'waktu_pulang' => $absToday['waktu_pulang'] ?? null,
                     ]
                 ]);
+            case 'learning_path':
+            case 'learningpath':
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                $academicModel = new AcademicModel();
+
+                $siswaId = intval($siswa['id'] ?? 0);
+                $kelasId = intval($siswa['kelas_id'] ?? 0);
+
+                $enrolledList = [];
+                try {
+                    $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
+                } catch (\Throwable $eEnr) {}
+
+                if (empty($enrolledList)) {
+                    try {
+                        $stmtMapel = $this->db->prepare("
+                            SELECT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, 
+                                   COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
+                                   COALESCE(g.id, 1) as guru_id
+                            FROM mata_pelajaran mp
+                            LEFT JOIN jadwal j ON j.mapel_id = mp.id
+                            LEFT JOIN guru g ON j.guru_id = g.id
+                            LEFT JOIN users u ON g.user_id = u.id
+                            WHERE (j.kelas_id = :kid OR :kid2 = 0)
+                            GROUP BY mp.id
+                        ");
+                        $stmtMapel->execute(['kid' => $kelasId, 'kid2' => $kelasId]);
+                        $enrolledList = $stmtMapel->fetchAll();
+                    } catch (\Throwable $eM) {
+                        try {
+                            $stmtMapelAll = $this->db->query("
+                                SELECT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, 'Guru Pengampu' as nama_guru, 1 as guru_id
+                                FROM mata_pelajaran mp
+                            ");
+                            $enrolledList = $stmtMapelAll->fetchAll();
+                        } catch (\Throwable $eAll) {
+                            $enrolledList = [];
+                        }
+                    }
+                }
+
+                $mapelList = [];
+                $selesaiCount = 0;
+                $prosesCount = 0;
+                $belumCount = 0;
+                $totalProgressSum = 0;
+
+                foreach ($enrolledList as $em) {
+                    $mId = intval($em['mapel_id'] ?? $em['id'] ?? 0);
+                    $namaMapel = $em['nama_mapel'] ?? 'Mata Pelajaran';
+                    $kodeMapel = $em['kode_mapel'] ?? ('MP' . $mId);
+                    $namaGuru = $em['nama_guru'] ?? 'Guru Pengampu';
+
+                    $stmtMat = $this->db->prepare("
+                        SELECT m.*, COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru
+                        FROM materi m
+                        LEFT JOIN guru g ON m.guru_id = g.id
+                        LEFT JOIN users u ON g.user_id = u.id
+                        WHERE (m.mapel_id = :mid OR m.mapel_id IS NULL OR m.mapel_id = 0)
+                          AND (m.kelas_id = :kid OR m.kelas_id IS NULL OR m.kelas_id = 0)
+                        ORDER BY m.id ASC
+                    ");
+                    $stmtMat->execute(['mid' => $mId, 'kid' => $kelasId]);
+                    $materiRows = $stmtMat->fetchAll();
+
+                    $stmtTug = $this->db->prepare("
+                        SELECT t.*, COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
+                               pt.id as submission_id, pt.nilai, pt.submitted_at
+                        FROM tugas t
+                        LEFT JOIN guru g ON t.guru_id = g.id
+                        LEFT JOIN users u ON g.user_id = u.id
+                        LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = :sid)
+                        WHERE (t.mapel_id = :mid OR t.mapel_id IS NULL OR t.mapel_id = 0)
+                          AND (t.kelas_id = :kid OR t.kelas_id IS NULL OR t.kelas_id = 0)
+                        ORDER BY t.id ASC
+                    ");
+                    $stmtTug->execute(['mid' => $mId, 'kid' => $kelasId, 'sid' => $siswaId]);
+                    $tugasRows = $stmtTug->fetchAll();
+
+                    $stmtQz = $this->db->prepare("
+                        SELECT q.*, COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
+                               hq.id as hasil_id, hq.total_nilai, hq.status_lulus, hq.finished_at
+                        FROM quiz q
+                        LEFT JOIN guru g ON q.guru_id = g.id
+                        LEFT JOIN users u ON g.user_id = u.id
+                        LEFT JOIN (
+                            SELECT * FROM hasil_quiz WHERE siswa_id = :sid
+                        ) hq ON hq.quiz_id = q.id
+                        WHERE (q.mapel_id = :mid OR q.mapel_id IS NULL OR q.mapel_id = 0)
+                          AND (q.kelas_id = :kid OR q.kelas_id IS NULL OR q.kelas_id = 0)
+                          AND q.status = 'published'
+                        ORDER BY q.id ASC
+                    ");
+                    $stmtQz->execute(['mid' => $mId, 'kid' => $kelasId, 'sid' => $siswaId]);
+                    $quizRows = $stmtQz->fetchAll();
+
+                    $sequenceItems = [];
+
+                    foreach ($materiRows as $mItem) {
+                        $sequenceItems[] = [
+                            'id' => intval($mItem['id']),
+                            'type' => 'materi',
+                            'title' => $mItem['judul'],
+                            'desc' => $mItem['deskripsi'] ?: 'Modul materi pembelajaran KBM.',
+                            'guru' => $mItem['nama_guru'] ?: $namaGuru,
+                            'is_completed' => true,
+                            'action_label' => 'Buka Materi',
+                            'action_type' => 'materi'
+                        ];
+                    }
+
+                    foreach ($tugasRows as $tItem) {
+                        $isSub = !empty($tItem['submission_id']);
+                        $sequenceItems[] = [
+                            'id' => intval($tItem['id']),
+                            'type' => 'tugas',
+                            'title' => 'Penugasan: ' . $tItem['judul'],
+                            'desc' => $tItem['deskripsi'] ?: 'Tugas KBM & Praktikum.',
+                            'guru' => $tItem['nama_guru'] ?: $namaGuru,
+                            'is_completed' => $isSub,
+                            'action_label' => $isSub ? 'Tugas Terkirim' : 'Kirim Tugas',
+                            'action_type' => 'tugas'
+                        ];
+                    }
+
+                    foreach ($quizRows as $qItem) {
+                        $isFin = !empty($qItem['finished_at']) || !empty($qItem['hasil_id']);
+                        $sequenceItems[] = [
+                            'id' => intval($qItem['id']),
+                            'type' => 'quiz',
+                            'title' => 'Evaluasi CBT: ' . $qItem['judul'],
+                            'desc' => 'Ujian / Kuis Online Berbasis CBT.',
+                            'guru' => $qItem['nama_guru'] ?: $namaGuru,
+                            'is_completed' => $isFin,
+                            'action_label' => $isFin ? 'Hasil Kuis' : 'Ikuti Kuis',
+                            'action_type' => 'quiz'
+                        ];
+                    }
+
+                    if (empty($sequenceItems)) {
+                        $sequenceItems = [
+                            [
+                                'id' => 1,
+                                'type' => 'materi',
+                                'title' => 'Pembekalan Modul Teori ' . $namaMapel,
+                                'desc' => 'Pelajari silabus dan materi pendahuluan KBM.',
+                                'guru' => $namaGuru,
+                                'is_completed' => true,
+                                'action_label' => 'Buka Materi',
+                                'action_type' => 'materi'
+                            ],
+                            [
+                                'id' => 2,
+                                'type' => 'tugas',
+                                'title' => 'Penugasan Praktikum & Latihan KBM',
+                                'desc' => 'Selesaikan penugasan mandiri atau kelompok.',
+                                'guru' => $namaGuru,
+                                'is_completed' => false,
+                                'action_label' => 'Kirim Tugas',
+                                'action_type' => 'tugas'
+                            ],
+                            [
+                                'id' => 3,
+                                'type' => 'quiz',
+                                'title' => 'Evaluasi Kuis CBT Online',
+                                'desc' => 'Uji pemahaman KBM bab kurikulum.',
+                                'guru' => $namaGuru,
+                                'is_completed' => false,
+                                'action_label' => 'Ikuti Kuis',
+                                'action_type' => 'quiz'
+                            ]
+                        ];
+                    }
+
+                    $totalItems = count($sequenceItems);
+                    $completedItems = 0;
+                    foreach ($sequenceItems as $seq) {
+                        if (!empty($seq['is_completed'])) {
+                            $completedItems++;
+                        }
+                    }
+
+                    $progressPct = ($totalItems > 0) ? intval(round(($completedItems / $totalItems) * 100)) : 0;
+                    $totalProgressSum += $progressPct;
+
+                    $statusCat = 'belum_dimulai';
+                    $statusLabel = 'Belum Dimulai';
+
+                    if ($progressPct >= 100 && $totalItems > 0) {
+                        $statusCat = 'selesai';
+                        $statusLabel = 'Selesai Tuntas';
+                        $selesaiCount++;
+                    } elseif ($progressPct > 0) {
+                        $statusCat = 'dalam_proses';
+                        $statusLabel = 'Dalam Proses';
+                        $prosesCount++;
+                    } else {
+                        $belumCount++;
+                    }
+
+                    $currentStep = min(5, max(1, intval(ceil(($progressPct / 100) * 5))));
+                    if ($progressPct == 0) $currentStep = 1;
+
+                    $steps = [
+                        [
+                            'step_no' => 1,
+                            'title' => 'Tahap 1: Modul Teori & Materi Digital',
+                            'desc' => 'Pelajari konsep dasar & modul KBM.',
+                            'is_completed' => ($progressPct >= 20 || $completedItems >= 1),
+                            'is_unlocked' => true,
+                            'is_current' => ($currentStep === 1)
+                        ],
+                        [
+                            'step_no' => 2,
+                            'title' => 'Tahap 2: Diskusi KBM & Praktikum',
+                            'desc' => 'Praktik langsung & pendalaman materi.',
+                            'is_completed' => ($progressPct >= 40),
+                            'is_unlocked' => ($progressPct >= 20 || $completedItems >= 1),
+                            'is_current' => ($currentStep === 2)
+                        ],
+                        [
+                            'step_no' => 3,
+                            'title' => 'Tahap 3: Penugasan KBM Terstruktur',
+                            'desc' => 'Kirim laporan & tugas praktik.',
+                            'is_completed' => ($progressPct >= 60),
+                            'is_unlocked' => ($progressPct >= 40),
+                            'is_current' => ($currentStep === 3)
+                        ],
+                        [
+                            'step_no' => 4,
+                            'title' => 'Tahap 4: Uji Evaluasi & Kuis CBT',
+                            'desc' => 'Evaluasi kompetensi berbasis CBT.',
+                            'is_completed' => ($progressPct >= 80),
+                            'is_unlocked' => ($progressPct >= 60),
+                            'is_current' => ($currentStep === 4)
+                        ],
+                        [
+                            'step_no' => 5,
+                            'title' => 'Tahap 5: Tuntas Semester & Sertifikasi',
+                            'desc' => 'Kelulusan modul & sertifikat KBM.',
+                            'is_completed' => ($progressPct >= 100),
+                            'is_unlocked' => ($progressPct >= 80),
+                            'is_current' => ($currentStep === 5)
+                        ]
+                    ];
+
+                    $mapelList[] = [
+                        'mapel_id' => $mId,
+                        'nama_mapel' => $namaMapel,
+                        'kode_mapel' => $kodeMapel,
+                        'nama_guru' => $namaGuru,
+                        'status_category' => $statusCat,
+                        'status_label' => $statusLabel,
+                        'progress_percent' => $progressPct,
+                        'current_step' => $currentStep,
+                        'steps' => $steps,
+                        'sequence_items' => $sequenceItems
+                    ];
+                }
+
+                $totalMapel = count($mapelList);
+                $capaianPersen = ($totalMapel > 0) ? intval(round($totalProgressSum / $totalMapel)) : 0;
+
+                $this->jsonResponse(true, 'Alur Learning Path Siswa', [
+                    'tingkat' => $siswa['nama_kelas'] ?? 'Kelas Siswa',
+                    'jurusan' => $siswa['nama_jurusan'] ?? 'Teknik & Kejuruan',
+                    'capaian_persen' => $capaianPersen,
+                    'total_mapel' => $totalMapel,
+                    'selesai_count' => $selesaiCount,
+                    'proses_count' => $prosesCount,
+                    'belum_count' => $belumCount,
+                    'mapel_list' => $mapelList
+                ]);
                 break;
 
             case 'jadwal':
