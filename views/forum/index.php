@@ -59,11 +59,11 @@
 
         <!-- 2-Column Responsive Layout (Main Stream + Right Sidebar) -->
         <div class="row g-4">
-            <!-- Left Main Column: Discussion Topics Stream -->
+            <!-- Left Main Column: Discussion Topics Stream Grid -->
             <div class="col-lg-8 col-xl-8">
-                <div class="d-flex flex-column gap-4" id="forumTopicsContainer">
+                <div class="row row-cols-1 row-cols-md-2 g-4" id="forumTopicsContainer">
                     <?php if (empty($topics)): ?>
-                        <div class="p-5 text-center text-muted rounded-4 bg-white shadow-sm border">
+                        <div class="col-12 text-center py-5 text-muted bg-white rounded-4 shadow-sm border">
                             <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-4 mb-3">
                                 <i class="bi bi-chat-square-quote-fill display-5"></i>
                             </div>
@@ -87,73 +87,77 @@
                                 $ringClass = 'avatar-ring-guru';
                             }
                         ?>
-                            <div class="topic-card-item" data-topic-id="<?= $t['id'] ?>" data-visibility="<?= $t['visibility'] ?? 'public' ?>">
-                                <div class="forum-topic-card p-4 rounded-4 shadow-sm bg-white border">
-                                    <!-- Author & Metadata Header -->
-                                    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 pb-3 border-bottom">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <div class="avatar-ring <?= $ringClass ?>" style="padding:2px; flex-shrink: 0;">
-                                                <div class="avatar-inner" style="width:42px; height:42px; font-size:1rem; font-weight:bold;">
-                                                    <?= strtoupper(substr($t['full_name'], 0, 1)) ?>
+                            <div class="col topic-card-item" data-topic-id="<?= $t['id'] ?>" data-visibility="<?= $t['visibility'] ?? 'public' ?>">
+                                <div class="forum-topic-card p-3 p-md-4 rounded-4 shadow-sm bg-white border h-100 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <!-- Author & Metadata Header -->
+                                        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 pb-2 border-bottom">
+                                            <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                                <div class="avatar-ring <?= $ringClass ?>" style="padding:2px; flex-shrink: 0;">
+                                                    <div class="avatar-inner" style="width:36px; height:36px; font-size:0.9rem; font-weight:bold;">
+                                                        <?= strtoupper(substr($t['full_name'], 0, 1)) ?>
+                                                    </div>
+                                                </div>
+                                                <div class="text-truncate">
+                                                    <div class="fw-bold text-dark text-truncate" style="font-size:0.85rem;" title="<?= htmlspecialchars($t['full_name']) ?>">
+                                                        <?= htmlspecialchars($t['full_name']) ?>
+                                                    </div>
+                                                    <div class="d-flex align-items-center gap-1">
+                                                        <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">
+                                                            <?= htmlspecialchars($t['role_name']) ?>
+                                                        </span>
+                                                        <small class="text-muted" style="font-size:0.7rem;">
+                                                            <?= date('d/m/y, H:i', strtotime($t['created_at'])) ?>
+                                                        </small>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div>
-                                                <div class="fw-bold text-dark d-flex align-items-center gap-2 flex-wrap" style="font-size:0.95rem;">
-                                                    <span><?= htmlspecialchars($t['full_name']) ?></span>
-                                                    <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.7rem; background:#e0e7ff; color:#3730a3;">
-                                                        <?= htmlspecialchars($t['role_name']) ?>
+
+                                            <div class="d-flex align-items-center gap-1">
+                                                <?php if ($isPrivate): ?>
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1" style="font-size:0.68rem;">
+                                                        <i class="bi bi-lock-fill text-warning me-1"></i> Privat
                                                     </span>
-                                                </div>
-                                                <small class="text-muted" style="font-size:0.78rem;">
-                                                    <i class="bi bi-clock me-1"></i><?= date('d F Y, H:i', strtotime($t['created_at'])) ?> WIB
-                                                </small>
+                                                <?php else: ?>
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1" style="font-size:0.68rem;">
+                                                        <i class="bi bi-globe me-1"></i> Publik
+                                                    </span>
+                                                <?php endif; ?>
+
+                                                <?php if ($canDelete): ?>
+                                                    <button class="btn btn-outline-danger btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center" title="Hapus Topik Diskusi" data-bs-toggle="modal" data-bs-target="#modalDeleteTopic<?= $t['id'] ?>" style="width:26px; height:26px;">
+                                                        <i class="bi bi-trash3" style="font-size:0.75rem;"></i>
+                                                    </button>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
 
-                                        <div class="d-flex align-items-center gap-2">
-                                            <?php if ($isPrivate): ?>
-                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-2 fw-semibold" style="font-size:0.75rem;">
-                                                    <i class="bi bi-lock-fill text-warning me-1"></i> Privat
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 fw-semibold" style="font-size:0.75rem;">
-                                                    <i class="bi bi-globe me-1"></i> Publik
-                                                </span>
-                                            <?php endif; ?>
+                                        <!-- Title & Description -->
+                                        <h6 class="fw-bold mb-2 fs-6">
+                                            <a href="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $t['id'] ?>" class="text-decoration-none text-dark hover-primary" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.38;">
+                                                <?= htmlspecialchars($t['judul']) ?>
+                                            </a>
+                                        </h6>
+                                        <p class="text-secondary mb-3 small" style="font-size:0.83rem; line-height: 1.48; color: #475569; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                            <?= htmlspecialchars(substr($t['konten'], 0, 160)) ?><?= strlen($t['konten']) > 160 ? '...' : '' ?>
+                                        </p>
 
-                                            <?php if ($canDelete): ?>
-                                                <button class="btn btn-outline-danger btn-sm rounded-circle p-1 d-flex align-items-center justify-content-center" title="Hapus Topik Diskusi" data-bs-toggle="modal" data-bs-target="#modalDeleteTopic<?= $t['id'] ?>" style="width:30px; height:30px;">
-                                                    <i class="bi bi-trash3" style="font-size:0.8rem;"></i>
-                                                </button>
-                                            <?php endif; ?>
-                                        </div>
+                                        <!-- Attached Image Preview Showcase -->
+                                        <?php if (!empty($t['gambar'])): 
+                                            $imgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $t['gambar'])) 
+                                                ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($t['gambar']) 
+                                                : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($t['gambar']);
+                                        ?>
+                                            <div class="mb-3">
+                                                <div class="forum-image-preview-wrapper shadow-sm" onclick="openLightboxModal('<?= $imgPath ?>', '<?= htmlspecialchars(addslashes($t['judul'])) ?>')">
+                                                    <img src="<?= $imgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['gambar']) ?>';" alt="Lampiran Gambar Forum">
+                                                    <div class="forum-image-overlay">
+                                                        <div class="lens-icon-btn"><i class="bi bi-zoom-in"></i></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
-
-                                    <!-- Title & Description -->
-                                    <h5 class="fw-bold mb-2">
-                                        <a href="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $t['id'] ?>" class="text-decoration-none text-dark hover-primary" style="line-height: 1.4;">
-                                            <?= htmlspecialchars($t['judul']) ?>
-                                        </a>
-                                    </h5>
-                                    <p class="text-secondary mb-3" style="font-size:0.92rem; line-height: 1.6; color: #475569;">
-                                        <?= htmlspecialchars(substr($t['konten'], 0, 220)) ?><?= strlen($t['konten']) > 220 ? '...' : '' ?>
-                                    </p>
-
-                                    <!-- Attached Image Preview Showcase -->
-                                    <?php if (!empty($t['gambar'])): 
-                                        $imgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $t['gambar'])) 
-                                            ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($t['gambar']) 
-                                            : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($t['gambar']);
-                                    ?>
-                                        <div class="mb-3">
-                                            <div class="forum-image-preview-wrapper shadow-sm" style="display: inline-block; max-width: 440px; max-height: 260px; border-radius: 16px; overflow: hidden; background: #f1f5f9; border: 1px solid #e2e8f0; cursor: pointer;" onclick="openLightboxModal('<?= $imgPath ?>', '<?= htmlspecialchars(addslashes($t['judul'])) ?>')">
-                                                <img src="<?= $imgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['gambar']) ?>';" alt="Lampiran Gambar Forum" style="max-width: 100%; max-height: 240px; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; border-radius: 14px;">
-                                                <div class="forum-image-overlay">
-                                                    <span><i class="bi bi-zoom-in me-1"></i> Perbesar Gambar</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
 
                                     <!-- Multi-Emoji Reaction Bar -->
                                     <?php 
