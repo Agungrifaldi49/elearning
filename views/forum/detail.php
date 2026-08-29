@@ -4,22 +4,27 @@
 
 <script src="<?= BASE_URL ?>assets/js/forum.js?v=<?= time() ?>"></script>
 
-<main class="main-content px-3 px-md-4 pb-4">
+<main class="main-content px-3 px-md-4 pb-5">
     <div class="container-fluid pt-2">
         <input type="hidden" id="activeTopicId" value="<?= $topic['id'] ?>">
 
         <!-- Navigation Ribbon & Breadcrumb Header -->
         <div class="d-flex align-items-center justify-content-between mb-4 mt-3 flex-wrap gap-3 bg-white p-3 p-md-4 rounded-4 shadow-sm border" style="border-left: 5px solid #4f46e5 !important;">
-            <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
                 <a href="<?= BASE_URL ?>index.php?url=forum" class="btn btn-outline-primary rounded-pill px-4 py-2 shadow-sm fw-bold d-inline-flex align-items-center gap-2" style="font-size:0.88rem;">
-                    <i class="bi bi-arrow-left-circle-fill fs-5"></i> Kembali ke Forum
+                    <i class="bi bi-arrow-left-circle-fill fs-5"></i> Kembali ke Forum Diskusi
                 </a>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 d-none d-md-inline-block" style="font-size:0.82rem;">
-                    <i class="bi bi-chat-square-quote-fill me-1"></i> Topik Diskusi #<?= $topic['id'] ?>
-                </span>
+                <div class="d-none d-md-flex align-items-center gap-2 text-secondary small" style="font-size:0.82rem;">
+                    <i class="bi bi-chevron-right text-muted"></i>
+                    <span>Detail Diskusi</span>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                    <span class="fw-semibold text-dark text-truncate" style="max-width: 280px;" title="<?= htmlspecialchars($topic['judul']) ?>">
+                        <?= htmlspecialchars($topic['judul']) ?>
+                    </span>
+                </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <a href="#replyFormCard" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow d-inline-flex align-items-center gap-2" style="font-size:0.88rem;">
+                <a href="#replyFormCard" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-2" style="font-size:0.88rem;">
                     <i class="bi bi-reply-fill fs-5 text-warning"></i> Tulis Balasan
                 </a>
             </div>
@@ -56,11 +61,11 @@
                             <div>
                                 <div class="fw-bold mb-1 text-dark d-flex align-items-center gap-2 flex-wrap" style="font-size:1rem;">
                                     <span><?= htmlspecialchars($topic['full_name']) ?></span>
-                                    <span class="badge rounded-pill px-2 py-1" style="font-size:0.72rem; background:#e0e7ff; color:#3730a3;">
+                                    <span class="badge rounded-pill px-2.5 py-1" style="font-size:0.72rem; background:#e0e7ff; color:#3730a3;">
                                         <?= htmlspecialchars($topic['role_name']) ?>
                                     </span>
                                     <?php if ($isAuthor): ?>
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1" style="font-size:0.72rem;">Pembuat Topik</span>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1" style="font-size:0.72rem;">Pembuat Topik</span>
                                     <?php endif; ?>
                                 </div>
                                 <div class="text-muted small d-flex align-items-center gap-2 flex-wrap" style="font-size:0.8rem;">
@@ -120,7 +125,9 @@
                     <h3 class="fw-bold mb-3 text-dark" style="font-size: 1.45rem; line-height: 1.4;"><?= htmlspecialchars($topic['judul']) ?></h3>
                     <div class="text-dark mb-4" style="white-space: pre-line; line-height: 1.8; font-size: 1rem; color: #334155;">
                         <?= htmlspecialchars($topic['konten']) ?>
-                    </div>                    <!-- Attached Image Preview Showcase -->
+                    </div>
+
+                    <!-- Attached Image Preview Showcase -->
                     <?php if (!empty($topic['gambar'])): 
                         $topicImgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $topic['gambar'])) 
                             ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($topic['gambar']) 
@@ -181,8 +188,8 @@
                         </div>
 
                         <!-- Quick Action Button to Open Quick Reply Modal -->
-                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalQuickReply">
-                            <i class="bi bi-lightning-charge-fill me-1 text-warning"></i> Balas Cepat
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalQuickReply">
+                            <i class="bi bi-lightning-charge-fill text-warning"></i> Balas Cepat
                         </button>
                     </div>
 
@@ -278,7 +285,7 @@
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
-                    </div>               </div>
+                    </div>
 
                     <!-- Bottom Reply Form Card -->
                     <div id="replyFormCard" class="border-top pt-4">
