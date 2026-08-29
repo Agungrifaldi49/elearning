@@ -11,16 +11,16 @@
         <!-- Navigation Ribbon & Breadcrumb Header -->
         <div class="d-flex align-items-center justify-content-between mb-4 mt-3 flex-wrap gap-3 bg-white p-3 p-md-4 rounded-4 shadow-sm border" style="border-left: 5px solid #4f46e5 !important;">
             <div class="d-flex align-items-center gap-2 flex-wrap">
-                <a href="<?= BASE_URL ?>index.php?url=forum" class="btn btn-outline-primary rounded-pill px-4 py-2 shadow-sm fw-bold d-inline-flex align-items-center gap-2" style="font-size:0.9rem;">
+                <a href="<?= BASE_URL ?>index.php?url=forum" class="btn btn-outline-primary rounded-pill px-4 py-2 shadow-sm fw-bold d-inline-flex align-items-center gap-2" style="font-size:0.88rem;">
                     <i class="bi bi-arrow-left-circle-fill fs-5"></i> Kembali ke Forum
                 </a>
                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 d-none d-md-inline-block" style="font-size:0.82rem;">
-                    <i class="bi bi-chat-square-quote-fill me-1"></i> Topik #<?= $topic['id'] ?>
+                    <i class="bi bi-chat-square-quote-fill me-1"></i> Topik Diskusi #<?= $topic['id'] ?>
                 </span>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <a href="#replyFormCard" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow d-inline-flex align-items-center gap-2" style="font-size:0.9rem;">
-                    <i class="bi bi-chat-left-text-fill fs-5 text-warning"></i> Tulis Balasan
+                <a href="#replyFormCard" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow d-inline-flex align-items-center gap-2" style="font-size:0.88rem;">
+                    <i class="bi bi-reply-fill fs-5 text-warning"></i> Tulis Balasan
                 </a>
             </div>
         </div>
@@ -44,19 +44,19 @@
                 ?>
 
                 <!-- Topic Main Showcase Card -->
-                <div class="forum-topic-card p-4 p-md-5 mb-4 shadow-sm rounded-4 bg-white border">
+                <div class="forum-topic-card p-4 p-md-5 mb-4 shadow-sm bg-white border">
                     <!-- Author Header & Metadata -->
                     <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 pb-3 border-bottom">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="avatar-ring <?= $ringClass ?>" style="padding:2px;">
-                                <div class="avatar-inner" style="width:48px; height:48px; font-size:1.2rem;">
+                            <div class="avatar-ring <?= $ringClass ?>" style="padding:2px; flex-shrink:0;">
+                                <div class="avatar-inner" style="width:50px; height:50px; font-size:1.25rem;">
                                     <?= strtoupper(substr($topic['full_name'], 0, 1)) ?>
                                 </div>
                             </div>
                             <div>
                                 <div class="fw-bold mb-1 text-dark d-flex align-items-center gap-2 flex-wrap" style="font-size:1rem;">
                                     <span><?= htmlspecialchars($topic['full_name']) ?></span>
-                                    <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.72rem; background:#e0e7ff; color:#3730a3;">
+                                    <span class="badge rounded-pill px-2 py-1" style="font-size:0.72rem; background:#e0e7ff; color:#3730a3;">
                                         <?= htmlspecialchars($topic['role_name']) ?>
                                     </span>
                                     <?php if ($isAuthor): ?>
@@ -64,10 +64,10 @@
                                     <?php endif; ?>
                                 </div>
                                 <div class="text-muted small d-flex align-items-center gap-2 flex-wrap" style="font-size:0.8rem;">
-                                    <span><i class="bi bi-clock me-1"></i><?= date('d F Y, H:i', strtotime($topic['created_at'])) ?> WIB</span>
+                                    <span><i class="bi bi-clock me-1 text-primary"></i><?= date('d F Y, H:i', strtotime($topic['created_at'])) ?> WIB</span>
                                     <?php if (!empty($topic['nama_mapel'])): ?>
                                         <span>•</span>
-                                        <span class="text-primary fw-medium"><i class="bi bi-book me-1"></i><?= htmlspecialchars($topic['nama_mapel']) ?></span>
+                                        <span class="text-primary fw-medium"><i class="bi bi-journal-text me-1"></i><?= htmlspecialchars($topic['nama_mapel']) ?></span>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -85,7 +85,7 @@
                             <?php endif; ?>
 
                             <?php if ($canDelete): ?>
-                                <button class="btn btn-outline-danger btn-sm rounded-circle p-2" title="Hapus Topik Diskusi" data-bs-toggle="modal" data-bs-target="#modalDeleteTopicDetail" style="width:34px; height:34px; line-height:1;">
+                                <button class="btn btn-outline-danger btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center" title="Hapus Topik Diskusi" data-bs-toggle="modal" data-bs-target="#modalDeleteTopicDetail" style="width:34px; height:34px; line-height:1;">
                                     <i class="bi bi-trash3"></i>
                                 </button>
 
@@ -129,8 +129,8 @@
                             : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($topic['gambar']);
                     ?>
                         <div class="mb-4">
-                            <div class="forum-image-preview-wrapper shadow-sm" style="max-width: 500px;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
-                                <img src="<?= $topicImgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>';" alt="Lampiran Gambar Topik" style="max-height: 280px; object-fit: cover;">
+                            <div class="forum-image-preview-wrapper shadow-sm" style="max-width: 540px;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
+                                <img src="<?= $topicImgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>';" alt="Lampiran Gambar Topik" style="max-height: 320px; object-fit: cover;">
                                 <div class="forum-image-overlay">
                                     <div class="lens-icon-btn"><i class="bi bi-zoom-in"></i></div>
                                 </div>
@@ -170,12 +170,12 @@
                 </div>
 
                 <!-- Comments Thread Section -->
-                <div class="card border-0 rounded-4 p-4 p-md-5 mb-4 shadow-sm bg-white">
+                <div class="card border-0 rounded-4 p-4 p-md-5 mb-4 shadow-sm bg-white border">
                     <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 pb-3 border-bottom">
                         <div class="d-flex align-items-center gap-2">
                             <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                                 <i class="bi bi-chat-left-dots-fill text-primary"></i> 
-                                Tanggapan & Solusi Akademik
+                                Tanggapan & Solusi Pembelajaran
                             </h5>
                             <span class="badge bg-primary rounded-pill px-3 py-1 fs-6 ms-1">
                                 <span id="commentCountBadge"><?= count($comments) ?></span> Balasan
@@ -195,7 +195,7 @@
                                 <i class="bi bi-grid-fill me-1"></i> Semua
                             </button>
                             <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1 text-dark" onclick="ForumApp.filterComments('guru')">
-                                <i class="bi bi-person-badge-fill me-1 text-warning"></i> Solusi Guru
+                                <i class="bi bi-award-fill me-1 text-warning"></i> Solusi Guru
                             </button>
                             <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1 text-dark" onclick="ForumApp.filterComments('image')">
                                 <i class="bi bi-image me-1 text-info"></i> Lampiran Foto
@@ -210,8 +210,8 @@
                         </div>
                     </div>
 
-                    <!-- Scrollable Comments Thread Box -->
-                    <div class="d-flex flex-column gap-3 mb-4 pe-1" id="commentsListContainer" style="max-height: 650px; overflow-y: auto; scroll-behavior: smooth;">
+                    <!-- Comments Thread Container -->
+                    <div class="d-flex flex-column gap-3 mb-4 pe-1" id="commentsListContainer" style="max-height: 700px; overflow-y: auto; scroll-behavior: smooth;">
                         <?php if (empty($comments)): ?>
                             <div class="p-5 text-center text-muted rounded-4 bg-light">
                                 <i class="bi bi-chat-square-text-fill fs-1 mb-3 text-primary opacity-50 d-block"></i>
@@ -225,12 +225,12 @@
                                     $cRoleLower = strtolower($c['role_name'] ?? '');
                                     $cRingClass = 'avatar-ring-siswa';
                                     $cardAccentClass = 'comment-card-siswa';
-                                    $roleBadge = '<span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">Siswa</span>';
+                                    $roleBadge = '<span class="badge rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">Siswa</span>';
 
                                     if (str_contains($cRoleLower, 'admin')) {
                                         $cRingClass = 'avatar-ring-admin';
                                         $cardAccentClass = 'comment-card-admin';
-                                        $roleBadge = '<span class="badge bg-purple-subtle text-purple rounded-pill px-2 py-0" style="font-size:0.65rem; background:#f3e8ff; color:#6b21a8;"><i class="bi bi-shield-check me-1"></i>Administrator</span>';
+                                        $roleBadge = '<span class="badge rounded-pill px-2 py-0" style="font-size:0.65rem; background:#f3e8ff; color:#6b21a8;"><i class="bi bi-shield-check me-1"></i>Administrator</span>';
                                     } else if (str_contains($cRoleLower, 'guru')) {
                                         $cRingClass = 'avatar-ring-guru';
                                         $cardAccentClass = 'comment-card-guru';
@@ -262,7 +262,7 @@
                                         </div>
                                     </div>
 
-                                    <p class="mb-2 text-dark small" style="white-space: pre-line; line-height:1.65; font-size:0.92rem; color: #334155;"><?= htmlspecialchars($c['komentar']) ?></p>
+                                    <p class="mb-2 text-dark small" style="white-space: pre-line; line-height:1.68; font-size:0.92rem; color: #334155;"><?= htmlspecialchars($c['komentar']) ?></p>
                                     
                                     <?php if (!empty($c['gambar'])): 
                                         $cFolder = file_exists(ROOT_PATH . 'assets/uploads/forum/' . $c['gambar']) ? 'forum' : 'tugas';
@@ -282,7 +282,7 @@
                         <?php endif; ?>
                     </div>
 
-                    <!-- Elevated Bottom Reply Form Card -->
+                    <!-- Bottom Reply Form Card -->
                     <div id="replyFormCard" class="border-top pt-4">
                         <div class="bg-light p-4 rounded-4 border shadow-sm">
                             <h6 class="fw-bold mb-3 text-dark d-flex align-items-center justify-content-between flex-wrap gap-2">
@@ -365,7 +365,7 @@
                                 </div>
                             </div>
                             <h6 class="fw-bold mb-1 text-dark fs-6"><?= htmlspecialchars($topic['full_name']) ?></h6>
-                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-3 py-1 mb-3" style="background:#e0e7ff; color:#3730a3; font-size:0.78rem;">
+                            <span class="badge rounded-pill px-3 py-1 mb-3" style="background:#e0e7ff; color:#3730a3; font-size:0.78rem;">
                                 <?= htmlspecialchars($topic['role_name']) ?>
                             </span>
 

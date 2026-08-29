@@ -9,7 +9,9 @@ const ForumApp = {
         activeTopicId: 0,
         isMutating: false,
         lastTopicsSig: '',
-        lastCommentsSig: ''
+        lastCommentsSig: '',
+        currentFilter: 'all',
+        searchQuery: ''
     },
 
     init: function() {
@@ -17,6 +19,9 @@ const ForumApp = {
         const commentsContainer = document.getElementById('commentsListContainer');
         const modalForm = document.querySelector('#modalAddTopic form');
         const commentForm = document.querySelector('#commentReplyForm');
+        const searchInput = document.getElementById('forumSearchInput');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        const filterChips = document.querySelectorAll('#forumFilterChips .forum-filter-chip');
 
         // Setup AJAX Submit for Add Topic Modal
         if (modalForm) {
@@ -38,12 +43,77 @@ const ForumApp = {
             });
         }
 
+        // Setup Realtime Live Search for Topics
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                this.state.searchQuery = query;
+
+                if (clearBtn) {
+                    if (query.length > 0) {
+                        clearBtn.classList.remove('d-none');
+                    } else {
+                        clearBtn.classList.add('d-none');
+                    }
+                }
+                this.applyTopicFilters();
+            });
+        }
+
+        if (clearBtn && searchInput) {
+            clearBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                this.state.searchQuery = '';
+                clearBtn.classList.add('d-none');
+                this.applyTopicFilters();
+                searchInput.focus();
+            });
+        }
+
+        // Setup Filter Chips Switching
+        if (filterChips.length > 0) {
+            filterChips.forEach(chip => {
+                chip.addEventListener('click', (e) => {
+                    filterChips.forEach(c => {
+                        c.classList.remove('btn-primary', 'active', 'shadow-sm');
+                        c.classList.add('btn-light', 'text-dark', 'border');
+                    });
+                    const target = e.currentTarget;
+                    target.classList.remove('btn-light', 'text-dark', 'border');
+                    target.classList.add('btn-primary', 'active', 'shadow-sm');
+
+                    this.state.currentFilter = target.getAttribute('data-filter') || 'all';
+                    this.applyTopicFilters();
+                });
+            });
+        }
+
         // Start Realtime Polling
         if (topicsContainer) {
             this.startTopicPolling();
         } else if (commentsContainer && this.state.activeTopicId > 0) {
             this.startCommentPolling();
         }
+    },
+
+    // Apply Live Filter and Search to Topic Cards DOM
+    applyTopicFilters: function() {
+        const items = document.querySelectorAll('#forumTopicsContainer .topic-card-item');
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const visibility = item.getAttribute('data-visibility') || 'public';
+            const textContent = item.textContent.toLowerCase();
+            const filterMatch = (this.state.currentFilter === 'all') || (visibility === this.state.currentFilter);
+            const searchMatch = !this.state.searchQuery || textContent.includes(this.state.searchQuery);
+
+            if (filterMatch && searchMatch) {
+                item.classList.remove('d-none');
+                visibleCount++;
+            } else {
+                item.classList.add('d-none');
+            }
+        });
     },
 
     // --- MULTI-EMOJI REACTION ENGINE (AJAX) ---
@@ -96,7 +166,7 @@ const ForumApp = {
                         onclick="ForumApp.toggleReaction(${forumId}, '${r.type}')" 
                         title="${r.label}">
                     <span class="fs-6 me-1">${r.emoji}</span>
-                    <span class="small">${count > 0 ? count : ''}</span>
+                    <span class="small fw-semibold">${count > 0 ? count : ''}</span>
                 </button>
             `;
         }).join('');
@@ -243,17 +313,22 @@ const ForumApp = {
 
     renderTopics: function(topics) {
         const container = document.getElementById('forumTopicsContainer');
+        const heroCountElem = document.getElementById('heroTopicCount');
         if (!container) return;
+
+        if (heroCountElem && topics) {
+            heroCountElem.textContent = topics.length;
+        }
 
         if (!topics || topics.length === 0) {
             container.innerHTML = `
-                <div class="col-12 text-center py-5 text-muted">
+                <div class="col-12 text-center py-5 text-muted bg-white rounded-4 shadow-sm border p-4">
                     <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-4 mb-3">
                         <i class="bi bi-chat-square-quote-fill display-5"></i>
                     </div>
-                    <h5 class="fw-bold mb-1">Belum Ada Topik Diskusi</h5>
-                    <p class="small mb-3">Jadilah yang pertama untuk memulai pertanyaan atau bahan diskusi baru!</p>
-                    <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalAddTopic">
+                    <h5 class="fw-bold mb-1 text-dark">Belum Ada Topik Diskusi</h5>
+                    <p class="small mb-3 text-secondary">Jadilah yang pertama untuk memulai pertanyaan atau bahan diskusi baru!</p>
+                    <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddTopic">
                         <i class="bi bi-plus-circle me-1"></i> Mulai Diskusi Pertama
                     </button>
                 </div>
@@ -286,7 +361,7 @@ const ForumApp = {
                 const activeClass = isActive ? 'btn-primary-subtle border-primary text-primary fw-bold shadow-sm' : 'btn-light border-0 text-secondary';
 
                 return `
-                    <button type="button" class="btn btn-sm ${activeClass} rounded-pill px-3 py-1 me-2 mb-2 btn-emoji-react" 
+                    <button type="button" class="btn btn-sm ${activeClass} rounded-pill px-2 py-1 me-1 mb-1 btn-emoji-react" 
                             onclick="ForumApp.toggleReaction(${t.id}, '${r.type}')" 
                             title="${r.label}">
                         <span class="fs-6 me-1">${r.emoji}</span>
@@ -311,21 +386,21 @@ const ForumApp = {
 
             return `
                 <div class="col topic-card-item" data-topic-id="${t.id}" data-visibility="${t.visibility || 'public'}">
-                    <div class="forum-topic-card p-3 p-md-4 rounded-4 shadow-sm bg-white border h-100 d-flex flex-column justify-content-between">
+                    <div class="forum-topic-card p-3 p-md-4 bg-white border h-100 d-flex flex-column justify-content-between">
                         <div>
                             <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 pb-2 border-bottom">
                                 <div class="d-flex align-items-center gap-2 overflow-hidden">
                                     <div class="avatar-ring ${ringClass}" style="padding:2px; flex-shrink: 0;">
-                                        <div class="avatar-inner" style="width:36px; height:36px; font-size:0.9rem; font-weight:bold;">
+                                        <div class="avatar-inner" style="width:38px; height:38px; font-size:0.9rem; font-weight:bold;">
                                             ${initial}
                                         </div>
                                     </div>
                                     <div class="text-truncate">
-                                        <div class="fw-bold text-dark text-truncate" style="font-size:0.85rem;" title="${t.full_name}">
+                                        <div class="fw-bold text-dark text-truncate" style="font-size:0.88rem;" title="${t.full_name}">
                                             ${t.full_name}
                                         </div>
                                         <div class="d-flex align-items-center gap-1">
-                                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">
+                                            <span class="badge rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">
                                                 ${t.role_name}
                                             </span>
                                             <small class="text-muted" style="font-size:0.7rem;">
@@ -372,12 +447,12 @@ const ForumApp = {
                             </div>
 
                             <div class="d-flex align-items-center justify-content-between pt-2 border-top flex-wrap gap-2">
-                                <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-sm d-inline-flex align-items-center gap-1" style="font-size:0.78rem;">
+                                <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="btn btn-primary rounded-pill px-3 py-1 fw-bold shadow-sm d-inline-flex align-items-center gap-2" style="font-size:0.82rem;">
                                     <i class="bi bi-chat-text-fill"></i> ${t.total_replies} Balasan
                                 </a>
                                 ${t.nama_mapel ? `
-                                    <span class="small text-muted text-truncate" style="font-size:0.72rem; max-width: 100px;" title="${t.nama_mapel}">
-                                        <i class="bi bi-journal-text text-primary me-1"></i>${t.nama_mapel}
+                                    <span class="badge bg-light text-primary border rounded-pill px-3 py-2 fw-semibold" style="font-size:0.75rem;">
+                                        <i class="bi bi-journal-text me-1"></i>${t.nama_mapel}
                                     </span>
                                 ` : ''}
                             </div>
@@ -388,6 +463,7 @@ const ForumApp = {
         }).join('');
 
         container.innerHTML = html;
+        this.applyTopicFilters();
     },
 
     // --- REALTIME COMMENT POLLING ---
@@ -444,12 +520,12 @@ const ForumApp = {
             const roleLower = (c.role_name || '').toLowerCase();
             let cRingClass = 'avatar-ring-siswa';
             let cardAccentClass = 'comment-card-siswa';
-            let roleBadge = '<span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">Siswa</span>';
+            let roleBadge = '<span class="badge rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">Siswa</span>';
 
             if (roleLower.includes('admin')) {
                 cRingClass = 'avatar-ring-admin';
                 cardAccentClass = 'comment-card-admin';
-                roleBadge = '<span class="badge bg-purple-subtle text-purple rounded-pill px-2 py-0" style="font-size:0.65rem; background:#f3e8ff; color:#6b21a8;"><i class="bi bi-shield-check me-1"></i>Administrator</span>';
+                roleBadge = '<span class="badge rounded-pill px-2 py-0" style="font-size:0.65rem; background:#f3e8ff; color:#6b21a8;"><i class="bi bi-shield-check me-1"></i>Administrator</span>';
             } else if (roleLower.includes('guru')) {
                 cRingClass = 'avatar-ring-guru';
                 cardAccentClass = 'comment-card-guru';
@@ -495,7 +571,7 @@ const ForumApp = {
                             </button>
                         </div>
                     </div>
-                    <p class="mb-2 text-dark small" style="white-space: pre-line; line-height:1.65; font-size:0.92rem; color: #334155;">${c.komentar}</p>
+                    <p class="mb-2 text-dark small" style="white-space: pre-line; line-height:1.68; font-size:0.92rem; color: #334155;">${c.komentar}</p>
                     ${cmtImg}
                 </div>
             `;
