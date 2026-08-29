@@ -274,11 +274,21 @@
                                             <?php endif; ?>
                                         </div>
                                     </div>
-                                    <div class="d-flex align-items-center justify-content-between bg-white p-2.5 rounded-3 border">
+                                    <div class="d-flex align-items-center justify-content-between bg-white p-2.5 rounded-3 border gap-1">
                                         <code class="fs-6 fw-bold text-danger mb-0" style="letter-spacing:1px;"><?= htmlspecialchars($mk['enrollment_key']) ?></code>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-3 fw-bold flex-shrink-0" style="font-size:0.75rem;" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($mk['enrollment_key'], ENT_QUOTES) ?>'); alert('Key <?= htmlspecialchars($mk['enrollment_key'], ENT_QUOTES) ?> berhasil disalin!')">
-                                            <i class="bi bi-clipboard me-1"></i> Salin
-                                        </button>
+                                        <div class="d-flex gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.75rem;"
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#modalGuruSetKey"
+                                                    data-mapel="<?= $mk['mapel_id'] ?>"
+                                                    data-kelas="<?= $mk['kelas_id'] ?? '' ?>"
+                                                    data-key="<?= htmlspecialchars($mk['enrollment_key'], ENT_QUOTES) ?>">
+                                                <i class="bi bi-pencil-square me-1"></i> Edit
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-1 px-2.5 fw-bold" style="font-size:0.75rem;" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($mk['enrollment_key'], ENT_QUOTES) ?>'); alert('Key <?= htmlspecialchars($mk['enrollment_key'], ENT_QUOTES) ?> berhasil disalin!')">
+                                                <i class="bi bi-clipboard me-1"></i> Salin
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -488,6 +498,30 @@ function generateGuruSmartKey() {
     
     document.getElementById('guru_enrollment_key').value = resultKey;
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const modalGuruSetKey = document.getElementById('modalGuruSetKey');
+    if (modalGuruSetKey) {
+        modalGuruSetKey.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+            
+            const mapelId = button.getAttribute('data-mapel');
+            const kelasId = button.getAttribute('data-kelas');
+            const key = button.getAttribute('data-key');
+            
+            if (mapelId) {
+                document.getElementById('guru_key_mapel_id').value = mapelId;
+            }
+            if (kelasId !== null && kelasId !== undefined) {
+                document.getElementById('guru_key_kelas_id').value = kelasId;
+            }
+            if (key) {
+                document.getElementById('guru_enrollment_key').value = key;
+            }
+        });
+    }
+});
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
