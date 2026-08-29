@@ -1310,40 +1310,63 @@ class ApiController {
                 break;
 
             case 'available_mapel':
+            case 'key_mapel':
+            case 'mapel_keys':
+            case 'gabung_kelas_list':
                 try {
                     require_once ROOT_PATH . 'models/AcademicModel.php';
                     $academicModel = new AcademicModel();
-                    $academicModel->ensureEnrollmentTables();
+                    $mapelKeys = $academicModel->getMapelEnrollmentKeys();
+                    $enrolledList = $academicModel->getSiswaEnrolledMapels($siswa['id']);
 
-                    $search = trim($_GET['search'] ?? $_POST['search'] ?? '');
-                    $sql = "
-                        SELECT mek.id as key_id, mek.mapel_id, mek.guru_id, mek.kelas_id,
-                               mp.nama_mapel, mp.kode_mapel, g.nama_lengkap as nama_guru, k.nama_kelas,
-                               (SELECT COUNT(*) FROM siswa_mapel_enrollment sme WHERE sme.mapel_id = mek.mapel_id AND sme.guru_id = mek.guru_id AND sme.siswa_id = :sid) as is_enrolled
-                        FROM mapel_enrollment_keys mek
-                        JOIN mata_pelajaran mp ON mek.mapel_id = mp.id
-                        JOIN guru g ON mek.guru_id = g.id
-                        LEFT JOIN kelas k ON mek.kelas_id = k.id
-                    ";
-                    if ($search !== '') {
-                        $sql .= " WHERE mp.nama_mapel LIKE :s1 OR g.nama_lengkap LIKE :s2 OR k.nama_kelas LIKE :s3";
-                        $stmtM = $this->db->prepare($sql);
-                        $stmtM->execute(['sid' => $siswa['id'], 's1' => "%$search%", 's2' => "%$search%", 's3' => "%$search%"]);
-                    } else {
-                        $stmtM = $this->db->prepare($sql);
-                        $stmtM->execute(['sid' => $siswa['id']]);
+                    $enrolledMapelGuruKeys = [];
+                    foreach ($enrolledList as $em) {
+                        $eKId = !empty($em['kelas_id']) ? (int)$em['kelas_id'] : 0;
+                        $enrolledMapelGuruKeys[$em['mapel_id'] . '_' . $em['guru_id'] . '_' . $eKId] = true;
+                        if ($eKId === 0) {
+                            $enrolledMapelGuruKeys[$em['mapel_id'] . '_' . $em['guru_id'] . '_global'] = true;
+                        }
                     }
-                    $list = $stmtM->fetchAll();
-                    $this->jsonResponse(true, 'Daftar Mata Pelajaran & Key System', $list);
+
+                    $search = strtolower(trim($_GET['search'] ?? $_POST['search'] ?? ''));
+                    $list = [];
+
+                    foreach ($mapelKeys as $mk) {
+                        $mkKId = !empty($mk['kelas_id']) ? (int)$mk['kelas_id'] : 0;
+                        $isEnrolled = isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id'] . '_' . $mkKId])
+                                   || ($mkKId > 0 && isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id'] . '_0']))
+                                   || isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id'] . '_global']);
+
+                        $namaMapel = $mk['nama_mapel'] ?? '';
+                        $namaGuru = $mk['nama_guru'] ?? '';
+                        $namaKelas = $mk['nama_kelas'] ?? 'Semua Rombel';
+
+                        if (!empty($search)) {
+                            $kw = strtolower($namaMapel . ' ' . $namaGuru . ' ' . $namaKelas);
+                            if (strpos($kw, $search) === false) {
+                                continue;
+                            }
+                        }
+
+                        $list[] = [
+                            'key_id' => intval($mk['id']),
+                            'mapel_id' => intval($mk['mapel_id']),
+                            'guru_id' => intval($mk['guru_id']),
+                            'kelas_id' => $mk['kelas_id'] ? intval($mk['kelas_id']) : null,
+                            'nama_mapel' => $namaMapel,
+                            'kode_mapel' => $mk['kode_mapel'] ?? ('MP' . $mk['mapel_id']),
+                            'nama_guru' => $namaGuru,
+                            'nama_kelas' => $namaKelas,
+                            'tingkat' => intval($mk['tingkat'] ?? 0),
+                            'nama_jurusan' => $mk['nama_jurusan'] ?? '',
+                            'enrollment_key' => $mk['enrollment_key'] ?? '',
+                            'is_enrolled' => $isEnrolled ? 1 : 0
+                        ];
+                    }
+
+                    $this->jsonResponse(true, 'Daftar Key Mapel & Status Pendaftaran Siswa', $list);
                 } catch (\Throwable $eAm) {
-                    // Fallback to basic mapel list if mapel_enrollment_keys table is not available
-                    $stmtBasic = $this->db->prepare("
-                        SELECT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel 
-                        FROM mata_pelajaran mp
-                    ");
-                    $stmtBasic->execute();
-                    $list = $stmtBasic->fetchAll();
-                    $this->jsonResponse(true, 'Daftar Mata Pelajaran', $list);
+                    $this->jsonResponse(false, 'Gagal memuat data key mapel: ' . $eAm->getMessage(), null, 500);
                 }
                 break;
 
@@ -1357,29 +1380,14 @@ class ApiController {
                     if (empty($keyMapel)) {
                         $this->jsonResponse(false, 'Kode Akses / Key Mapel tidak boleh kosong!', null, 400);
                     }
-                    $cleanKey = strtoupper($keyMapel);
-                    try {
-                        $stmtK = $this->db->prepare("
-                            SELECT mek.*, mp.nama_mapel, g.nama_lengkap as nama_guru 
-                            FROM mapel_enrollment_keys mek
-                            JOIN mata_pelajaran mp ON mek.mapel_id = mp.id
-                            JOIN guru g ON mek.guru_id = g.id
-                            WHERE UPPER(mek.enrollment_key) = :k1 OR UPPER(mek.passcode) = :k2
-                            LIMIT 1
-                        ");
-                        $stmtK->execute(['k1' => $cleanKey, 'k2' => $cleanKey]);
-                        $target = $stmtK->fetch();
+                    require_once ROOT_PATH . 'models/AcademicModel.php';
+                    $academicModel = new AcademicModel();
+                    $res = $academicModel->enrollSiswaByMapelKey($siswa['id'], $keyMapel);
 
-                        if (!$target) {
-                            $this->jsonResponse(false, 'Key Mapel tidak valid! Silakan minta Passcode Key resmi dari Guru atau Admin.', null, 404);
-                        }
-
-                        $ins = $this->db->prepare("INSERT IGNORE INTO siswa_mapel_enrollment (siswa_id, mapel_id, guru_id) VALUES (:sid, :mid, :gid)");
-                        $ins->execute(['sid' => $siswa['id'], 'mid' => $target['mapel_id'], 'gid' => $target['guru_id']]);
-
-                        $this->jsonResponse(true, 'Selamat! Anda berhasil terdaftar di Mata Pelajaran ' . $target['nama_mapel'] . ' (' . $target['nama_guru'] . ').', $target);
-                    } catch (\Throwable $eEn) {
-                        $this->jsonResponse(false, 'Gagal terdaftar ke mapel: ' . $eEn->getMessage(), null, 500);
+                    if ($res['status'] === true) {
+                        $this->jsonResponse(true, $res['message'], $res['enrollment'] ?? null);
+                    } else {
+                        $this->jsonResponse(false, $res['message'], null, 400);
                     }
                 } else {
                     require_once ROOT_PATH . 'models/AcademicModel.php';
@@ -1411,25 +1419,9 @@ class ApiController {
                     $kelasId = intval($siswa['kelas_id'] ?? 0);
                     $siswaId = intval($siswa['id'] ?? 0);
 
-                    // Fetch enrolled subjects (siswa_mapel_enrollment) AND class schedule subjects (jadwal for student's kelas_id)
-                    $stmtMapel = $this->db->prepare("
-                        SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru
-                        FROM mata_pelajaran mp
-                        LEFT JOIN siswa_mapel_enrollment sme ON (sme.mapel_id = mp.id AND sme.siswa_id = :sid)
-                        LEFT JOIN jadwal j ON (j.mapel_id = mp.id AND j.kelas_id = :kid)
-                        LEFT JOIN guru g ON (sme.guru_id = g.id OR j.guru_id = g.id)
-                        WHERE (sme.siswa_id = :sid2)
-                           OR (j.kelas_id = :kid2 AND :kid3 > 0)
-                        ORDER BY mp.id ASC
-                    ");
-                    $stmtMapel->execute([
-                        'sid' => $siswaId,
-                        'kid' => $kelasId,
-                        'sid2' => $siswaId,
-                        'kid2' => $kelasId,
-                        'kid3' => $kelasId
-                    ]);
-                    $enrolledMapel = $stmtMapel->fetchAll();
+                    require_once ROOT_PATH . 'models/AcademicModel.php';
+                    $academicModel = new AcademicModel();
+                    $enrolledMapel = $academicModel->getSiswaEnrolledMapels($siswaId);
 
                     if (empty($enrolledMapel) && $siswaId > 0) {
                         // Fallback: check if student enrolled via key without guru_id constraint
