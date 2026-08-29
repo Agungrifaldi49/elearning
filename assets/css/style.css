@@ -638,57 +638,73 @@ h1, h2, h3, h4, h5, h6, .font-heading {
    Forum Diskusi - Modern Design System & Premium Styling
    ========================================================================== */
 .forum-hero-banner {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #312e81 70%, #4338ca 100%);
     border-radius: 24px;
     color: #ffffff;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 15px 35px rgba(49, 46, 129, 0.22);
+    box-shadow: 0 20px 40px rgba(30, 27, 75, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .forum-hero-banner::before {
     content: '';
     position: absolute;
     top: -50%;
-    right: -20%;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, rgba(255, 255, 255, 0) 70%);
+    right: -15%;
+    width: 450px;
+    height: 450px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, rgba(139, 92, 246, 0.15) 50%, rgba(255, 255, 255, 0) 70%);
     border-radius: 50%;
     pointer-events: none;
+    animation: floatGlow 8s ease-in-out infinite alternate;
+}
+
+@keyframes floatGlow {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-20px, 20px) scale(1.08); }
 }
 
 .forum-hero-stat-chip {
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 50px;
-    padding: 6px 16px;
+    padding: 6px 18px;
     font-size: 0.825rem;
     font-weight: 600;
     color: #ffffff;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.25s ease;
+}
+
+.forum-hero-stat-chip:hover {
+    background: rgba(255, 255, 255, 0.22);
+    transform: translateY(-1px);
 }
 
 .forum-search-box {
     background: #ffffff;
     border-radius: 50px;
-    padding: 6px 6px 6px 20px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    transition: all 0.3s ease;
+    padding: 6px 8px 6px 22px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    border: 1.5px solid #e2e8f0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 [data-bs-theme="dark"] .forum-search-box {
     background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 .forum-search-box:focus-within {
     border-color: #6366f1;
-    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 12px 35px rgba(99, 102, 241, 0.22);
+    transform: translateY(-1px);
 }
 
 .forum-search-box input {
@@ -697,47 +713,55 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     outline: none;
     box-shadow: none;
     font-size: 0.925rem;
+    color: #1e293b;
+}
+
+[data-bs-theme="dark"] .forum-search-box input {
+    color: #f8fafc;
 }
 
 .forum-filter-chip {
     border-radius: 50px;
-    padding: 7px 18px;
+    padding: 8px 20px;
     font-size: 0.85rem;
     font-weight: 600;
     color: #64748b;
     background: #f1f5f9;
-    border: 1px solid transparent;
+    border: 1px solid #e2e8f0;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     white-space: nowrap;
     text-decoration: none;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
 
 [data-bs-theme="dark"] .forum-filter-chip {
     background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
     color: #94a3b8;
 }
 
 .forum-filter-chip:hover {
     color: #4f46e5;
     background: #e0e7ff;
+    border-color: #c7d2fe;
+    transform: translateY(-1px);
 }
 
 .forum-filter-chip.active {
     background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
     color: #ffffff !important;
-    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35);
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);
     border-color: transparent;
 }
 
 .forum-topic-card {
     background: #ffffff;
-    border-radius: 20px;
+    border-radius: 22px;
     border: 1px solid rgba(226, 232, 240, 0.9);
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.03);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden !important;
@@ -751,9 +775,9 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .forum-topic-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 16px 36px rgba(99, 102, 241, 0.12);
-    border-color: rgba(99, 102, 241, 0.4);
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.45);
 }
 
 .avatar-ring {
@@ -764,14 +788,17 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 .avatar-ring-admin {
     background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 .avatar-ring-guru {
     background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .avatar-ring-siswa {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .avatar-inner {
@@ -806,7 +833,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     position: relative;
     width: 100%;
     max-width: 100% !important;
-    border-radius: 14px;
+    border-radius: 16px;
     overflow: hidden !important;
     cursor: pointer;
     border: 1px solid rgba(226, 232, 240, 0.9);
@@ -820,7 +847,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .forum-image-preview-wrapper:hover {
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
     transform: translateY(-2px);
 }
 
@@ -835,14 +862,15 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .forum-image-preview-wrapper:hover img {
-    transform: scale(1.03);
+    transform: scale(1.04);
 }
 
 .forum-image-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.35);
-    backdrop-filter: blur(2px);
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
     opacity: 0;
     display: flex;
     align-items: center;
@@ -872,10 +900,10 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 .comment-card-item {
     background: #ffffff;
-    border-radius: 18px;
+    border-radius: 20px;
     border: 1px solid rgba(226, 232, 240, 0.85);
-    border-left: 4px solid #6366f1 !important;
-    padding: 18px 22px;
+    border-left: 5px solid #6366f1 !important;
+    padding: 20px 24px;
     transition: all 0.25s ease;
 }
 
@@ -885,13 +913,14 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .comment-card-item:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.06);
 }
 
 /* Lightbox Modal Styling */
 .lightbox-modal .modal-content {
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: none;
     border-radius: 24px;
 }
@@ -908,9 +937,9 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 /* Sidebar & Multi-Column Grid Components */
 .forum-sidebar-card {
     background: #ffffff;
-    border-radius: 20px;
+    border-radius: 22px;
     border: 1px solid rgba(226, 232, 240, 0.9);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.03);
     overflow: hidden;
     transition: all 0.25s ease;
 }
@@ -923,7 +952,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 .forum-sidebar-card .card-header {
     background: transparent;
     border-bottom: 1px solid rgba(226, 232, 240, 0.7);
-    padding: 16px 20px;
+    padding: 18px 22px;
 }
 
 [data-bs-theme="dark"] .forum-sidebar-card .card-header {
@@ -1003,7 +1032,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 /* Comment Thread Role Accents */
 .comment-card-guru {
-    border-left: 4px solid #f59e0b !important;
+    border-left: 5px solid #f59e0b !important;
     background: #fffbeb !important;
 }
 
@@ -1012,7 +1041,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .comment-card-admin {
-    border-left: 4px solid #8b5cf6 !important;
+    border-left: 5px solid #8b5cf6 !important;
     background: #f5f3ff !important;
 }
 
@@ -1021,7 +1050,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .comment-card-siswa {
-    border-left: 4px solid #10b981 !important;
+    border-left: 5px solid #10b981 !important;
     background: #ffffff !important;
 }
 
@@ -1031,13 +1060,13 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     font-weight: 700;
     color: #64748b;
     background: #f1f5f9;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 12px;
 }
 
 .comment-quote-btn {
     font-size: 0.72rem;
-    padding: 2px 10px;
+    padding: 3px 12px;
     border-radius: 14px;
     transition: all 0.2s ease;
 }
@@ -1059,8 +1088,8 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .floating-btn-reply {
-    width: 54px;
-    height: 54px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
     color: #ffffff;
@@ -1068,7 +1097,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     align-items: center;
     justify-content: center;
     font-size: 1.4rem;
-    box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
+    box-shadow: 0 12px 28px rgba(79, 70, 229, 0.45);
     border: none;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1076,13 +1105,13 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 .floating-btn-reply:hover {
     transform: scale(1.12) translateY(-2px);
-    box-shadow: 0 14px 30px rgba(79, 70, 229, 0.5);
+    box-shadow: 0 16px 35px rgba(79, 70, 229, 0.55);
     color: #ffffff;
 }
 
 .floating-btn-top {
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
     background: #ffffff;
     color: #475569;
@@ -1090,7 +1119,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     align-items: center;
     justify-content: center;
     font-size: 1.2rem;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
     border: 1px solid #e2e8f0;
     cursor: pointer;
     transition: all 0.25s ease;
@@ -1098,6 +1127,9 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 .floating-btn-top:hover {
     background: #f8fafc;
+    transform: translateY(-2px);
+    color: #4f46e5;
+}
     color: #4f46e5;
     transform: translateY(-2px);
 }

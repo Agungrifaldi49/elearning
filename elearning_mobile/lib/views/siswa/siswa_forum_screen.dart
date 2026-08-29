@@ -672,7 +672,16 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: Colors.indigo.shade900,
+              decoration: BoxDecoration(
+                color: Colors.indigo.shade900,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.indigo.shade900.withValues(alpha: 0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Row(
                 children: [
                   const Text('Filter Akses:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
@@ -698,121 +707,168 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredTopics.isEmpty
-                      ? const Center(child: Text('Belum ada topik diskusi pada kategori ini.'))
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.forum_outlined, size: 64, color: Colors.indigo.shade200),
+                              const SizedBox(height: 12),
+                              const Text('Belum ada topik diskusi pada kategori ini.', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        )
                       : ListView.builder(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           itemCount: _filteredTopics.length,
                           itemBuilder: (context, index) {
                             final f = _filteredTopics[index];
                             final bool isPrivate = f.visibility.toLowerCase().trim() == 'private';
+                            final String roleLower = f.roleName.toLowerCase();
+                            Color roleColor = Colors.green;
+                            if (roleLower.contains('admin')) roleColor = Colors.purple;
+                            if (roleLower.contains('guru')) roleColor = Colors.blue;
 
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              elevation: 2,
-                              child: InkWell(
-                                onTap: () => _showForumDetailBottomSheet(f),
-                                borderRadius: BorderRadius.circular(16),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          CircleAvatar(
-                                            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
-                                            backgroundImage: (f.avatarUrl != null && f.avatarUrl!.isNotEmpty)
-                                                ? NetworkImage(f.avatarUrl!)
-                                                : null,
-                                            child: (f.avatarUrl == null || f.avatarUrl!.isEmpty)
-                                                ? Text(
-                                                    f.fullName.isNotEmpty ? f.fullName[0] : 'U',
-                                                    style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
-                                                  )
-                                                : null,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(f.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                                Text("${f.roleName} • ${f.createdAt}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                              ],
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: isPrivate ? Colors.amber.shade100 : Colors.green.shade100,
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              isPrivate ? '🔒 ${f.targetNamaKelas}' : '🌐 Public',
-                                              style: TextStyle(
-                                                color: isPrivate ? Colors.amber.shade900 : Colors.green.shade900,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.bold,
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.grey.shade200),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.04),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(20),
+                                child: InkWell(
+                                  onTap: () => _showForumDetailBottomSheet(f),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(18),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.all(2),
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                gradient: LinearGradient(
+                                                  colors: [roleColor.withValues(alpha: 0.8), roleColor],
+                                                ),
                                               ),
+                                              child: CircleAvatar(
+                                                radius: 18,
+                                                backgroundColor: Colors.white,
+                                                backgroundImage: (f.avatarUrl != null && f.avatarUrl!.isNotEmpty)
+                                                    ? NetworkImage(f.avatarUrl!)
+                                                    : null,
+                                                child: (f.avatarUrl == null || f.avatarUrl!.isEmpty)
+                                                    ? Text(
+                                                        f.fullName.isNotEmpty ? f.fullName[0].toUpperCase() : 'U',
+                                                        style: TextStyle(color: roleColor, fontWeight: FontWeight.bold, fontSize: 14),
+                                                      )
+                                                    : null,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(f.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                                  const SizedBox(height: 2),
+                                                  Text("${f.roleName} • ${f.createdAt}", style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                                                ],
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: isPrivate ? Colors.amber.shade50 : Colors.green.shade50,
+                                                borderRadius: BorderRadius.circular(20),
+                                                border: Border.all(color: isPrivate ? Colors.amber.shade200 : Colors.green.shade200),
+                                              ),
+                                              child: Text(
+                                                isPrivate ? '🔒 ${f.targetNamaKelas}' : '🌐 Public',
+                                                style: TextStyle(
+                                                  color: isPrivate ? Colors.amber.shade900 : Colors.green.shade900,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 14),
+                                        Text(
+                                          ProfanityService.filter(f.judul),
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, height: 1.3),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          ProfanityService.filter(f.konten),
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.4),
+                                        ),
+                                        if (f.gambarUrl != null && f.gambarUrl!.isNotEmpty) ...[
+                                          const SizedBox(height: 12),
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(14),
+                                            child: Image.network(
+                                              f.gambarUrl!,
+                                              height: 160,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => const SizedBox(),
                                             ),
                                           ),
                                         ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(ProfanityService.filter(f.judul), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        ProfanityService.filter(f.konten),
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 13, color: Colors.grey.shade800, height: 1.3),
-                                      ),
-                                      if (f.gambarUrl != null && f.gambarUrl!.isNotEmpty) ...[
-                                        const SizedBox(height: 10),
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Image.network(
-                                            f.gambarUrl!,
-                                            height: 160,
-                                            width: double.infinity,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) => const SizedBox(),
+                                        const SizedBox(height: 14),
+                                        Container(
+                                          padding: const EdgeInsets.only(top: 12),
+                                          decoration: BoxDecoration(
+                                            border: Border(top: BorderSide(color: Colors.grey.shade100)),
                                           ),
-                                        ),
-                                      ],
-                                      const Divider(height: 20),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: Colors.indigo.shade50,
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              f.kategori,
-                                              style: TextStyle(color: Colors.indigo.shade900, fontSize: 11, fontWeight: FontWeight.bold),
-                                            ),
-                                          ),
-                                          Row(
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
-                                              const Icon(Icons.mode_comment_outlined, size: 14, color: Colors.grey),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '${f.totalKomentar} Balasan',
-                                                style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.indigo.shade50,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  f.kategori,
+                                                  style: TextStyle(color: Colors.indigo.shade900, fontSize: 11, fontWeight: FontWeight.bold),
+                                                ),
+                                              ),
+                                              Row(
+                                                children: [
+                                                  Icon(Icons.chat_bubble_outline_rounded, size: 15, color: Colors.indigo.shade600),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    '${f.totalKomentar} Balasan',
+                                                    style: TextStyle(fontSize: 12, color: Colors.indigo.shade900, fontWeight: FontWeight.bold),
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
-                                        ],
-                                      ),
-                                    ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
+                              );
                           },
                         ),
             ),
@@ -829,6 +885,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
       selected: isSelected,
       selectedColor: Colors.amber.shade700,
       backgroundColor: Colors.white24,
+      elevation: isSelected ? 2 : 0,
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : Colors.white70,
         fontWeight: FontWeight.bold,

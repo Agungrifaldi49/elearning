@@ -10,21 +10,21 @@
         <div class="forum-hero-banner p-4 p-md-5 mb-4">
             <div class="row align-items-center g-3 position-relative" style="z-index: 1;">
                 <div class="col-lg-8">
-                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
                         <span class="forum-hero-stat-chip">
                             <i class="bi bi-chat-square-text-fill text-warning"></i> <?= count($topics) ?> Topik Diskusi
                         </span>
                         <span class="forum-hero-stat-chip">
-                            <i class="bi bi-people-fill text-info"></i> Komunitas KBM Active
+                            <i class="bi bi-people-fill text-info"></i> Komunitas KBM Aktif
                         </span>
                     </div>
-                    <h2 class="fw-bold mb-2">Forum Diskusi & Komunitas Pembelajaran</h2>
-                    <p class="mb-0 text-white-70 fs-6" style="max-width: 650px;">
+                    <h2 class="fw-bold mb-2 text-white display-6">Forum Diskusi & Komunitas Pembelajaran</h2>
+                    <p class="mb-0 text-white-70 fs-6" style="max-width: 680px; line-height: 1.6;">
                         Ruang kolaborasi akademik resmi SMK Muthia Harapan Cicalengka. Bagikan pertanyaan, kirim tanggapan, sertakan lampiran gambar, dan berdiskusi secara interaktif.
                     </p>
                 </div>
                 <div class="col-lg-4 text-lg-end">
-                    <button class="btn btn-warning text-dark fw-bold rounded-pill px-4 py-2 shadow-lg" data-bs-toggle="modal" data-bs-target="#modalAddTopic" style="font-size: 0.95rem;">
+                    <button class="btn btn-warning text-dark fw-bold rounded-pill px-4 py-3 shadow-lg" data-bs-toggle="modal" data-bs-target="#modalAddTopic" style="font-size: 0.95rem;">
                         <i class="bi bi-plus-circle-fill me-2 fs-5"></i> Buat Topik Diskusi
                     </button>
                 </div>
@@ -91,7 +91,7 @@
                                 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-1">
                                     <div class="d-flex align-items-center gap-2 overflow-hidden">
                                         <div class="avatar-ring <?= $ringClass ?>" style="padding:1px; flex-shrink: 0;">
-                                            <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
+                                            <div class="avatar-inner" style="width:36px; height:36px; font-size:0.85rem;">
                                                 <?= strtoupper(substr($t['full_name'], 0, 1)) ?>
                                             </div>
                                         </div>
@@ -112,11 +112,11 @@
 
                                     <div class="d-flex align-items-center gap-1">
                                         <?php if ($isPrivate): ?>
-                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1" style="font-size:0.65rem;">
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1" style="font-size:0.65rem;" title="Diskusi Privat">
                                                 <i class="bi bi-lock-fill text-warning"></i>
                                             </span>
                                         <?php else: ?>
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1" style="font-size:0.65rem;">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1" style="font-size:0.65rem;" title="Diskusi Publik">
                                                 <i class="bi bi-globe"></i>
                                             </span>
                                         <?php endif; ?>
@@ -146,7 +146,7 @@
                                         : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($t['gambar']);
                                 ?>
                                     <div class="mb-3">
-                                        <div class="forum-image-preview-wrapper" style="position: relative; width: 100%; height: 140px; max-height: 140px; border-radius: 12px; overflow: hidden; cursor: pointer; background: #f8fafc; border: 1px solid #e2e8f0;" onclick="openLightboxModal('<?= $imgPath ?>', '<?= htmlspecialchars(addslashes($t['judul'])) ?>')">
+                                        <div class="forum-image-preview-wrapper" style="position: relative; width: 100%; height: 140px; max-height: 140px; border-radius: 14px; overflow: hidden; cursor: pointer; background: #f8fafc; border: 1px solid #e2e8f0;" onclick="openLightboxModal('<?= $imgPath ?>', '<?= htmlspecialchars(addslashes($t['judul'])) ?>')">
                                             <img src="<?= $imgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['gambar']) ?>';" alt="Lampiran Gambar Forum" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: cover; display: block;">
                                             <div class="forum-image-overlay" style="font-size:0.72rem;">
                                                 <i class="bi bi-zoom-in me-1"></i> Perbesar Gambar
@@ -192,7 +192,7 @@
                                     <a href="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $t['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.78rem;">
                                         <i class="bi bi-chat-text-fill me-1"></i> <?= $t['total_replies'] ?> Balasan
                                     </a>
-                                    <?php if ($t['nama_mapel']): ?>
+                                    <?php if (!empty($t['nama_mapel'])): ?>
                                         <span class="small text-muted text-truncate" style="font-size:0.72rem; max-width: 110px;" title="<?= htmlspecialchars($t['nama_mapel']) ?>">
                                             <i class="bi bi-journal-text text-primary me-1"></i><?= htmlspecialchars($t['nama_mapel']) ?>
                                         </span>
@@ -313,9 +313,11 @@
                         <label class="form-label small fw-semibold">Mata Pelajaran (Opsional)</label>
                         <select name="mapel_id" class="form-select rounded-3">
                             <option value="0">Umum / Semua Mapel</option>
-                            <?php foreach ($mapelList as $mp): ?>
-                                <option value="<?= $mp['id'] ?>"><?= htmlspecialchars($mp['nama_mapel']) ?></option>
-                            <?php endforeach; ?>
+                            <?php if (!empty($mapelList)): ?>
+                                <?php foreach ($mapelList as $mp): ?>
+                                    <option value="<?= $mp['id'] ?>"><?= htmlspecialchars($mp['nama_mapel']) ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
                     </div>
 
