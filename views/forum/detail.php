@@ -584,4 +584,56 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<!-- Quick Reply Modal for 100+ Replies UX -->
+<div class="modal fade" id="modalQuickReply" tabindex="-1" aria-labelledby="modalQuickReplyLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header bg-primary text-white p-4 rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalQuickReplyLabel">
+                    <i class="bi bi-lightning-charge-fill text-warning me-2"></i> Balas Diskusi Cepat
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="quickReplyForm" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="forum_id" value="<?= $topic['id'] ?>">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold text-dark">Tanggapan / Solusi Akademik Anda</label>
+                        <textarea name="komentar" id="quickReplyKomentarInput" class="form-control rounded-3 p-3" rows="4" placeholder="Tuliskan balasan Anda di sini..." required style="resize: vertical; font-size:0.95rem;"></textarea>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-dark">Lampiran Foto Screenshot (Opsional)</label>
+                        <input type="file" name="gambar" id="quickReplyImageInput" class="form-control form-control-sm rounded-3" accept="image/*" onchange="previewImageInput(this, 'quickReplyImagePreview', 'quickReplyImageContainer')">
+                        <div id="quickReplyImageContainer" class="mt-2 d-none position-relative">
+                            <img id="quickReplyImagePreview" src="" class="img-fluid rounded-3 border shadow-sm" style="max-height: 140px; object-fit: cover;">
+                            <button type="button" class="btn btn-danger btn-sm rounded-circle position-absolute top-0 start-0 m-1 p-1" onclick="clearImageInput('quickReplyImageInput', 'quickReplyImageContainer')">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">
+                        <i class="bi bi-send-fill me-1"></i> Kirim Balasan Cepat
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Sticky Floating Actions (Quick Reply & Scroll Top) -->
+<div class="forum-floating-actions">
+    <button type="button" class="floating-btn-reply" data-bs-toggle="modal" data-bs-target="#modalQuickReply" title="Balas Diskusi Cepat">
+        <i class="bi bi-chat-fill"></i>
+    </button>
+    <button type="button" class="floating-btn-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Kembali ke Atas">
+        <i class="bi bi-arrow-up-short"></i>
+    </button>
+</div>
+
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
