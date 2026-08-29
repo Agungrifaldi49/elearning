@@ -271,8 +271,7 @@ class ApiController {
                 ]);
                 break;
 
-            case 'learning_path':
-            case 'learningpath':
+            case 'deprecated_learning_path_old':
                 require_once ROOT_PATH . 'models/AcademicModel.php';
                 $academicModel = new AcademicModel();
 
@@ -1421,6 +1420,8 @@ class ApiController {
                 break;
 
             case 'learning_path':
+            case 'learningpath':
+            case 'alur_pembelajaran':
                 try {
                     $kelasId = intval($siswa['kelas_id'] ?? 0);
                     $siswaId = intval($siswa['id'] ?? 0);
