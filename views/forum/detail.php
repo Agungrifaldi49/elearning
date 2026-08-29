@@ -120,17 +120,15 @@
                     <h3 class="fw-bold mb-3 text-dark" style="font-size: 1.45rem; line-height: 1.4;"><?= htmlspecialchars($topic['judul']) ?></h3>
                     <div class="text-dark mb-4" style="white-space: pre-line; line-height: 1.8; font-size: 1rem; color: #334155;">
                         <?= htmlspecialchars($topic['konten']) ?>
-                    </div>
-
-                    <!-- Attached Image Preview Showcase -->
+                    </div>                    <!-- Attached Image Preview Showcase -->
                     <?php if (!empty($topic['gambar'])): 
                         $topicImgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $topic['gambar'])) 
                             ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($topic['gambar']) 
                             : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($topic['gambar']);
                     ?>
                         <div class="mb-4">
-                            <div class="forum-image-preview-wrapper shadow-sm" style="max-width: 540px;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
-                                <img src="<?= $topicImgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>';" alt="Lampiran Gambar Topik" style="max-height: 320px; object-fit: cover;">
+                            <div class="forum-image-preview-wrapper shadow-sm" style="max-width: 100%; max-height: 480px;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
+                                <img src="<?= $topicImgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>';" alt="Lampiran Gambar Topik" style="max-height: 460px; object-fit: contain; width: 100%; height: auto;">
                                 <div class="forum-image-overlay">
                                     <div class="lens-icon-btn"><i class="bi bi-zoom-in"></i></div>
                                 </div>
@@ -269,8 +267,8 @@
                                         $cmtImg = BASE_URL . 'assets/uploads/' . $cFolder . '/' . htmlspecialchars($c['gambar']);
                                     ?>
                                         <div class="mt-2">
-                                            <div class="forum-image-preview-wrapper shadow-sm d-inline-block" style="max-width: 320px;" onclick="openLightboxModal('<?= $cmtImg ?>', 'Lampiran Balasan Komentar')">
-                                                <img src="<?= $cmtImg ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($c['gambar']) ?>';" alt="Lampiran Balasan">
+                                            <div class="forum-image-preview-wrapper shadow-sm d-inline-block" style="max-width: 100%; max-height: 350px;" onclick="openLightboxModal('<?= $cmtImg ?>', 'Lampiran Balasan Komentar')">
+                                                <img src="<?= $cmtImg ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($c['gambar']) ?>';" alt="Lampiran Balasan" style="max-height: 330px; object-fit: contain; width: 100%; height: auto;">
                                                 <div class="forum-image-overlay">
                                                     <span><i class="bi bi-zoom-in me-1"></i> Perbesar</span>
                                                 </div>
@@ -280,7 +278,7 @@
                                 </div>
                             <?php endforeach; ?>
                         <?php endif; ?>
-                    </div>
+                    </div>               </div>
 
                     <!-- Bottom Reply Form Card -->
                     <div id="replyFormCard" class="border-top pt-4">
