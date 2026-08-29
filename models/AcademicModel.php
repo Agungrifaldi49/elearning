@@ -712,17 +712,34 @@ class AcademicModel extends BaseModel {
         $kelasIdVal = !empty($kelas_id) ? (int)$kelas_id : null;
         
         if ($kelasIdVal) {
-            $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND kelas_id = ?");
+            $chk = $this->db->prepare("SELECT id, enrollment_key FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND kelas_id = ?");
             $chk->execute([$mapel_id, $guru_id, $kelasIdVal]);
         } else {
-            $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND (kelas_id IS NULL OR kelas_id = 0)");
+            $chk = $this->db->prepare("SELECT id, enrollment_key FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND (kelas_id IS NULL OR kelas_id = 0)");
             $chk->execute([$mapel_id, $guru_id]);
         }
         $row = $chk->fetch();
 
         if ($row) {
+            $oldKey = strtoupper(trim($row['enrollment_key'] ?? ''));
             $stmt = $this->db->prepare("UPDATE mapel_enrollment_keys SET enrollment_key = ?, passcode = ?, kelas_id = ? WHERE id = ?");
-            return $stmt->execute([$cleanKey, $cleanKey, $kelasIdVal, $row['id']]);
+            $res = $stmt->execute([$cleanKey, $cleanKey, $kelasIdVal, $row['id']]);
+
+            // If Key is updated to a new value, automatically reset student enrollments for this mapel & class
+            if ($res && !empty($oldKey) && $oldKey !== $cleanKey) {
+                if ($kelasIdVal) {
+                    $del = $this->db->prepare("
+                        DELETE sme FROM siswa_mapel_enrollment sme
+                        JOIN siswa s ON sme.siswa_id = s.id
+                        WHERE sme.mapel_id = ? AND sme.guru_id = ? AND s.kelas_id = ?
+                    ");
+                    $del->execute([$mapel_id, $guru_id, $kelasIdVal]);
+                } else {
+                    $del = $this->db->prepare("DELETE FROM siswa_mapel_enrollment WHERE mapel_id = ? AND guru_id = ?");
+                    $del->execute([$mapel_id, $guru_id]);
+                }
+            }
+            return $res;
         } else {
             $stmt = $this->db->prepare("INSERT INTO mapel_enrollment_keys (mapel_id, guru_id, kelas_id, enrollment_key, passcode) VALUES (?, ?, ?, ?, ?)");
             return $stmt->execute([$mapel_id, $guru_id, $kelasIdVal, $cleanKey, $cleanKey]);
