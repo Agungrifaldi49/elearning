@@ -868,7 +868,8 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                     ),
                                   ),
                                 ),
-                              );
+                              ),
+                            );
                           },
                         ),
             ),
