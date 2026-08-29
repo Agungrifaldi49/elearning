@@ -692,8 +692,101 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     max-width: 100%;
     object-fit: contain;
     border-radius: 16px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
 }
 
+/* Sidebar & Multi-Column Grid Components */
+.forum-sidebar-card {
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    overflow: hidden;
+    transition: all 0.25s ease;
+}
 
+[data-bs-theme="dark"] .forum-sidebar-card {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+}
 
+.forum-sidebar-card .card-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+    padding: 16px 20px;
+}
+
+[data-bs-theme="dark"] .forum-sidebar-card .card-header {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.trending-topic-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+}
+
+.trending-topic-item:hover {
+    background: #f1f5f9;
+    transform: translateX(4px);
+    color: inherit;
+}
+
+[data-bs-theme="dark"] .trending-topic-item:hover {
+    background: #334155;
+}
+
+.trending-number {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #e0e7ff;
+    color: #4338ca;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.mapel-tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.mapel-tag-chip:hover {
+    background: #4f46e5;
+    color: #ffffff;
+    border-color: #4f46e5;
+    transform: translateY(-2px);
+}
+
+.forum-grid-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.forum-grid-card .forum-topic-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}

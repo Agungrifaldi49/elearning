@@ -29,199 +29,319 @@
                     </button>
                 </div>
             </div>
-        </div>
-
-        <!-- Filter & Search Toolbar -->
-        <div class="row g-3 mb-4 align-items-center">
-            <div class="col-md-6 col-lg-7">
-                <div class="d-flex align-items-center gap-2 overflow-auto py-1" id="forumFilterChips">
-                    <button class="forum-filter-chip active" data-filter="all">
-                        <i class="bi bi-grid-fill"></i> Semua Topik
-                    </button>
-                    <button class="forum-filter-chip" data-filter="public">
-                        <i class="bi bi-globe"></i> Publik
-                    </button>
-                    <button class="forum-filter-chip" data-filter="private">
-                        <i class="bi bi-lock-fill text-warning"></i> Privat
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-6 col-lg-5">
-                <div class="forum-search-box d-flex align-items-center">
-                    <i class="bi bi-search text-muted me-2 fs-6"></i>
-                    <input type="text" id="forumSearchInput" class="w-100" placeholder="Cari topik diskusi, pertanyaan, atau nama pembuat...">
-                    <button class="btn btn-sm btn-light rounded-circle p-1 text-muted d-none" id="clearSearchBtn" type="button">
-                        <i class="bi bi-x-circle-fill"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Forum Topics Container -->
-        <div class="row g-4" id="forumTopicsContainer">
-            <?php if (empty($topics)): ?>
-                <div class="col-12 text-center py-5 text-muted">
-                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-4 mb-3">
-                        <i class="bi bi-chat-square-quote-fill display-5"></i>
+        <!-- Layout Grid Multi-Kolom: Feed Utama (col-lg-8) + Sidebar Dashboard (col-lg-4) -->
+        <div class="row g-4">
+            <!-- Left Main Column: Filter Toolbar & Card Grid Feed -->
+            <div class="col-lg-8 col-xl-8">
+                <!-- Filter & Search Toolbar -->
+                <div class="row g-3 mb-4 align-items-center">
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center gap-2 overflow-auto py-1" id="forumFilterChips">
+                            <button class="forum-filter-chip active" data-filter="all">
+                                <i class="bi bi-grid-fill"></i> Semua
+                            </button>
+                            <button class="forum-filter-chip" data-filter="public">
+                                <i class="bi bi-globe"></i> Publik
+                            </button>
+                            <button class="forum-filter-chip" data-filter="private">
+                                <i class="bi bi-lock-fill text-warning"></i> Privat
+                            </button>
+                        </div>
                     </div>
-                    <h5 class="fw-bold mb-1">Belum Ada Topik Diskusi</h5>
-                    <p class="small mb-3">Jadilah yang pertama untuk memulai pertanyaan atau bahan diskusi baru!</p>
-                    <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalAddTopic">
-                        <i class="bi bi-plus-circle me-1"></i> Mulai Diskusi Pertama
-                    </button>
+                    <div class="col-md-6">
+                        <div class="forum-search-box d-flex align-items-center">
+                            <i class="bi bi-search text-muted me-2 fs-6"></i>
+                            <input type="text" id="forumSearchInput" class="w-100" placeholder="Cari topik diskusi atau nama pembuat...">
+                            <button class="btn btn-sm btn-light rounded-circle p-1 text-muted d-none" id="clearSearchBtn" type="button">
+                                <i class="bi bi-x-circle-fill"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-            <?php else: ?>
-                <?php foreach ($topics as $t): 
-                    $isAuthor = ((int)($t['user_id'] ?? 0) === (int)($user['id'] ?? 0));
-                    $isAdmin = (strtolower($user['role_name'] ?? '') === 'administrator');
-                    $canDelete = ($isAuthor || $isAdmin);
-                    $isPrivate = (($t['visibility'] ?? 'public') === 'private');
-                    $roleNameLower = strtolower($t['role_name'] ?? '');
-                    $ringClass = 'avatar-ring-siswa';
-                    if (str_contains($roleNameLower, 'admin')) {
-                        $ringClass = 'avatar-ring-admin';
-                    } else if (str_contains($roleNameLower, 'guru')) {
-                        $ringClass = 'avatar-ring-guru';
-                    }
-                ?>
-                    <div class="col-12 topic-card-item" data-topic-id="<?= $t['id'] ?>" data-visibility="<?= $t['visibility'] ?? 'public' ?>">
-                        <div class="forum-topic-card p-4">
-                            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                                <div class="d-flex align-items-center gap-3">
-                                    <div class="avatar-ring <?= $ringClass ?>">
-                                        <div class="avatar-inner">
-                                            <?= strtoupper(substr($t['full_name'], 0, 1)) ?>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="fw-bold mb-0 text-dark d-flex align-items-center gap-1 flex-wrap">
-                                            <span><?= htmlspecialchars($t['full_name']) ?></span>
-                                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.7rem; background:#e0e7ff; color:#3730a3;">
-                                                <?= htmlspecialchars($t['role_name']) ?>
-                                            </span>
-                                            <?php if ($isAuthor): ?>
-                                                <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1" style="font-size:0.65rem;">Saya</span>
-                                            <?php endif; ?>
-                                        </div>
-                                        <small class="text-muted">
-                                            <i class="bi bi-clock me-1"></i><?= date('d M Y, H:i', strtotime($t['created_at'])) ?> WIB
-                                            <?= $t['nama_mapel'] ? ' • <i class="bi bi-book text-primary me-1"></i>' . htmlspecialchars($t['nama_mapel']) : '' ?>
-                                        </small>
-                                    </div>
-                                </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <?php if ($isPrivate): ?>
-                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1 fw-semibold">
-                                            <i class="bi bi-lock-fill text-warning me-1"></i> Privat
-                                            <?php if (!empty($t['target_role'])): ?>
-                                                (<?= ucfirst(htmlspecialchars($t['target_role'])) ?>)
-                                            <?php endif; ?>
-                                            <?php if (!empty($t['target_nama_kelas'])): ?>
-                                                - <?= htmlspecialchars($t['target_nama_kelas']) ?>
-                                            <?php endif; ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-semibold">
-                                            <i class="bi bi-globe me-1"></i> Publik
-                                        </span>
-                                    <?php endif; ?>
 
-                                    <?php if ($canDelete): ?>
-                                        <button class="btn btn-outline-danger btn-sm rounded-circle p-2" title="Hapus Topik Diskusi" data-bs-toggle="modal" data-bs-target="#modalDeleteTopic<?= $t['id'] ?>">
-                                            <i class="bi bi-trash3"></i>
-                                        </button>
-                                    <?php endif; ?>
+                <!-- Forum Topics Container (2-Column Grid on Desktop) -->
+                <div class="row row-cols-1 row-cols-md-2 g-4" id="forumTopicsContainer">
+                    <?php if (empty($topics)): ?>
+                        <div class="col-12 text-center py-5 text-muted">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex p-4 mb-3">
+                                <i class="bi bi-chat-square-quote-fill display-5"></i>
+                            </div>
+                            <h5 class="fw-bold mb-1">Belum Ada Topik Diskusi</h5>
+                            <p class="small mb-3">Jadilah yang pertama untuk memulai pertanyaan atau bahan diskusi baru!</p>
+                            <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalAddTopic">
+                                <i class="bi bi-plus-circle me-1"></i> Mulai Diskusi Pertama
+                            </button>
+                        </div>
+                    <?php else: ?>
+                        <?php foreach ($topics as $t): 
+                            $isAuthor = ((int)($t['user_id'] ?? 0) === (int)($user['id'] ?? 0));
+                            $isAdmin = (strtolower($user['role_name'] ?? '') === 'administrator');
+                            $canDelete = ($isAuthor || $isAdmin);
+                            $isPrivate = (($t['visibility'] ?? 'public') === 'private');
+                            $roleNameLower = strtolower($t['role_name'] ?? '');
+                            $ringClass = 'avatar-ring-siswa';
+                            if (str_contains($roleNameLower, 'admin')) {
+                                $ringClass = 'avatar-ring-admin';
+                            } else if (str_contains($roleNameLower, 'guru')) {
+                                $ringClass = 'avatar-ring-guru';
+                            }
+                        ?>
+                            <div class="col topic-card-item" data-topic-id="<?= $t['id'] ?>" data-visibility="<?= $t['visibility'] ?? 'public' ?>">
+                                <div class="forum-topic-card p-4 h-100 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="avatar-ring <?= $ringClass ?>" style="padding:1px;">
+                                                    <div class="avatar-inner" style="width:36px; height:36px; font-size:0.9rem;">
+                                                        <?= strtoupper(substr($t['full_name'], 0, 1)) ?>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold mb-0 text-dark small d-flex align-items-center gap-1 flex-wrap">
+                                                        <span><?= htmlspecialchars($t['full_name']) ?></span>
+                                                        <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">
+                                                            <?= htmlspecialchars($t['role_name']) ?>
+                                                        </span>
+                                                    </div>
+                                                    <small class="text-muted" style="font-size:0.75rem;">
+                                                        <i class="bi bi-clock me-1"></i><?= date('d M, H:i', strtotime($t['created_at'])) ?>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <?php if ($isPrivate): ?>
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1 small">
+                                                        <i class="bi bi-lock-fill text-warning me-1"></i> Privat
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
+                                                        <i class="bi bi-globe me-1"></i> Publik
+                                                    </span>
+                                                <?php endif; ?>
+
+                                                <?php if ($canDelete): ?>
+                                                    <button class="btn btn-outline-danger btn-sm rounded-circle p-1" title="Hapus Topik Diskusi" data-bs-toggle="modal" data-bs-target="#modalDeleteTopic<?= $t['id'] ?>" style="width:28px; height:28px; line-height:1;">
+                                                        <i class="bi bi-trash3" style="font-size:0.75rem;"></i>
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+
+                                        <h6 class="fw-bold mb-2">
+                                            <a href="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $t['id'] ?>" class="text-decoration-none text-dark hover-primary">
+                                                <?= htmlspecialchars($t['judul']) ?>
+                                            </a>
+                                        </h6>
+                                        <p class="text-secondary mb-3 small" style="line-height: 1.5; font-size:0.88rem; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+                                            <?= htmlspecialchars(substr($t['konten'], 0, 160)) ?><?= strlen($t['konten']) > 160 ? '...' : '' ?>
+                                        </p>
+
+                                        <?php if (!empty($t['gambar'])): 
+                                            $imgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $t['gambar'])) 
+                                                ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($t['gambar']) 
+                                                : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($t['gambar']);
+                                        ?>
+                                            <div class="mb-3">
+                                                <div class="forum-image-preview-wrapper" style="height:160px; max-width:100%;" onclick="openLightboxModal('<?= $imgPath ?>', '<?= htmlspecialchars(addslashes($t['judul'])) ?>')">
+                                                    <img src="<?= $imgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['gambar']) ?>';" alt="Lampiran Gambar Forum">
+                                                    <div class="forum-image-overlay" style="font-size:0.75rem;">
+                                                        <i class="bi bi-zoom-in me-1"></i> Perbesar Gambar
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div>
+                                        <!-- Multi-Emoji Reaction Bar -->
+                                        <?php 
+                                            $reactionMap = [
+                                                ['type' => 'love', 'emoji' => '❤️', 'label' => 'Love'],
+                                                ['type' => 'like', 'emoji' => '👍', 'label' => 'Jempol'],
+                                                ['type' => 'laugh', 'emoji' => '😂', 'label' => 'Ketawa'],
+                                                ['type' => 'sad', 'emoji' => '😢', 'label' => 'Sedih'],
+                                                ['type' => 'wow', 'emoji' => '😮', 'label' => 'Kaget'],
+                                                ['type' => 'fire', 'emoji' => '🔥', 'label' => 'Menyala']
+                                            ];
+                                            $rc = $t['reactions'] ?? ['love'=>0,'like'=>0,'laugh'=>0,'sad'=>0,'wow'=>0,'fire'=>0,'my_reaction'=>null];
+                                        ?>
+                                        <div class="pt-2 mb-2 border-top">
+                                            <div class="reaction-bar d-flex flex-wrap align-items-center" data-forum-id="<?= $t['id'] ?>">
+                                                <?php foreach ($reactionMap as $r): ?>
+                                                    <?php 
+                                                        $count = $rc[$r['type']] ?? 0;
+                                                        $isActive = (($rc['my_reaction'] ?? '') === $r['type']);
+                                                        $btnClass = $isActive ? 'btn-primary-subtle border-primary text-primary fw-bold shadow-sm' : 'btn-light border-0 text-secondary';
+                                                    ?>
+                                                    <button type="button" class="btn btn-sm <?= $btnClass ?> rounded-pill px-2 py-0 me-1 mb-1 btn-emoji-react" style="font-size:0.75rem;" 
+                                                            onclick="ForumApp.toggleReaction(<?= $t['id'] ?>, '<?= $r['type'] ?>')" 
+                                                            title="<?= $r['label'] ?>">
+                                                        <span><?= $r['emoji'] ?></span>
+                                                        <span class="small"><?= $count > 0 ? $count : '' ?></span>
+                                                    </button>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex align-items-center justify-content-between pt-2 border-top">
+                                            <a href="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $t['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.8rem;">
+                                                <i class="bi bi-chat-text-fill me-1"></i> <?= $t['total_replies'] ?> Balasan
+                                            </a>
+                                            <?php if ($t['nama_mapel']): ?>
+                                                <span class="small text-muted" style="font-size:0.75rem;" title="<?= htmlspecialchars($t['nama_mapel']) ?>">
+                                                    <i class="bi bi-journal-text text-primary me-1"></i><?= htmlspecialchars(substr($t['nama_mapel'], 0, 14)) ?><?= strlen($t['nama_mapel']) > 14 ? '..' : '' ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <h5 class="fw-bold mb-2">
-                                <a href="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $t['id'] ?>" class="text-decoration-none text-dark hover-primary">
-                                    <?= htmlspecialchars($t['judul']) ?>
-                                </a>
-                            </h5>
-                            <p class="text-secondary mb-3 fs-6" style="line-height: 1.6;"><?= htmlspecialchars(substr($t['konten'], 0, 240)) ?><?= strlen($t['konten']) > 240 ? '...' : '' ?></p>
-
-                            <?php if (!empty($t['gambar'])): 
-                                $imgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $t['gambar'])) 
-                                    ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($t['gambar']) 
-                                    : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($t['gambar']);
-                            ?>
-                                <div class="mb-3">
-                                    <div class="forum-image-preview-wrapper" onclick="openLightboxModal('<?= $imgPath ?>', '<?= htmlspecialchars(addslashes($t['judul'])) ?>')">
-                                        <img src="<?= $imgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['gambar']) ?>';" alt="Lampiran Gambar Forum">
-                                        <div class="forum-image-overlay">
-                                            <i class="bi bi-zoom-in fs-4"></i> Klik untuk memperbesar gambar
+                            <?php if ($canDelete): ?>
+                                <!-- Modal Delete Topic -->
+                                <div class="modal fade" id="modalDeleteTopic<?= $t['id'] ?>" tabindex="-1">
+                                    <div class="modal-dialog modal-dialog-centered modal-sm">
+                                        <div class="modal-content border-0 rounded-4 shadow-lg">
+                                            <div class="modal-body text-center p-4">
+                                                <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex p-3 mb-3">
+                                                    <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                                                </div>
+                                                <h6 class="fw-bold mb-2">Hapus Topik Diskusi?</h6>
+                                                <p class="small text-muted mb-4">Apakah Anda yakin ingin menghapus topik <strong>"<?= htmlspecialchars($t['judul']) ?>"</strong>? Seluruh balasan komentar akan ikut terhapus secara permanen.</p>
+                                                <form action="<?= BASE_URL ?>index.php?url=forum" method="POST">
+                                                    <?= Security::csrfField() ?>
+                                                    <input type="hidden" name="action" value="delete">
+                                                    <input type="hidden" name="topic_id" value="<?= $t['id'] ?>">
+                                                    <div class="d-flex gap-2">
+                                                        <button type="button" class="btn btn-light w-100 rounded-pill" data-bs-dismiss="modal">Batal</button>
+                                                        <button type="submit" class="btn btn-danger w-100 rounded-pill">Ya, Hapus</button>
+                                                    </div>
+                                                </form>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             <?php endif; ?>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
 
-                            <!-- Multi-Emoji Reaction Bar -->
+            <!-- Right Column: Forum Dashboard Sidebar Widgets -->
+            <div class="col-lg-4 col-xl-4">
+                <div class="d-flex flex-column gap-4">
+
+                    <!-- Widget 1: Topik Trending 🔥 -->
+                    <div class="forum-sidebar-card">
+                        <div class="card-header d-flex align-items-center justify-content-between">
+                            <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                                <i class="bi bi-fire text-danger fs-5"></i> Topik Popular & Trending
+                            </h6>
+                            <span class="badge bg-danger-subtle text-danger rounded-pill px-2 py-1 small">🔥 Hot</span>
+                        </div>
+                        <div class="p-3 d-flex flex-column gap-2">
                             <?php 
-                                $reactionMap = [
-                                    ['type' => 'love', 'emoji' => '❤️', 'label' => 'Love'],
-                                    ['type' => 'like', 'emoji' => '👍', 'label' => 'Jempol'],
-                                    ['type' => 'laugh', 'emoji' => '😂', 'label' => 'Ketawa'],
-                                    ['type' => 'sad', 'emoji' => '😢', 'label' => 'Sedih'],
-                                    ['type' => 'wow', 'emoji' => '😮', 'label' => 'Kaget'],
-                                    ['type' => 'fire', 'emoji' => '🔥', 'label' => 'Menyala']
-                                ];
-                                $rc = $t['reactions'] ?? ['love'=>0,'like'=>0,'laugh'=>0,'sad'=>0,'wow'=>0,'fire'=>0,'my_reaction'=>null];
+                                $trendingTopics = $topics;
+                                usort($trendingTopics, function($a, $b) {
+                                    return ($b['total_replies'] ?? 0) <=> ($a['total_replies'] ?? 0);
+                                });
+                                $trendingList = array_slice($trendingTopics, 0, 4);
+                                $rank = 1;
                             ?>
-                            <div class="pt-2 mb-3 border-top">
-                                <div class="reaction-bar d-flex flex-wrap align-items-center" data-forum-id="<?= $t['id'] ?>">
-                                    <?php foreach ($reactionMap as $r): ?>
-                                        <?php 
-                                            $count = $rc[$r['type']] ?? 0;
-                                            $isActive = (($rc['my_reaction'] ?? '') === $r['type']);
-                                            $btnClass = $isActive ? 'btn-primary-subtle border-primary text-primary fw-bold shadow-sm' : 'btn-light border-0 text-secondary';
-                                        ?>
-                                        <button type="button" class="btn btn-sm <?= $btnClass ?> rounded-pill px-2 py-1 me-1 mb-1 btn-emoji-react" 
-                                                onclick="ForumApp.toggleReaction(<?= $t['id'] ?>, '<?= $r['type'] ?>')" 
-                                                title="<?= $r['label'] ?>">
-                                            <span class="fs-6 me-1"><?= $r['emoji'] ?></span>
-                                            <span class="small"><?= $count > 0 ? $count : '' ?></span>
-                                        </button>
-                                    <?php endforeach; ?>
-                                </div>
-                            </div>
-
-                            <div class="d-flex align-items-center justify-content-between pt-3 border-top flex-wrap gap-2">
-                                <a href="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $t['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-4 py-2 fw-semibold">
-                                    <i class="bi bi-chat-text-fill me-1"></i> <?= $t['total_replies'] ?> Balasan Diskusi
-                                </a>
-                                <span class="small text-muted"><i class="bi bi-calendar3 me-1"></i> <?= date('d F Y', strtotime($t['created_at'])) ?></span>
-                            </div>
+                            <?php if (empty($trendingList)): ?>
+                                <div class="text-muted small text-center py-3">Belum ada aktivitas diskusi.</div>
+                            <?php else: ?>
+                                <?php foreach ($trendingList as $tr): ?>
+                                    <a href="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $tr['id'] ?>" class="trending-topic-item">
+                                        <div class="trending-number"><?= $rank++ ?></div>
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <div class="fw-bold small text-dark text-truncate" style="font-size:0.88rem;">
+                                                <?= htmlspecialchars($tr['judul']) ?>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2 text-muted small mt-1" style="font-size:0.75rem;">
+                                                <span><i class="bi bi-chat-text text-primary me-1"></i><?= $tr['total_replies'] ?> balasan</span>
+                                                <span>•</span>
+                                                <span><i class="bi bi-person text-secondary me-1"></i><?= htmlspecialchars($tr['full_name']) ?></span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
 
-                    <?php if ($canDelete): ?>
-                        <!-- Modal Delete Topic -->
-                        <div class="modal fade" id="modalDeleteTopic<?= $t['id'] ?>" tabindex="-1">
-                            <div class="modal-dialog modal-dialog-centered modal-sm">
-                                <div class="modal-content border-0 rounded-4 shadow-lg">
-                                    <div class="modal-body text-center p-4">
-                                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex p-3 mb-3">
-                                            <i class="bi bi-exclamation-triangle-fill fs-3"></i>
-                                        </div>
-                                        <h6 class="fw-bold mb-2">Hapus Topik Diskusi?</h6>
-                                        <p class="small text-muted mb-4">Apakah Anda yakin ingin menghapus topik <strong>"<?= htmlspecialchars($t['judul']) ?>"</strong>? Seluruh balasan komentar akan ikut terhapus secara permanen.</p>
-                                        <form action="<?= BASE_URL ?>index.php?url=forum" method="POST">
-                                            <?= Security::csrfField() ?>
-                                            <input type="hidden" name="action" value="delete">
-                                            <input type="hidden" name="topic_id" value="<?= $t['id'] ?>">
-                                            <div class="d-flex gap-2">
-                                                <button type="button" class="btn btn-light w-100 rounded-pill" data-bs-dismiss="modal">Batal</button>
-                                                <button type="submit" class="btn btn-danger w-100 rounded-pill">Ya, Hapus</button>
-                                            </div>
-                                        </form>
+                    <!-- Widget 2: Statistik Forum & Komunitas 📊 -->
+                    <div class="forum-sidebar-card">
+                        <div class="card-header">
+                            <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                                <i class="bi bi-bar-chart-line-fill text-primary"></i> Statistik Komunitas KBM
+                            </h6>
+                        </div>
+                        <div class="p-3">
+                            <div class="row g-2 text-center">
+                                <div class="col-6">
+                                    <div class="p-3 bg-light rounded-4 border">
+                                        <div class="fs-4 fw-bold text-primary"><?= count($topics) ?></div>
+                                        <div class="small text-muted" style="font-size:0.75rem;">Total Diskusi</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="p-3 bg-light rounded-4 border">
+                                        <?php 
+                                            $totalRepliesAll = array_sum(array_column($topics, 'total_replies'));
+                                        ?>
+                                        <div class="fs-4 fw-bold text-success"><?= $totalRepliesAll ?></div>
+                                        <div class="small text-muted" style="font-size:0.75rem;">Total Tanggapan</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    <?php endif; ?>
-                <?php endforeach; ?>
-            <?php endif; ?>
+                    </div>
+
+                    <!-- Widget 3: Filter Kategori Mata Pelajaran 📚 -->
+                    <div class="forum-sidebar-card">
+                        <div class="card-header">
+                            <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                                <i class="bi bi-bookmarks-fill text-indigo" style="color:#6366f1;"></i> Kategori Mata Pelajaran
+                            </h6>
+                        </div>
+                        <div class="p-3">
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="mapel-tag-chip active" onclick="document.getElementById('forumSearchInput').value=''; ForumApp.fetchTopics();">
+                                    <i class="bi bi-collection-fill"></i> Semua Mapel
+                                </span>
+                                <span class="mapel-tag-chip" onclick="document.getElementById('forumSearchInput').value='Matematika'; ForumApp.fetchTopics();">
+                                    📘 Matematika
+                                </span>
+                                <span class="mapel-tag-chip" onclick="document.getElementById('forumSearchInput').value='Pemrograman'; ForumApp.fetchTopics();">
+                                    💻 Pemrograman Web
+                                </span>
+                                <span class="mapel-tag-chip" onclick="document.getElementById('forumSearchInput').value='Bahasa'; ForumApp.fetchTopics();">
+                                    📖 Bahasa Indonesia
+                                </span>
+                                <span class="mapel-tag-chip" onclick="document.getElementById('forumSearchInput').value='Inggris'; ForumApp.fetchTopics();">
+                                    🌐 Bahasa Inggris
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Widget 4: Panduan Etika Diskusi 💡 -->
+                    <div class="forum-sidebar-card border-0 bg-primary bg-opacity-10">
+                        <div class="p-4">
+                            <h6 class="fw-bold text-primary mb-2 d-flex align-items-center gap-2">
+                                <i class="bi bi-lightbulb-fill text-warning"></i> Etika Berdiskusi Pembelajaran
+                            </h6>
+                            <ul class="mb-0 ps-3 text-secondary small" style="line-height: 1.6; font-size: 0.82rem;">
+                                <li class="mb-1">Gunakan bahasa yang sopan, santun, dan komunikatif.</li>
+                                <li class="mb-1">Sertakan lampiran gambar screenshot jika menemukan soal/kendala.</li>
+                                <li>Saling mengapresiasi solusi dan jawaban teman sejawat.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
         </div>
     </div>
 </main>

@@ -310,70 +310,75 @@ const ForumApp = {
             ` : '';
 
             return `
-                <div class="col-12 topic-card-item" data-topic-id="${t.id}" data-visibility="${t.visibility || 'public'}">
-                    <div class="forum-topic-card p-4">
-                        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-ring ${ringClass}">
-                                    <div class="avatar-inner">
-                                        ${initial}
+                <div class="col topic-card-item" data-topic-id="${t.id}" data-visibility="${t.visibility || 'public'}">
+                    <div class="forum-topic-card p-4 h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar-ring ${ringClass}" style="padding:1px;">
+                                        <div class="avatar-inner" style="width:36px; height:36px; font-size:0.9rem;">
+                                            ${initial}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold mb-0 text-dark small d-flex align-items-center gap-1 flex-wrap">
+                                            <span>${t.full_name}</span>
+                                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">
+                                                ${t.role_name}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted" style="font-size:0.75rem;">
+                                            <i class="bi bi-clock me-1"></i>${t.created_at}
+                                        </small>
                                     </div>
                                 </div>
-                                <div>
-                                    <div class="fw-bold mb-0 text-dark d-flex align-items-center gap-1 flex-wrap">
-                                        <span>${t.full_name}</span>
-                                        <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.7rem; background:#e0e7ff; color:#3730a3;">
-                                            ${t.role_name}
+                                <div class="d-flex align-items-center gap-1">
+                                    ${isPrivate ? `
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1 small">
+                                            <i class="bi bi-lock-fill text-warning me-1"></i> Privat
                                         </span>
-                                    </div>
-                                    <small class="text-muted">
-                                        <i class="bi bi-clock me-1"></i>${t.created_at} 
-                                        ${t.nama_mapel ? ' • <i class="bi bi-book text-primary me-1"></i>' + t.nama_mapel : ''}
-                                    </small>
+                                    ` : `
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
+                                            <i class="bi bi-globe me-1"></i> Publik
+                                        </span>
+                                    `}
+
+                                    ${t.can_delete ? `
+                                        <button class="btn btn-outline-danger btn-sm rounded-circle p-1" title="Hapus Topik Diskusi" onclick="ForumApp.deleteTopic(${t.id}, '${document.querySelector('input[name=csrf_token]') ? document.querySelector('input[name=csrf_token]').value : ''}')" style="width:28px; height:28px; line-height:1;">
+                                            <i class="bi bi-trash3" style="font-size:0.75rem;"></i>
+                                        </button>
+                                    ` : ''}
                                 </div>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
-                                ${isPrivate ? `
-                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1 fw-semibold">
-                                        <i class="bi bi-lock-fill text-warning me-1"></i> Privat
-                                        ${t.target_role ? `(${t.target_role})` : ''}
-                                        ${t.target_nama_kelas ? `- ${t.target_nama_kelas}` : ''}
-                                    </span>
-                                ` : `
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-semibold">
-                                        <i class="bi bi-globe me-1"></i> Publik
-                                    </span>
-                                `}
 
-                                ${t.can_delete ? `
-                                    <button class="btn btn-outline-danger btn-sm rounded-circle p-2" title="Hapus Topik Diskusi" onclick="ForumApp.deleteTopic(${t.id}, '${document.querySelector('input[name=csrf_token]') ? document.querySelector('input[name=csrf_token]').value : ''}')">
-                                        <i class="bi bi-trash3"></i>
-                                    </button>
+                            <h6 class="fw-bold mb-2">
+                                <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="text-decoration-none text-dark hover-primary">
+                                    ${t.judul}
+                                </a>
+                            </h6>
+                            <p class="text-secondary mb-3 small" style="line-height: 1.5; font-size:0.88rem; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${t.konten_preview}...</p>
+
+                            ${imgHtml}
+                        </div>
+
+                        <div>
+                            <!-- Multi-Emoji Reaction Bar -->
+                            <div class="pt-2 mb-2 border-top">
+                                <div class="reaction-bar d-flex flex-wrap align-items-center" data-forum-id="${t.id}">
+                                    ${reactionButtons}
+                                </div>
+                            </div>
+
+                            <div class="d-flex align-items-center justify-content-between pt-2 border-top">
+                                <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.8rem;">
+                                    <i class="bi bi-chat-text-fill me-1"></i> ${t.total_replies} Balasan
+                                </a>
+                                ${t.nama_mapel ? `
+                                    <span class="small text-muted" style="font-size:0.75rem;" title="${t.nama_mapel}">
+                                        <i class="bi bi-journal-text text-primary me-1"></i>${t.nama_mapel.substring(0, 14)}${t.nama_mapel.length > 14 ? '..' : ''}
+                                    </span>
                                 ` : ''}
                             </div>
-                        </div>
-
-                        <h5 class="fw-bold mb-2">
-                            <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="text-decoration-none text-dark hover-primary">
-                                ${t.judul}
-                            </a>
-                        </h5>
-                        <p class="text-secondary mb-3 fs-6" style="line-height: 1.6;">${t.konten_preview}...</p>
-
-                        ${imgHtml}
-
-                        <!-- Multi-Emoji Reaction Bar -->
-                        <div class="mb-3 pt-2 border-top">
-                            <div class="reaction-bar d-flex flex-wrap align-items-center" data-forum-id="${t.id}">
-                                ${reactionButtons}
-                            </div>
-                        </div>
-
-                        <div class="d-flex align-items-center justify-content-between pt-3 border-top flex-wrap gap-2">
-                            <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="btn btn-sm btn-primary rounded-pill px-4 py-2 fw-semibold">
-                                <i class="bi bi-chat-text-fill me-1"></i> ${t.total_replies} Balasan Diskusi
-                            </a>
-                            <span class="small text-muted"><i class="bi bi-clock me-1"></i> Diposting ${t.posted_time || ''} WIB</span>
                         </div>
                     </div>
                 </div>
