@@ -172,18 +172,47 @@
 
                 <!-- Comments Thread Section -->
                 <div class="card border-0 rounded-4 p-4 p-md-5 mb-4 shadow-sm bg-white">
-                    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 pb-3 border-bottom">
-                        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
-                            <i class="bi bi-chat-left-dots-fill text-primary"></i> 
-                            Tanggapan & Solusi Akademik
-                        </h5>
-                        <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">
-                            <span id="commentCountBadge"><?= count($comments) ?></span> Balasan
-                        </span>
+                    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 pb-3 border-bottom">
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                                <i class="bi bi-chat-left-dots-fill text-primary"></i> 
+                                Tanggapan & Solusi Akademik
+                            </h5>
+                            <span class="badge bg-primary rounded-pill px-3 py-1 fs-6 ms-1">
+                                <span id="commentCountBadge"><?= count($comments) ?></span> Balasan
+                            </span>
+                        </div>
+
+                        <!-- Quick Action Button to Open Quick Reply Modal -->
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalQuickReply">
+                            <i class="bi bi-lightning-charge-fill me-1 text-warning"></i> Balas Cepat
+                        </button>
                     </div>
 
-                    <!-- Comments List Thread Container -->
-                    <div class="d-flex flex-column gap-3 mb-4" id="commentsListContainer">
+                    <!-- Comment Filter & Sort Toolbar -->
+                    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 p-2 bg-light rounded-3 border">
+                        <div class="d-flex align-items-center gap-1 overflow-auto" id="commentFilterChips">
+                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 active" onclick="ForumApp.filterComments('all')">
+                                <i class="bi bi-grid-fill me-1"></i> Semua
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1 text-dark" onclick="ForumApp.filterComments('guru')">
+                                <i class="bi bi-person-badge-fill me-1 text-warning"></i> Solusi Guru
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light border rounded-pill px-3 py-1 text-dark" onclick="ForumApp.filterComments('image')">
+                                <i class="bi bi-image me-1 text-info"></i> Lampiran Foto
+                            </button>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <small class="text-muted fw-semibold">Urutan:</small>
+                            <select id="commentSortSelect" class="form-select form-select-sm rounded-pill border-secondary-subtle" style="width: auto; font-size:0.8rem;" onchange="ForumApp.sortComments(this.value)">
+                                <option value="oldest">Terlama (#1 Dulu)</option>
+                                <option value="newest">Terbaru di Atas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Comments Thread Box (Max-Height 650px for 100+ Replies) -->
+                    <div class="d-flex flex-column gap-3 mb-4 pe-1" id="commentsListContainer" style="max-height: 650px; overflow-y: auto; scroll-behavior: smooth;">
                         <?php if (empty($comments)): ?>
                             <div class="p-5 text-center text-muted rounded-4 bg-light">
                                 <i class="bi bi-chat-square-text-fill fs-1 mb-3 text-primary opacity-50 d-block"></i>
@@ -191,16 +220,25 @@
                                 <p class="small mb-0 text-secondary">Berikan solusi atau penjelasan pertama untuk membantu pertanyaan di atas!</p>
                             </div>
                         <?php else: ?>
-                            <?php foreach ($comments as $c): 
-                                $cRoleLower = strtolower($c['role_name'] ?? '');
-                                $cRingClass = 'avatar-ring-siswa';
-                                if (str_contains($cRoleLower, 'admin')) {
-                                    $cRingClass = 'avatar-ring-admin';
-                                } else if (str_contains($cRoleLower, 'guru')) {
-                                    $cRingClass = 'avatar-ring-guru';
-                                }
+                            <?php 
+                                $cmtIndex = 1;
+                                foreach ($comments as $c): 
+                                    $cRoleLower = strtolower($c['role_name'] ?? '');
+                                    $cRingClass = 'avatar-ring-siswa';
+                                    $cardAccentClass = 'comment-card-siswa';
+                                    $roleBadge = '<span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">Siswa</span>';
+
+                                    if (str_contains($cRoleLower, 'admin')) {
+                                        $cRingClass = 'avatar-ring-admin';
+                                        $cardAccentClass = 'comment-card-admin';
+                                        $roleBadge = '<span class="badge bg-purple-subtle text-purple rounded-pill px-2 py-0" style="font-size:0.65rem; background:#f3e8ff; color:#6b21a8;"><i class="bi bi-shield-check me-1"></i>Administrator</span>';
+                                    } else if (str_contains($cRoleLower, 'guru')) {
+                                        $cRingClass = 'avatar-ring-guru';
+                                        $cardAccentClass = 'comment-card-guru';
+                                        $roleBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0" style="font-size:0.65rem;"><i class="bi bi-award-fill me-1 text-warning"></i>Solusi Pengajar</span>';
+                                    }
                             ?>
-                                <div class="comment-card-item shadow-sm" data-comment-id="<?= $c['id'] ?>">
+                                <div class="comment-card-item <?= $cardAccentClass ?> shadow-sm" data-comment-id="<?= $c['id'] ?>" data-role="<?= $cRoleLower ?>" data-has-image="<?= !empty($c['gambar']) ? 'true' : 'false' ?>">
                                     <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-1">
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="avatar-ring <?= $cRingClass ?>" style="padding:1px;">
@@ -208,13 +246,23 @@
                                                     <?= strtoupper(substr($c['full_name'], 0, 1)) ?>
                                                 </div>
                                             </div>
-                                            <span class="fw-bold small text-dark"><?= htmlspecialchars($c['full_name']) ?></span>
-                                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">
-                                                <?= htmlspecialchars($c['role_name']) ?>
-                                            </span>
+                                            <div>
+                                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                    <span class="fw-bold small text-dark"><?= htmlspecialchars($c['full_name']) ?></span>
+                                                    <?= $roleBadge ?>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-clock me-1"></i><?= date('d/m/Y H:i', strtotime($c['created_at'])) ?></small>
+
+                                        <div class="d-flex align-items-center gap-2">
+                                            <small class="text-muted me-1" style="font-size:0.73rem;"><i class="bi bi-clock me-1"></i><?= date('d/m/Y H:i', strtotime($c['created_at'])) ?></small>
+                                            <span class="comment-number-badge">#<?= $cmtIndex++ ?></span>
+                                            <button type="button" class="btn btn-sm btn-light border comment-quote-btn" onclick="ForumApp.quoteComment('<?= htmlspecialchars(addslashes($c['full_name'])) ?>', <?= $cmtIndex - 1 ?>)" title="Kutip Balasan Ini">
+                                                <i class="bi bi-quote"></i> Kutip
+                                            </button>
+                                        </div>
                                     </div>
+
                                     <p class="mb-2 text-dark small" style="white-space: pre-line; line-height:1.65; font-size:0.92rem; color: #334155;"><?= htmlspecialchars($c['komentar']) ?></p>
                                     
                                     <?php if (!empty($c['gambar'])): 
@@ -225,7 +273,7 @@
                                             <div class="forum-image-preview-wrapper d-inline-block" style="max-width: 280px; height: 160px; border-radius:12px;" onclick="openLightboxModal('<?= $cmtImg ?>', 'Lampiran Balasan Komentar')">
                                                 <img src="<?= $cmtImg ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($c['gambar']) ?>';" class="img-fluid rounded-3 border" style="height: 100%; object-fit: cover;" alt="Lampiran Balasan">
                                                 <div class="forum-image-overlay" style="font-size:0.75rem;">
-                                                    <i class="bi bi-zoom-in"></i> Perbesar
+                                                    <i class="bi bi-zoom-in me-1"></i> Perbesar
                                                 </div>
                                             </div>
                                         </div>
@@ -235,11 +283,16 @@
                         <?php endif; ?>
                     </div>
 
-                    <!-- Elevated Floating Reply Form Card -->
+                    <!-- Elevated Bottom Reply Form Card -->
                     <div id="replyFormCard" class="border-top pt-4">
-                        <div class="bg-light p-4 rounded-4 border">
-                            <h6 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
-                                <i class="bi bi-reply-fill text-primary fs-5"></i> Berikan Tanggapan atau Solusi Pembelajaran
+                        <div class="bg-light p-4 rounded-4 border shadow-sm">
+                            <h6 class="fw-bold mb-3 text-dark d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <span class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-reply-fill text-primary fs-5"></i> Berikan Tanggapan atau Solusi Pembelajaran
+                                </span>
+                                <span class="small text-muted fw-normal" style="font-size:0.78rem;">
+                                    Membalas sebagai: <strong><?= htmlspecialchars($user['full_name'] ?? 'Pengguna') ?></strong> (<?= htmlspecialchars($user['role_name'] ?? 'User') ?>)
+                                </span>
                             </h6>
                             <form id="commentReplyForm" enctype="multipart/form-data">
                                 <?= Security::csrfField() ?>
@@ -357,6 +410,64 @@
     </div>
 </main>
 
+<!-- Modal Quick Reply (Balas Cepat Tanpa Scroll) -->
+<div class="modal fade" id="modalQuickReply" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <h5 class="fw-bold modal-title d-flex align-items-center gap-2">
+                    <span class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-inline-flex">
+                        <i class="bi bi-lightning-charge-fill text-warning"></i>
+                    </span>
+                    Balas Cepat Diskusi
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="quickReplyForm" enctype="multipart/form-data">
+                <div class="modal-body px-4 py-3">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="forum_id" value="<?= $topic['id'] ?>">
+
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <div class="small text-muted mb-1">Membalas Topik:</div>
+                        <div class="fw-bold text-dark text-truncate"><?= htmlspecialchars($topic['judul']) ?></div>
+                    </div>
+
+                    <div class="mb-3 position-relative">
+                        <label class="form-label small fw-semibold">Isi Balasan / Solusi Akademik <span class="text-danger">*</span></label>
+                        <textarea name="komentar" id="quickReplyKomentarInput" class="form-control rounded-3" rows="4" placeholder="Tuliskan jawaban atau solusi Anda di sini..." required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Lampiran Gambar Screenshot (Opsional)</label>
+                        <input type="file" name="gambar" id="quickReplyImageInput" class="form-control rounded-3" accept="image/*" onchange="previewImageInput(this, 'quickReplyImagePreview', 'quickReplyImageContainer')">
+                        <div id="quickReplyImageContainer" class="mt-2 d-none position-relative">
+                            <img id="quickReplyImagePreview" src="" class="img-fluid rounded-3 border shadow-sm" style="max-height: 160px; object-fit: cover;">
+                            <button type="button" class="btn btn-danger btn-sm rounded-circle position-absolute top-0 start-0 m-1 p-1" onclick="clearImageInput('quickReplyImageInput', 'quickReplyImageContainer')">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Kirim Balasan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Sticky Floating Action Buttons for 100+ Replies -->
+<div class="forum-floating-actions">
+    <button type="button" class="floating-btn-reply" data-bs-toggle="modal" data-bs-target="#modalQuickReply" title="Balas Cepat Diskusi (Tanpa Scroll)">
+        <i class="bi bi-chat-left-text-fill"></i>
+    </button>
+    <button type="button" class="floating-btn-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Kembali ke Atas">
+        <i class="bi bi-arrow-up-short fs-4"></i>
+    </button>
+</div>
+
 <!-- Image Lightbox Zoom Modal -->
 <div class="modal fade lightbox-modal" id="globalLightboxModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -378,6 +489,7 @@ function openLightboxModal(src, title) {
     const imgElem = document.getElementById('lightboxImage');
     const titleElem = document.getElementById('lightboxTitle');
     if (modalElem && imgElem) {
+
         imgElem.src = src;
         if (titleElem) titleElem.textContent = title || 'Pratinjau Gambar';
         const bsModal = new bootstrap.Modal(modalElem);

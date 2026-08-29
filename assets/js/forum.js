@@ -429,62 +429,171 @@ const ForumApp = {
 
         if (!comments || comments.length === 0) {
             container.innerHTML = `
-                <div class="p-4 text-center text-muted rounded-4 bg-light">
-                    <i class="bi bi-chat-left-text fs-2 mb-2 d-block opacity-50"></i>
-                    <p class="mb-0">Belum ada tanggapan balasan pada topik ini. Berikan solusi atau jawaban Anda!</p>
+                <div class="p-5 text-center text-muted rounded-4 bg-light">
+                    <i class="bi bi-chat-square-text-fill fs-1 mb-3 text-primary opacity-50 d-block"></i>
+                    <h6 class="fw-bold mb-1">Belum Ada Tanggapan</h6>
+                    <p class="small mb-0 text-secondary">Berikan solusi atau penjelasan pertama untuk membantu pertanyaan di atas!</p>
                 </div>
             `;
             return;
         }
 
+        let cmtIndex = 1;
         const html = comments.map(c => {
             const initial = c.full_name ? c.full_name.charAt(0).toUpperCase() : 'U';
             const roleLower = (c.role_name || '').toLowerCase();
             let cRingClass = 'avatar-ring-siswa';
-            if (roleLower.includes('admin')) cRingClass = 'avatar-ring-admin';
-            else if (roleLower.includes('guru')) cRingClass = 'avatar-ring-guru';
+            let cardAccentClass = 'comment-card-siswa';
+            let roleBadge = '<span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">Siswa</span>';
+
+            if (roleLower.includes('admin')) {
+                cRingClass = 'avatar-ring-admin';
+                cardAccentClass = 'comment-card-admin';
+                roleBadge = '<span class="badge bg-purple-subtle text-purple rounded-pill px-2 py-0" style="font-size:0.65rem; background:#f3e8ff; color:#6b21a8;"><i class="bi bi-shield-check me-1"></i>Administrator</span>';
+            } else if (roleLower.includes('guru')) {
+                cRingClass = 'avatar-ring-guru';
+                cardAccentClass = 'comment-card-guru';
+                roleBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0" style="font-size:0.65rem;"><i class="bi bi-award-fill me-1 text-warning"></i>Solusi Pengajar</span>';
+            }
 
             const cPrimaryUrl = c.gambar_url || (BASE_URL + 'assets/uploads/forum/' + c.gambar);
             const cFallbackUrl = BASE_URL + 'assets/uploads/tugas/' + c.gambar;
+            const currentNum = cmtIndex++;
 
             const cmtImg = (c.gambar) ? `
                 <div class="mt-2">
-                    <div class="forum-image-preview-wrapper d-inline-block" style="max-width: 280px; height: 160px;" onclick="openLightboxModal('${cPrimaryUrl}', 'Lampiran Balasan Komentar')">
+                    <div class="forum-image-preview-wrapper d-inline-block" style="max-width: 280px; height: 160px; border-radius:12px;" onclick="openLightboxModal('${cPrimaryUrl}', 'Lampiran Balasan Komentar')">
                         <img src="${cPrimaryUrl}" onerror="this.onerror=null; this.src='${cFallbackUrl}';" class="img-fluid rounded-3 border" style="height: 100%; object-fit: cover;" alt="Lampiran Balasan">
                         <div class="forum-image-overlay" style="font-size:0.75rem;">
-                            <i class="bi bi-zoom-in"></i> Perbesar
+                            <i class="bi bi-zoom-in me-1"></i> Perbesar
                         </div>
                     </div>
                 </div>
             ` : '';
 
             return `
-                <div class="comment-card-item shadow-sm" data-comment-id="${c.id}">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="comment-card-item ${cardAccentClass} shadow-sm" data-comment-id="${c.id}" data-role="${roleLower}" data-has-image="${c.gambar ? 'true' : 'false'}">
+                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-1">
                         <div class="d-flex align-items-center gap-2">
                             <div class="avatar-ring ${cRingClass}" style="padding:1px;">
-                                <div class="avatar-inner" style="width:32px; height:32px; font-size:0.85rem;">
+                                <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
                                     ${initial}
                                 </div>
                             </div>
-                            <span class="fw-bold small text-dark">${c.full_name}</span>
-                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">
-                                ${c.role_name}
-                            </span>
+                            <div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="fw-bold small text-dark">${c.full_name}</span>
+                                    ${roleBadge}
+                                </div>
+                            </div>
                         </div>
-                        <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-clock me-1"></i>${c.created_at}</small>
+                        <div class="d-flex align-items-center gap-2">
+                            <small class="text-muted me-1" style="font-size:0.73rem;"><i class="bi bi-clock me-1"></i>${c.created_at}</small>
+                            <span class="comment-number-badge">#${currentNum}</span>
+                            <button type="button" class="btn btn-sm btn-light border comment-quote-btn" onclick="ForumApp.quoteComment('${(c.full_name || '').replace(/'/g, "\\'")}', ${currentNum})" title="Kutip Balasan Ini">
+                                <i class="bi bi-quote"></i> Kutip
+                            </button>
+                        </div>
                     </div>
-                    <p class="mb-2 text-dark small" style="white-space: pre-line; line-height:1.6; font-size:0.95rem;">${c.komentar}</p>
+                    <p class="mb-2 text-dark small" style="white-space: pre-line; line-height:1.65; font-size:0.92rem; color: #334155;">${c.komentar}</p>
                     ${cmtImg}
                 </div>
             `;
         }).join('');
 
         container.innerHTML = html;
+    },
+
+    quoteComment: function(authorName, commentNum) {
+        const input = document.getElementById('replyKomentarInput') || document.getElementById('quickReplyKomentarInput');
+        if (input) {
+            const prefix = `@${authorName} (#${commentNum}): `;
+            input.value = prefix + input.value;
+            input.focus();
+            
+            const replyForm = document.getElementById('replyFormCard');
+            if (replyForm) {
+                replyForm.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    },
+
+    filterComments: function(type) {
+        const container = document.getElementById('commentsListContainer');
+        if (!container) return;
+
+        const chips = document.querySelectorAll('#commentFilterChips button');
+        chips.forEach(chip => chip.classList.remove('btn-primary', 'active'));
+        chips.forEach(chip => chip.classList.add('btn-light', 'text-dark'));
+
+        event.currentTarget.classList.remove('btn-light', 'text-dark');
+        event.currentTarget.classList.add('btn-primary', 'active');
+
+        const items = container.querySelectorAll('.comment-card-item');
+        items.forEach(item => {
+            const role = item.getAttribute('data-role') || '';
+            const hasImage = item.getAttribute('data-has-image') === 'true';
+
+            if (type === 'all') {
+                item.classList.remove('d-none');
+            } else if (type === 'guru') {
+                if (role.includes('guru')) item.classList.remove('d-none');
+                else item.classList.add('d-none');
+            } else if (type === 'image') {
+                if (hasImage) item.classList.remove('d-none');
+                else item.classList.add('d-none');
+            }
+        });
+    },
+
+    sortComments: function(order) {
+        const container = document.getElementById('commentsListContainer');
+        if (!container) return;
+
+        const items = Array.from(container.querySelectorAll('.comment-card-item'));
+        if (items.length === 0) return;
+
+        items.sort((a, b) => {
+            const idA = parseInt(a.getAttribute('data-comment-id')) || 0;
+            const idB = parseInt(b.getAttribute('data-comment-id')) || 0;
+            return order === 'newest' ? idB - idA : idA - idB;
+        });
+
+        items.forEach(item => container.appendChild(item));
     }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
     ForumApp.init();
+
+    // Quick Reply Form Handler
+    const quickForm = document.getElementById('quickReplyForm');
+    if (quickForm) {
+        quickForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('action', 'add_comment');
+
+            ForumApp.state.isMutating = true;
+            fetch(`${BASE_URL}index.php?url=forum/detail&id=${ForumApp.state.activeTopicId}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(() => {
+                this.reset();
+                const modalElem = document.getElementById('modalQuickReply');
+                if (modalElem) {
+                    const modal = bootstrap.Modal.getInstance(modalElem);
+                    if (modal) modal.hide();
+                }
+                ForumApp.fetchComments();
+            })
+            .catch(err => console.error(err))
+            .finally(() => {
+                ForumApp.state.isMutating = false;
+            });
+        });
+    }
 });
+
 
