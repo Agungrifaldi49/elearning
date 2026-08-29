@@ -936,20 +936,24 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 /* Lightbox Modal Styling */
 .lightbox-modal .modal-content {
-    background: rgba(15, 23, 42, 0.96);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
+    background: rgba(15, 23, 42, 0.96) !important;
+    color: #ffffff !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 24px !important;
 }
 
 .lightbox-modal img {
-    max-height: 82vh;
-    width: auto;
-    max-width: 100%;
-    object-fit: contain;
-    border-radius: 14px;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+    max-height: 75vh !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin: 0 auto !important;
+    border-radius: 14px !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* Sidebar & Multi-Column Grid Components */

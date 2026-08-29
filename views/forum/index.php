@@ -420,15 +420,17 @@
 </div>
 
 <!-- Image Lightbox Modal -->
-<div class="modal fade lightbox-modal" id="globalLightboxModal" tabindex="-1">
+<div class="modal fade lightbox-modal" id="globalLightboxModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h6 class="modal-title text-white small" id="lightboxTitle">Lampiran Gambar</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 rounded-4 shadow-lg" style="background: rgba(15, 23, 42, 0.96) !important; color: #ffffff !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.15) !important;">
+            <div class="modal-header border-0 pb-0 pt-3 px-4 d-flex align-items-center justify-content-between">
+                <h6 class="modal-title text-white small fw-bold d-flex align-items-center gap-2" id="lightboxTitle">
+                    <i class="bi bi-image text-warning me-1"></i> Lampiran Gambar
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center p-3">
-                <img id="lightboxImage" src="" alt="Pratinjau Gambar">
+            <div class="modal-body text-center p-3 p-md-4 d-flex align-items-center justify-content-center" style="min-height: 220px;">
+                <img id="lightboxImage" src="" alt="Pratinjau Gambar" style="max-height: 75vh; max-width: 100%; width: auto; height: auto; object-fit: contain; margin: 0 auto; display: block; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.6);">
             </div>
         </div>
     </div>
