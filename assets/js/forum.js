@@ -300,8 +300,8 @@ const ForumApp = {
 
             const imgHtml = (t.gambar) ? `
                 <div class="mb-3">
-                    <div class="forum-image-preview-wrapper" style="height:140px; max-width:100%; border-radius:12px;" onclick="openLightboxModal('${primaryUrl}', '${(t.judul || '').replace(/'/g, "\\'")}')">
-                        <img src="${primaryUrl}" onerror="this.onerror=null; this.src='${fallbackUrl}';" alt="Lampiran Gambar Forum">
+                    <div class="forum-image-preview-wrapper" style="position: relative; width: 100%; height: 140px; max-height: 140px; border-radius: 12px; overflow: hidden; cursor: pointer; background: #f8fafc; border: 1px solid #e2e8f0;" onclick="openLightboxModal('${primaryUrl}', '${(t.judul || '').replace(/'/g, "\\'")}')">
+                        <img src="${primaryUrl}" onerror="this.onerror=null; this.src='${fallbackUrl}';" alt="Lampiran Gambar Forum" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: cover; display: block;">
                         <div class="forum-image-overlay" style="font-size:0.72rem;">
                             <i class="bi bi-zoom-in me-1"></i> Perbesar Gambar
                         </div>
