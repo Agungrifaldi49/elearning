@@ -295,6 +295,8 @@ class ApiController {
 
                 foreach ($enrolledList as $em) {
                     $mId = intval($em['mapel_id'] ?? $em['id'] ?? 0);
+                    $gId = intval($em['guru_id'] ?? 0);
+                    $kId = !empty($em['kelas_id']) ? intval($em['kelas_id']) : $kelasId;
                     $namaMapel = $em['nama_mapel'] ?? 'Mata Pelajaran';
                     $kodeMapel = $em['kode_mapel'] ?? ('MP' . $mId);
                     $namaGuru = $em['nama_guru'] ?? 'Guru Pengampu';
@@ -305,10 +307,11 @@ class ApiController {
                         LEFT JOIN guru g ON m.guru_id = g.id
                         LEFT JOIN users u ON g.user_id = u.id
                         WHERE m.mapel_id = :mid
-                          AND (m.kelas_id = :kid OR m.kelas_id IS NULL OR m.kelas_id = 0)
+                          AND (:gid = 0 OR m.guru_id = :gid)
+                          AND (:kid = 0 OR m.kelas_id = :kid OR m.kelas_id IS NULL OR m.kelas_id = 0)
                         ORDER BY m.id ASC
                     ");
-                    $stmtMat->execute(['mid' => $mId, 'kid' => $kelasId]);
+                    $stmtMat->execute(['mid' => $mId, 'gid' => $gId, 'kid' => $kId]);
                     $materiRows = $stmtMat->fetchAll();
 
                     $stmtTug = $this->db->prepare("
@@ -319,10 +322,11 @@ class ApiController {
                         LEFT JOIN users u ON g.user_id = u.id
                         LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = :sid)
                         WHERE t.mapel_id = :mid
-                          AND (t.kelas_id = :kid OR t.kelas_id IS NULL OR t.kelas_id = 0)
+                          AND (:gid = 0 OR t.guru_id = :gid)
+                          AND (:kid = 0 OR t.kelas_id = :kid OR t.kelas_id IS NULL OR t.kelas_id = 0)
                         ORDER BY t.id ASC
                     ");
-                    $stmtTug->execute(['mid' => $mId, 'kid' => $kelasId, 'sid' => $siswaId]);
+                    $stmtTug->execute(['mid' => $mId, 'gid' => $gId, 'kid' => $kId, 'sid' => $siswaId]);
                     $tugasRows = $stmtTug->fetchAll();
 
                     $stmtQz = $this->db->prepare("
@@ -335,11 +339,12 @@ class ApiController {
                             SELECT * FROM hasil_quiz WHERE siswa_id = :sid
                         ) hq ON hq.quiz_id = q.id
                         WHERE q.mapel_id = :mid
-                          AND (q.kelas_id = :kid OR q.kelas_id IS NULL OR q.kelas_id = 0)
+                          AND (:gid = 0 OR q.guru_id = :gid)
+                          AND (:kid = 0 OR q.kelas_id = :kid OR q.kelas_id IS NULL OR q.kelas_id = 0)
                           AND q.status = 'published'
                         ORDER BY q.id ASC
                     ");
-                    $stmtQz->execute(['mid' => $mId, 'kid' => $kelasId, 'sid' => $siswaId]);
+                    $stmtQz->execute(['mid' => $mId, 'gid' => $gId, 'kid' => $kId, 'sid' => $siswaId]);
                     $quizRows = $stmtQz->fetchAll();
 
                     $stmtUj = $this->db->prepare("
@@ -352,11 +357,12 @@ class ApiController {
                             SELECT * FROM hasil_ujian WHERE siswa_id = :sid
                         ) hu ON hu.ujian_id = u.id
                         WHERE u.mapel_id = :mid
-                          AND (u.kelas_id = :kid OR u.kelas_id IS NULL OR u.kelas_id = 0)
+                          AND (:gid = 0 OR u.guru_id = :gid)
+                          AND (:kid = 0 OR u.kelas_id = :kid OR u.kelas_id IS NULL OR u.kelas_id = 0)
                           AND u.is_active = 1
                         ORDER BY u.id ASC
                     ");
-                    $stmtUj->execute(['mid' => $mId, 'kid' => $kelasId, 'sid' => $siswaId]);
+                    $stmtUj->execute(['mid' => $mId, 'gid' => $gId, 'kid' => $kId, 'sid' => $siswaId]);
                     $ujianRows = $stmtUj->fetchAll();
 
                     $sequenceItems = [];
