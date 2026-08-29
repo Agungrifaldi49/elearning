@@ -300,10 +300,10 @@ const ForumApp = {
 
             const imgHtml = (t.gambar) ? `
                 <div class="mb-3">
-                    <div class="forum-image-preview-wrapper" onclick="openLightboxModal('${primaryUrl}', '${(t.judul || '').replace(/'/g, "\\'")}')">
+                    <div class="forum-image-preview-wrapper" style="height:140px; max-width:100%; border-radius:12px;" onclick="openLightboxModal('${primaryUrl}', '${(t.judul || '').replace(/'/g, "\\'")}')">
                         <img src="${primaryUrl}" onerror="this.onerror=null; this.src='${fallbackUrl}';" alt="Lampiran Gambar Forum">
-                        <div class="forum-image-overlay">
-                            <i class="bi bi-zoom-in fs-4"></i> Klik untuk memperbesar gambar
+                        <div class="forum-image-overlay" style="font-size:0.72rem;">
+                            <i class="bi bi-zoom-in me-1"></i> Perbesar Gambar
                         </div>
                     </div>
                 </div>
@@ -311,52 +311,54 @@ const ForumApp = {
 
             return `
                 <div class="col topic-card-item" data-topic-id="${t.id}" data-visibility="${t.visibility || 'public'}">
-                    <div class="forum-topic-card p-4 h-100 d-flex flex-column justify-content-between">
+                    <div class="forum-topic-card p-3 p-md-4 h-100 d-flex flex-column justify-content-between shadow-sm">
                         <div>
-                            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="avatar-ring ${ringClass}" style="padding:1px;">
-                                        <div class="avatar-inner" style="width:36px; height:36px; font-size:0.9rem;">
+                            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-1">
+                                <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                    <div class="avatar-ring ${ringClass}" style="padding:1px; flex-shrink: 0;">
+                                        <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
                                             ${initial}
                                         </div>
                                     </div>
-                                    <div>
-                                        <div class="fw-bold mb-0 text-dark small d-flex align-items-center gap-1 flex-wrap">
-                                            <span>${t.full_name}</span>
-                                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">
+                                    <div class="text-truncate">
+                                        <div class="fw-bold text-dark small text-truncate" style="font-size:0.85rem;" title="${t.full_name}">
+                                            ${t.full_name}
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-0" style="font-size:0.6rem; background:#e0e7ff; color:#3730a3;">
                                                 ${t.role_name}
                                             </span>
+                                            <small class="text-muted ms-1" style="font-size:0.7rem;">
+                                                ${t.created_at}
+                                            </small>
                                         </div>
-                                        <small class="text-muted" style="font-size:0.75rem;">
-                                            <i class="bi bi-clock me-1"></i>${t.created_at}
-                                        </small>
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-center gap-1">
                                     ${isPrivate ? `
-                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1 small">
-                                            <i class="bi bi-lock-fill text-warning me-1"></i> Privat
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1" style="font-size:0.65rem;">
+                                            <i class="bi bi-lock-fill text-warning"></i>
                                         </span>
                                     ` : `
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
-                                            <i class="bi bi-globe me-1"></i> Publik
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1" style="font-size:0.65rem;">
+                                            <i class="bi bi-globe"></i>
                                         </span>
                                     `}
 
                                     ${t.can_delete ? `
-                                        <button class="btn btn-outline-danger btn-sm rounded-circle p-1" title="Hapus Topik Diskusi" onclick="ForumApp.deleteTopic(${t.id}, '${document.querySelector('input[name=csrf_token]') ? document.querySelector('input[name=csrf_token]').value : ''}')" style="width:28px; height:28px; line-height:1;">
-                                            <i class="bi bi-trash3" style="font-size:0.75rem;"></i>
+                                        <button class="btn btn-outline-danger btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center" title="Hapus Topik Diskusi" onclick="ForumApp.deleteTopic(${t.id}, '${document.querySelector('input[name=csrf_token]') ? document.querySelector('input[name=csrf_token]').value : ''}')" style="width:26px; height:26px;">
+                                            <i class="bi bi-trash3" style="font-size:0.7rem;"></i>
                                         </button>
                                     ` : ''}
                                 </div>
                             </div>
 
-                            <h6 class="fw-bold mb-2">
-                                <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="text-decoration-none text-dark hover-primary">
+                            <h6 class="fw-bold mb-2 fs-6">
+                                <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="text-decoration-none text-dark hover-primary" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35;">
                                     ${t.judul}
                                 </a>
                             </h6>
-                            <p class="text-secondary mb-3 small" style="line-height: 1.5; font-size:0.88rem; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">${t.konten_preview}...</p>
+                            <p class="text-secondary mb-3 small" style="font-size:0.83rem; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${t.konten_preview}...</p>
 
                             ${imgHtml}
                         </div>
@@ -370,12 +372,12 @@ const ForumApp = {
                             </div>
 
                             <div class="d-flex align-items-center justify-content-between pt-2 border-top">
-                                <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.8rem;">
+                                <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.78rem;">
                                     <i class="bi bi-chat-text-fill me-1"></i> ${t.total_replies} Balasan
                                 </a>
                                 ${t.nama_mapel ? `
-                                    <span class="small text-muted" style="font-size:0.75rem;" title="${t.nama_mapel}">
-                                        <i class="bi bi-journal-text text-primary me-1"></i>${t.nama_mapel.substring(0, 14)}${t.nama_mapel.length > 14 ? '..' : ''}
+                                    <span class="small text-muted text-truncate" style="font-size:0.72rem; max-width: 110px;" title="${t.nama_mapel}">
+                                        <i class="bi bi-journal-text text-primary me-1"></i>${t.nama_mapel}
                                     </span>
                                 ` : ''}
                             </div>
