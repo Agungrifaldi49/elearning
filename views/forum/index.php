@@ -92,22 +92,7 @@
                                     <div class="d-flex align-items-center gap-2 overflow-hidden">
                                         <div class="avatar-ring <?= $ringClass ?>" style="padding:1px; flex-shrink: 0;">
                                             <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
-                                                <?php
-                                                    $avFile = $t['avatar'] ?? '';
-                                                    $userAvUrl = null;
-                                                    if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                                                        if (file_exists(ROOT_PATH . 'assets/uploads/profile/' . $avFile)) {
-                                                            $userAvUrl = BASE_URL . 'assets/uploads/profile/' . htmlspecialchars($avFile);
-                                                        } elseif (file_exists(ROOT_PATH . 'assets/uploads/avatar/' . $avFile)) {
-                                                            $userAvUrl = BASE_URL . 'assets/uploads/avatar/' . htmlspecialchars($avFile);
-                                                        }
-                                                    }
-                                                ?>
-                                                <?php if ($userAvUrl): ?>
-                                                    <img src="<?= $userAvUrl ?>" alt="<?= htmlspecialchars($t['full_name']) ?>" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
-                                                <?php else: ?>
-                                                    <?= strtoupper(substr($t['full_name'], 0, 1)) ?>
-                                                <?php endif; ?>
+                                                <?= strtoupper(substr($t['full_name'], 0, 1)) ?>
                                             </div>
                                         </div>
                                         <div class="text-truncate">

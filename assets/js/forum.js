@@ -309,10 +309,6 @@ const ForumApp = {
                 </div>
             ` : '';
 
-            const avatarContent = t.avatar_url 
-                ? `<img src="${t.avatar_url}" alt="${t.full_name}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` 
-                : initial;
-
             return `
                 <div class="col topic-card-item" data-topic-id="${t.id}" data-visibility="${t.visibility || 'public'}">
                     <div class="forum-topic-card p-3 p-md-4 h-100 d-flex flex-column justify-content-between shadow-sm">
@@ -321,7 +317,7 @@ const ForumApp = {
                                 <div class="d-flex align-items-center gap-2 overflow-hidden">
                                     <div class="avatar-ring ${ringClass}" style="padding:1px; flex-shrink: 0;">
                                         <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
-                                            ${avatarContent}
+                                            ${initial}
                                         </div>
                                     </div>
                                     <div class="text-truncate">
@@ -475,17 +471,13 @@ const ForumApp = {
                 </div>
             ` : '';
 
-            const cmtAvatarContent = c.avatar_url 
-                ? `<img src="${c.avatar_url}" alt="${c.full_name}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">` 
-                : initial;
-
             return `
                 <div class="comment-card-item ${cardAccentClass} shadow-sm" data-comment-id="${c.id}" data-role="${roleLower}" data-has-image="${c.gambar ? 'true' : 'false'}">
                     <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-1">
                         <div class="d-flex align-items-center gap-2">
                             <div class="avatar-ring ${cRingClass}" style="padding:1px;">
                                 <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
-                                    ${cmtAvatarContent}
+                                    ${initial}
                                 </div>
                             </div>
                             <div>

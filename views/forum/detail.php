@@ -50,22 +50,7 @@
                         <div class="d-flex align-items-center gap-3">
                             <div class="avatar-ring <?= $ringClass ?>" style="padding:2px;">
                                 <div class="avatar-inner" style="width:48px; height:48px; font-size:1.2rem;">
-                                    <?php
-                                        $topicAvFile = $topic['avatar'] ?? '';
-                                        $topicAvUrl = null;
-                                        if (!empty($topicAvFile) && $topicAvFile !== 'default_avatar.png' && $topicAvFile !== 'default.png') {
-                                            if (file_exists(ROOT_PATH . 'assets/uploads/profile/' . $topicAvFile)) {
-                                                $topicAvUrl = BASE_URL . 'assets/uploads/profile/' . htmlspecialchars($topicAvFile);
-                                            } elseif (file_exists(ROOT_PATH . 'assets/uploads/avatar/' . $topicAvFile)) {
-                                                $topicAvUrl = BASE_URL . 'assets/uploads/avatar/' . htmlspecialchars($topicAvFile);
-                                            }
-                                        }
-                                    ?>
-                                    <?php if ($topicAvUrl): ?>
-                                        <img src="<?= $topicAvUrl ?>" alt="<?= htmlspecialchars($topic['full_name']) ?>" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
-                                    <?php else: ?>
-                                        <?= strtoupper(substr($topic['full_name'], 0, 1)) ?>
-                                    <?php endif; ?>
+                                    <?= strtoupper(substr($topic['full_name'], 0, 1)) ?>
                                 </div>
                             </div>
                             <div>
@@ -260,22 +245,7 @@
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="avatar-ring <?= $cRingClass ?>" style="padding:1px;">
                                                 <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
-                                                    <?php
-                                                        $cAvFile = $c['avatar'] ?? '';
-                                                        $cAvUrl = null;
-                                                        if (!empty($cAvFile) && $cAvFile !== 'default_avatar.png' && $cAvFile !== 'default.png') {
-                                                            if (file_exists(ROOT_PATH . 'assets/uploads/profile/' . $cAvFile)) {
-                                                                $cAvUrl = BASE_URL . 'assets/uploads/profile/' . htmlspecialchars($cAvFile);
-                                                            } elseif (file_exists(ROOT_PATH . 'assets/uploads/avatar/' . $cAvFile)) {
-                                                                $cAvUrl = BASE_URL . 'assets/uploads/avatar/' . htmlspecialchars($cAvFile);
-                                                            }
-                                                        }
-                                                    ?>
-                                                    <?php if ($cAvUrl): ?>
-                                                        <img src="<?= $cAvUrl ?>" alt="<?= htmlspecialchars($c['full_name']) ?>" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
-                                                    <?php else: ?>
-                                                        <?= strtoupper(substr($c['full_name'], 0, 1)) ?>
-                                                    <?php endif; ?>
+                                                    <?= strtoupper(substr($c['full_name'], 0, 1)) ?>
                                                 </div>
                                             </div>
                                             <div>
@@ -394,11 +364,7 @@
                         <div class="p-4 text-center">
                             <div class="avatar-ring <?= $ringClass ?> mx-auto mb-3" style="width:64px; height:64px; padding:3px;">
                                 <div class="avatar-inner" style="width:58px; height:58px; font-size:1.5rem;">
-                                    <?php if ($topicAvUrl): ?>
-                                        <img src="<?= $topicAvUrl ?>" alt="<?= htmlspecialchars($topic['full_name']) ?>" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
-                                    <?php else: ?>
-                                        <?= strtoupper(substr($topic['full_name'], 0, 1)) ?>
-                                    <?php endif; ?>
+                                    <?= strtoupper(substr($topic['full_name'], 0, 1)) ?>
                                 </div>
                             </div>
                             <h6 class="fw-bold mb-1 text-dark fs-6"><?= htmlspecialchars($topic['full_name']) ?></h6>

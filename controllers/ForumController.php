@@ -110,23 +110,11 @@ class ForumController {
                 $gUrl = BASE_URL . 'assets/uploads/' . $folder . '/' . htmlspecialchars($t['gambar']);
             }
 
-            $avFile = $t['avatar'] ?? '';
-            $userAvatarUrl = null;
-            if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                if (file_exists(ROOT_PATH . 'assets/uploads/profile/' . $avFile)) {
-                    $userAvatarUrl = BASE_URL . 'assets/uploads/profile/' . htmlspecialchars($avFile);
-                } elseif (file_exists(ROOT_PATH . 'assets/uploads/avatar/' . $avFile)) {
-                    $userAvatarUrl = BASE_URL . 'assets/uploads/avatar/' . htmlspecialchars($avFile);
-                }
-            }
-
             $formattedTopics[] = [
                 'id' => (int)$t['id'],
                 'user_id' => (int)$t['user_id'],
                 'full_name' => htmlspecialchars($t['full_name']),
                 'role_name' => htmlspecialchars($t['role_name']),
-                'avatar' => $t['avatar'] ?? null,
-                'avatar_url' => $userAvatarUrl,
                 'created_at' => date('d F Y, H:i', strtotime($t['created_at'])),
                 'posted_time' => date('H:i', strtotime($t['created_at'])),
                 'nama_mapel' => $t['nama_mapel'] ? htmlspecialchars($t['nama_mapel']) : '',
@@ -201,22 +189,10 @@ class ForumController {
                 $cUrl = BASE_URL . 'assets/uploads/' . $folder . '/' . htmlspecialchars($c['gambar']);
             }
 
-            $avFile = $c['avatar'] ?? '';
-            $userAvatarUrl = null;
-            if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                if (file_exists(ROOT_PATH . 'assets/uploads/profile/' . $avFile)) {
-                    $userAvatarUrl = BASE_URL . 'assets/uploads/profile/' . htmlspecialchars($avFile);
-                } elseif (file_exists(ROOT_PATH . 'assets/uploads/avatar/' . $avFile)) {
-                    $userAvatarUrl = BASE_URL . 'assets/uploads/avatar/' . htmlspecialchars($avFile);
-                }
-            }
-
             $formattedComments[] = [
                 'id' => (int)$c['id'],
                 'full_name' => htmlspecialchars($c['full_name']),
                 'role_name' => htmlspecialchars($c['role_name']),
-                'avatar' => $c['avatar'] ?? null,
-                'avatar_url' => $userAvatarUrl,
                 'created_at' => date('d/m/Y H:i', strtotime($c['created_at'])),
                 'komentar' => nl2br(htmlspecialchars($c['komentar'])),
                 'gambar' => $c['gambar'] ?? null,
