@@ -8,8 +8,8 @@
     <div class="container-fluid">
         <input type="hidden" id="activeTopicId" value="<?= $topic['id'] ?>">
 
-        <!-- Navigation Ribbon & Breadcrumb -->
-        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 bg-white p-3 rounded-4 shadow-sm border">
+        <!-- Navigation Ribbon & Breadcrumb (Pushed down with top margin clearance) -->
+        <div class="d-flex align-items-center justify-content-between mb-4 mt-4 pt-md-3 flex-wrap gap-3 bg-white p-3 rounded-4 shadow-sm border" style="margin-top: 1.5rem !important;">
             <div class="d-flex align-items-center gap-2">
                 <a href="<?= BASE_URL ?>index.php?url=forum" class="btn btn-light rounded-pill px-3 py-2 shadow-sm border text-dark fw-semibold" style="font-size:0.88rem;">
                     <i class="bi bi-arrow-left me-1 text-primary"></i> Kembali ke Daftar Forum
@@ -123,14 +123,14 @@
                         <?= htmlspecialchars($topic['konten']) ?>
                     </div>
 
-                    <!-- Attached Image Preview Showcase -->
+                    <!-- Attached Image Preview Showcase (Full-Image View without Crop) -->
                     <?php if (!empty($topic['gambar'])): 
                         $topicImgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $topic['gambar'])) 
                             ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($topic['gambar']) 
                             : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($topic['gambar']);
                     ?>
                         <div class="mb-4">
-                            <div class="forum-image-preview-wrapper shadow-sm" style="max-width: 100%; height: 320px; border-radius:18px;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
+                            <div class="forum-detail-image-box shadow-sm" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
                                 <img src="<?= $topicImgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>';" alt="Lampiran Gambar Topik">
                                 <div class="forum-image-overlay">
                                     <i class="bi bi-zoom-in fs-3"></i> Klik untuk memperbesar gambar
