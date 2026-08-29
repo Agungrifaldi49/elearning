@@ -1091,6 +1091,10 @@ class AdminController {
             exit();
         }
 
+        foreach ($guruList as $gItem) {
+            $academicModel->ensureGuruClassKeys($gItem['id']);
+        }
+
         $jadwalList = $academicModel->getJadwal($selectedKelasId);
         $academicModel->detectScheduleConflicts($jadwalList);
         require_once ROOT_PATH . 'views/admin/jadwal.php';

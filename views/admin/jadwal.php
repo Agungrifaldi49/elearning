@@ -121,13 +121,14 @@
                                 <th>Rombel Kelas</th>
                                 <th>Mata Pelajaran</th>
                                 <th>Guru Pengampu</th>
+                                <th>Key Mapel Rombel</th>
                                 <th>Ruangan</th>
                                 <th style="width:140px;" class="text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($jadwalList)): ?>
-                                <tr><td colspan="8" class="text-center py-4 text-muted">Belum ada data jadwal pelajaran terdaftar.</td></tr>
+                                <tr><td colspan="9" class="text-center py-4 text-muted">Belum ada data jadwal pelajaran terdaftar.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($jadwalList as $i => $j): 
                                     $hasConflict = !empty($j['is_conflict']);
@@ -149,10 +150,29 @@
                                             <i class="bi bi-clock me-1 text-muted"></i>
                                             <?= date('H:i', strtotime($j['jam_mulai'])) ?> - <?= date('H:i', strtotime($j['jam_selesai'])) ?> WIB
                                         </td>
-                                        <td class="fw-bold text-primary"><?= htmlspecialchars($j['nama_kelas']) ?></td>
+                                        <td class="fw-bold text-primary">
+                                            <?= htmlspecialchars($j['nama_kelas']) ?>
+                                            <?php if (!empty($j['tingkat'])): ?>
+                                                <span class="badge bg-light text-secondary border ms-1">Kelas <?= (int)$j['tingkat'] ?></span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="fw-bold text-dark"><?= htmlspecialchars($j['nama_mapel']) ?></td>
                                         <td>
                                             <i class="bi bi-person-badge me-1 text-secondary"></i><?= htmlspecialchars($j['nama_guru']) ?>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($j['enrollment_key'])): 
+                                                $tNum = (int)($j['tingkat'] ?? 0);
+                                                $badgeStyle = ($tNum === 10) ? 'background:#e0e7ff; color:#3730a3;' :
+                                                             (($tNum === 11) ? 'background:#f3e8ff; color:#6b21a8;' :
+                                                             (($tNum === 12) ? 'background:#dcfce7; color:#15803d;' : 'background:#fee2e2; color:#991b1b;'));
+                                            ?>
+                                                <code class="fs-6 fw-bold px-2.5 py-1 rounded-3 border" style="<?= $badgeStyle ?> letter-spacing:0.5px;">
+                                                    <i class="bi bi-key-fill me-1"></i><?= htmlspecialchars($j['enrollment_key']) ?>
+                                                </code>
+                                            <?php else: ?>
+                                                <span class="text-muted small">-</span>
+                                            <?php endif; ?>
                                         </td>
                                         <td>
                                             <span class="badge bg-light text-dark border">

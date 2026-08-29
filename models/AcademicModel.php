@@ -231,7 +231,11 @@ class AcademicModel extends BaseModel {
     // --- JADWAL ---
     public function getJadwal($kelas_id = null, $guru_id = null) {
         $sql = "
-            SELECT j.*, k.nama_kelas, m.nama_mapel, g.nama_lengkap as nama_guru
+            SELECT j.*, k.nama_kelas, k.tingkat, m.nama_mapel, m.kode_mapel, g.nama_lengkap as nama_guru,
+                   COALESCE(
+                       (SELECT enrollment_key FROM mapel_enrollment_keys mek WHERE mek.mapel_id = j.mapel_id AND mek.guru_id = j.guru_id AND mek.kelas_id = j.kelas_id LIMIT 1),
+                       (SELECT enrollment_key FROM mapel_enrollment_keys mek WHERE mek.mapel_id = j.mapel_id AND mek.guru_id = j.guru_id AND (mek.kelas_id IS NULL OR mek.kelas_id = 0) LIMIT 1)
+                   ) as enrollment_key
             FROM jadwal j
             JOIN kelas k ON j.kelas_id = k.id
             JOIN mata_pelajaran m ON j.mapel_id = m.id
@@ -253,7 +257,13 @@ class AcademicModel extends BaseModel {
             INSERT INTO jadwal (kelas_id, mapel_id, guru_id, hari, jam_mulai, jam_selesai, ruangan)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([$kelas_id, $mapel_id, $guru_id, $hari, $jam_mulai, $jam_selesai, $ruangan]);
+        $res = $stmt->execute([$kelas_id, $mapel_id, $guru_id, $hari, $jam_mulai, $jam_selesai, $ruangan]);
+
+        if ($guru_id) {
+            $this->ensureGuruClassKeys($guru_id);
+        }
+
+        return $res;
     }
 
     public function updateJadwal($id, $kelas_id, $mapel_id, $guru_id, $hari, $jam_mulai, $jam_selesai, $ruangan) {
