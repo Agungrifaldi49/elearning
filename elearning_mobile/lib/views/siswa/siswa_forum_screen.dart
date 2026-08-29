@@ -38,7 +38,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.black.withOpacity(0.9),
+        backgroundColor: Colors.black.withValues(alpha: 0.9),
         insetPadding: EdgeInsets.zero,
         child: Stack(
           children: [
@@ -306,7 +306,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                   userId: user.id,
                   judul: judul,
                   konten: konten,
-                  gambarUrl: topicImage != null ? topicImage!.path : null,
+                  gambarUrl: topicImage?.path,
                   kategori: kategori,
                   visibility: visibility,
                   targetNamaKelas: visibility == 'private' ? 'Kelas Saya' : 'Semua Kelas',
@@ -323,8 +323,9 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                   _applyFilter();
                 });
 
-                if (!mounted) return;
-                Navigator.pop(context);
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                navigator.pop();
 
                 final bodyData = <String, dynamic>{
                   'user_id': user.id,
@@ -340,7 +341,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                 final res = await ApiService.post('forum/create', bodyData);
 
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  scaffoldMessenger.showSnackBar(
                     SnackBar(
                       content: Text(res['message'] ?? 'Topik berhasil diterbitkan'),
                       backgroundColor: res['success'] == true ? Colors.green : Colors.blue,
@@ -478,7 +479,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                 borderRadius: BorderRadius.circular(12),
                                 child: Image.network(
                                   forum.gambarUrl!,
-                                  maxHeight: 200,
+                                  height: 200,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) => const SizedBox(),
@@ -532,7 +533,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                                 borderRadius: BorderRadius.circular(8),
                                                 child: Image.network(
                                                   cmtImgUrl.toString(),
-                                                  maxHeight: 120,
+                                                  height: 120,
                                                   width: 180,
                                                   fit: BoxFit.cover,
                                                   errorBuilder: (_, __, ___) => const SizedBox(),
