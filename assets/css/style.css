@@ -416,6 +416,201 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     color: #0f172a !important;
 }
 .landing-misi-content p {
+.grade-table td, .grade-table th { padding: 10px 14px; vertical-align: middle; }
+.predikat-badge { font-size: 1rem; font-weight: 800; padding: 5px 12px; border-radius: 8px; }
+
+/* ============== Kartu Pelajar Digital ============== */
+.kartu-wrapper { max-width: 380px; }
+.kartu-pelajar {
+    background: linear-gradient(135deg, #0D6EFD 0%, #0056d3 60%, #003d99 100%);
+    border-radius: 20px;
+    color: #fff;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(13,110,253,0.35);
+}
+.kartu-pelajar::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 150px; height: 150px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+}
+.kartu-pelajar::after {
+    content: '';
+    position: absolute;
+    bottom: -50px; left: -30px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+}
+
+/* ============== Sertifikat Digital ============== */
+.sertifikat-wrapper {
+    border: 8px double #0D6EFD;
+    border-radius: 20px;
+    padding: 40px;
+    position: relative;
+    background: #fff;
+}
+[data-bs-theme="dark"] .sertifikat-wrapper { background: #1e293b; }
+
+/* ============== Timeline (Kalender Akademik) ============== */
+.timeline { position: relative; padding-left: 28px; }
+.timeline::before { content: ''; position: absolute; left: 10px; top: 0; bottom: 0; width: 2px; background: #e2e8f0; }
+[data-bs-theme="dark"] .timeline::before { background: #334155; }
+.timeline-item { position: relative; margin-bottom: 20px; }
+.timeline-dot { position: absolute; left: -24px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: #0D6EFD; border: 2px solid #fff; box-shadow: 0 0 0 3px rgba(13,110,253,.2); }
+
+/* ============== Progress Bar Custom ============== */
+.progress-custom { height: 10px; border-radius: 999px; }
+.progress-custom .progress-bar { border-radius: 999px; }
+
+/* ============== Badge Pill Large ============== */
+.badge-pill-lg { padding: 8px 18px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; }
+
+/* ============== Landing Page Modern Styles & Misi Formatting ============== */
+h1, h2, h3, h4, h5, h6, .font-heading {
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.02em;
+}
+
+/* Clean Nav Link Styling for Landing Page */
+#mainNavbar .nav-link {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9) !important;
+    transition: opacity 0.2s ease, color 0.2s ease;
+}
+#mainNavbar .nav-link:hover {
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+.landing-navbar {
+    transition: all 0.3s ease;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(15, 23, 42, 0.88) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.landing-navbar.scrolled {
+    background: rgba(15, 23, 42, 0.96) !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+.landing-hero {
+    background: radial-gradient(circle at 80% 20%, rgba(13, 110, 253, 0.25) 0%, rgba(0, 0, 0, 0) 50%),
+                linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d1b3e 100%);
+    position: relative;
+    overflow: hidden;
+}
+.landing-hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -15%;
+    width: 650px;
+    height: 650px;
+    background: radial-gradient(circle, rgba(255, 193, 7, 0.18) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.landing-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(13, 110, 253, 0.25) 0%, rgba(255, 255, 255, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+}
+
+.card-hover-effect {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    background: #ffffff;
+}
+.card-hover-effect:hover {
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 25px 40px -15px rgba(13, 110, 253, 0.15);
+    border-color: rgba(13, 110, 253, 0.4);
+}
+
+.icon-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%);
+    color: #ffffff;
+}
+.icon-gradient-success {
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+    color: #ffffff;
+}
+.icon-gradient-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    color: #212529;
+}
+
+/* Styled Lists for Misi & Visi Content */
+.landing-misi-content {
+    font-size: 0.95rem;
+    color: #1e293b !important;
+    line-height: 1.65;
+}
+.landing-misi-content ol {
+    padding-left: 1.4rem;
+    margin-bottom: 0.75rem;
+    list-style-type: decimal;
+}
+.landing-misi-content ol[type="a"] {
+    list-style-type: lower-alpha;
+}
+.landing-misi-content ol[type="A"] {
+    list-style-type: upper-alpha;
+}
+.landing-misi-content ul {
+    padding-left: 1.4rem;
+    margin-bottom: 0.75rem;
+    list-style-type: disc;
+}
+.landing-misi-content li {
+    margin-bottom: 0.5rem;
+    padding-left: 0.2rem;
+    color: #1e293b !important;
+}
+.landing-misi-content li::marker {
+    color: #0d6efd !important;
+    font-weight: 700;
+}
+.landing-misi-content b, 
+.landing-misi-content strong {
+    font-weight: 700;
+    color: #0f172a !important;
+}
+.landing-misi-content i, 
+.landing-misi-content em {
+    font-style: italic;
+    color: #334155 !important;
+}
+.landing-misi-content u {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: #0d6efd !important;
+    text-decoration-thickness: 2px;
+    color: #0f172a !important;
+}
+.landing-misi-content p {
     margin-bottom: 0.6rem;
     line-height: 1.6;
     color: #1e293b !important;
@@ -430,6 +625,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     border: 3px solid #ffffff;
     transition: transform 0.3s ease;
 }
+
 .guru-card-img:hover {
     transform: scale(1.08);
 }
@@ -587,201 +783,16 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     font-weight: 700;
     font-size: 1.1rem;
     color: #312e81;
-}
-
-[data-bs-theme="dark"] .avatar-inner {
-    background: #0f172a;
-    color: #e0e7ff;
-}
-
-.forum-image-preview-wrapper {
-    position: relative;
-    max-width: 440px;
-    height: 220px;
-    border-radius: 16px;
     overflow: hidden;
-    cursor: pointer;
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    background: #f8fafc;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    padding: 0;
 }
 
-[data-bs-theme="dark"] .forum-image-preview-wrapper {
-    background: #0f172a;
-    border-color: rgba(255, 255, 255, 0.1);
-}
-
-.forum-image-preview-wrapper:hover {
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
-}
-
-.forum-image-preview-wrapper img {
+.avatar-inner img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
-    transition: transform 0.4s ease;
-}
-
-.forum-image-preview-wrapper:hover img {
-    transform: scale(1.02);
-}
-
-.forum-image-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.35);
-    backdrop-filter: blur(2px);
-    opacity: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ffffff;
-    font-weight: 600;
-    font-size: 0.9rem;
-    gap: 6px;
-    transition: opacity 0.25s ease;
-}
-
-.forum-image-preview-wrapper:hover .forum-image-overlay {
-    opacity: 1;
-}
-
-.btn-emoji-react {
-    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.btn-emoji-react:hover {
-    transform: scale(1.18);
-}
-
-.btn-emoji-react:active {
-    transform: scale(0.92);
-}
-
-.comment-card-item {
-    background: #ffffff;
-    border-radius: 16px;
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    border-left: 4px solid #6366f1 !important;
-    padding: 16px 20px;
-    transition: all 0.25s ease;
-}
-
-[data-bs-theme="dark"] .comment-card-item {
-    background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
-.comment-card-item:hover {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-}
-
-/* Lightbox Modal Styling */
-.lightbox-modal .modal-content {
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(16px);
-    border: none;
-    border-radius: 24px;
-}
-
-.lightbox-modal img {
-    max-height: 80vh;
-    width: auto;
-    max-width: 100%;
-    object-fit: contain;
-    border-radius: 16px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-}
-
-/* Sidebar & Multi-Column Grid Components */
-.forum-sidebar-card {
-    background: #ffffff;
-    border-radius: 20px;
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-    overflow: hidden;
-    transition: all 0.25s ease;
-}
-
-[data-bs-theme="dark"] .forum-sidebar-card {
-    background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
-.forum-sidebar-card .card-header {
-    background: transparent;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.7);
-    padding: 16px 20px;
-}
-
-[data-bs-theme="dark"] .forum-sidebar-card .card-header {
-    border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-.trending-topic-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px 16px;
-    border-radius: 14px;
-    transition: background-color 0.2s ease, transform 0.2s ease;
-    text-decoration: none;
-    color: inherit;
-}
-
-.trending-topic-item:hover {
-    background: #f1f5f9;
-    transform: translateX(4px);
-    color: inherit;
-}
-
-[data-bs-theme="dark"] .trending-topic-item:hover {
-    background: #334155;
-}
-
-.trending-number {
-    width: 28px;
-    height: 28px;
     border-radius: 50%;
-    background: #e0e7ff;
-    color: #4338ca;
-    font-weight: 700;
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.mapel-tag-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 20px;
-    background: #f1f5f9;
-    color: #475569;
-    font-size: 0.82rem;
-    font-weight: 600;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.mapel-tag-chip:hover {
-    background: #4f46e5;
-    color: #ffffff;
-    border-color: #4f46e5;
-    transform: translateY(-2px);
-}
-
-.forum-grid-card {
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: #312e81;
+    display: block;
 }
 
 [data-bs-theme="dark"] .avatar-inner {
