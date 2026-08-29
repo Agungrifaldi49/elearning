@@ -58,9 +58,15 @@
             <h4 class="fw-bold mb-3 text-dark"><?= htmlspecialchars($topic['judul']) ?></h4>
             <p class="lead text-muted fs-6 mb-4" style="white-space: pre-line;"><?= htmlspecialchars($topic['konten']) ?></p>
 
-            <?php if ($topic['gambar']): ?>
-                <div class="mb-4">
-                    <img src="<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>" class="img-fluid rounded-4 shadow-sm" style="max-height: 400px; object-fit: cover;">
+            <?php if (!empty($topic['gambar'])): 
+                $topicImgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $topic['gambar'])) 
+                    ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($topic['gambar']) 
+                    : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($topic['gambar']);
+            ?>
+                <div class="mb-4 text-center">
+                    <a href="<?= $topicImgPath ?>" target="_blank" title="Klik untuk memperbesar">
+                        <img src="<?= $topicImgPath ?>" class="img-fluid rounded-4 shadow-sm border" style="max-height: 450px; object-fit: contain;">
+                    </a>
                 </div>
             <?php endif; ?>
 
@@ -137,14 +143,23 @@
                                 <span class="badge bg-primary" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
                                 <small class="text-muted ms-auto"><?= date('d/m/Y H:i', strtotime($c['created_at'])) ?></small>
                             </div>
-                            <p class="mb-0 text-muted small" style="white-space: pre-line;"><?= htmlspecialchars($c['komentar']) ?></p>
+                            <p class="mb-2 text-muted small" style="white-space: pre-line;"><?= htmlspecialchars($c['komentar']) ?></p>
+                            <?php if (!empty($c['gambar'])): 
+                                $cmtImg = BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($c['gambar']);
+                            ?>
+                                <div class="mt-2">
+                                    <a href="<?= $cmtImg ?>" target="_blank">
+                                        <img src="<?= $cmtImg ?>" class="img-fluid rounded-3 border shadow-sm" style="max-height: 200px; max-width: 300px; object-fit: cover;" alt="Lampiran Balasan">
+                                    </a>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
 
             <!-- Comment Form -->
-            <form id="commentReplyForm" action="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $topic['id'] ?>" method="POST">
+            <form id="commentReplyForm" action="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $topic['id'] ?>" method="POST" enctype="multipart/form-data">
                 <?= Security::csrfField() ?>
                 <div class="mb-3 position-relative">
                     <div class="d-flex justify-content-between align-items-center mb-1">
@@ -172,8 +187,18 @@
                         </div>
                     </div>
 
-                    <textarea name="komentar" id="replyKomentarInput" class="form-control rounded-3" rows="3" placeholder="Tuliskan komentar atau solusi..." required></textarea>
+                    <textarea name="komentar" id="replyKomentarInput" class="form-control rounded-3 mb-2" rows="3" placeholder="Tuliskan komentar atau solusi..." required></textarea>
+                    
+                    <div class="d-flex align-items-center gap-2 bg-light p-2 rounded-3 border">
+                        <i class="bi bi-image text-primary fs-5"></i>
+                        <input type="file" name="gambar" class="form-control form-control-sm border-0 bg-transparent" accept="image/*">
+                        <small class="text-muted" style="font-size:0.75rem;">Lampiran Screenshot (Opsional)</small>
+                    </div>
                 </div>
+                <button type="submit" class="btn btn-primary px-4 fw-bold rounded-pill">
+                    <i class="bi bi-send me-1"></i> Kirim Balasan
+                </button>
+            </form>
                 <button type="submit" class="btn btn-primary px-4 fw-bold rounded-pill">
                     <i class="bi bi-send me-1"></i> Kirim Balasan
                 </button>

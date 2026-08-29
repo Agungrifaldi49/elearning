@@ -62,7 +62,7 @@ class ForumController {
             $gambar = null;
 
             if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] === UPLOAD_ERR_OK) {
-                $gambar = UploadHelper::upload($_FILES['gambar'], 'tugas');
+                $gambar = UploadHelper::upload($_FILES['gambar'], 'forum');
             }
 
             $commModel->createForumTopic($user['id'], $mapelId, $judul, $konten, $gambar, $visibility, $targetRole, $targetKelasId);
@@ -117,6 +117,8 @@ class ForumController {
                 'target_nama_kelas' => $t['target_nama_kelas'] ? htmlspecialchars($t['target_nama_kelas']) : '',
                 'judul' => htmlspecialchars($t['judul']),
                 'konten_preview' => htmlspecialchars(substr($t['konten'], 0, 220)),
+                'gambar' => $t['gambar'] ?? null,
+                'gambar_url' => !empty($t['gambar']) ? BASE_URL . 'assets/uploads/forum/' . $t['gambar'] : null,
                 'total_replies' => (int)$t['total_replies'],
                 'reactions' => $reactions,
                 'can_delete' => $canDelete,
@@ -180,7 +182,9 @@ class ForumController {
                 'full_name' => htmlspecialchars($c['full_name']),
                 'role_name' => htmlspecialchars($c['role_name']),
                 'created_at' => date('d/m/Y H:i', strtotime($c['created_at'])),
-                'komentar' => nl2br(htmlspecialchars($c['komentar']))
+                'komentar' => nl2br(htmlspecialchars($c['komentar'])),
+                'gambar' => $c['gambar'] ?? null,
+                'gambar_url' => !empty($c['gambar']) ? BASE_URL . 'assets/uploads/forum/' . $c['gambar'] : null
             ];
         }
 
@@ -273,8 +277,13 @@ class ForumController {
             $rawKomentar = Security::sanitize($_POST['komentar']);
             $komentar = ProfanityFilterHelper::filter($rawKomentar);
             $parentId = (int)($_POST['parent_id'] ?? 0);
+            $gambar = null;
 
-            $commModel->addKomentar($id, $user['id'], $komentar, $parentId);
+            if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] === UPLOAD_ERR_OK) {
+                $gambar = UploadHelper::upload($_FILES['gambar'], 'forum');
+            }
+
+            $commModel->addKomentar($id, $user['id'], $komentar, $parentId, $gambar);
 
             if (isset($_POST['is_ajax']) || isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
                 header('Content-Type: application/json');

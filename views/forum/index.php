@@ -79,6 +79,18 @@
                             </h5>
                             <p class="text-muted mb-3"><?= htmlspecialchars(substr($t['konten'], 0, 220)) ?>...</p>
 
+                            <?php if (!empty($t['gambar'])): 
+                                $imgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $t['gambar'])) 
+                                    ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($t['gambar']) 
+                                    : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($t['gambar']);
+                            ?>
+                                <div class="mb-3">
+                                    <a href="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $t['id'] ?>">
+                                        <img src="<?= $imgPath ?>" class="img-fluid rounded-3 shadow-sm border" style="max-height: 240px; width: 100%; object-fit: cover;" alt="Lampiran Gambar Forum">
+                                    </a>
+                                </div>
+                            <?php endif; ?>
+
                             <div class="d-flex align-items-center justify-content-between pt-3 border-top">
                                 <a href="<?= BASE_URL ?>index.php?url=forum/detail&id=<?= $t['id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3">
                                     <i class="bi bi-chat-text me-1"></i> <?= $t['total_replies'] ?> Balasan Diskusi

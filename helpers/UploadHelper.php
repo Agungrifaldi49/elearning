@@ -13,7 +13,8 @@ class UploadHelper {
         'profile' => ['jpg', 'jpeg', 'png', 'webp'],
         'sertifikat' => ['pdf', 'jpg', 'png'],
         'logo' => ['jpg', 'jpeg', 'png', 'webp', 'svg', 'ico'],
-        'soal' => ['jpg', 'jpeg', 'png', 'gif', 'webp']
+        'soal' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        'forum' => ['jpg', 'jpeg', 'png', 'gif', 'webp']
     ];
 
     private static $max_sizes = [
@@ -23,7 +24,8 @@ class UploadHelper {
         'profile' => 5 * 1024 * 1024,   // 5 MB
         'sertifikat' => 10 * 1024 * 1024, // 10 MB
         'logo' => 5 * 1024 * 1024,       // 5 MB
-        'soal' => 10 * 1024 * 1024      // 10 MB
+        'soal' => 10 * 1024 * 1024,      // 10 MB
+        'forum' => 10 * 1024 * 1024      // 10 MB
     ];
 
     /**

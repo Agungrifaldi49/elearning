@@ -2761,6 +2761,33 @@ class ApiController {
             $visibility = trim($input['visibility'] ?? 'public');
             $targetKelasId = intval($input['target_kelas_id'] ?? 0);
             $mapelId = intval($input['mapel_id'] ?? 0);
+            $gambarFilename = null;
+
+            // Process image file or base64 if provided
+            if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] === UPLOAD_ERR_OK) {
+                if (file_exists(ROOT_PATH . 'helpers/UploadHelper.php')) {
+                    require_once ROOT_PATH . 'helpers/UploadHelper.php';
+                    $gambarFilename = UploadHelper::upload($_FILES['gambar'], 'forum');
+                }
+            }
+            if (!$gambarFilename && !empty($input['gambar_base64'])) {
+                $base64 = $input['gambar_base64'];
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64, $type)) {
+                    $base64 = substr($base64, strpos($base64, ',') + 1);
+                    $ext = strtolower($type[1]);
+                } else {
+                    $ext = 'jpg';
+                }
+                $imgData = base64_decode($base64);
+                if ($imgData !== false) {
+                    $uploadDir = ROOT_PATH . 'assets/uploads/forum/';
+                    if (!is_dir($uploadDir)) {
+                        @mkdir($uploadDir, 0777, true);
+                    }
+                    $gambarFilename = 'forum_' . time() . '_' . uniqid() . '.' . $ext;
+                    @file_put_contents($uploadDir . $gambarFilename, $imgData);
+                }
+            }
 
             if ($targetKelasId <= 0 && $userId > 0) {
                 $stmtS = $this->db->prepare("SELECT kelas_id FROM siswa WHERE user_id = :uid LIMIT 1");
@@ -2782,20 +2809,21 @@ class ApiController {
 
             if ($commModel) {
                 try {
-                    $commModel->createForumTopic($userId, $mapelId > 0 ? $mapelId : null, $judul, $konten, null, $visibility, null, $targetKelasId > 0 ? $targetKelasId : null);
+                    $commModel->createForumTopic($userId, $mapelId > 0 ? $mapelId : null, $judul, $konten, $gambarFilename, $visibility, null, $targetKelasId > 0 ? $targetKelasId : null);
                     $this->jsonResponse(true, 'Topik diskusi berhasil diterbitkan!');
                 } catch (\Throwable $eCm) {}
             }
 
             try {
                 $stmt = $this->db->prepare("
-                    INSERT INTO forum (user_id, judul, konten, kategori, visibility, target_kelas_id, created_at) 
-                    VALUES (:uid, :jdl, :ktn, :ktg, :vis, :tkid, NOW())
+                    INSERT INTO forum (user_id, judul, konten, gambar, kategori, visibility, target_kelas_id, created_at) 
+                    VALUES (:uid, :jdl, :ktn, :gbr, :ktg, :vis, :tkid, NOW())
                 ");
                 $stmt->execute([
                     'uid' => $userId,
                     'jdl' => $judul,
                     'ktn' => $konten,
+                    'gbr' => $gambarFilename,
                     'ktg' => $kategori,
                     'vis' => $visibility === 'private' ? 'private' : 'public',
                     'tkid' => $targetKelasId > 0 ? $targetKelasId : null
@@ -2804,13 +2832,14 @@ class ApiController {
             } catch (\Throwable $eC) {
                 try {
                     $stmtFB = $this->db->prepare("
-                        INSERT INTO forum (user_id, judul, konten, created_at) 
-                        VALUES (:uid, :jdl, :ktn, NOW())
+                        INSERT INTO forum (user_id, judul, konten, gambar, created_at) 
+                        VALUES (:uid, :jdl, :ktn, :gbr, NOW())
                     ");
                     $stmtFB->execute([
                         'uid' => $userId,
                         'jdl' => $judul,
-                        'ktn' => $konten
+                        'ktn' => $konten,
+                        'gbr' => $gambarFilename
                     ]);
                     $this->jsonResponse(true, 'Topik diskusi berhasil diterbitkan!');
                 } catch (\Throwable $eFB) {
@@ -2820,6 +2849,32 @@ class ApiController {
         } elseif ($endpoint === 'comment') {
             $forumId = intval($input['forum_id'] ?? $_GET['forum_id'] ?? 0);
             $komentar = trim($input['komentar'] ?? $input['isi_komentar'] ?? '');
+            $gambarFilename = null;
+
+            if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] === UPLOAD_ERR_OK) {
+                if (file_exists(ROOT_PATH . 'helpers/UploadHelper.php')) {
+                    require_once ROOT_PATH . 'helpers/UploadHelper.php';
+                    $gambarFilename = UploadHelper::upload($_FILES['gambar'], 'forum');
+                }
+            }
+            if (!$gambarFilename && !empty($input['gambar_base64'])) {
+                $base64 = $input['gambar_base64'];
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64, $type)) {
+                    $base64 = substr($base64, strpos($base64, ',') + 1);
+                    $ext = strtolower($type[1]);
+                } else {
+                    $ext = 'jpg';
+                }
+                $imgData = base64_decode($base64);
+                if ($imgData !== false) {
+                    $uploadDir = ROOT_PATH . 'assets/uploads/forum/';
+                    if (!is_dir($uploadDir)) {
+                        @mkdir($uploadDir, 0777, true);
+                    }
+                    $gambarFilename = 'comment_' . time() . '_' . uniqid() . '.' . $ext;
+                    @file_put_contents($uploadDir . $gambarFilename, $imgData);
+                }
+            }
 
             if ($forumId <= 0 || empty($komentar)) {
                 $this->jsonResponse(false, 'ID Forum dan isi komentar wajib diisi!', null, 400);
@@ -2831,20 +2886,21 @@ class ApiController {
 
             if ($commModel) {
                 try {
-                    $commModel->addKomentar($forumId, $userId, $komentar);
+                    $commModel->addKomentar($forumId, $userId, $komentar, null, $gambarFilename);
                     $this->jsonResponse(true, 'Komentar berhasil ditambahkan!');
                 } catch (\Throwable $eAm) {}
             }
 
             try {
                 $stmt = $this->db->prepare("
-                    INSERT INTO komentar (forum_id, user_id, komentar, created_at) 
-                    VALUES (:fid, :uid, :km, NOW())
+                    INSERT INTO komentar (forum_id, user_id, komentar, gambar, created_at) 
+                    VALUES (:fid, :uid, :km, :gbr, NOW())
                 ");
                 $stmt->execute([
                     'fid' => $forumId,
                     'uid' => $userId,
-                    'km' => $komentar
+                    'km' => $komentar,
+                    'gbr' => $gambarFilename
                 ]);
                 $this->jsonResponse(true, 'Komentar berhasil ditambahkan!');
             } catch (\Throwable $eKm) {
@@ -2865,7 +2921,7 @@ class ApiController {
             if (!$topic) {
                 try {
                     $stmtF = $this->db->prepare("
-                        SELECT f.id, f.user_id, f.judul, f.konten, 
+                        SELECT f.id, f.user_id, f.judul, f.konten, f.gambar,
                                COALESCE(f.kategori, 'Umum') as kategori,
                                COALESCE(f.visibility, 'public') as visibility,
                                f.created_at,
@@ -2885,19 +2941,34 @@ class ApiController {
                 } catch (\Throwable $eFd) {}
             }
 
+            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'smkmuthiaharapancicalengka.my.id';
+
             if ($topic) {
                 $avFile = $topic['avatar_file'] ?? ($topic['avatar'] ?? ($topic['foto_profil'] ?? ''));
                 if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                    $topic['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                    $topic['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : "{$scheme}://{$host}/assets/uploads/profile/" . $avFile;
                 } else {
                     $topic['avatar_url'] = null;
+                }
+
+                if (!empty($topic['gambar'])) {
+                    $gFile = $topic['gambar'];
+                    if (strpos($gFile, 'http') === 0) {
+                        $topic['gambar_url'] = $gFile;
+                    } else {
+                        $folder = file_exists(ROOT_PATH . 'assets/uploads/forum/' . $gFile) ? 'forum' : 'tugas';
+                        $topic['gambar_url'] = "{$scheme}://{$host}/assets/uploads/{$folder}/" . $gFile;
+                    }
+                } else {
+                    $topic['gambar_url'] = null;
                 }
             }
 
             if (empty($comments)) {
                 try {
                     $stmtK = $this->db->prepare("
-                        SELECT k.id, k.forum_id, k.user_id, k.komentar as isi_komentar, k.created_at,
+                        SELECT k.id, k.forum_id, k.user_id, k.komentar as isi_komentar, k.gambar, k.created_at,
                                COALESCE(u.full_name, 'Pengguna') as full_name, 
                                COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file
                         FROM komentar k
@@ -2916,9 +2987,20 @@ class ApiController {
                 $c['isi_komentar'] = $c['isi_komentar'] ?? ($c['komentar'] ?? '');
                 $avFile = $c['avatar_file'] ?? ($c['avatar'] ?? '');
                 if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                    $c['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                    $c['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : "{$scheme}://{$host}/assets/uploads/profile/" . $avFile;
                 } else {
                     $c['avatar_url'] = null;
+                }
+
+                if (!empty($c['gambar'])) {
+                    $cgFile = $c['gambar'];
+                    if (strpos($cgFile, 'http') === 0) {
+                        $c['gambar_url'] = $cgFile;
+                    } else {
+                        $c['gambar_url'] = "{$scheme}://{$host}/assets/uploads/forum/" . $cgFile;
+                    }
+                } else {
+                    $c['gambar_url'] = null;
                 }
             }
 
@@ -3009,7 +3091,7 @@ class ApiController {
                     $stmtIns->execute(['uid' => $realUserId]);
 
                     $stmt2 = $this->db->query("
-                        SELECT f.id, COALESCE(f.user_id, 1) as user_id, f.judul, f.konten, f.created_at,
+                        SELECT f.id, COALESCE(f.user_id, 1) as user_id, f.judul, f.konten, f.gambar, f.created_at,
                                COALESCE(u.full_name, 'Admin E-Learning') as full_name, 
                                COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file, 
                                COALESCE(r.name, 'Admin') as role_name,
@@ -3038,12 +3120,17 @@ class ApiController {
                         'target_nama_kelas' => 'Semua Kelas',
                         'full_name' => 'Admin E-Learning',
                         'avatar_url' => null,
+                        'gambar' => null,
+                        'gambar_url' => null,
                         'role_name' => 'Admin',
                         'total_komentar' => 0,
                         'created_at' => date('Y-m-d H:i:s')
                     ]
                 ];
             }
+
+            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'smkmuthiaharapancicalengka.my.id';
 
             foreach ($list as &$f) {
                 if (!isset($f['kategori']) || empty($f['kategori'])) $f['kategori'] = 'Umum';
@@ -3055,9 +3142,21 @@ class ApiController {
 
                 $avFile = $f['avatar_file'] ?? ($f['avatar'] ?? ($f['foto_profil'] ?? ''));
                 if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                    $f['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                    $f['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : "{$scheme}://{$host}/assets/uploads/profile/" . $avFile;
                 } else {
                     $f['avatar_url'] = null;
+                }
+
+                if (!empty($f['gambar'])) {
+                    $gFile = $f['gambar'];
+                    if (strpos($gFile, 'http') === 0) {
+                        $f['gambar_url'] = $gFile;
+                    } else {
+                        $folder = file_exists(ROOT_PATH . 'assets/uploads/forum/' . $gFile) ? 'forum' : 'tugas';
+                        $f['gambar_url'] = "{$scheme}://{$host}/assets/uploads/{$folder}/" . $gFile;
+                    }
+                } else {
+                    $f['gambar_url'] = null;
                 }
             }
             $this->jsonResponse(true, 'Daftar Forum Diskusi', $list);

@@ -34,9 +34,11 @@ class CommunicationModel extends BaseModel {
 
     private function ensureForumColumnsExist() {
         try {
+            $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS gambar VARCHAR(255) NULL");
             $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS visibility ENUM('public', 'private') DEFAULT 'public'");
             $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS target_role VARCHAR(50) NULL");
             $this->db->exec("ALTER TABLE forum ADD COLUMN IF NOT EXISTS target_kelas_id INT NULL");
+            $this->db->exec("ALTER TABLE komentar ADD COLUMN IF NOT EXISTS gambar VARCHAR(255) NULL");
         } catch (Exception $e) {}
     }
 
@@ -287,9 +289,9 @@ class CommunicationModel extends BaseModel {
         return $stmt->fetchAll();
     }
 
-    public function addKomentar($forum_id, $userId, $komentar, $parent_id = null) {
-        $stmt = $this->db->prepare("INSERT INTO komentar (forum_id, user_id, parent_id, komentar) VALUES (?, ?, ?, ?)");
-        return $stmt->execute([$forum_id, $userId, $parent_id ?: null, $komentar]);
+    public function addKomentar($forum_id, $userId, $komentar, $parent_id = null, $gambar = null) {
+        $stmt = $this->db->prepare("INSERT INTO komentar (forum_id, user_id, parent_id, komentar, gambar) VALUES (?, ?, ?, ?, ?)");
+        return $stmt->execute([$forum_id, $userId, $parent_id ?: null, $komentar, $gambar]);
     }
 
     // --- REALTIME CHAT (AJAX POLLING) ---

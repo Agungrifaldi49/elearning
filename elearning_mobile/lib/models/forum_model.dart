@@ -3,6 +3,8 @@ class ForumModel {
   final int userId;
   final String judul;
   final String konten;
+  final String? gambar;
+  final String? gambarUrl;
   final String kategori;
   final String visibility;
   final String targetNamaKelas;
@@ -18,6 +20,8 @@ class ForumModel {
     required this.userId,
     required this.judul,
     required this.konten,
+    this.gambar,
+    this.gambarUrl,
     required this.kategori,
     this.visibility = 'public',
     this.targetNamaKelas = 'Semua Kelas',
@@ -34,11 +38,17 @@ class ForumModel {
     if (avUrl == null && json['avatar'] != null && json['avatar'].toString().startsWith('http')) {
       avUrl = json['avatar'];
     }
+    String? gUrl = json['gambar_url'];
+    if (gUrl == null && json['gambar'] != null && json['gambar'].toString().startsWith('http')) {
+      gUrl = json['gambar'];
+    }
     return ForumModel(
       id: int.parse((json['id'] ?? 0).toString()),
       userId: int.parse((json['user_id'] ?? 0).toString()),
       judul: json['judul'] ?? '',
       konten: json['konten'] ?? '',
+      gambar: json['gambar'],
+      gambarUrl: gUrl,
       kategori: json['kategori'] ?? 'Umum',
       visibility: json['visibility'] ?? 'public',
       targetNamaKelas: json['target_nama_kelas'] ?? json['nama_kelas'] ?? 'Semua Kelas',
@@ -57,6 +67,8 @@ class KomentarModel {
   final int forumId;
   final int userId;
   final String isiKomentar;
+  final String? gambar;
+  final String? gambarUrl;
   final String fullName;
   final String avatar;
   final String? avatarUrl;
@@ -67,6 +79,8 @@ class KomentarModel {
     required this.forumId,
     required this.userId,
     required this.isiKomentar,
+    this.gambar,
+    this.gambarUrl,
     required this.fullName,
     required this.avatar,
     this.avatarUrl,
@@ -78,11 +92,17 @@ class KomentarModel {
     if (avUrl == null && json['avatar'] != null && json['avatar'].toString().startsWith('http')) {
       avUrl = json['avatar'];
     }
+    String? gUrl = json['gambar_url'];
+    if (gUrl == null && json['gambar'] != null && json['gambar'].toString().startsWith('http')) {
+      gUrl = json['gambar'];
+    }
     return KomentarModel(
       id: int.parse((json['id'] ?? 0).toString()),
       forumId: int.parse((json['forum_id'] ?? 0).toString()),
       userId: int.parse((json['user_id'] ?? 0).toString()),
-      isiKomentar: json['isi_komentar'] ?? '',
+      isiKomentar: json['isi_komentar'] ?? json['komentar'] ?? '',
+      gambar: json['gambar'],
+      gambarUrl: gUrl,
       fullName: json['full_name'] ?? '',
       avatar: json['avatar'] ?? 'default_avatar.png',
       avatarUrl: avUrl,

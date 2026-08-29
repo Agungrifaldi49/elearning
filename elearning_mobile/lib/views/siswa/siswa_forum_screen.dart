@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../models/forum_model.dart';
 import '../../providers/auth_provider.dart';
@@ -20,6 +23,47 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
   List<ForumModel> _filteredTopics = [];
   bool _isLoading = false;
   String _selectedFilter = 'semua'; // 'semua', 'public', 'private'
+
+  Future<XFile?> _pickImage() async {
+    try {
+      final picker = ImagePicker();
+      return await picker.pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 1200);
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      return null;
+    }
+  }
+
+  void _showImageViewer(BuildContext context, String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.black.withOpacity(0.9),
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white, size: 60),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -85,6 +129,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
     final kontenController = TextEditingController();
     String visibility = 'public';
     String kategori = 'Umum';
+    XFile? topicImage;
 
     showDialog(
       context: context,
@@ -188,6 +233,49 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
+                const SizedBox(height: 14),
+                if (topicImage != null) ...[
+                  Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          File(topicImage!.path),
+                          height: 140,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: GestureDetector(
+                          onTap: () => setDialogState(() => topicImage = null),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                            child: const Icon(Icons.close, color: Colors.white, size: 18),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final img = await _pickImage();
+                    if (img != null) {
+                      setDialogState(() => topicImage = img);
+                    }
+                  },
+                  icon: const Icon(Icons.add_photo_alternate_rounded, size: 20),
+                  label: Text(topicImage == null ? 'Lampirkan Gambar / Foto' : 'Ganti Gambar Lampiran'),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    minimumSize: const Size(double.infinity, 44),
+                  ),
+                ),
               ],
             ),
           ),
@@ -206,12 +294,19 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                   return;
                 }
 
-                // Optimistically insert new topic to UI right away
+                String? base64Image;
+                if (topicImage != null) {
+                  final bytes = await File(topicImage!.path).readAsBytes();
+                  final ext = topicImage!.path.split('.').last;
+                  base64Image = 'data:image/$ext;base64,${base64Encode(bytes)}';
+                }
+
                 final newTopic = ForumModel(
                   id: DateTime.now().millisecondsSinceEpoch,
                   userId: user.id,
                   judul: judul,
                   konten: konten,
+                  gambarUrl: topicImage != null ? topicImage!.path : null,
                   kategori: kategori,
                   visibility: visibility,
                   targetNamaKelas: visibility == 'private' ? 'Kelas Saya' : 'Semua Kelas',
@@ -231,13 +326,18 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                 if (!mounted) return;
                 Navigator.pop(context);
 
-                final res = await ApiService.post('forum/create', {
+                final bodyData = <String, dynamic>{
                   'user_id': user.id,
                   'judul': judul,
                   'konten': konten,
                   'kategori': kategori,
                   'visibility': visibility,
-                });
+                };
+                if (base64Image != null) {
+                  bodyData['gambar_base64'] = base64Image;
+                }
+
+                final res = await ApiService.post('forum/create', bodyData);
 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -275,6 +375,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
     final commentController = TextEditingController();
     bool isLoadingComments = true;
     List<dynamic> comments = [];
+    XFile? commentImage;
 
     Future<void> fetchComments() async {
       final res = await ApiService.get('forum/detail', params: {'forum_id': forum.id.toString()});
@@ -362,9 +463,30 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.indigo.shade100),
                       ),
-                      child: SelectableText(
-                        ProfanityService.filter(forum.konten),
-                        style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SelectableText(
+                            ProfanityService.filter(forum.konten),
+                            style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
+                          ),
+                          if (forum.gambarUrl != null && forum.gambarUrl!.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            GestureDetector(
+                              onTap: () => _showImageViewer(context, forum.gambarUrl!),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  forum.gambarUrl!,
+                                  maxHeight: 200,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const SizedBox(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -381,6 +503,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                     final c = comments[index];
                                     final avatarUrl = c['avatar_url'];
                                     final fullName = c['full_name'] ?? 'User';
+                                    final cmtImgUrl = c['gambar_url'];
 
                                     return ListTile(
                                       contentPadding: EdgeInsets.zero,
@@ -394,19 +517,74 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                             : null,
                                       ),
                                       title: Text(fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                      subtitle: Text(
-                                        ProfanityService.filter(c['isi_komentar'] ?? ''),
-                                        style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                      subtitle: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            ProfanityService.filter(c['isi_komentar'] ?? ''),
+                                            style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                          ),
+                                          if (cmtImgUrl != null && cmtImgUrl.toString().isNotEmpty) ...[
+                                            const SizedBox(height: 6),
+                                            GestureDetector(
+                                              onTap: () => _showImageViewer(context, cmtImgUrl.toString()),
+                                              child: ClipRRect(
+                                                borderRadius: BorderRadius.circular(8),
+                                                child: Image.network(
+                                                  cmtImgUrl.toString(),
+                                                  maxHeight: 120,
+                                                  width: 180,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) => const SizedBox(),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                       trailing: Text(c['created_at'] ?? '', style: const TextStyle(fontSize: 10, color: Colors.grey)),
                                     );
                                   },
                                 ),
                     ),
+                    if (commentImage != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                File(commentImage!.path),
+                                height: 50,
+                                width: 50,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text('Gambar terlampir', style: TextStyle(fontSize: 12, color: Colors.indigo, fontWeight: FontWeight.bold)),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.cancel, color: Colors.grey, size: 20),
+                              onPressed: () => setModalState(() => commentImage = null),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Row(
                         children: [
+                          IconButton(
+                            icon: const Icon(Icons.add_a_photo_rounded, color: Colors.indigo),
+                            onPressed: () async {
+                              final img = await _pickImage();
+                              if (img != null) {
+                                setModalState(() => commentImage = img);
+                              }
+                            },
+                          ),
                           Expanded(
                             child: TextField(
                               controller: commentController,
@@ -424,12 +602,26 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                               final text = commentController.text.trim();
                               if (user == null || text.isEmpty) return;
 
+                              String? base64CmtImage;
+                              if (commentImage != null) {
+                                final bytes = await File(commentImage!.path).readAsBytes();
+                                final ext = commentImage!.path.split('.').last;
+                                base64CmtImage = 'data:image/$ext;base64,${base64Encode(bytes)}';
+                              }
+
                               commentController.clear();
-                              final res = await ApiService.post('forum/comment', {
+                              setModalState(() => commentImage = null);
+
+                              final bodyData = <String, dynamic>{
                                 'user_id': user.id,
                                 'forum_id': forum.id,
                                 'komentar': text,
-                              });
+                              };
+                              if (base64CmtImage != null) {
+                                bodyData['gambar_base64'] = base64CmtImage;
+                              }
+
+                              final res = await ApiService.post('forum/comment', bodyData);
 
                               if (res['success'] == true) {
                                 isLoadingComments = true;
@@ -575,6 +767,19 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(fontSize: 13, color: Colors.grey.shade800, height: 1.3),
                                       ),
+                                      if (f.gambarUrl != null && f.gambarUrl!.isNotEmpty) ...[
+                                        const SizedBox(height: 10),
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.network(
+                                            f.gambarUrl!,
+                                            height: 160,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => const SizedBox(),
+                                          ),
+                                        ),
+                                      ],
                                       const Divider(height: 20),
                                       Row(
                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
