@@ -630,36 +630,43 @@ class AcademicModel extends BaseModel {
     public function getMapelEnrollmentKeys($guru_id = null) {
         $this->ensureEnrollmentTables();
         $sql = "
-            SELECT mek.*, m.nama_mapel, m.kode_mapel, g.nama_lengkap as nama_guru, g.nip, k.nama_kelas,
-            (SELECT COUNT(*) FROM siswa_mapel_enrollment sme WHERE sme.mapel_id = mek.mapel_id AND sme.guru_id = mek.guru_id) as total_siswa
+            SELECT mek.*, m.nama_mapel, m.kode_mapel, g.nama_lengkap as nama_guru, g.nip, k.nama_kelas, k.tingkat, j.nama_jurusan,
+            (SELECT COUNT(*) FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.mapel_id = mek.mapel_id AND sme.guru_id = mek.guru_id AND (mek.kelas_id IS NULL OR s.kelas_id = mek.kelas_id)) as total_siswa
             FROM mapel_enrollment_keys mek
             JOIN mata_pelajaran m ON mek.mapel_id = m.id
             JOIN guru g ON mek.guru_id = g.id
             LEFT JOIN kelas k ON mek.kelas_id = k.id
+            LEFT JOIN jurusan j ON k.jurusan_id = j.id
             WHERE 1=1
         ";
         if ($guru_id) {
             $gId = (int)$guru_id;
             $sql .= " AND mek.guru_id = {$gId}";
         }
-        $sql .= " ORDER BY m.nama_mapel ASC, g.nama_lengkap ASC";
+        $sql .= " ORDER BY m.nama_mapel ASC, k.tingkat ASC, k.nama_kelas ASC, g.nama_lengkap ASC";
         return $this->db->query($sql)->fetchAll();
     }
 
     public function setMapelEnrollmentKey($mapel_id, $guru_id, $key, $kelas_id = null) {
         $this->ensureEnrollmentTables();
         $cleanKey = strtoupper(trim($key));
+        $kelasIdVal = !empty($kelas_id) ? (int)$kelas_id : null;
         
-        $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ?");
-        $chk->execute([$mapel_id, $guru_id]);
+        if ($kelasIdVal) {
+            $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND kelas_id = ?");
+            $chk->execute([$mapel_id, $guru_id, $kelasIdVal]);
+        } else {
+            $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND (kelas_id IS NULL OR kelas_id = 0)");
+            $chk->execute([$mapel_id, $guru_id]);
+        }
         $row = $chk->fetch();
 
         if ($row) {
             $stmt = $this->db->prepare("UPDATE mapel_enrollment_keys SET enrollment_key = ?, passcode = ?, kelas_id = ? WHERE id = ?");
-            return $stmt->execute([$cleanKey, $cleanKey, $kelas_id ?: null, $row['id']]);
+            return $stmt->execute([$cleanKey, $cleanKey, $kelasIdVal, $row['id']]);
         } else {
             $stmt = $this->db->prepare("INSERT INTO mapel_enrollment_keys (mapel_id, guru_id, kelas_id, enrollment_key, passcode) VALUES (?, ?, ?, ?, ?)");
-            return $stmt->execute([$mapel_id, $guru_id, $kelas_id ?: null, $cleanKey, $cleanKey]);
+            return $stmt->execute([$mapel_id, $guru_id, $kelasIdVal, $cleanKey, $cleanKey]);
         }
     }
 
@@ -672,10 +679,11 @@ class AcademicModel extends BaseModel {
         }
 
         $stmt = $this->db->prepare("
-            SELECT mek.*, m.nama_mapel, g.nama_lengkap as nama_guru 
+            SELECT mek.*, m.nama_mapel, g.nama_lengkap as nama_guru, k.nama_kelas, k.tingkat
             FROM mapel_enrollment_keys mek
             JOIN mata_pelajaran m ON mek.mapel_id = m.id
             JOIN guru g ON mek.guru_id = g.id
+            LEFT JOIN kelas k ON mek.kelas_id = k.id
             WHERE UPPER(mek.enrollment_key) = ? OR UPPER(mek.passcode) = ?
         ");
         $stmt->execute([$cleanKey, $cleanKey]);
@@ -685,7 +693,8 @@ class AcademicModel extends BaseModel {
             if (preg_match('/^MPL-(\d+)-(\d+)-(\d+)$/i', $cleanKey, $matches)) {
                 $mId = intval($matches[1]);
                 $gId = intval($matches[2]);
-                $this->setMapelEnrollmentKey($mId, $gId, $cleanKey);
+                $kId = intval($matches[3]);
+                $this->setMapelEnrollmentKey($mId, $gId, $cleanKey, $kId);
                 $stmt->execute([$cleanKey, $cleanKey]);
                 $target = $stmt->fetch();
             }
@@ -695,13 +704,31 @@ class AcademicModel extends BaseModel {
             return ['status' => false, 'message' => 'Kode Akses / Key Mapel tidak valid. Silakan minta Key resmi dari Guru atau Admin.'];
         }
 
+        // Verify student class targeting
+        $stmtS = $this->db->prepare("SELECT s.*, k.nama_kelas, k.tingkat FROM siswa s LEFT JOIN kelas k ON s.kelas_id = k.id WHERE s.id = ?");
+        $stmtS->execute([(int)$siswa_id]);
+        $siswa = $stmtS->fetch();
+
+        if ($target['kelas_id'] && $siswa && $siswa['kelas_id']) {
+            if ((int)$target['kelas_id'] !== (int)$siswa['kelas_id']) {
+                $targetKelasName = $target['nama_kelas'] ?? ('Kelas ' . ($target['tingkat'] ?? ''));
+                $siswaKelasName = $siswa['nama_kelas'] ?? ('Kelas ' . ($siswa['tingkat'] ?? ''));
+                return [
+                    'status' => false,
+                    'message' => "⚠️ Gagal Mendaftar! Key Mapel '{$cleanKey}' ditujukan khusus untuk Rombel {$targetKelasName}. Kelas Anda saat ini adalah {$siswaKelasName}. Silakan gunakan Key Mapel yang sesuai dengan kelas Anda!"
+                ];
+            }
+        }
+
         try {
             $ins = $this->db->prepare("INSERT IGNORE INTO siswa_mapel_enrollment (siswa_id, mapel_id, guru_id) VALUES (?, ?, ?)");
             $ins->execute([$siswa_id, $target['mapel_id'], $target['guru_id']]);
 
+            $kelasInfo = !empty($target['nama_kelas']) ? " [{$target['nama_kelas']}]" : '';
+
             return [
                 'status' => true,
-                'message' => 'Selamat! Anda berhasil terdaftar di Mata Pelajaran ' . $target['nama_mapel'] . ' (' . $target['nama_guru'] . ').',
+                'message' => 'Selamat! Anda berhasil terdaftar di Mata Pelajaran ' . $target['nama_mapel'] . $kelasInfo . ' bersama Guru ' . $target['nama_guru'] . '.',
                 'enrollment' => $target
             ];
         } catch (Exception $e) {

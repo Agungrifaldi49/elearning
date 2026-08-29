@@ -245,7 +245,24 @@
                                                 <i class="bi bi-people-fill me-1"></i><?= (int)$mk['total_siswa'] ?> Siswa
                                             </span>
                                         </div>
-                                        <small class="text-muted d-block mb-3" style="font-size:0.75rem;">Target Rombel: <strong><?= htmlspecialchars($mk['nama_kelas'] ?? 'Semua Rombel') ?></strong></small>
+                                        <?php 
+                                            $tNum = (int)($mk['tingkat'] ?? 0);
+                                            $badgeStyle = ($tNum === 10) ? 'background:#e0e7ff; color:#3730a3;' :
+                                                         (($tNum === 11) ? 'background:#f3e8ff; color:#6b21a8;' :
+                                                         (($tNum === 12) ? 'background:#dcfce7; color:#15803d;' : 'background:#f1f5f9; color:#334155;'));
+                                        ?>
+                                        <div class="mb-3">
+                                            <small class="text-muted d-block mb-1" style="font-size:0.75rem;">Target Rombel Kelas:</small>
+                                            <?php if (!empty($mk['nama_kelas'])): ?>
+                                                <span class="badge rounded-pill px-2.5 py-1 fw-bold border" style="<?= $badgeStyle ?> font-size:0.72rem;">
+                                                    <i class="bi bi-building me-1"></i><?= htmlspecialchars($mk['nama_kelas']) ?> (Kelas <?= $tNum ?>)
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge bg-light text-secondary border fw-semibold px-2.5 py-1" style="font-size:0.72rem;">
+                                                    <i class="bi bi-globe me-1"></i>Semua Rombel (Global)
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                     <div class="d-flex align-items-center justify-content-between bg-white p-2.5 rounded-3 border">
                                         <code class="fs-6 fw-bold text-danger mb-0" style="letter-spacing:1px;"><?= htmlspecialchars($mk['enrollment_key']) ?></code>
@@ -331,72 +348,36 @@
                     </div>
                 </form>
 
-                <!-- MOBILE STUDENT ENROLLED CARDS VIEW (Screen Only < 768px) -->
-                <?php if (!empty($siswaEnrolledList)): ?>
-                    <div class="d-block d-md-none mb-3">
-                        <div class="row g-2.5">
-                            <?php foreach ($siswaEnrolledList as $mse): ?>
-                                <div class="col-12">
-                                    <div class="p-3 bg-white rounded-3 border shadow-xs">
-                                        <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
-                                            <div>
-                                                <h6 class="fw-bold text-dark mb-0 fs-6"><i class="bi bi-person-circle text-primary me-1.5"></i><?= htmlspecialchars($mse['nama_lengkap']) ?></h6>
-                                                <code class="small text-muted">NISN: <?= htmlspecialchars($mse['nisn'] ?? ($mse['nis'] ?? '-')) ?></code>
-                                            </div>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill" style="font-size:0.7rem;">
-                                                <?= htmlspecialchars($mse['nama_kelas'] ?? 'Umum') ?>
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-center pt-2 border-top gap-1 flex-wrap" style="font-size:0.75rem;">
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
-                                                <i class="bi bi-book-fill me-1"></i><?= htmlspecialchars($mse['nama_mapel']) ?>
-                                            </span>
-                                            <span class="text-muted" style="font-size:0.7rem;">Enrolled: <?= date('d M Y', strtotime($mse['enrolled_at'])) ?></span>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <!-- DESKTOP / TABLET STUDENT ENROLLED TABLE -->
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 <?= !empty($siswaEnrolledList) ? 'datatable' : '' ?>">
+                    <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th style="width:40px;" class="text-center">No</th>
-                                <th>NISN / NIS</th>
-                                <th>Nama Siswa</th>
+                                <th style="width:40px;">No</th>
+                                <th>Nama Lengkap Siswa</th>
                                 <th>Rombel Kelas</th>
                                 <th>Jurusan</th>
-                                <th>Mata Pelajaran Terdaftar</th>
-                                <th>Tanggal Join / Enrolled</th>
+                                <th>Mata Pelajaran</th>
+                                <th>Tgl Terdaftar</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($siswaEnrolledList)): ?>
-                                <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">
-                                        <i class="bi bi-people fs-2 d-block mb-2 text-secondary"></i>
-                                        Belum ada data siswa terdaftar yang sesuai dengan kriteria pencarian / filter Anda.
-                                    </td>
-                                </tr>
+                                <tr><td colspan="6" class="text-center py-4 text-muted">Belum ada siswa terdaftar yang sesuai filter.</td></tr>
                             <?php else: ?>
-                                <?php foreach ($siswaEnrolledList as $idx => $se): ?>
+                                <?php foreach ($siswaEnrolledList as $i => $se): ?>
                                     <tr>
-                                        <td class="text-center"><?= $idx + 1 ?></td>
-                                        <td><code class="fw-bold text-dark"><?= htmlspecialchars($se['nisn'] ?? ($se['nis'] ?? '-')) ?></code></td>
+                                        <td><?= $i + 1 ?></td>
                                         <td class="fw-bold text-dark">
-                                            <i class="bi bi-person-circle text-primary me-1.5"></i><?= htmlspecialchars($se['nama_lengkap']) ?>
+                                            <i class="bi bi-person-fill text-secondary me-1"></i><?= htmlspecialchars($se['nama_lengkap']) ?>
+                                            <small class="text-muted d-block">NISN: <?= htmlspecialchars($se['nisn'] ?? '-') ?></small>
                                         </td>
                                         <td>
                                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill fw-bold" style="font-size:0.75rem;">
-                                                <?= htmlspecialchars($se['nama_kelas'] ?? 'Umum') ?>
+                                                <?= htmlspecialchars($se['nama_kelas'] ?? '-') ?>
                                             </span>
                                         </td>
                                         <td>
-                                            <span class="badge bg-light text-dark border rounded-pill fw-medium" style="font-size:0.75rem;">
+                                            <span class="badge bg-light text-dark border rounded-pill" style="font-size:0.75rem;">
                                                 <?= htmlspecialchars($se['nama_jurusan'] ?? 'Umum') ?>
                                             </span>
                                         </td>
@@ -405,9 +386,7 @@
                                                 <i class="bi bi-book-fill me-1"></i><?= htmlspecialchars($se['nama_mapel']) ?>
                                             </span>
                                         </td>
-                                        <td class="text-muted small">
-                                            <?= date('d M Y, H:i', strtotime($se['enrolled_at'])) ?> WIB
-                                        </td>
+                                        <td class="text-muted small"><?= date('d M Y, H:i', strtotime($se['enrolled_at'])) ?> WIB</td>
                                     </tr>
                                 <?php endforeach; ?>
                             <?php endif; ?>
@@ -437,7 +416,7 @@
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-dark">Pilih Mata Pelajaran Pengampuan <span class="text-danger">*</span></label>
-                        <select name="mapel_id" class="form-select rounded-3" required>
+                        <select name="mapel_id" id="guru_key_mapel_id" class="form-select rounded-3" required>
                             <option value="">-- Pilih Mata Pelajaran --</option>
                             <?php 
                             $listM = !empty($myMapelList) ? $myMapelList : $mapelList;
@@ -449,29 +428,29 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-dark">Pilih Rombel Kelas (Opsional)</label>
-                        <select name="kelas_id" class="form-select rounded-3">
-                            <option value="">-- Semua Kelas Pengampuan --</option>
+                        <label class="form-label small fw-bold text-dark">Pilih Rombel Kelas Target <span class="text-danger">*Sangat Disarankan Per-Kelas</span></label>
+                        <select name="kelas_id" id="guru_key_kelas_id" class="form-select rounded-3">
+                            <option value="">-- Semua Kelas (Global) --</option>
                             <?php 
                             $listK = !empty($myKelasList) ? $myKelasList : $kelasList;
                             foreach ($listK as $k): 
                             ?>
-                                <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
+                                <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?> (Kelas <?= htmlspecialchars($k['tingkat'] ?? '-') ?>)</option>
                             <?php endforeach; ?>
                         </select>
+                        <small class="text-muted mt-1 d-block" style="font-size:0.75rem;">
+                            <i class="bi bi-info-circle text-primary me-1"></i>Pilih Rombel Kelas spesifik agar Key Mapel Anda di Kelas 10, 11, dan 12 terpisah rapi.
+                        </small>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-dark">Kode Akses / Key Mapel (Passcode) <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="text" name="enrollment_key" id="guru_enrollment_key" class="form-control text-uppercase fw-bold rounded-start-3" placeholder="Contoh: MTK-GURU1-2026" required style="letter-spacing:1px;">
-                            <button type="button" class="btn btn-outline-secondary rounded-end-3" onclick="document.getElementById('guru_enrollment_key').value = 'KEY-' + Math.floor(1000 + Math.random() * 9000)">
-                                <i class="bi bi-shuffle me-1"></i> Acak
+                            <input type="text" name="enrollment_key" id="guru_enrollment_key" class="form-control text-uppercase fw-bold rounded-start-3" placeholder="Contoh: AGAMA-X-RPL1" required style="letter-spacing:1px;">
+                            <button type="button" class="btn btn-outline-secondary rounded-end-3" onclick="generateGuruSmartKey()">
+                                <i class="bi bi-magic me-1"></i> Kunci Cerdas
                             </button>
                         </div>
-                        <small class="text-muted mt-1.5 d-block" style="font-size:0.75rem;">
-                            <i class="bi bi-info-circle me-1"></i>Siswa akan diminta memasukkan Key ini sebelum dapat mengakses materi/tugas mapel Anda.
-                        </small>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 justify-content-between">
@@ -482,5 +461,23 @@
         </div>
     </div>
 </div>
+
+<script>
+function generateGuruSmartKey() {
+    const mapelSel = document.getElementById('guru_key_mapel_id');
+    const kelasSel = document.getElementById('guru_key_kelas_id');
+    
+    let mapelText = mapelSel.options[mapelSel.selectedIndex] ? mapelSel.options[mapelSel.selectedIndex].text : 'MAPEL';
+    let kelasText = kelasSel.options[kelasSel.selectedIndex] ? kelasSel.options[kelasSel.selectedIndex].text : '';
+    
+    mapelText = mapelText.replace(/[^a-zA-Z0-9]/g, '').substring(0, 5).toUpperCase();
+    kelasText = kelasText.replace(/[^a-zA-Z0-9]/g, '').substring(0, 6).toUpperCase();
+    
+    const randNum = Math.floor(100 + Math.random() * 900);
+    const resultKey = (mapelText || 'MPL') + (kelasText ? '-' + kelasText : '') + '-' + randNum;
+    
+    document.getElementById('guru_enrollment_key').value = resultKey;
+}
+</script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>

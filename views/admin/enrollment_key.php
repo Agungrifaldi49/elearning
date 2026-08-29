@@ -57,9 +57,23 @@
                                     <small class="text-muted">NIP: <?= htmlspecialchars($k['nip'] ?? '-') ?></small>
                                 </td>
                                 <td>
-                                    <span class="badge bg-light text-dark border fw-bold">
-                                        <?= htmlspecialchars($k['nama_kelas'] ?? 'Semua Kelas') ?>
-                                    </span>
+                                    <?php if (!empty($k['nama_kelas'])): 
+                                        $tNum = (int)($k['tingkat'] ?? 0);
+                                        $badgeStyle = ($tNum === 10) ? 'background:#e0e7ff; color:#3730a3;' :
+                                                     (($tNum === 11) ? 'background:#f3e8ff; color:#6b21a8;' :
+                                                     (($tNum === 12) ? 'background:#dcfce7; color:#15803d;' : 'background:#f1f5f9; color:#334155;'));
+                                    ?>
+                                        <span class="badge rounded-pill px-3 py-2 fw-bold border" style="<?= $badgeStyle ?>">
+                                            <i class="bi bi-building me-1"></i><?= htmlspecialchars($k['nama_kelas']) ?>
+                                            <?php if ($tNum > 0): ?>
+                                                <span class="ms-1 opacity-75">(Kelas <?= $tNum ?>)</span>
+                                            <?php endif; ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge bg-light text-secondary border fw-bold px-3 py-2">
+                                            <i class="bi bi-globe me-1"></i>Semua Rombel (Global)
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
@@ -133,24 +147,56 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Spesifik Rombel Kelas (Opsional)</label>
+                        <label class="form-label small fw-bold">Target Rombel Kelas <span class="text-danger">*Sangat Disarankan Per-Kelas</span></label>
                         <select name="kelas_id" id="key_kelas_id" class="form-select">
                             <option value="">-- Semua Kelas (Global Guru) --</option>
                             <?php foreach ($kelasList as $k): ?>
-                                <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
+                                <option value="<?= $k['id'] ?>">
+                                    <?= htmlspecialchars($k['nama_kelas']) ?> (Kelas <?= htmlspecialchars($k['tingkat'] ?? '-') ?> - <?= htmlspecialchars($k['nama_jurusan'] ?? 'Umum') ?>)
+                                </option>
                             <?php endforeach; ?>
                         </select>
+                        <div class="form-text text-muted small mt-1">
+                            <i class="bi bi-info-circle text-primary me-1"></i>Pilih Rombel Kelas spesifik agar jika Guru mengajar di Kelas 10, 11, dan 12, Key pendaftarannya tidak tertukar.
+                        </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Kode Akses / Key Mapel (Passcode)</label>
                         <div class="input-group">
-                            <input type="text" name="enrollment_key" id="key_enrollment_key" class="form-control text-uppercase fw-bold" placeholder="Contoh: WEB-GURU1-2026" required style="letter-spacing:1px;">
-                            <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('key_enrollment_key').value = 'KEY-' + Math.floor(1000 + Math.random() * 9000)">
-                                <i class="bi bi-shuffle me-1"></i> Acak
+                            <input type="text" name="enrollment_key" id="key_enrollment_key" class="form-control text-uppercase fw-bold" placeholder="Contoh: AGAMA-X-RPL1" required style="letter-spacing:1px;">
+                            <button type="button" class="btn btn-outline-secondary" onclick="generateSmartKey()">
+                                <i class="bi bi-magic me-1"></i> Buat Kunci Cerdas
                             </button>
                         </div>
-                        <small class="text-muted mt-1 d-block">Key ini akan diminta kepada siswa saat pendaftaran mapel pertama kali.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">Simpan Key Mapel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function generateSmartKey() {
+    const mapelSel = document.getElementById('key_mapel_id');
+    const kelasSel = document.getElementById('key_kelas_id');
+    
+    let mapelText = mapelSel.options[mapelSel.selectedIndex] ? mapelSel.options[mapelSel.selectedIndex].text : 'MAPEL';
+    let kelasText = kelasSel.options[kelasSel.selectedIndex] ? kelasSel.options[kelasSel.selectedIndex].text : '';
+    
+    mapelText = mapelText.replace(/[^a-zA-Z0-9]/g, '').substring(0, 5).toUpperCase();
+    kelasText = kelasText.replace(/[^a-zA-Z0-9]/g, '').substring(0, 6).toUpperCase();
+    
+    const randNum = Math.floor(100 + Math.random() * 900);
+    const resultKey = (mapelText || 'MPL') + (kelasText ? '-' + kelasText : '') + '-' + randNum;
+    
+    document.getElementById('key_enrollment_key').value = resultKey;
+}
+</script>    <small class="text-muted mt-1 d-block">Key ini akan diminta kepada siswa saat pendaftaran mapel pertama kali.</small>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 justify-content-between">
