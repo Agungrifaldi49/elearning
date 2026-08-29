@@ -104,6 +104,12 @@ class ForumController {
             $canDelete = ($isAuthor || $isAdmin);
             $reactions = $commModel->getForumReactionSummary($t['id'], $user['id']);
 
+            $gUrl = null;
+            if (!empty($t['gambar'])) {
+                $folder = file_exists(ROOT_PATH . 'assets/uploads/forum/' . $t['gambar']) ? 'forum' : 'tugas';
+                $gUrl = BASE_URL . 'assets/uploads/' . $folder . '/' . htmlspecialchars($t['gambar']);
+            }
+
             $formattedTopics[] = [
                 'id' => (int)$t['id'],
                 'user_id' => (int)$t['user_id'],
@@ -118,7 +124,7 @@ class ForumController {
                 'judul' => htmlspecialchars($t['judul']),
                 'konten_preview' => htmlspecialchars(substr($t['konten'], 0, 220)),
                 'gambar' => $t['gambar'] ?? null,
-                'gambar_url' => !empty($t['gambar']) ? BASE_URL . 'assets/uploads/forum/' . $t['gambar'] : null,
+                'gambar_url' => $gUrl,
                 'total_replies' => (int)$t['total_replies'],
                 'reactions' => $reactions,
                 'can_delete' => $canDelete,
@@ -177,6 +183,12 @@ class ForumController {
         $formattedComments = [];
 
         foreach ($comments as $c) {
+            $cUrl = null;
+            if (!empty($c['gambar'])) {
+                $folder = file_exists(ROOT_PATH . 'assets/uploads/forum/' . $c['gambar']) ? 'forum' : 'tugas';
+                $cUrl = BASE_URL . 'assets/uploads/' . $folder . '/' . htmlspecialchars($c['gambar']);
+            }
+
             $formattedComments[] = [
                 'id' => (int)$c['id'],
                 'full_name' => htmlspecialchars($c['full_name']),
@@ -184,7 +196,7 @@ class ForumController {
                 'created_at' => date('d/m/Y H:i', strtotime($c['created_at'])),
                 'komentar' => nl2br(htmlspecialchars($c['komentar'])),
                 'gambar' => $c['gambar'] ?? null,
-                'gambar_url' => !empty($c['gambar']) ? BASE_URL . 'assets/uploads/forum/' . $c['gambar'] : null
+                'gambar_url' => $cUrl
             ];
         }
 

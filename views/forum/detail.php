@@ -92,8 +92,8 @@
                     : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($topic['gambar']);
             ?>
                 <div class="mb-4">
-                    <div class="forum-image-preview-wrapper" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
-                        <img src="<?= $topicImgPath ?>" alt="Lampiran Gambar Topik" style="max-height: 450px;">
+                    <div class="forum-image-preview-wrapper" style="max-width: 550px; height: 280px;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
+                        <img src="<?= $topicImgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>';" alt="Lampiran Gambar Topik">
                         <div class="forum-image-overlay">
                             <i class="bi bi-zoom-in fs-3"></i> Klik untuk melihat ukuran penuh
                         </div>
@@ -201,11 +201,12 @@
                             </div>
                             <p class="mb-2 text-dark small" style="white-space: pre-line; line-height:1.6; font-size:0.95rem;"><?= htmlspecialchars($c['komentar']) ?></p>
                             <?php if (!empty($c['gambar'])): 
-                                $cmtImg = BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($c['gambar']);
+                                $cFolder = file_exists(ROOT_PATH . 'assets/uploads/forum/' . $c['gambar']) ? 'forum' : 'tugas';
+                                $cmtImg = BASE_URL . 'assets/uploads/' . $cFolder . '/' . htmlspecialchars($c['gambar']);
                             ?>
                                 <div class="mt-2">
-                                    <div class="forum-image-preview-wrapper d-inline-block" style="max-width: 280px;" onclick="openLightboxModal('<?= $cmtImg ?>', 'Lampiran Balasan Komentar')">
-                                        <img src="<?= $cmtImg ?>" class="img-fluid rounded-3 border" style="max-height: 180px; object-fit: cover;" alt="Lampiran Balasan">
+                                    <div class="forum-image-preview-wrapper d-inline-block" style="max-width: 280px; height: 160px;" onclick="openLightboxModal('<?= $cmtImg ?>', 'Lampiran Balasan Komentar')">
+                                        <img src="<?= $cmtImg ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($c['gambar']) ?>';" class="img-fluid rounded-3 border" style="height: 100%; object-fit: cover;" alt="Lampiran Balasan">
                                         <div class="forum-image-overlay" style="font-size:0.75rem;">
                                             <i class="bi bi-zoom-in"></i> Perbesar
                                         </div>

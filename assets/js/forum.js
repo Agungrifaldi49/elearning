@@ -7,7 +7,9 @@ const ForumApp = {
         isPolling: false,
         pollInterval: null,
         activeTopicId: 0,
-        isMutating: false
+        isMutating: false,
+        lastTopicsSig: '',
+        lastCommentsSig: ''
     },
 
     init: function() {
@@ -125,6 +127,7 @@ const ForumApp = {
                     const inst = bootstrap.Modal.getInstance(modalElem);
                     if (inst) inst.hide();
                 }
+                this.state.lastTopicsSig = '';
                 this.fetchTopics();
             } else {
                 alert(res.message || 'Gagal membuat topik diskusi');
@@ -157,6 +160,11 @@ const ForumApp = {
             if (res.status === 'success') {
                 const textarea = form.querySelector('textarea[name="komentar"]');
                 if (textarea) textarea.value = '';
+                const imgInput = form.querySelector('input[type="file"]');
+                if (imgInput) imgInput.value = '';
+                const imgContainer = document.getElementById('replyImageContainer');
+                if (imgContainer) imgContainer.classList.add('d-none');
+                this.state.lastCommentsSig = '';
                 this.fetchComments();
             } else {
                 alert(res.message || 'Gagal menambahkan komentar');
@@ -193,6 +201,7 @@ const ForumApp = {
                 if (window.location.href.includes('url=forum/detail')) {
                     window.location.href = `${BASE_URL}index.php?url=forum`;
                 } else {
+                    this.state.lastTopicsSig = '';
                     this.fetchTopics();
                 }
             } else {
@@ -214,7 +223,7 @@ const ForumApp = {
             if (!this.state.isMutating) {
                 this.fetchTopics();
             }
-        }, 3000);
+        }, 4000);
     },
 
     fetchTopics: function() {
@@ -222,7 +231,11 @@ const ForumApp = {
         .then(res => res.json())
         .then(res => {
             if (res.status === 'success' && res.topics) {
-                this.renderTopics(res.topics);
+                const sig = JSON.stringify(res.topics.map(t => ({ id: t.id, total_replies: t.total_replies, created_at: t.created_at, gambar: t.gambar })));
+                if (sig !== this.state.lastTopicsSig) {
+                    this.state.lastTopicsSig = sig;
+                    this.renderTopics(res.topics);
+                }
             }
         })
         .catch(() => {});
@@ -282,10 +295,13 @@ const ForumApp = {
                 `;
             }).join('');
 
-            const imgHtml = (t.gambar_url || t.gambar) ? `
+            const primaryUrl = t.gambar_url || (BASE_URL + 'assets/uploads/forum/' + t.gambar);
+            const fallbackUrl = BASE_URL + 'assets/uploads/tugas/' + t.gambar;
+
+            const imgHtml = (t.gambar) ? `
                 <div class="mb-3">
-                    <div class="forum-image-preview-wrapper" onclick="openLightboxModal('${t.gambar_url || (BASE_URL + 'assets/uploads/forum/' + t.gambar)}', '${(t.judul || '').replace(/'/g, "\\'")}')">
-                        <img src="${t.gambar_url || (BASE_URL + 'assets/uploads/forum/' + t.gambar)}" alt="Lampiran Gambar Forum">
+                    <div class="forum-image-preview-wrapper" onclick="openLightboxModal('${primaryUrl}', '${(t.judul || '').replace(/'/g, "\\'")}')">
+                        <img src="${primaryUrl}" onerror="this.onerror=null; this.src='${fallbackUrl}';" alt="Lampiran Gambar Forum">
                         <div class="forum-image-overlay">
                             <i class="bi bi-zoom-in fs-4"></i> Klik untuk memperbesar gambar
                         </div>
@@ -385,7 +401,11 @@ const ForumApp = {
         .then(res => res.json())
         .then(res => {
             if (res.status === 'success' && res.comments) {
-                this.renderComments(res.comments);
+                const sig = JSON.stringify(res.comments.map(c => ({ id: c.id, created_at: c.created_at, gambar: c.gambar })));
+                if (sig !== this.state.lastCommentsSig) {
+                    this.state.lastCommentsSig = sig;
+                    this.renderComments(res.comments);
+                }
             }
         })
         .catch(() => {});
@@ -417,10 +437,13 @@ const ForumApp = {
             if (roleLower.includes('admin')) cRingClass = 'avatar-ring-admin';
             else if (roleLower.includes('guru')) cRingClass = 'avatar-ring-guru';
 
-            const cmtImg = (c.gambar_url || c.gambar) ? `
+            const cPrimaryUrl = c.gambar_url || (BASE_URL + 'assets/uploads/forum/' + c.gambar);
+            const cFallbackUrl = BASE_URL + 'assets/uploads/tugas/' + c.gambar;
+
+            const cmtImg = (c.gambar) ? `
                 <div class="mt-2">
-                    <div class="forum-image-preview-wrapper d-inline-block" style="max-width: 280px;" onclick="openLightboxModal('${c.gambar_url || (BASE_URL + 'assets/uploads/forum/' + c.gambar)}', 'Lampiran Balasan Komentar')">
-                        <img src="${c.gambar_url || (BASE_URL + 'assets/uploads/forum/' + c.gambar)}" class="img-fluid rounded-3 border" style="max-height: 180px; object-fit: cover;" alt="Lampiran Balasan">
+                    <div class="forum-image-preview-wrapper d-inline-block" style="max-width: 280px; height: 160px;" onclick="openLightboxModal('${cPrimaryUrl}', 'Lampiran Balasan Komentar')">
+                        <img src="${cPrimaryUrl}" onerror="this.onerror=null; this.src='${cFallbackUrl}';" class="img-fluid rounded-3 border" style="height: 100%; object-fit: cover;" alt="Lampiran Balasan">
                         <div class="forum-image-overlay" style="font-size:0.75rem;">
                             <i class="bi bi-zoom-in"></i> Perbesar
                         </div>

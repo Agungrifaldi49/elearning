@@ -148,7 +148,7 @@
                             ?>
                                 <div class="mb-3">
                                     <div class="forum-image-preview-wrapper" onclick="openLightboxModal('<?= $imgPath ?>', '<?= htmlspecialchars(addslashes($t['judul'])) ?>')">
-                                        <img src="<?= $imgPath ?>" alt="Lampiran Gambar Forum">
+                                        <img src="<?= $imgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['gambar']) ?>';" alt="Lampiran Gambar Forum">
                                         <div class="forum-image-overlay">
                                             <i class="bi bi-zoom-in fs-4"></i> Klik untuk memperbesar gambar
                                         </div>
