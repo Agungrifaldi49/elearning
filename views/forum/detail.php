@@ -4,25 +4,29 @@
 
 <script src="<?= BASE_URL ?>assets/js/forum.js?v=<?= time() ?>"></script>
 
-<main class="main-content px-3 px-md-4">
+<main class="main-content px-3 px-md-4 py-3">
     <div class="container-fluid">
         <input type="hidden" id="activeTopicId" value="<?= $topic['id'] ?>">
 
-        <!-- Navigation & Breadcrumb -->
-        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-            <a href="<?= BASE_URL ?>index.php?url=forum" class="btn btn-light rounded-pill px-3 shadow-sm border">
-                <i class="bi bi-arrow-left me-1"></i> Kembali ke Daftar Forum
-            </a>
-            <div class="text-muted small">
-                <i class="bi bi-house-door me-1"></i> Forum / Detail Topik #<?= $topic['id'] ?>
+        <!-- Navigation Ribbon & Breadcrumb -->
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 bg-white p-3 rounded-4 shadow-sm border">
+            <div class="d-flex align-items-center gap-2">
+                <a href="<?= BASE_URL ?>index.php?url=forum" class="btn btn-light rounded-pill px-3 py-2 shadow-sm border text-dark fw-semibold" style="font-size:0.88rem;">
+                    <i class="bi bi-arrow-left me-1 text-primary"></i> Kembali ke Daftar Forum
+                </a>
+                <span class="text-muted d-none d-md-inline" style="font-size:0.85rem;">/ Detail Topik #<?= $topic['id'] ?></span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="#replyFormCard" class="btn btn-primary rounded-pill px-3 py-2 fw-semibold shadow-sm" style="font-size:0.88rem;">
+                    <i class="bi bi-chat-left-text-fill me-1"></i> Tulis Balasan
+                </a>
             </div>
         </div>
 
-        <!-- Layout Grid Multi-Kolom Detail Topik -->
+        <!-- Multi-Column Grid Detail Topik -->
         <div class="row g-4">
-            <!-- Left Main Column: Topic Detail & Comments Thread -->
+            <!-- Left Main Column: Topic Showcase & Discussion Thread -->
             <div class="col-lg-8 col-xl-8">
-                <!-- Topic Detail Card -->
                 <?php 
                     $isAuthor = ((int)($topic['user_id'] ?? 0) === (int)($user['id'] ?? 0));
                     $isAdmin = (strtolower($user['role_name'] ?? '') === 'administrator');
@@ -36,49 +40,53 @@
                         $ringClass = 'avatar-ring-guru';
                     }
                 ?>
-                <div class="forum-topic-card p-4 p-md-5 mb-4">
-                    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+
+                <!-- Topic Main Showcase Card -->
+                <div class="forum-topic-card p-4 p-md-5 mb-4 shadow-sm rounded-4 bg-white border">
+                    <!-- Author Header & Metadata -->
+                    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 pb-3 border-bottom">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="avatar-ring <?= $ringClass ?>">
-                                <div class="avatar-inner">
+                            <div class="avatar-ring <?= $ringClass ?>" style="padding:2px;">
+                                <div class="avatar-inner" style="width:48px; height:48px; font-size:1.2rem;">
                                     <?= strtoupper(substr($topic['full_name'], 0, 1)) ?>
                                 </div>
                             </div>
                             <div>
-                                <div class="fw-bold mb-0 text-dark d-flex align-items-center gap-2 flex-wrap fs-6">
+                                <div class="fw-bold mb-1 text-dark d-flex align-items-center gap-2 flex-wrap" style="font-size:1rem;">
                                     <span><?= htmlspecialchars($topic['full_name']) ?></span>
-                                    <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.75rem; background:#e0e7ff; color:#3730a3;">
+                                    <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.72rem; background:#e0e7ff; color:#3730a3;">
                                         <?= htmlspecialchars($topic['role_name']) ?>
                                     </span>
                                     <?php if ($isAuthor): ?>
-                                        <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1" style="font-size:0.7rem;">Pembuat Topik</span>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1" style="font-size:0.72rem;">Pembuat Topik</span>
                                     <?php endif; ?>
                                 </div>
-                                <small class="text-muted">
-                                    <i class="bi bi-clock me-1"></i>Diposting <?= date('d F Y, H:i', strtotime($topic['created_at'])) ?> WIB
-                                    <?= $topic['nama_mapel'] ? ' • <i class="bi bi-book text-primary me-1"></i>' . htmlspecialchars($topic['nama_mapel']) : '' ?>
-                                </small>
+                                <div class="text-muted small d-flex align-items-center gap-2 flex-wrap" style="font-size:0.8rem;">
+                                    <span><i class="bi bi-clock me-1"></i><?= date('d F Y, H:i', strtotime($topic['created_at'])) ?> WIB</span>
+                                    <?php if ($topic['nama_mapel']): ?>
+                                        <span>•</span>
+                                        <span class="text-primary fw-medium"><i class="bi bi-book me-1"></i><?= htmlspecialchars($topic['nama_mapel']) ?></span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
+
                         <div class="d-flex align-items-center gap-2">
                             <?php if ($isPrivate): ?>
-                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-2 fw-semibold">
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-2 fw-semibold" style="font-size:0.8rem;">
                                     <i class="bi bi-lock-fill text-warning me-1"></i> Privat
                                     <?php if (!empty($topic['target_role'])): ?>
                                         (<?= ucfirst(htmlspecialchars($topic['target_role'])) ?>)
                                     <?php endif; ?>
-                                    <?php if (!empty($topic['target_nama_kelas'])): ?>
-                                        - <?= htmlspecialchars($topic['target_nama_kelas']) ?>
-                                    <?php endif; ?>
                                 </span>
                             <?php else: ?>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 fw-semibold">
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 fw-semibold" style="font-size:0.8rem;">
                                     <i class="bi bi-globe me-1"></i> Publik
                                 </span>
                             <?php endif; ?>
 
                             <?php if ($canDelete): ?>
-                                <button class="btn btn-outline-danger btn-sm rounded-circle p-2" title="Hapus Topik Diskusi" data-bs-toggle="modal" data-bs-target="#modalDeleteTopicDetail">
+                                <button class="btn btn-outline-danger btn-sm rounded-circle p-2" title="Hapus Topik Diskusi" data-bs-toggle="modal" data-bs-target="#modalDeleteTopicDetail" style="width:34px; height:34px; line-height:1;">
                                     <i class="bi bi-trash3"></i>
                                 </button>
 
@@ -91,7 +99,7 @@
                                                     <i class="bi bi-exclamation-triangle-fill fs-3"></i>
                                                 </div>
                                                 <h6 class="fw-bold mb-2">Hapus Topik Diskusi?</h6>
-                                                <p class="small text-muted mb-4">Apakah Anda yakin ingin menghapus topik ini beserta seluruh balasannya?</p>
+                                                <p class="small text-muted mb-4">Apakah Anda yakin ingin menghapus topik ini beserta seluruh balasannya secara permanen?</p>
                                                 <form action="<?= BASE_URL ?>index.php?url=forum" method="POST">
                                                     <?= Security::csrfField() ?>
                                                     <input type="hidden" name="action" value="delete">
@@ -109,21 +117,23 @@
                         </div>
                     </div>
 
-                    <h3 class="fw-bold mb-3 text-dark"><?= htmlspecialchars($topic['judul']) ?></h3>
-                    <div class="text-dark fs-6 mb-4" style="white-space: pre-line; line-height: 1.7; font-size: 1.05rem;">
+                    <!-- Title & Main Content Body -->
+                    <h3 class="fw-bold mb-3 text-dark" style="font-size: 1.45rem; line-height: 1.4;"><?= htmlspecialchars($topic['judul']) ?></h3>
+                    <div class="text-dark mb-4" style="white-space: pre-line; line-height: 1.8; font-size: 1rem; color: #334155;">
                         <?= htmlspecialchars($topic['konten']) ?>
                     </div>
 
+                    <!-- Attached Image Preview Showcase -->
                     <?php if (!empty($topic['gambar'])): 
                         $topicImgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $topic['gambar'])) 
                             ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($topic['gambar']) 
                             : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($topic['gambar']);
                     ?>
                         <div class="mb-4">
-                            <div class="forum-image-preview-wrapper" style="max-width: 100%; height: 280px;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
+                            <div class="forum-image-preview-wrapper shadow-sm" style="max-width: 100%; height: 320px; border-radius:18px;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
                                 <img src="<?= $topicImgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>';" alt="Lampiran Gambar Topik">
                                 <div class="forum-image-overlay">
-                                    <i class="bi bi-zoom-in fs-3"></i> Klik untuk melihat ukuran penuh
+                                    <i class="bi bi-zoom-in fs-3"></i> Klik untuk memperbesar gambar
                                 </div>
                             </div>
                         </div>
@@ -161,17 +171,24 @@
                 </div>
 
                 <!-- Comments Thread Section -->
-                <div class="card border-0 rounded-4 p-4 p-md-5 mb-4 shadow-sm">
-                    <h5 class="fw-bold mb-4 d-flex align-items-center gap-2">
-                        <i class="bi bi-chat-left-dots-fill text-primary"></i> 
-                        Tanggapan Diskusi (<span id="commentCountBadge"><?= count($comments) ?></span>)
-                    </h5>
+                <div class="card border-0 rounded-4 p-4 p-md-5 mb-4 shadow-sm bg-white">
+                    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 pb-3 border-bottom">
+                        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                            <i class="bi bi-chat-left-dots-fill text-primary"></i> 
+                            Tanggapan & Solusi Akademik
+                        </h5>
+                        <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">
+                            <span id="commentCountBadge"><?= count($comments) ?></span> Balasan
+                        </span>
+                    </div>
 
-                    <div class="d-flex flex-column gap-3 mb-5" id="commentsListContainer">
+                    <!-- Comments List Thread Container -->
+                    <div class="d-flex flex-column gap-3 mb-4" id="commentsListContainer">
                         <?php if (empty($comments)): ?>
-                            <div class="p-4 text-center text-muted rounded-4 bg-light">
-                                <i class="bi bi-chat-left-text fs-2 mb-2 d-block opacity-50"></i>
-                                <p class="mb-0">Belum ada tanggapan balasan pada topik ini. Berikan solusi atau jawaban Anda!</p>
+                            <div class="p-5 text-center text-muted rounded-4 bg-light">
+                                <i class="bi bi-chat-square-text-fill fs-1 mb-3 text-primary opacity-50 d-block"></i>
+                                <h6 class="fw-bold mb-1">Belum Ada Tanggapan</h6>
+                                <p class="small mb-0 text-secondary">Berikan solusi atau penjelasan pertama untuk membantu pertanyaan di atas!</p>
                             </div>
                         <?php else: ?>
                             <?php foreach ($comments as $c): 
@@ -184,27 +201,28 @@
                                 }
                             ?>
                                 <div class="comment-card-item shadow-sm" data-comment-id="<?= $c['id'] ?>">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-1">
                                         <div class="d-flex align-items-center gap-2">
                                             <div class="avatar-ring <?= $cRingClass ?>" style="padding:1px;">
-                                                <div class="avatar-inner" style="width:32px; height:32px; font-size:0.85rem;">
+                                                <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
                                                     <?= strtoupper(substr($c['full_name'], 0, 1)) ?>
                                                 </div>
                                             </div>
                                             <span class="fw-bold small text-dark"><?= htmlspecialchars($c['full_name']) ?></span>
-                                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">
+                                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-0" style="font-size:0.65rem; background:#e0e7ff; color:#3730a3;">
                                                 <?= htmlspecialchars($c['role_name']) ?>
                                             </span>
                                         </div>
                                         <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-clock me-1"></i><?= date('d/m/Y H:i', strtotime($c['created_at'])) ?></small>
                                     </div>
-                                    <p class="mb-2 text-dark small" style="white-space: pre-line; line-height:1.6; font-size:0.95rem;"><?= htmlspecialchars($c['komentar']) ?></p>
+                                    <p class="mb-2 text-dark small" style="white-space: pre-line; line-height:1.65; font-size:0.92rem; color: #334155;"><?= htmlspecialchars($c['komentar']) ?></p>
+                                    
                                     <?php if (!empty($c['gambar'])): 
                                         $cFolder = file_exists(ROOT_PATH . 'assets/uploads/forum/' . $c['gambar']) ? 'forum' : 'tugas';
                                         $cmtImg = BASE_URL . 'assets/uploads/' . $cFolder . '/' . htmlspecialchars($c['gambar']);
                                     ?>
                                         <div class="mt-2">
-                                            <div class="forum-image-preview-wrapper d-inline-block" style="max-width: 280px; height: 160px;" onclick="openLightboxModal('<?= $cmtImg ?>', 'Lampiran Balasan Komentar')">
+                                            <div class="forum-image-preview-wrapper d-inline-block" style="max-width: 280px; height: 160px; border-radius:12px;" onclick="openLightboxModal('<?= $cmtImg ?>', 'Lampiran Balasan Komentar')">
                                                 <img src="<?= $cmtImg ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($c['gambar']) ?>';" class="img-fluid rounded-3 border" style="height: 100%; object-fit: cover;" alt="Lampiran Balasan">
                                                 <div class="forum-image-overlay" style="font-size:0.75rem;">
                                                     <i class="bi bi-zoom-in"></i> Perbesar
@@ -217,42 +235,44 @@
                         <?php endif; ?>
                     </div>
 
-                    <!-- Modern Comment Reply Form -->
-                    <div class="border-top pt-4">
-                        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
-                            <i class="bi bi-reply-fill text-primary fs-5"></i> Berikan Tanggapan atau Solusi
-                        </h6>
-                        <form id="commentReplyForm" enctype="multipart/form-data">
-                            <?= Security::csrfField() ?>
-                            <input type="hidden" name="forum_id" value="<?= $topic['id'] ?>">
+                    <!-- Elevated Floating Reply Form Card -->
+                    <div id="replyFormCard" class="border-top pt-4">
+                        <div class="bg-light p-4 rounded-4 border">
+                            <h6 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
+                                <i class="bi bi-reply-fill text-primary fs-5"></i> Berikan Tanggapan atau Solusi Pembelajaran
+                            </h6>
+                            <form id="commentReplyForm" enctype="multipart/form-data">
+                                <?= Security::csrfField() ?>
+                                <input type="hidden" name="forum_id" value="<?= $topic['id'] ?>">
 
-                            <div class="position-relative">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="small text-muted">Tulis tanggapan akademik yang membantu:</span>
-                                    <button type="button" id="replyEmojiBtn" class="btn btn-sm btn-white border rounded-pill px-3 py-1 text-secondary shadow-sm" title="Pilih Emoji">
-                                        <i class="bi bi-emoji-smile me-1 text-warning"></i> Emoji
-                                    </button>
+                                <div class="position-relative mb-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <span class="small text-muted">Tulis tanggapan akademik yang bermanfaat:</span>
+                                        <button type="button" id="replyEmojiBtn" class="btn btn-sm btn-white border rounded-pill px-3 py-1 text-secondary shadow-sm" title="Pilih Emoji">
+                                            <i class="bi bi-emoji-smile me-1 text-warning"></i> Emoji
+                                        </button>
+                                    </div>
+
+                                    <!-- Reply Emoji Picker Popover Box -->
+                                    <div id="replyEmojiPopover" class="card shadow-lg border-0 rounded-4 position-absolute bottom-100 end-0 mb-2 d-none" style="width: 340px; z-index: 1060;">
+                                        <div class="card-header bg-primary text-white py-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
+                                            <span class="small fw-bold"><i class="bi bi-emoji-smile me-1"></i> Pilih Emoji</span>
+                                            <button type="button" class="btn-close btn-close-white small" id="closeReplyEmojiBtn"></button>
+                                        </div>
+                                        <div class="bg-light border-bottom d-flex justify-content-around p-1" id="replyEmojiCatTabs">
+                                            <button type="button" class="btn btn-sm btn-light border-0 reply-emoji-cat-tab active" data-cat="smileys" style="font-size: 1.1rem;">😀</button>
+                                            <button type="button" class="btn btn-sm btn-light border-0 reply-emoji-cat-tab" data-cat="gestures" style="font-size: 1.1rem;">👋</button>
+                                            <button type="button" class="btn btn-sm btn-light border-0 reply-emoji-cat-tab" data-cat="love" style="font-size: 1.1rem;">❤️</button>
+                                            <button type="button" class="btn btn-sm btn-light border-0 reply-emoji-cat-tab" data-cat="education" style="font-size: 1.1rem;">🎓</button>
+                                            <button type="button" class="btn btn-sm btn-light border-0 reply-emoji-cat-tab" data-cat="activities" style="font-size: 1.1rem;">🔥</button>
+                                        </div>
+                                        <div class="card-body p-2 overflow-auto" style="max-height: 220px; font-size: 1.3rem;">
+                                            <div class="d-flex flex-wrap gap-1" id="replyEmojiListContainer"></div>
+                                        </div>
+                                    </div>
+
+                                    <textarea name="komentar" id="replyKomentarInput" class="form-control rounded-3 border shadow-sm p-3" rows="3" placeholder="Tuliskan komentar atau solusi penjelasan di sini..." required style="resize: vertical; font-size:0.95rem;"></textarea>
                                 </div>
-
-                                <!-- Reply Emoji Picker Popover Box -->
-                                <div id="replyEmojiPopover" class="card shadow-lg border-0 rounded-4 position-absolute bottom-100 end-0 mb-2 d-none" style="width: 340px; z-index: 1060;">
-                                    <div class="card-header bg-primary text-white py-2 px-3 d-flex justify-content-between align-items-center rounded-top-4">
-                                        <span class="small fw-bold"><i class="bi bi-emoji-smile me-1"></i> Pilih Emoji</span>
-                                        <button type="button" class="btn-close btn-close-white small" id="closeReplyEmojiBtn"></button>
-                                    </div>
-                                    <div class="bg-light border-bottom d-flex justify-around p-1" id="replyEmojiCatTabs">
-                                        <button type="button" class="btn btn-sm btn-light border-0 reply-emoji-cat-tab active" data-cat="smileys" style="font-size: 1.1rem;">😀</button>
-                                        <button type="button" class="btn btn-sm btn-light border-0 reply-emoji-cat-tab" data-cat="gestures" style="font-size: 1.1rem;">👋</button>
-                                        <button type="button" class="btn btn-sm btn-light border-0 reply-emoji-cat-tab" data-cat="love" style="font-size: 1.1rem;">❤️</button>
-                                        <button type="button" class="btn btn-sm btn-light border-0 reply-emoji-cat-tab" data-cat="education" style="font-size: 1.1rem;">🎓</button>
-                                        <button type="button" class="btn btn-sm btn-light border-0 reply-emoji-cat-tab" data-cat="activities" style="font-size: 1.1rem;">🔥</button>
-                                    </div>
-                                    <div class="card-body p-2 overflow-auto" style="max-height: 220px; font-size: 1.3rem;">
-                                        <div class="d-flex flex-wrap gap-1" id="replyEmojiListContainer"></div>
-                                    </div>
-                                </div>
-
-                                <textarea name="komentar" id="replyKomentarInput" class="form-control rounded-3 border-0 shadow-sm p-3 mb-3" rows="3" placeholder="Tuliskan komentar atau solusi penjelasan..." required style="resize: vertical;"></textarea>
 
                                 <div class="p-3 bg-white rounded-3 border shadow-sm mb-3">
                                     <label class="form-label small fw-semibold text-dark mb-2 d-flex align-items-center gap-1">
@@ -266,23 +286,24 @@
                                         </button>
                                     </div>
                                 </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary px-4 py-2 fw-bold rounded-pill shadow-sm">
-                                <i class="bi bi-send-fill me-1"></i> Kirim Balasan
-                            </button>
-                        </form>
+
+                                <button type="submit" class="btn btn-primary px-4 py-2 fw-bold rounded-pill shadow-sm">
+                                    <i class="bi bi-send-fill me-1"></i> Kirim Balasan Diskusi
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Sidebar Column: Topic Information & Author Card -->
+            <!-- Right Sidebar Column: Topic Info & Author Profile Widget -->
             <div class="col-lg-4 col-xl-4">
                 <div class="d-flex flex-column gap-4">
-                    <!-- Author Information Widget -->
+                    <!-- Author Information Profile Card -->
                     <div class="forum-sidebar-card">
                         <div class="card-header">
                             <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
-                                <i class="bi bi-person-badge-fill text-primary"></i> Pembuat Topik Diskusi
+                                <i class="bi bi-person-badge-fill text-primary fs-5"></i> Pembuat Topik Diskusi
                             </h6>
                         </div>
                         <div class="p-4 text-center">
@@ -291,8 +312,8 @@
                                     <?= strtoupper(substr($topic['full_name'], 0, 1)) ?>
                                 </div>
                             </div>
-                            <h6 class="fw-bold mb-1 text-dark"><?= htmlspecialchars($topic['full_name']) ?></h6>
-                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-3 py-1 mb-3" style="background:#e0e7ff; color:#3730a3; font-size:0.8rem;">
+                            <h6 class="fw-bold mb-1 text-dark fs-6"><?= htmlspecialchars($topic['full_name']) ?></h6>
+                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-3 py-1 mb-3" style="background:#e0e7ff; color:#3730a3; font-size:0.78rem;">
                                 <?= htmlspecialchars($topic['role_name']) ?>
                             </span>
 
@@ -300,18 +321,18 @@
 
                             <div class="text-start d-flex flex-column gap-2 small text-muted">
                                 <div class="d-flex align-items-center justify-content-between">
-                                    <span><i class="bi bi-clock me-1"></i> Tanggal Dibuat:</span>
+                                    <span><i class="bi bi-calendar3 me-1 text-primary"></i> Tanggal Dibuat:</span>
                                     <span class="fw-semibold text-dark"><?= date('d M Y', strtotime($topic['created_at'])) ?></span>
                                 </div>
                                 <div class="d-flex align-items-center justify-content-between">
-                                    <span><i class="bi bi-shield-check me-1"></i> Sifat Akses:</span>
+                                    <span><i class="bi bi-shield-check me-1 text-primary"></i> Sifat Akses:</span>
                                     <span class="fw-semibold <?= $isPrivate ? 'text-warning' : 'text-success' ?>">
                                         <?= $isPrivate ? '🔒 Privat' : '🌐 Publik' ?>
                                     </span>
                                 </div>
                                 <?php if ($topic['nama_mapel']): ?>
                                     <div class="d-flex align-items-center justify-content-between">
-                                        <span><i class="bi bi-journal-text me-1"></i> Mata Pelajaran:</span>
+                                        <span><i class="bi bi-journal-text me-1 text-primary"></i> Mata Pelajaran:</span>
                                         <span class="fw-semibold text-primary"><?= htmlspecialchars($topic['nama_mapel']) ?></span>
                                     </div>
                                 <?php endif; ?>
@@ -319,14 +340,14 @@
                         </div>
                     </div>
 
-                    <!-- Discussion Guidelines Card -->
+                    <!-- Academic Discussion Guidelines Card -->
                     <div class="forum-sidebar-card border-0 bg-success bg-opacity-10">
                         <div class="p-4">
                             <h6 class="fw-bold text-success mb-2 d-flex align-items-center gap-2">
                                 <i class="bi bi-check-circle-fill"></i> Panduan Tanggapan Efektif
                             </h6>
-                            <p class="small text-secondary mb-0" style="line-height:1.6; font-size:0.85rem;">
-                                Berikan jawaban penjelasan yang terstruktur, singkat, dan tepat sasaran. Jika memiliki screenshot atau referensi gambar, sertakan lampiran pada form balasan di sebelah kiri.
+                            <p class="small text-secondary mb-0" style="line-height:1.65; font-size:0.84rem;">
+                                Berikan jawaban penjelasan yang terstruktur, komunikatif, dan tepat sasaran. Jika memiliki screenshot atau referensi gambar pendukung, lampirkan pada form balasan komentar.
                             </p>
                         </div>
                     </div>
@@ -336,7 +357,7 @@
     </div>
 </main>
 
-<!-- Image Lightbox Modal -->
+<!-- Image Lightbox Zoom Modal -->
 <div class="modal fade lightbox-modal" id="globalLightboxModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
@@ -393,10 +414,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btn && popover && container && input) {
         const emojiCategories = {
             smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','🥲','🥹','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😮‍💨','😤','😠','😡','🤬','🤯','😱','😨','😰','😥','😓','🤗','🤔','🫣','🤭','🥱','😴','🤤','😷','🤒','🤕','🤢','🤮','🤧','😵','🤠'],
-            gestures: ['👍','👎','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','耳朵','🫁','🧠','🗣️','👤','👥'],
+            gestures: ['👍','👎','👌','🤌','🤏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','🫵','👋','🤚','🖐️','✋','🖖','🫱','🫲','🫳','🫴','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🫁','🧠','🗣️','👤','👥'],
             love: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','✴️','☯️','☦️','🔒','🔓','🔑','🛡️','⚔️','⚖️','💯','⚡','✨','🌟','⭐'],
             education: ['🎓','📚','📖','📜','📑','📰','📊','📈','📉','📄','📅','📆','📇','📋','📁','📂','📒','📓','📔','📕','📗','📘','📙','🖋️','🖊️','🖌️','🖍️','📝','✏️','📏','📐','✂️','📌','📍','🔍','🔎','🏫','👨‍🏫','👩‍🏫','👨‍🎓','👩‍🎓','💻','🖥️','🖨️','📱','⌨️','🖱️','💾'],
-            activities: ['🔥','🎉','🎊','🎈','🎁','🎀','🏆','🥇','🥈','🥉','🏅','🎖️','🎗️','⚽','🏀','🏈','baseball','softball','tennis','volleyball','rugby','flying_disc','8ball','yo_yo','ping_pong','badminton','hockey','field_hockey','lacrosse','cricket','boxing','martial_arts','rocket','target','🇮🇩','🏁','🚩']
+            activities: ['🔥','🎉','🎊','🎈','🎁','🎀','🏆','🥇','🥈','🥉','🏅','🎖️','🎗️','⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🏑','🥍','🏏','🥊','🥋','🚀','🎯','🇮🇩','🏁','🚩']
         };
 
         function renderCategory(catKey) {
@@ -425,6 +446,32 @@ document.addEventListener('DOMContentLoaded', function() {
             tab.addEventListener('click', (e) => {
                 e.stopPropagation();
                 catTabs.forEach(t => t.classList.remove('active', 'bg-white', 'shadow-sm'));
+                tab.classList.add('active', 'bg-white', 'shadow-sm');
+                const cat = tab.getAttribute('data-cat');
+                renderCategory(cat);
+            });
+        });
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            popover.classList.toggle('d-none');
+        });
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => popover.classList.add('d-none'));
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!popover.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+                popover.classList.add('d-none');
+            }
+        });
+    }
+});
+</script>
+
+<?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
+', 'bg-white', 'shadow-sm'));
                 tab.classList.add('active', 'bg-white', 'shadow-sm');
                 const cat = tab.getAttribute('data-cat');
                 renderCategory(cat);
