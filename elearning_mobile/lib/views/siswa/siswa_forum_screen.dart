@@ -837,7 +837,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                                     ),
                                                     child: Image.network(
                                                       f.gambarUrl!,
-                                                      fit: BoxFit.cover,
+                                                      fit: BoxFit.contain,
                                                       errorBuilder: (_, __, ___) => const Padding(
                                                         padding: EdgeInsets.all(20),
                                                         child: Row(
