@@ -286,11 +286,11 @@ const ForumApp = {
                 const activeClass = isActive ? 'btn-primary-subtle border-primary text-primary fw-bold shadow-sm' : 'btn-light border-0 text-secondary';
 
                 return `
-                    <button type="button" class="btn btn-sm ${activeClass} rounded-pill px-2 py-1 me-1 mb-1 btn-emoji-react" 
+                    <button type="button" class="btn btn-sm ${activeClass} rounded-pill px-3 py-1 me-2 mb-2 btn-emoji-react" 
                             onclick="ForumApp.toggleReaction(${t.id}, '${r.type}')" 
                             title="${r.label}">
                         <span class="fs-6 me-1">${r.emoji}</span>
-                        <span class="small">${count > 0 ? count : ''}</span>
+                        <span class="small fw-semibold">${count > 0 ? count : ''}</span>
                     </button>
                 `;
             }).join('');
@@ -300,87 +300,80 @@ const ForumApp = {
 
             const imgHtml = (t.gambar) ? `
                 <div class="mb-3">
-                    <div class="forum-image-preview-wrapper" style="position: relative; width: 100%; height: 140px; max-height: 140px; border-radius: 12px; overflow: hidden; cursor: pointer; background: #f8fafc; border: 1px solid #e2e8f0;" onclick="openLightboxModal('${primaryUrl}', '${(t.judul || '').replace(/'/g, "\\'")}')">
-                        <img src="${primaryUrl}" onerror="this.onerror=null; this.src='${fallbackUrl}';" alt="Lampiran Gambar Forum" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: cover; display: block;">
-                        <div class="forum-image-overlay" style="font-size:0.72rem;">
-                            <i class="bi bi-zoom-in me-1"></i> Perbesar Gambar
+                    <div class="forum-image-preview-wrapper shadow-sm" style="display: inline-block; max-width: 440px; max-height: 260px; border-radius: 16px; overflow: hidden; background: #f1f5f9; border: 1px solid #e2e8f0; cursor: pointer;" onclick="openLightboxModal('${primaryUrl}', '${(t.judul || '').replace(/'/g, "\\'")}')">
+                        <img src="${primaryUrl}" onerror="this.onerror=null; this.src='${fallbackUrl}';" alt="Lampiran Gambar Forum" style="max-width: 100%; max-height: 240px; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; border-radius: 14px;">
+                        <div class="forum-image-overlay">
+                            <span><i class="bi bi-zoom-in me-1"></i> Perbesar Gambar</span>
                         </div>
                     </div>
                 </div>
             ` : '';
 
             return `
-                <div class="col topic-card-item" data-topic-id="${t.id}" data-visibility="${t.visibility || 'public'}">
-                    <div class="forum-topic-card p-3 p-md-4 h-100 d-flex flex-column justify-content-between shadow-sm">
-                        <div>
-                            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-1">
-                                <div class="d-flex align-items-center gap-2 overflow-hidden">
-                                    <div class="avatar-ring ${ringClass}" style="padding:1px; flex-shrink: 0;">
-                                        <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
-                                            ${initial}
-                                        </div>
-                                    </div>
-                                    <div class="text-truncate">
-                                        <div class="fw-bold text-dark small text-truncate" style="font-size:0.85rem;" title="${t.full_name}">
-                                            ${t.full_name}
-                                        </div>
-                                        <div class="d-flex align-items-center gap-1">
-                                            <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-0" style="font-size:0.6rem; background:#e0e7ff; color:#3730a3;">
-                                                ${t.role_name}
-                                            </span>
-                                            <small class="text-muted ms-1" style="font-size:0.7rem;">
-                                                ${t.created_at}
-                                            </small>
-                                        </div>
+                <div class="topic-card-item" data-topic-id="${t.id}" data-visibility="${t.visibility || 'public'}">
+                    <div class="forum-topic-card p-4 rounded-4 shadow-sm bg-white border">
+                        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 pb-3 border-bottom">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-ring ${ringClass}" style="padding:2px; flex-shrink: 0;">
+                                    <div class="avatar-inner" style="width:42px; height:42px; font-size:1rem; font-weight:bold;">
+                                        ${initial}
                                     </div>
                                 </div>
-                                <div class="d-flex align-items-center gap-1">
-                                    ${isPrivate ? `
-                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-1" style="font-size:0.65rem;">
-                                            <i class="bi bi-lock-fill text-warning"></i>
+                                <div>
+                                    <div class="fw-bold text-dark d-flex align-items-center gap-2 flex-wrap" style="font-size:0.95rem;">
+                                        <span>${t.full_name}</span>
+                                        <span class="badge bg-indigo-subtle text-indigo rounded-pill px-2 py-1" style="font-size:0.7rem; background:#e0e7ff; color:#3730a3;">
+                                            ${t.role_name}
                                         </span>
-                                    ` : `
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1" style="font-size:0.65rem;">
-                                            <i class="bi bi-globe"></i>
-                                        </span>
-                                    `}
-
-                                    ${t.can_delete ? `
-                                        <button class="btn btn-outline-danger btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center" title="Hapus Topik Diskusi" onclick="ForumApp.deleteTopic(${t.id}, '${document.querySelector('input[name=csrf_token]') ? document.querySelector('input[name=csrf_token]').value : ''}')" style="width:26px; height:26px;">
-                                            <i class="bi bi-trash3" style="font-size:0.7rem;"></i>
-                                        </button>
-                                    ` : ''}
+                                    </div>
+                                    <small class="text-muted" style="font-size:0.78rem;">
+                                        <i class="bi bi-clock me-1"></i>${t.created_at}
+                                    </small>
                                 </div>
                             </div>
-
-                            <h6 class="fw-bold mb-2 fs-6">
-                                <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="text-decoration-none text-dark hover-primary" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35;">
-                                    ${t.judul}
-                                </a>
-                            </h6>
-                            <p class="text-secondary mb-3 small" style="font-size:0.83rem; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${t.konten_preview}...</p>
-
-                            ${imgHtml}
-                        </div>
-
-                        <div>
-                            <!-- Multi-Emoji Reaction Bar -->
-                            <div class="pt-2 mb-2 border-top">
-                                <div class="reaction-bar d-flex flex-wrap align-items-center" data-forum-id="${t.id}">
-                                    ${reactionButtons}
-                                </div>
-                            </div>
-
-                            <div class="d-flex align-items-center justify-content-between pt-2 border-top">
-                                <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.78rem;">
-                                    <i class="bi bi-chat-text-fill me-1"></i> ${t.total_replies} Balasan
-                                </a>
-                                ${t.nama_mapel ? `
-                                    <span class="small text-muted text-truncate" style="font-size:0.72rem; max-width: 110px;" title="${t.nama_mapel}">
-                                        <i class="bi bi-journal-text text-primary me-1"></i>${t.nama_mapel}
+                            <div class="d-flex align-items-center gap-2">
+                                ${isPrivate ? `
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-2 fw-semibold" style="font-size:0.75rem;">
+                                        <i class="bi bi-lock-fill text-warning me-1"></i> Privat
                                     </span>
+                                ` : `
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 fw-semibold" style="font-size:0.75rem;">
+                                        <i class="bi bi-globe me-1"></i> Publik
+                                    </span>
+                                `}
+
+                                ${t.can_delete ? `
+                                    <button class="btn btn-outline-danger btn-sm rounded-circle p-1 d-flex align-items-center justify-content-center" title="Hapus Topik Diskusi" onclick="ForumApp.deleteTopic(${t.id}, '${document.querySelector('input[name=csrf_token]') ? document.querySelector('input[name=csrf_token]').value : ''}')" style="width:30px; height:30px;">
+                                        <i class="bi bi-trash3" style="font-size:0.8rem;"></i>
+                                    </button>
                                 ` : ''}
                             </div>
+                        </div>
+
+                        <h5 class="fw-bold mb-2">
+                            <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="text-decoration-none text-dark hover-primary" style="line-height: 1.4;">
+                                ${t.judul}
+                            </a>
+                        </h5>
+                        <p class="text-secondary mb-3" style="font-size:0.92rem; line-height: 1.6; color: #475569;">${t.konten_preview}...</p>
+
+                        ${imgHtml}
+
+                        <div class="pt-3 mb-3 border-top">
+                            <div class="reaction-bar d-flex flex-wrap align-items-center" data-forum-id="${t.id}">
+                                ${reactionButtons}
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top flex-wrap gap-2">
+                            <a href="${BASE_URL}index.php?url=forum/detail&id=${t.id}" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm d-inline-flex align-items-center gap-2" style="font-size:0.88rem;">
+                                <i class="bi bi-chat-text-fill"></i> ${t.total_replies} Balasan Diskusi
+                            </a>
+                            ${t.nama_mapel ? `
+                                <span class="badge bg-light text-primary border rounded-pill px-3 py-2 fw-semibold" style="font-size:0.8rem;">
+                                    <i class="bi bi-journal-text me-1"></i>${t.nama_mapel}
+                                </span>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -461,11 +454,11 @@ const ForumApp = {
             const currentNum = cmtIndex++;
 
             const cmtImg = (c.gambar) ? `
-                <div class="mt-2">
-                    <div class="forum-image-preview-wrapper d-inline-block" style="max-width: 280px; height: 160px; border-radius:12px;" onclick="openLightboxModal('${cPrimaryUrl}', 'Lampiran Balasan Komentar')">
-                        <img src="${cPrimaryUrl}" onerror="this.onerror=null; this.src='${cFallbackUrl}';" class="img-fluid rounded-3 border" style="height: 100%; object-fit: cover;" alt="Lampiran Balasan">
-                        <div class="forum-image-overlay" style="font-size:0.75rem;">
-                            <i class="bi bi-zoom-in me-1"></i> Perbesar
+                <div class="mt-2 text-start">
+                    <div class="forum-image-preview-wrapper shadow-sm d-inline-block" style="max-width: 320px; max-height: 220px; border-radius: 16px; overflow: hidden; background: #f1f5f9; border: 1px solid #e2e8f0; cursor: pointer;" onclick="openLightboxModal('${cPrimaryUrl}', 'Lampiran Balasan Komentar')">
+                        <img src="${cPrimaryUrl}" onerror="this.onerror=null; this.src='${cFallbackUrl}';" alt="Lampiran Balasan" style="max-width: 100%; max-height: 200px; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; border-radius: 14px;">
+                        <div class="forum-image-overlay">
+                            <span><i class="bi bi-zoom-in me-1"></i> Perbesar</span>
                         </div>
                     </div>
                 </div>

@@ -146,8 +146,8 @@
                                             : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($t['gambar']);
                                     ?>
                                         <div class="mb-3">
-                                            <div class="forum-image-preview-wrapper shadow-sm" onclick="openLightboxModal('<?= $imgPath ?>', '<?= htmlspecialchars(addslashes($t['judul'])) ?>')">
-                                                <img src="<?= $imgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['gambar']) ?>';" alt="Lampiran Gambar Forum">
+                                            <div class="forum-image-preview-wrapper shadow-sm" style="display: inline-block; max-width: 440px; max-height: 260px; border-radius: 16px; overflow: hidden; background: #f1f5f9; border: 1px solid #e2e8f0; cursor: pointer;" onclick="openLightboxModal('<?= $imgPath ?>', '<?= htmlspecialchars(addslashes($t['judul'])) ?>')">
+                                                <img src="<?= $imgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['gambar']) ?>';" alt="Lampiran Gambar Forum" style="max-width: 100%; max-height: 240px; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; border-radius: 14px;">
                                                 <div class="forum-image-overlay">
                                                     <span><i class="bi bi-zoom-in me-1"></i> Perbesar Gambar</span>
                                                 </div>

@@ -129,8 +129,8 @@
                             : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($topic['gambar']);
                     ?>
                         <div class="mb-4">
-                            <div class="forum-image-preview-wrapper shadow-sm" style="max-width: 600px;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
-                                <img src="<?= $topicImgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>';" alt="Lampiran Gambar Topik">
+                            <div class="forum-image-preview-wrapper shadow-sm" style="display: inline-block; max-width: 500px; max-height: 320px; border-radius: 16px; overflow: hidden; background: #f1f5f9; border: 1px solid #e2e8f0; cursor: pointer;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
+                                <img src="<?= $topicImgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>';" alt="Lampiran Gambar Topik" style="max-width: 100%; max-height: 300px; width: auto; height: auto; object-fit: contain; display: block; margin: 0 auto; border-radius: 14px;">
                                 <div class="forum-image-overlay">
                                     <span><i class="bi bi-zoom-in me-1"></i> Klik untuk memperbesar gambar</span>
                                 </div>
