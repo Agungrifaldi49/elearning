@@ -838,7 +838,8 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     cursor: pointer;
     border: 1px solid rgba(226, 232, 240, 0.9);
     background: #f8fafc;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 [data-bs-theme="dark"] .forum-image-preview-wrapper {
@@ -847,7 +848,8 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .forum-image-preview-wrapper:hover {
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 14px 35px rgba(99, 102, 241, 0.22);
+    border-color: #6366f1;
     transform: translateY(-2px);
 }
 
@@ -855,22 +857,22 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     width: 100% !important;
     height: 100% !important;
     max-width: 100% !important;
-    max-height: 100% !important;
+    max-height: 320px !important;
     object-fit: cover !important;
     display: block !important;
-    transition: transform 0.4s ease;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .forum-image-preview-wrapper:hover img {
-    transform: scale(1.04);
+    transform: scale(1.03);
 }
 
 .forum-image-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.4);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     opacity: 0;
     display: flex;
     align-items: center;
@@ -880,6 +882,17 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     font-size: 0.85rem;
     gap: 6px;
     transition: opacity 0.25s ease;
+}
+
+.forum-image-overlay span {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50px;
+    padding: 8px 18px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .forum-image-preview-wrapper:hover .forum-image-overlay {
@@ -918,20 +931,20 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 /* Lightbox Modal Styling */
 .lightbox-modal .modal-content {
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: none;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 24px;
 }
 
 .lightbox-modal img {
-    max-height: 80vh;
+    max-height: 82vh;
     width: auto;
     max-width: 100%;
     object-fit: contain;
-    border-radius: 16px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    border-radius: 14px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
 }
 
 /* Sidebar & Multi-Column Grid Components */

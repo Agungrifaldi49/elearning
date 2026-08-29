@@ -820,14 +820,55 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                         ),
                                         if (f.gambarUrl != null && f.gambarUrl!.isNotEmpty) ...[
                                           const SizedBox(height: 12),
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(14),
-                                            child: Image.network(
-                                              f.gambarUrl!,
-                                              height: 160,
-                                              width: double.infinity,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => const SizedBox(),
+                                          GestureDetector(
+                                            onTap: () => _showImageViewer(context, f.gambarUrl!),
+                                            child: Stack(
+                                              alignment: Alignment.bottomRight,
+                                              children: [
+                                                ClipRRect(
+                                                  borderRadius: BorderRadius.circular(16),
+                                                  child: Container(
+                                                    constraints: const BoxConstraints(maxHeight: 220),
+                                                    width: double.infinity,
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.grey.shade100,
+                                                      borderRadius: BorderRadius.circular(16),
+                                                      border: Border.all(color: Colors.grey.shade200),
+                                                    ),
+                                                    child: Image.network(
+                                                      f.gambarUrl!,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder: (_, __, ___) => const Padding(
+                                                        padding: EdgeInsets.all(20),
+                                                        child: Row(
+                                                          mainAxisAlignment: MainAxisAlignment.center,
+                                                          children: [
+                                                            Icon(Icons.image_not_supported_outlined, color: Colors.grey),
+                                                            SizedBox(width: 8),
+                                                            Text('Gagal memuat gambar', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                Container(
+                                                  margin: const EdgeInsets.all(10),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.black.withOpacity(0.75),
+                                                    borderRadius: BorderRadius.circular(20),
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.zoom_in, color: Colors.white, size: 14),
+                                                      SizedBox(width: 4),
+                                                      Text('Tap perbesar', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ],
