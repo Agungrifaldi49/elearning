@@ -576,10 +576,13 @@ class AcademicModel extends BaseModel {
                     enrollment_key VARCHAR(50) NOT NULL,
                     passcode VARCHAR(50) NULL,
                     is_active TINYINT(1) DEFAULT 1,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE KEY u_mapel_guru (mapel_id, guru_id)
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+
+            try {
+                $this->db->exec("ALTER TABLE mapel_enrollment_keys DROP INDEX u_mapel_guru");
+            } catch (\Throwable $eDrop) {}
 
             $this->db->exec("
                 CREATE TABLE IF NOT EXISTS siswa_mapel_enrollment (
@@ -591,50 +594,7 @@ class AcademicModel extends BaseModel {
                     UNIQUE KEY u_siswa_mapel_guru (siswa_id, mapel_id, guru_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
-
-            // Seed default keys ONLY for assigned (mapel_id, guru_id) pairs
-            $pairs = $this->db->query("
-                SELECT DISTINCT mapel_id, guru_id, kelas_id FROM (
-                    SELECT mapel_id, guru_id, kelas_id FROM jadwal WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                    UNION
-                    SELECT mapel_id, guru_id, kelas_id FROM materi WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                    UNION
-                    SELECT mapel_id, guru_id, kelas_id FROM tugas WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                    UNION
-                    SELECT mapel_id, guru_id, kelas_id FROM quiz WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                ) t
-            ")->fetchAll();
-
-            foreach ($pairs as $p) {
-                $mId = (int)$p['mapel_id'];
-                $gId = (int)$p['guru_id'];
-                $kId = !empty($p['kelas_id']) ? (int)$p['kelas_id'] : null;
-
-                $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ?");
-                $chk->execute([$mId, $gId]);
-                if (!$chk->fetch()) {
-                    $key = 'MPL-' . $mId . '-' . $gId . '-' . rand(100, 999);
-                    $ins = $this->db->prepare("INSERT INTO mapel_enrollment_keys (mapel_id, guru_id, kelas_id, enrollment_key, passcode) VALUES (?, ?, ?, ?, ?)");
-                    $ins->execute([$mId, $gId, $kId, $key, $key]);
-                }
-            }
-
-            // Purge any unassigned keys in database
-            $this->db->exec("
-                DELETE FROM mapel_enrollment_keys 
-                WHERE (mapel_id, guru_id) NOT IN (
-                    SELECT mapel_id, guru_id FROM (
-                        SELECT mapel_id, guru_id FROM jadwal WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                        UNION
-                        SELECT mapel_id, guru_id FROM materi WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                        UNION
-                        SELECT mapel_id, guru_id FROM tugas WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                        UNION
-                        SELECT mapel_id, guru_id FROM quiz WHERE mapel_id IS NOT NULL AND guru_id IS NOT NULL
-                    ) t
-                )
-            ");
-        } catch (Exception $e) {}
+        } catch (\Throwable $e) {}
     }
 
     public function ensureGuruClassKeys($guru_id) {
