@@ -830,51 +830,11 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     transition: transform 0.4s ease;
 }
 
-.forum-image-preview-wrapper:hover img {
-    transform: scale(1.02);
-}
-
-/* Full-Image Showcase Box for Web & Mobile */
-.forum-detail-image-box {
-    position: relative;
-    max-width: 100%;
-    background: #0f172a;
-    border-radius: 18px;
-    overflow: hidden;
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    cursor: pointer;
-    transition: all 0.25s ease;
-}
-
-.forum-detail-image-box:hover {
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
-    transform: translateY(-2px);
-}
-
-.forum-detail-image-box img {
-    max-height: 480px;
-    width: auto;
-    max-width: 100%;
-    object-fit: contain;
-    border-radius: 12px;
-    display: block;
-    margin: 0 auto;
-    transition: transform 0.3s ease;
-}
-
-.forum-detail-image-box:hover img {
-    transform: scale(1.02);
-}
-
 .forum-image-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(15, 23, 42, 0.45);
-    backdrop-filter: blur(3px);
+    background: rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(2px);
     opacity: 0;
     display: flex;
     align-items: center;
@@ -883,11 +843,9 @@ h1, h2, h3, h4, h5, h6, .font-heading {
     font-weight: 600;
     font-size: 0.9rem;
     gap: 6px;
-    border-radius: inherit;
     transition: opacity 0.25s ease;
 }
 
-.forum-detail-image-box:hover .forum-image-overlay,
 .forum-image-preview-wrapper:hover .forum-image-overlay {
     opacity: 1;
 }
