@@ -1091,8 +1091,10 @@ class AdminController {
             exit();
         }
 
-        foreach ($guruList as $gItem) {
-            $academicModel->ensureGuruClassKeys($gItem['id']);
+        if (!empty($guruList) && is_array($guruList)) {
+            foreach ($guruList as $gItem) {
+                $academicModel->ensureGuruClassKeys($gItem['id'] ?? 0);
+            }
         }
 
         $jadwalList = $academicModel->getJadwal($selectedKelasId);

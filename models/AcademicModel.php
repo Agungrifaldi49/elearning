@@ -648,26 +648,18 @@ class AcademicModel extends BaseModel {
                 FROM jadwal j
                 JOIN mata_pelajaran m ON j.mapel_id = m.id
                 JOIN kelas k ON j.kelas_id = k.id
-                WHERE j.guru_id = {$gId} AND j.mapel_id IS NOT NULL AND j.kelas_id IS NOT NULL
-                UNION
-                SELECT DISTINCT mt.mapel_id, mt.kelas_id, m.nama_mapel, k.nama_kelas, k.tingkat
-                FROM materi mt
-                JOIN mata_pelajaran m ON mt.mapel_id = m.id
-                JOIN kelas k ON mt.kelas_id = k.id
-                WHERE mt.guru_id = {$gId} AND mt.mapel_id IS NOT NULL AND mt.kelas_id IS NOT NULL
-                UNION
-                SELECT DISTINCT t.mapel_id, t.kelas_id, m.nama_mapel, k.nama_kelas, k.tingkat
-                FROM tugas t
-                JOIN mata_pelajaran m ON t.mapel_id = m.id
-                JOIN kelas k ON t.kelas_id = k.id
-                WHERE t.guru_id = {$gId} AND t.mapel_id IS NOT NULL AND t.kelas_id IS NOT NULL
+                WHERE j.guru_id = ? AND j.mapel_id IS NOT NULL AND j.kelas_id IS NOT NULL
             ";
 
-            $assignedPairs = $this->db->query($sql)->fetchAll();
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$gId]);
+            $assignedPairs = $stmt->fetchAll();
 
             foreach ($assignedPairs as $pair) {
                 $mId = (int)$pair['mapel_id'];
                 $kId = (int)$pair['kelas_id'];
+
+                if ($mId <= 0 || $kId <= 0) continue;
 
                 $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND kelas_id = ?");
                 $chk->execute([$mId, $gId, $kId]);
@@ -680,7 +672,9 @@ class AcademicModel extends BaseModel {
                     $this->setMapelEnrollmentKey($mId, $gId, $smartKey, $kId);
                 }
             }
-        } catch (Exception $e) {}
+        } catch (\Throwable $e) {
+            // Fail-safe execution
+        }
     }
 
     public function getMapelEnrollmentKeys($guru_id = null) {
