@@ -86,9 +86,12 @@ class ForumController {
     }
 
     public static function formatAvatarUrl($avatarFile) {
-        if (empty($avatarFile) || $avatarFile === 'default_avatar.png' || $avatarFile === 'default.png') {
+        if (empty($avatarFile) || !is_string($avatarFile) || $avatarFile === 'default_avatar.png' || $avatarFile === 'default.png') {
             return null;
         }
+
+        $root = defined('ROOT_PATH') ? ROOT_PATH : __DIR__ . '/../';
+        $baseUrl = defined('BASE_URL') ? BASE_URL : '/';
 
         $paths = [
             'assets/uploads/avatar/' . $avatarFile,
@@ -99,12 +102,12 @@ class ForumController {
         ];
 
         foreach ($paths as $p) {
-            if (file_exists(ROOT_PATH . $p)) {
-                return BASE_URL . $p;
+            if (file_exists($root . $p)) {
+                return $baseUrl . $p;
             }
         }
 
-        return BASE_URL . 'assets/uploads/avatar/' . htmlspecialchars($avatarFile);
+        return $baseUrl . 'assets/uploads/avatar/' . htmlspecialchars($avatarFile);
     }
 
     public function fetchUpdates() {

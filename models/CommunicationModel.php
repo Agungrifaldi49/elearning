@@ -133,13 +133,11 @@ class CommunicationModel extends BaseModel {
         $userRoleLower = strtolower($userRole ?? '');
 
         $sql = "
-            SELECT f.*, u.full_name, COALESCE(NULLIF(s.foto_profil, ''), NULLIF(g.foto, ''), u.avatar, '') as avatar, r.name as role_name, m.nama_mapel, k.nama_kelas as target_nama_kelas,
+            SELECT f.*, u.full_name, u.avatar, r.name as role_name, m.nama_mapel, k.nama_kelas as target_nama_kelas,
             (SELECT COUNT(*) FROM komentar km WHERE km.forum_id = f.id) as total_replies
             FROM forum f
             JOIN users u ON f.user_id = u.id
             JOIN roles r ON u.role_id = r.id
-            LEFT JOIN siswa s ON u.id = s.user_id
-            LEFT JOIN guru g ON u.id = g.user_id
             LEFT JOIN mata_pelajaran m ON f.mapel_id = m.id
             LEFT JOIN kelas k ON f.target_kelas_id = k.id
         ";
@@ -164,12 +162,10 @@ class CommunicationModel extends BaseModel {
 
     public function getForumDetail($id) {
         $stmt = $this->db->prepare("
-            SELECT f.*, u.full_name, COALESCE(NULLIF(s.foto_profil, ''), NULLIF(g.foto, ''), u.avatar, '') as avatar, r.name as role_name, m.nama_mapel, k.nama_kelas as target_nama_kelas
+            SELECT f.*, u.full_name, u.avatar, r.name as role_name, m.nama_mapel, k.nama_kelas as target_nama_kelas
             FROM forum f
             JOIN users u ON f.user_id = u.id
             JOIN roles r ON u.role_id = r.id
-            LEFT JOIN siswa s ON u.id = s.user_id
-            LEFT JOIN guru g ON u.id = g.user_id
             LEFT JOIN mata_pelajaran m ON f.mapel_id = m.id
             LEFT JOIN kelas k ON f.target_kelas_id = k.id
             WHERE f.id = ?
@@ -282,12 +278,10 @@ class CommunicationModel extends BaseModel {
 
     public function getKomentar($forum_id) {
         $stmt = $this->db->prepare("
-            SELECT k.*, u.full_name, COALESCE(NULLIF(s.foto_profil, ''), NULLIF(g.foto, ''), u.avatar, '') as avatar, r.name as role_name
+            SELECT k.*, u.full_name, u.avatar, r.name as role_name
             FROM komentar k
             JOIN users u ON k.user_id = u.id
             JOIN roles r ON u.role_id = r.id
-            LEFT JOIN siswa s ON u.id = s.user_id
-            LEFT JOIN guru g ON u.id = g.user_id
             WHERE k.forum_id = ?
             ORDER BY k.id ASC
         ");
