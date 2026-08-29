@@ -114,7 +114,10 @@
         $enrolledCount = 0;
         $unenrolledCount = 0;
         foreach ($mapelKeys as $mk) {
-            $isEnrolled = isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id']]);
+            $mkKId = !empty($mk['kelas_id']) ? (int)$mk['kelas_id'] : 0;
+            $isEnrolled = isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id'] . '_' . $mkKId])
+                       || ($mkKId > 0 && isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id'] . '_0']))
+                       || isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id'] . '_global']);
             if ($isEnrolled) $enrolledCount++;
             else $unenrolledCount++;
         }
@@ -180,7 +183,10 @@
                     </div>
                 <?php else: ?>
                     <?php foreach ($mapelKeys as $mk): 
-                        $isEnrolled = isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id']]);
+                        $mkKId = !empty($mk['kelas_id']) ? (int)$mk['kelas_id'] : 0;
+                        $isEnrolled = isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id'] . '_' . $mkKId])
+                                   || ($mkKId > 0 && isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id'] . '_0']))
+                                   || isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id'] . '_global']);
                         $tNum = (int)($mk['tingkat'] ?? 0);
                         $badgeStyle = ($tNum === 10) ? 'background:#e0e7ff; color:#3730a3;' :
                                      (($tNum === 11) ? 'background:#f3e8ff; color:#6b21a8;' :

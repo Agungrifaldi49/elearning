@@ -590,10 +590,18 @@ class AcademicModel extends BaseModel {
                     siswa_id INT NOT NULL,
                     mapel_id INT NOT NULL,
                     guru_id INT NOT NULL,
-                    enrolled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE KEY u_siswa_mapel_guru (siswa_id, mapel_id, guru_id)
+                    kelas_id INT NULL,
+                    enrolled_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+
+            try {
+                $this->db->exec("ALTER TABLE siswa_mapel_enrollment ADD COLUMN kelas_id INT NULL AFTER guru_id");
+            } catch (\Throwable $eCol) {}
+
+            try {
+                $this->db->exec("ALTER TABLE siswa_mapel_enrollment DROP INDEX u_siswa_mapel_guru");
+            } catch (\Throwable $eDropS) {}
         } catch (\Throwable $e) {}
     }
 
@@ -812,8 +820,20 @@ class AcademicModel extends BaseModel {
         }
 
         try {
-            $ins = $this->db->prepare("INSERT IGNORE INTO siswa_mapel_enrollment (siswa_id, mapel_id, guru_id) VALUES (?, ?, ?)");
-            $ins->execute([$siswa_id, $target['mapel_id'], $target['guru_id']]);
+            $targetKelasId = !empty($target['kelas_id']) ? (int)$target['kelas_id'] : null;
+
+            if ($targetKelasId) {
+                $chk = $this->db->prepare("SELECT id FROM siswa_mapel_enrollment WHERE siswa_id = ? AND mapel_id = ? AND guru_id = ? AND kelas_id = ?");
+                $chk->execute([(int)$siswa_id, $target['mapel_id'], $target['guru_id'], $targetKelasId]);
+            } else {
+                $chk = $this->db->prepare("SELECT id FROM siswa_mapel_enrollment WHERE siswa_id = ? AND mapel_id = ? AND guru_id = ?");
+                $chk->execute([(int)$siswa_id, $target['mapel_id'], $target['guru_id']]);
+            }
+
+            if (!$chk->fetch()) {
+                $ins = $this->db->prepare("INSERT INTO siswa_mapel_enrollment (siswa_id, mapel_id, guru_id, kelas_id) VALUES (?, ?, ?, ?)");
+                $ins->execute([(int)$siswa_id, $target['mapel_id'], $target['guru_id'], $targetKelasId]);
+            }
 
             $kelasInfo = !empty($target['nama_kelas']) ? " [{$target['nama_kelas']}]" : '';
 
@@ -830,13 +850,15 @@ class AcademicModel extends BaseModel {
     public function getSiswaEnrolledMapels($siswa_id) {
         $this->ensureEnrollmentTables();
         $stmt = $this->db->prepare("
-            SELECT sme.*, m.nama_mapel, m.kode_mapel, g.nama_lengkap as nama_guru 
+            SELECT sme.*, m.nama_mapel, m.kode_mapel, g.nama_lengkap as nama_guru, k.nama_kelas, k.tingkat
             FROM siswa_mapel_enrollment sme
             JOIN mata_pelajaran m ON sme.mapel_id = m.id
             JOIN guru g ON sme.guru_id = g.id
+            LEFT JOIN kelas k ON sme.kelas_id = k.id
             WHERE sme.siswa_id = ?
+            ORDER BY m.nama_mapel ASC
         ");
-        $stmt->execute([$siswa_id]);
+        $stmt->execute([(int)$siswa_id]);
         return $stmt->fetchAll();
     }
 

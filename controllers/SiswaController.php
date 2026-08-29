@@ -711,7 +711,11 @@ class SiswaController {
 
         $enrolledMapelGuruKeys = [];
         foreach ($enrolledList as $em) {
-            $enrolledMapelGuruKeys[$em['mapel_id'] . '_' . $em['guru_id']] = true;
+            $eKId = !empty($em['kelas_id']) ? (int)$em['kelas_id'] : 0;
+            $enrolledMapelGuruKeys[$em['mapel_id'] . '_' . $em['guru_id'] . '_' . $eKId] = true;
+            if ($eKId === 0) {
+                $enrolledMapelGuruKeys[$em['mapel_id'] . '_' . $em['guru_id'] . '_global'] = true;
+            }
         }
 
         require_once ROOT_PATH . 'views/siswa/gabung_kelas.php';
