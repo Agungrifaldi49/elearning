@@ -140,17 +140,17 @@
                         <?= htmlspecialchars($topic['konten']) ?>
                     </div>
 
-                    <!-- Attached Image Preview Showcase (Full-Image View without Crop) -->
+                    <!-- Attached Image Preview Showcase -->
                     <?php if (!empty($topic['gambar'])): 
                         $topicImgPath = (file_exists(ROOT_PATH . 'assets/uploads/forum/' . $topic['gambar'])) 
                             ? BASE_URL . 'assets/uploads/forum/' . htmlspecialchars($topic['gambar']) 
                             : BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($topic['gambar']);
                     ?>
                         <div class="mb-4">
-                            <div class="forum-detail-image-box shadow-sm" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
+                            <div class="forum-image-preview-wrapper shadow-sm" style="max-width: 100%; height: 320px; border-radius:18px;" onclick="openLightboxModal('<?= $topicImgPath ?>', '<?= htmlspecialchars(addslashes($topic['judul'])) ?>')">
                                 <img src="<?= $topicImgPath ?>" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($topic['gambar']) ?>';" alt="Lampiran Gambar Topik">
                                 <div class="forum-image-overlay">
-                                    <i class="bi bi-zoom-in fs-3"></i> Klik untuk memperbesar gambar
+                                    <i class="bi bi-zoom-in me-1"></i> Klik untuk memperbesar gambar
                                 </div>
                             </div>
                         </div>
