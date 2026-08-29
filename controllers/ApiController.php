@@ -160,6 +160,18 @@ class ApiController {
         $endpoint = strtolower(explode('?', $endpoint)[0]);
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? $_GET['siswa_id'] ?? $_POST['siswa_id'] ?? $input['siswa_id'] ?? 0);
+        if ($userId === 0) {
+            $rawQuery = $_SERVER['QUERY_STRING'] ?? '';
+            if (preg_match('/user_id=(\d+)/i', $rawQuery, $mUid)) {
+                $userId = intval($mUid[1]);
+            } elseif (preg_match('/siswa_id=(\d+)/i', $rawQuery, $mSid)) {
+                $userId = intval($mSid[1]);
+            }
+        }
+        if ($userId === 0 && AuthHelper::isSiswa()) {
+            $sessionUser = AuthHelper::user();
+            $userId = intval($sessionUser['id'] ?? 0);
+        }
         
         $siswa = null;
         if ($userId > 0) {

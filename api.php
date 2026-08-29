@@ -19,7 +19,15 @@ if (ob_get_length()) ob_clean();
 
 // Parse endpoint action from query parameters, PATH_INFO, or REQUEST_URI
 $rawAction = $_GET['action'] ?? $_GET['url'] ?? $_GET['endpoint'] ?? '';
-$action = explode('?', $rawAction)[0];
+if (strpos($rawAction, '?') !== false) {
+    $partsAction = explode('?', $rawAction, 2);
+    $action = $partsAction[0];
+    parse_str($partsAction[1], $embeddedParams);
+    $_GET = array_merge($embeddedParams, $_GET);
+    $_REQUEST = array_merge($embeddedParams, $_REQUEST);
+} else {
+    $action = $rawAction;
+}
 
 if (empty($action) && isset($_SERVER['PATH_INFO'])) {
     $action = trim(explode('?', $_SERVER['PATH_INFO'])[0], '/');
