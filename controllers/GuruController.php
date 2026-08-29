@@ -1330,6 +1330,7 @@ class GuruController {
             ORDER BY k.tingkat ASC, k.nama_kelas ASC
         ")->fetchAll();
 
+        $academicModel->ensureGuruClassKeys($guruId);
         $myKeys = $academicModel->getMapelEnrollmentKeys($guruId);
         $mapelList = $academicModel->getMapel();
         $myMapelList = $academicModel->getMapelByGuru($guruId);

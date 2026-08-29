@@ -627,6 +627,52 @@ class AcademicModel extends BaseModel {
         } catch (Exception $e) {}
     }
 
+    public function ensureGuruClassKeys($guru_id) {
+        $this->ensureEnrollmentTables();
+        $gId = (int)$guru_id;
+        if ($gId <= 0) return;
+
+        try {
+            $sql = "
+                SELECT DISTINCT j.mapel_id, j.kelas_id, m.nama_mapel, k.nama_kelas, k.tingkat
+                FROM jadwal j
+                JOIN mata_pelajaran m ON j.mapel_id = m.id
+                JOIN kelas k ON j.kelas_id = k.id
+                WHERE j.guru_id = {$gId} AND j.mapel_id IS NOT NULL AND j.kelas_id IS NOT NULL
+                UNION
+                SELECT DISTINCT mt.mapel_id, mt.kelas_id, m.nama_mapel, k.nama_kelas, k.tingkat
+                FROM materi mt
+                JOIN mata_pelajaran m ON mt.mapel_id = m.id
+                JOIN kelas k ON mt.kelas_id = k.id
+                WHERE mt.guru_id = {$gId} AND mt.mapel_id IS NOT NULL AND mt.kelas_id IS NOT NULL
+                UNION
+                SELECT DISTINCT t.mapel_id, t.kelas_id, m.nama_mapel, k.nama_kelas, k.tingkat
+                FROM tugas t
+                JOIN mata_pelajaran m ON t.mapel_id = m.id
+                JOIN kelas k ON t.kelas_id = k.id
+                WHERE t.guru_id = {$gId} AND t.mapel_id IS NOT NULL AND t.kelas_id IS NOT NULL
+            ";
+
+            $assignedPairs = $this->db->query($sql)->fetchAll();
+
+            foreach ($assignedPairs as $pair) {
+                $mId = (int)$pair['mapel_id'];
+                $kId = (int)$pair['kelas_id'];
+
+                $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND kelas_id = ?");
+                $chk->execute([$mId, $gId, $kId]);
+                if (!$chk->fetch()) {
+                    $mText = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $pair['nama_mapel']), 0, 5));
+                    $kText = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $pair['nama_kelas']), 0, 6));
+                    $rand = rand(100, 999);
+                    $smartKey = ($mText ?: 'MPL') . '-' . ($kText ?: 'KLS') . '-' . $rand;
+
+                    $this->setMapelEnrollmentKey($mId, $gId, $smartKey, $kId);
+                }
+            }
+        } catch (Exception $e) {}
+    }
+
     public function getMapelEnrollmentKeys($guru_id = null) {
         $this->ensureEnrollmentTables();
         $sql = "

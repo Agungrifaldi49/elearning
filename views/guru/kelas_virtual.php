@@ -225,6 +225,16 @@
                     </button>
                 </div>
 
+                <div class="alert alert-info border-0 rounded-4 shadow-sm mb-3 d-flex align-items-center gap-3">
+                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:40px; height:40px;">
+                        <i class="bi bi-info-circle-fill fs-5"></i>
+                    </div>
+                    <div class="small">
+                        <strong class="text-dark d-block mb-0">💡 Kunci Mapel Otomatis Terpisah Per-Rombel Kelas:</strong>
+                        <span class="text-secondary">Sistem secara otomatis telah membuatkan <strong>Key Pendaftaran unik untuk setiap Rombel Kelas</strong> yang Anda ampu (Kelas 10, 11, 12). Berikan Key yang sesuai dengan Rombel Kelas siswa agar siswa tidak tertukar atau salah kelas saat mendaftar!</span>
+                    </div>
+                </div>
+
                 <?php if (empty($myKeys)): ?>
                     <div class="text-center py-5 text-muted">
                         <div class="bg-slate-100 text-slate-400 rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px; background-color: #f1f5f9;">
