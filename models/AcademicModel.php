@@ -597,8 +597,48 @@ class AcademicModel extends BaseModel {
         } catch (\Throwable $e) {}
     }
 
-    public function ensureGuruClassKeys($guru_id) {
+    public function syncKeysWithSchedule() {
         $this->ensureEnrollmentTables();
+        try {
+            $sql = "
+                SELECT DISTINCT j.mapel_id, j.kelas_id, j.guru_id, m.nama_mapel, k.nama_kelas
+                FROM jadwal j
+                JOIN mata_pelajaran m ON j.mapel_id = m.id
+                JOIN kelas k ON j.kelas_id = k.id
+                WHERE j.mapel_id IS NOT NULL AND j.kelas_id IS NOT NULL AND j.guru_id IS NOT NULL AND j.guru_id > 0
+            ";
+            $jadwalPairs = $this->db->query($sql)->fetchAll();
+
+            foreach ($jadwalPairs as $jp) {
+                $mId = (int)$jp['mapel_id'];
+                $kId = (int)$jp['kelas_id'];
+                $gId = (int)$jp['guru_id'];
+
+                if ($mId <= 0 || $kId <= 0 || $gId <= 0) continue;
+
+                $stmtChk = $this->db->prepare("SELECT id, guru_id FROM mapel_enrollment_keys WHERE mapel_id = ? AND kelas_id = ?");
+                $stmtChk->execute([$mId, $kId]);
+                $existingKey = $stmtChk->fetch();
+
+                if ($existingKey) {
+                    if ((int)$existingKey['guru_id'] !== $gId) {
+                        $upd = $this->db->prepare("UPDATE mapel_enrollment_keys SET guru_id = ? WHERE id = ?");
+                        $upd->execute([$gId, $existingKey['id']]);
+                    }
+                } else {
+                    $mText = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $jp['nama_mapel']), 0, 5));
+                    $kText = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $jp['nama_kelas']), 0, 6));
+                    $rand = rand(100, 999);
+                    $smartKey = ($mText ?: 'MPL') . '-' . ($kText ?: 'KLS') . '-' . $rand;
+
+                    $this->setMapelEnrollmentKey($mId, $gId, $smartKey, $kId);
+                }
+            }
+        } catch (\Throwable $e) {}
+    }
+
+    public function ensureGuruClassKeys($guru_id) {
+        $this->syncKeysWithSchedule();
         $gId = (int)$guru_id;
         if ($gId <= 0) return;
 
@@ -632,13 +672,11 @@ class AcademicModel extends BaseModel {
                     $this->setMapelEnrollmentKey($mId, $gId, $smartKey, $kId);
                 }
             }
-        } catch (\Throwable $e) {
-            // Fail-safe execution
-        }
+        } catch (\Throwable $e) {}
     }
 
     public function getMapelEnrollmentKeys($guru_id = null) {
-        $this->ensureEnrollmentTables();
+        $this->syncKeysWithSchedule();
         $sql = "
             SELECT mek.*, m.nama_mapel, m.kode_mapel, g.nama_lengkap as nama_guru, g.nip, k.nama_kelas, k.tingkat, j.nama_jurusan,
             (SELECT COUNT(*) FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.mapel_id = mek.mapel_id AND sme.guru_id = mek.guru_id AND (mek.kelas_id IS NULL OR s.kelas_id = mek.kelas_id)) as total_siswa
@@ -651,7 +689,18 @@ class AcademicModel extends BaseModel {
         ";
         if ($guru_id) {
             $gId = (int)$guru_id;
-            $sql .= " AND mek.guru_id = {$gId}";
+            $sql .= " AND mek.guru_id = {$gId} AND (
+                mek.kelas_id IS NULL 
+                OR (mek.mapel_id, mek.kelas_id) IN (
+                    SELECT mapel_id, kelas_id FROM jadwal WHERE guru_id = {$gId} AND mapel_id IS NOT NULL AND kelas_id IS NOT NULL
+                    UNION
+                    SELECT mapel_id, kelas_id FROM materi WHERE guru_id = {$gId} AND mapel_id IS NOT NULL AND kelas_id IS NOT NULL
+                    UNION
+                    SELECT mapel_id, kelas_id FROM tugas WHERE guru_id = {$gId} AND mapel_id IS NOT NULL AND kelas_id IS NOT NULL
+                    UNION
+                    SELECT me.mapel_id, s.kelas_id FROM siswa_mapel_enrollment me JOIN siswa s ON me.siswa_id = s.id WHERE me.guru_id = {$gId} AND s.kelas_id IS NOT NULL
+                )
+            )";
         }
         $sql .= " ORDER BY m.nama_mapel ASC, k.tingkat ASC, k.nama_kelas ASC, g.nama_lengkap ASC";
         return $this->db->query($sql)->fetchAll();
