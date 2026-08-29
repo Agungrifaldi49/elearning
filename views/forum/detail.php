@@ -471,29 +471,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
-', 'bg-white', 'shadow-sm'));
-                tab.classList.add('active', 'bg-white', 'shadow-sm');
-                const cat = tab.getAttribute('data-cat');
-                renderCategory(cat);
-            });
-        });
-
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            popover.classList.toggle('d-none');
-        });
-
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => popover.classList.add('d-none'));
-        }
-
-        document.addEventListener('click', (e) => {
-            if (!popover.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
-                popover.classList.add('d-none');
-            }
-        });
-    }
-});
-</script>
-
-<?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
