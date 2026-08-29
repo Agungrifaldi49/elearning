@@ -109,6 +109,16 @@
     <?php endif; ?>
 
     <!-- SECTION 1: PENDAFTARAN MAPEL PER-GURU (KEY SYSTEM) -->
+    <?php
+        $totalMapelCount = count($mapelKeys ?? []);
+        $enrolledCount = 0;
+        $unenrolledCount = 0;
+        foreach ($mapelKeys as $mk) {
+            $isEnrolled = isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id']]);
+            if ($isEnrolled) $enrolledCount++;
+            else $unenrolledCount++;
+        }
+    ?>
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-4 p-md-5">
             <div class="d-flex justify-content-between align-items-sm-center flex-column flex-sm-row mb-4 gap-3 pb-3 border-bottom">
@@ -124,7 +134,42 @@
                 </button>
             </div>
 
-            <div class="row g-3 g-md-4">
+            <!-- Filter Tabs & Search Controls Bar -->
+            <div class="row g-3 align-items-center mb-4">
+                <div class="col-12 col-md-7 col-lg-8">
+                    <ul class="nav nav-pills custom-nav-pills gap-2 flex-wrap" id="mapelFilterPills">
+                        <li class="nav-item">
+                            <button class="nav-link active rounded-pill px-3 py-1.5 btn-filter-mapel" data-filter="all" onclick="setMapelFilter('all', this)">
+                                <i class="bi bi-grid-fill me-1"></i> Semua Mapel <span class="badge bg-white text-dark ms-1 rounded-pill"><?= $totalMapelCount ?></span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link text-warning-emphasis bg-warning-subtle rounded-pill px-3 py-1.5 btn-filter-mapel" data-filter="unenrolled" onclick="setMapelFilter('unenrolled', this)">
+                                <i class="bi bi-lock-fill me-1 text-warning"></i> Belum Terdaftar <span class="badge bg-warning text-dark ms-1 rounded-pill"><?= $unenrolledCount ?></span>
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link text-success bg-success-subtle rounded-pill px-3 py-1.5 btn-filter-mapel" data-filter="enrolled" onclick="setMapelFilter('enrolled', this)">
+                                <i class="bi bi-check-circle-fill me-1 text-success"></i> Sudah Terdaftar <span class="badge bg-success text-white ms-1 rounded-pill"><?= $enrolledCount ?></span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-12 col-md-5 col-lg-4">
+                    <div class="input-group shadow-xs rounded-pill overflow-hidden border">
+                        <span class="input-group-text bg-white border-0 ps-3">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" id="searchMapelKeyInput" class="form-control border-0 py-2 fs-6" placeholder="Cari nama mapel / guru..." onkeyup="filterMapelKeyCards()">
+                        <button type="button" class="btn btn-white border-0 pe-3 text-muted" onclick="document.getElementById('searchMapelKeyInput').value=''; filterMapelKeyCards();">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mapel Key Grid -->
+            <div class="row g-3 g-md-4" id="mapelKeysGrid">
                 <?php if (empty($mapelKeys)): ?>
                     <div class="col-12 text-center py-5 text-muted">
                         <div class="bg-light rounded-circle p-4 d-inline-flex mb-3 text-secondary">
@@ -136,11 +181,19 @@
                 <?php else: ?>
                     <?php foreach ($mapelKeys as $mk): 
                         $isEnrolled = isset($enrolledMapelGuruKeys[$mk['mapel_id'] . '_' . $mk['guru_id']]);
+                        $tNum = (int)($mk['tingkat'] ?? 0);
+                        $badgeStyle = ($tNum === 10) ? 'background:#e0e7ff; color:#3730a3;' :
+                                     (($tNum === 11) ? 'background:#f3e8ff; color:#6b21a8;' :
+                                     (($tNum === 12) ? 'background:#dcfce7; color:#15803d;' : 'background:#f1f5f9; color:#334155;'));
+                        
+                        $searchKeywords = strtolower(htmlspecialchars($mk['nama_mapel'] . ' ' . $mk['nama_guru'] . ' ' . ($mk['nama_kelas'] ?? 'Semua Rombel')));
                     ?>
-                        <div class="col-12 col-md-6 col-lg-4">
+                        <div class="col-12 col-md-6 col-lg-4 mapel-key-card-item" 
+                             data-enrolled="<?= $isEnrolled ? 'true' : 'false' ?>" 
+                             data-search="<?= $searchKeywords ?>">
                             <div class="key-item-card p-4 h-100 d-flex flex-column justify-content-between">
                                 <div>
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-1">
                                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1.5 rounded-pill fw-bold text-truncate" style="max-width:180px;">
                                             <?= htmlspecialchars($mk['nama_mapel']) ?>
                                         </span>
@@ -152,16 +205,28 @@
                                     </div>
                                     
                                     <h6 class="fw-bold text-dark mb-1 fs-6"><i class="bi bi-person-badge me-1.5 text-secondary"></i><?= htmlspecialchars($mk['nama_guru']) ?></h6>
-                                    <p class="small text-muted mb-3">Rombel Ajar: <strong><?= htmlspecialchars($mk['nama_kelas'] ?? 'Semua Rombel') ?></strong></p>
+                                    
+                                    <div class="mb-3">
+                                        <small class="text-muted d-block mb-1" style="font-size:0.75rem;">Target Rombel Kelas:</small>
+                                        <?php if (!empty($mk['nama_kelas'])): ?>
+                                            <span class="badge rounded-pill px-2.5 py-1 fw-bold border" style="<?= $badgeStyle ?> font-size:0.72rem;">
+                                                <i class="bi bi-building me-1"></i><?= htmlspecialchars($mk['nama_kelas']) ?> (Kelas <?= $tNum ?>)
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-light text-secondary border fw-semibold px-2.5 py-1" style="font-size:0.72rem;">
+                                                <i class="bi bi-globe me-1"></i>Semua Rombel
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
 
                                 <div class="pt-2 border-top">
                                     <?php if ($isEnrolled): ?>
-                                        <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-2 rounded-3" disabled>
+                                        <button type="button" class="btn btn-sm btn-success w-100 fw-bold py-2 rounded-3" disabled style="background:#059669; border-color:#059669;">
                                             <i class="bi bi-patch-check-fill me-1"></i> Akses Terbuka (Terdaftar)
                                         </button>
                                     <?php else: ?>
-                                        <button type="button" class="btn btn-sm btn-outline-warning text-dark w-100 fw-bold py-2 rounded-3" data-bs-toggle="modal" data-bs-target="#modalEnrollMapel">
+                                        <button type="button" class="btn btn-sm btn-warning text-dark w-100 fw-bold py-2 rounded-3 shadow-xs" data-bs-toggle="modal" data-bs-target="#modalEnrollMapel">
                                             <i class="bi bi-key-fill me-1"></i> Input Key Untuk Daftar
                                         </button>
                                     <?php endif; ?>
@@ -170,6 +235,15 @@
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
+            </div>
+
+            <!-- Empty Search Results Placeholder -->
+            <div id="noMapelKeyFound" class="text-center py-5 text-muted d-none">
+                <div class="bg-light rounded-circle p-4 d-inline-flex mb-3 text-secondary">
+                    <i class="bi bi-search display-5"></i>
+                </div>
+                <h6 class="fw-bold text-dark mb-1">Tidak Ada Mata Pelajaran Sesuai Filter / Pencarian</h6>
+                <p class="small text-muted mb-0">Coba ubah kata kunci pencarian atau ganti filter status pendaftaran di atas.</p>
             </div>
         </div>
     </div>
@@ -325,5 +399,61 @@
         </div>
     </div>
 </div>
+
+<script>
+let currentMapelFilter = 'all';
+
+function setMapelFilter(filterType, btnElem) {
+    currentMapelFilter = filterType;
+    
+    document.querySelectorAll('.btn-filter-mapel').forEach(btn => {
+        btn.classList.remove('active', 'shadow-xs');
+    });
+    btnElem.classList.add('active', 'shadow-xs');
+
+    filterMapelKeyCards();
+}
+
+function filterMapelKeyCards() {
+    const query = document.getElementById('searchMapelKeyInput').value.toLowerCase().trim();
+    const cards = document.querySelectorAll('.mapel-key-card-item');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        const isEnrolled = card.getAttribute('data-enrolled') === 'true';
+        const searchData = card.getAttribute('data-search') || '';
+
+        let matchesFilter = false;
+        if (currentMapelFilter === 'all') {
+            matchesFilter = true;
+        } else if (currentMapelFilter === 'enrolled' && isEnrolled) {
+            matchesFilter = true;
+        } else if (currentMapelFilter === 'unenrolled' && !isEnrolled) {
+            matchesFilter = true;
+        }
+
+        let matchesSearch = true;
+        if (query.length > 0) {
+            matchesSearch = searchData.includes(query);
+        }
+
+        if (matchesFilter && matchesSearch) {
+            card.classList.remove('d-none');
+            visibleCount++;
+        } else {
+            card.classList.add('d-none');
+        }
+    });
+
+    const noFoundElem = document.getElementById('noMapelKeyFound');
+    if (noFoundElem) {
+        if (visibleCount === 0 && cards.length > 0) {
+            noFoundElem.classList.remove('d-none');
+        } else {
+            noFoundElem.classList.add('d-none');
+        }
+    }
+}
+</script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
