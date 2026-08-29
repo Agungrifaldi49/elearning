@@ -392,7 +392,7 @@ const ForumApp = {
                                 <div class="d-flex align-items-center gap-2 overflow-hidden">
                                     <div class="avatar-ring ${ringClass}" style="padding:2px; flex-shrink: 0;">
                                         <div class="avatar-inner" style="width:38px; height:38px; font-size:0.9rem; font-weight:bold;">
-                                            ${initial}
+                                            ${t.user_avatar_url ? `<img src="${t.user_avatar_url}" alt="${t.full_name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span style="display:none; width:100%; height:100%; align-items:center; justify-content:center;">${initial}</span>` : initial}
                                         </div>
                                     </div>
                                     <div class="text-truncate">
@@ -553,7 +553,7 @@ const ForumApp = {
                         <div class="d-flex align-items-center gap-2">
                             <div class="avatar-ring ${cRingClass}" style="padding:1px;">
                                 <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
-                                    ${initial}
+                                    ${c.user_avatar_url ? `<img src="${c.user_avatar_url}" alt="${c.full_name}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"><span style="display:none; width:100%; height:100%; align-items:center; justify-content:center;">${initial}</span>` : initial}
                                 </div>
                             </div>
                             <div>

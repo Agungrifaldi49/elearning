@@ -94,12 +94,20 @@
                             <div class="col topic-card-item" data-topic-id="<?= $t['id'] ?>" data-visibility="<?= $t['visibility'] ?? 'public' ?>">
                                 <div class="forum-topic-card p-3 p-md-4 bg-white border h-100 d-flex flex-column justify-content-between">
                                     <div>
-                                        <!-- Author & Metadata Header -->
                                         <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 pb-2 border-bottom">
                                             <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                                <?php 
+                                                    $userAvatarUrl = !empty($t['avatar']) ? ForumController::formatAvatarUrl($t['avatar']) : null;
+                                                    $initial = strtoupper(substr($t['full_name'], 0, 1));
+                                                ?>
                                                 <div class="avatar-ring <?= $ringClass ?>" style="padding:2px; flex-shrink: 0;">
                                                     <div class="avatar-inner" style="width:38px; height:38px; font-size:0.9rem; font-weight:bold;">
-                                                        <?= strtoupper(substr($t['full_name'], 0, 1)) ?>
+                                                        <?php if ($userAvatarUrl): ?>
+                                                            <img src="<?= $userAvatarUrl ?>" alt="<?= htmlspecialchars($t['full_name']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                            <span style="display:none; width:100%; height:100%; align-items:center; justify-content:center;"><?= $initial ?></span>
+                                                        <?php else: ?>
+                                                            <?= $initial ?>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                                 <div class="text-truncate">

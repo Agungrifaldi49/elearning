@@ -85,6 +85,28 @@ class ForumController {
         require_once ROOT_PATH . 'views/forum/index.php';
     }
 
+    public static function formatAvatarUrl($avatarFile) {
+        if (empty($avatarFile) || $avatarFile === 'default_avatar.png' || $avatarFile === 'default.png') {
+            return null;
+        }
+
+        $paths = [
+            'assets/uploads/avatar/' . $avatarFile,
+            'assets/uploads/profile/' . $avatarFile,
+            'assets/uploads/foto/' . $avatarFile,
+            'assets/uploads/siswa/' . $avatarFile,
+            'assets/uploads/guru/' . $avatarFile
+        ];
+
+        foreach ($paths as $p) {
+            if (file_exists(ROOT_PATH . $p)) {
+                return BASE_URL . $p;
+            }
+        }
+
+        return BASE_URL . 'assets/uploads/avatar/' . htmlspecialchars($avatarFile);
+    }
+
     public function fetchUpdates() {
         AuthHelper::requireLogin();
         header('Content-Type: application/json');
@@ -115,6 +137,7 @@ class ForumController {
                 'user_id' => (int)$t['user_id'],
                 'full_name' => htmlspecialchars($t['full_name']),
                 'role_name' => htmlspecialchars($t['role_name']),
+                'user_avatar_url' => self::formatAvatarUrl($t['avatar'] ?? ''),
                 'created_at' => date('d F Y, H:i', strtotime($t['created_at'])),
                 'posted_time' => date('H:i', strtotime($t['created_at'])),
                 'nama_mapel' => $t['nama_mapel'] ? htmlspecialchars($t['nama_mapel']) : '',
@@ -193,6 +216,7 @@ class ForumController {
                 'id' => (int)$c['id'],
                 'full_name' => htmlspecialchars($c['full_name']),
                 'role_name' => htmlspecialchars($c['role_name']),
+                'user_avatar_url' => self::formatAvatarUrl($c['avatar'] ?? ''),
                 'created_at' => date('d/m/Y H:i', strtotime($c['created_at'])),
                 'komentar' => nl2br(htmlspecialchars($c['komentar'])),
                 'gambar' => $c['gambar'] ?? null,

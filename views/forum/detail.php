@@ -53,9 +53,18 @@
                     <!-- Author Header & Metadata -->
                     <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 pb-3 border-bottom">
                         <div class="d-flex align-items-center gap-3">
+                            <?php 
+                                $topicAvatarUrl = !empty($topic['avatar']) ? ForumController::formatAvatarUrl($topic['avatar']) : null;
+                                $topicInitial = strtoupper(substr($topic['full_name'], 0, 1));
+                            ?>
                             <div class="avatar-ring <?= $ringClass ?>" style="padding:2px; flex-shrink:0;">
                                 <div class="avatar-inner" style="width:50px; height:50px; font-size:1.25rem;">
-                                    <?= strtoupper(substr($topic['full_name'], 0, 1)) ?>
+                                    <?php if ($topicAvatarUrl): ?>
+                                        <img src="<?= $topicAvatarUrl ?>" alt="<?= htmlspecialchars($topic['full_name']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <span style="display:none; width:100%; height:100%; align-items:center; justify-content:center;"><?= $topicInitial ?></span>
+                                    <?php else: ?>
+                                        <?= $topicInitial ?>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div>
@@ -245,9 +254,18 @@
                                 <div class="comment-card-item <?= $cardAccentClass ?> shadow-sm" data-comment-id="<?= $c['id'] ?>" data-role="<?= $cRoleLower ?>" data-has-image="<?= !empty($c['gambar']) ? 'true' : 'false' ?>">
                                     <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-1">
                                         <div class="d-flex align-items-center gap-2">
+                                            <?php 
+                                                $cAvatarUrl = !empty($c['avatar']) ? ForumController::formatAvatarUrl($c['avatar']) : null;
+                                                $cInitial = strtoupper(substr($c['full_name'], 0, 1));
+                                            ?>
                                             <div class="avatar-ring <?= $cRingClass ?>" style="padding:1px;">
                                                 <div class="avatar-inner" style="width:34px; height:34px; font-size:0.85rem;">
-                                                    <?= strtoupper(substr($c['full_name'], 0, 1)) ?>
+                                                    <?php if ($cAvatarUrl): ?>
+                                                        <img src="<?= $cAvatarUrl ?>" alt="<?= htmlspecialchars($c['full_name']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                        <span style="display:none; width:100%; height:100%; align-items:center; justify-content:center;"><?= $cInitial ?></span>
+                                                    <?php else: ?>
+                                                        <?= $cInitial ?>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                             <div>
@@ -366,7 +384,12 @@
                         <div class="p-4 text-center">
                             <div class="avatar-ring <?= $ringClass ?> mx-auto mb-3" style="width:64px; height:64px; padding:3px;">
                                 <div class="avatar-inner" style="width:58px; height:58px; font-size:1.5rem;">
-                                    <?= strtoupper(substr($topic['full_name'], 0, 1)) ?>
+                                    <?php if (!empty($topicAvatarUrl)): ?>
+                                        <img src="<?= $topicAvatarUrl ?>" alt="<?= htmlspecialchars($topic['full_name']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <span style="display:none; width:100%; height:100%; align-items:center; justify-content:center;"><?= $topicInitial ?></span>
+                                    <?php else: ?>
+                                        <?= $topicInitial ?>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <h6 class="fw-bold mb-1 text-dark fs-6"><?= htmlspecialchars($topic['full_name']) ?></h6>
