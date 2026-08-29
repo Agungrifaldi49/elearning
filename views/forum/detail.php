@@ -4,21 +4,23 @@
 
 <script src="<?= BASE_URL ?>assets/js/forum.js?v=<?= time() ?>"></script>
 
-<main class="main-content px-3 px-md-4 py-3">
-    <div class="container-fluid">
+<main class="main-content px-3 px-md-4 pb-4">
+    <div class="container-fluid pt-2">
         <input type="hidden" id="activeTopicId" value="<?= $topic['id'] ?>">
 
-        <!-- Navigation Ribbon & Breadcrumb (Pushed down with top margin clearance) -->
-        <div class="d-flex align-items-center justify-content-between mb-4 mt-4 pt-md-3 flex-wrap gap-3 bg-white p-3 rounded-4 shadow-sm border" style="margin-top: 1.5rem !important;">
-            <div class="d-flex align-items-center gap-2">
-                <a href="<?= BASE_URL ?>index.php?url=forum" class="btn btn-light rounded-pill px-3 py-2 shadow-sm border text-dark fw-semibold" style="font-size:0.88rem;">
-                    <i class="bi bi-arrow-left me-1 text-primary"></i> Kembali ke Daftar Forum
+        <!-- Navigation Ribbon & Breadcrumb (Prominent Top Clearance Below Navbar Header) -->
+        <div class="d-flex align-items-center justify-content-between mb-4 mt-3 flex-wrap gap-3 bg-white p-3 p-md-4 rounded-4 shadow-sm border" style="border-left: 5px solid #0d6efd !important;">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a href="<?= BASE_URL ?>index.php?url=forum" class="btn btn-outline-primary rounded-pill px-4 py-2 shadow-sm fw-bold d-inline-flex align-items-center gap-2" style="font-size:0.9rem;">
+                    <i class="bi bi-arrow-left-circle-fill fs-5"></i> Kembali ke Daftar Forum
                 </a>
-                <span class="text-muted d-none d-md-inline" style="font-size:0.85rem;">/ Detail Topik #<?= $topic['id'] ?></span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 d-none d-md-inline-block" style="font-size:0.82rem;">
+                    <i class="bi bi-chat-square-quote-fill me-1"></i> Detail Topik #<?= $topic['id'] ?>
+                </span>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <a href="#replyFormCard" class="btn btn-primary rounded-pill px-3 py-2 fw-semibold shadow-sm" style="font-size:0.88rem;">
-                    <i class="bi bi-chat-left-text-fill me-1"></i> Tulis Balasan
+                <a href="#replyFormCard" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow d-inline-flex align-items-center gap-2" style="font-size:0.9rem;">
+                    <i class="bi bi-chat-left-text-fill fs-5 text-warning"></i> Tulis Balasan
                 </a>
             </div>
         </div>
