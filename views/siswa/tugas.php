@@ -12,13 +12,21 @@
     min-height: 100vh;
 }
 
+/* Text Clamp Utility */
+.text-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
 /* Compact KPI Cards */
 .task-kpi-card {
     background: #ffffff;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-    padding: 12px 16px;
+    padding: 12px 14px;
     transition: all 0.2s ease;
     height: 100%;
 }
@@ -28,13 +36,13 @@
     border-color: #cbd5e1;
 }
 .task-kpi-icon {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     flex-shrink: 0;
 }
 
@@ -51,13 +59,13 @@
     background: transparent;
     color: #64748b;
     font-weight: 600;
-    font-size: 0.8rem;
-    padding: 5px 14px;
+    font-size: 0.78rem;
+    padding: 5px 12px;
     border-radius: 20px;
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
     cursor: pointer;
     white-space: nowrap;
 }
@@ -70,7 +78,7 @@
     color: #ffffff !important;
 }
 .filter-tab-btn .tab-count {
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     padding: 1px 6px;
     border-radius: 10px;
     background-color: rgba(0, 0, 0, 0.08);
@@ -81,7 +89,7 @@
     color: #ffffff;
 }
 
-/* Compact Task Card Item Architecture */
+/* Compact Task Card Item Architecture (Optimized for 3-4 Columns) */
 .task-card-item {
     background: #ffffff;
     border-radius: 14px;
@@ -123,15 +131,15 @@
     background-color: #f8fafc;
     border: 1px solid #e2e8f0;
     border-radius: 10px;
-    padding: 12px 14px;
+    padding: 10px 12px;
 }
 
 /* Compact File Dropzone Box */
 .custom-dropzone {
     border: 1.5px dashed #cbd5e1;
-    border-radius: 10px;
+    border-radius: 8px;
     background-color: #ffffff;
-    padding: 12px 16px;
+    padding: 8px 12px;
     text-align: center;
     transition: all 0.2s ease;
     cursor: pointer;
@@ -151,23 +159,23 @@
     cursor: pointer;
 }
 .dropzone-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
     background-color: #eff6ff;
     color: #2563eb;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1rem;
-    margin-bottom: 4px;
+    font-size: 0.9rem;
+    margin-bottom: 2px;
 }
 
 /* Chips Reason Buttons */
 .chip-reason {
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: 20px;
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 16px;
     border: 1px solid #cbd5e1;
     background-color: #ffffff;
     color: #475569;
@@ -203,7 +211,7 @@
         </div>
     </div>
 
-    <!-- 📊 COMPACT KPI SUMMARY CARDS -->
+    <!-- 📊 COMPACT KPI SUMMARY CARDS (4 COLUMNS) -->
     <?php
     $totalTasks = count($tugasList);
     $submittedCount = count($submittedMap ?? []);
@@ -224,46 +232,46 @@
     ?>
     <div class="row g-2 mb-3">
         <div class="col-6 col-md-3">
-            <div class="task-kpi-card d-flex align-items-center gap-2.5">
+            <div class="task-kpi-card d-flex align-items-center gap-2">
                 <div class="task-kpi-icon bg-primary-subtle text-primary">
                     <i class="bi bi-journal-text"></i>
                 </div>
                 <div>
                     <h5 class="fw-extrabold text-dark mb-0 lh-1"><?= $totalTasks ?></h5>
-                    <span class="text-muted fw-semibold" style="font-size: 0.75rem;">Total Penugasan</span>
+                    <span class="text-muted fw-semibold" style="font-size: 0.72rem;">Total Penugasan</span>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="task-kpi-card d-flex align-items-center gap-2.5">
+            <div class="task-kpi-card d-flex align-items-center gap-2">
                 <div class="task-kpi-icon bg-success-subtle text-success">
                     <i class="bi bi-cloud-check-fill"></i>
                 </div>
                 <div>
                     <h5 class="fw-extrabold text-dark mb-0 lh-1"><?= $submittedCount ?></h5>
-                    <span class="text-muted fw-semibold" style="font-size: 0.75rem;">Sudah Dikirim</span>
+                    <span class="text-muted fw-semibold" style="font-size: 0.72rem;">Sudah Dikirim</span>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="task-kpi-card d-flex align-items-center gap-2.5">
+            <div class="task-kpi-card d-flex align-items-center gap-2">
                 <div class="task-kpi-icon bg-warning-subtle text-warning-emphasis">
                     <i class="bi bi-clock-history"></i>
                 </div>
                 <div>
                     <h5 class="fw-extrabold text-dark mb-0 lh-1"><?= $pendingCount ?></h5>
-                    <span class="text-muted fw-semibold" style="font-size: 0.75rem;">Perlu Dikumpul</span>
+                    <span class="text-muted fw-semibold" style="font-size: 0.72rem;">Perlu Dikumpul</span>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="task-kpi-card d-flex align-items-center gap-2.5">
+            <div class="task-kpi-card d-flex align-items-center gap-2">
                 <div class="task-kpi-icon bg-info-subtle text-info">
                     <i class="bi bi-building-check"></i>
                 </div>
                 <div>
-                    <h6 class="fw-bold text-dark mb-0 text-truncate lh-1" style="max-width: 120px; font-size: 0.92rem;"><?= htmlspecialchars($siswa['nama_kelas'] ?? 'Rombel') ?></h6>
-                    <span class="text-muted fw-semibold" style="font-size: 0.75rem;">Kelas Target</span>
+                    <h6 class="fw-bold text-dark mb-0 text-truncate lh-1" style="max-width: 110px; font-size: 0.88rem;"><?= htmlspecialchars($siswa['nama_kelas'] ?? 'Rombel') ?></h6>
+                    <span class="text-muted fw-semibold" style="font-size: 0.72rem;">Kelas Target</span>
                 </div>
             </div>
         </div>
@@ -273,10 +281,10 @@
     <div class="filter-bar-container mb-3">
         <div class="row g-2 align-items-center">
             <!-- Tab Buttons -->
-            <div class="col-12 col-lg-7">
-                <div class="d-flex align-items-center gap-1 overflow-x-auto pb-1 pb-lg-0" style="scrollbar-width: thin;">
+            <div class="col-12 col-xl-7">
+                <div class="d-flex align-items-center gap-1 overflow-x-auto pb-1 pb-xl-0" style="scrollbar-width: thin;">
                     <button type="button" class="filter-tab-btn active" onclick="switchTaskTab('all', this)">
-                        <i class="bi bi-grid-fill me-1"></i> Semua Tugas
+                        <i class="bi bi-grid-fill me-1"></i> Semua
                         <span class="tab-count"><?= $totalTasks ?></span>
                     </button>
                     <button type="button" class="filter-tab-btn" onclick="switchTaskTab('terdaftar', this)">
@@ -288,25 +296,25 @@
                         <span class="tab-count"><?= $submittedCount ?></span>
                     </button>
                     <button type="button" class="filter-tab-btn" onclick="switchTaskTab('terkunci', this)">
-                        <i class="bi bi-lock-fill me-1"></i> Terkunci / Expired
+                        <i class="bi bi-lock-fill me-1"></i> Terkunci/Expired
                         <span class="tab-count"><?= $expiredOrLockedCount ?></span>
                     </button>
                 </div>
             </div>
 
             <!-- Search & Mapel Dropdown -->
-            <div class="col-12 col-lg-5">
+            <div class="col-12 col-xl-5">
                 <div class="row g-2">
                     <div class="col-7 col-sm-8">
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-2.5 text-muted">
-                                <i class="bi bi-search" style="font-size:0.8rem;"></i>
+                                <i class="bi bi-search" style="font-size:0.78rem;"></i>
                             </span>
-                            <input type="text" id="searchInput" class="form-control form-control-sm bg-light border-start-0 rounded-end-pill ps-0 text-dark" placeholder="Cari judul tugas / mapel..." oninput="applyFilters()" style="font-size: 0.8rem;">
+                            <input type="text" id="searchInput" class="form-control form-control-sm bg-light border-start-0 rounded-end-pill ps-0 text-dark" placeholder="Cari judul tugas / mapel..." oninput="applyFilters()" style="font-size: 0.78rem;">
                         </div>
                     </div>
                     <div class="col-5 col-sm-4">
-                        <select id="filterMapel" class="form-select form-select-sm rounded-pill text-dark" onchange="applyFilters()" style="font-size: 0.8rem;">
+                        <select id="filterMapel" class="form-select form-select-sm rounded-pill text-dark" onchange="applyFilters()" style="font-size: 0.78rem;">
                             <option value="">Semua Mapel</option>
                             <?php 
                             $mapelNames = array_unique(array_column($tugasList, 'nama_mapel'));
@@ -321,12 +329,13 @@
         </div>
     </div>
 
-    <!-- 📋 TASK CARDS GRID -->
+    <!-- 📋 TASK CARDS GRID (3-4 COLUMNS RESPONSIVE GRID) -->
+    <!-- col-12 (Mobile), col-sm-6 (Tablet), col-lg-4 (Laptop), col-xl-3 (Desktop 4 Columns) -->
     <div class="row g-3 mb-4" id="taskCardsGrid">
         <?php if (empty($tugasList)): ?>
             <div class="col-12">
                 <div class="card border-0 rounded-3 shadow-sm p-4 text-center bg-white">
-                    <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-2" style="width: 60px; height: 60px;">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-2" style="width: 55px; height: 55px;">
                         <i class="bi bi-journal-check fs-3"></i>
                     </div>
                     <h6 class="fw-bold text-dark mb-1">Belum Ada Penugasan Aktif</h6>
@@ -337,7 +346,7 @@
             <div id="emptyFilterNotice" class="col-12 text-center d-none py-4 bg-white rounded-3 shadow-sm border">
                 <i class="bi bi-search fs-3 text-muted d-block mb-1"></i>
                 <h6 class="fw-bold text-dark mb-1 small">Tugas Tidak Ditemukan</h6>
-                <p class="text-muted small mb-0" style="font-size:0.78rem;">Tidak ada tugas yang cocok dengan filter atau kata kunci pencarian Anda.</p>
+                <p class="text-muted small mb-0" style="font-size:0.75rem;">Tidak ada tugas yang cocok dengan filter atau kata kunci pencarian Anda.</p>
             </div>
 
             <?php foreach ($tugasList as $t): 
@@ -357,55 +366,58 @@
                 $deadlineTime = strtotime($t['deadline']);
                 $isNearDeadline = ($deadlineTime - time() < 86400) && ($deadlineTime > time());
             ?>
-                <div class="col-12 col-lg-6 task-item-col" data-title="<?= htmlspecialchars(strtolower($t['judul'])) ?>" data-mapel="<?= htmlspecialchars($t['nama_mapel']) ?>" data-status="<?= $statusCardVal ?>">
+                <!-- Responsive Grid: 4 cols on XL desktop, 3 cols on LG, 2 cols on SM, 1 col on Mobile -->
+                <div class="col-12 col-sm-6 col-lg-4 col-xl-3 task-item-col" data-title="<?= htmlspecialchars(strtolower($t['judul'])) ?>" data-mapel="<?= htmlspecialchars($t['nama_mapel']) ?>" data-status="<?= $statusCardVal ?>">
                     <div class="task-card-item <?= $cardStatusClass ?>">
                         
                         <!-- Top Accent Bar -->
                         <div class="task-accent-bar"></div>
 
-                        <div class="p-3 p-md-3.5 d-flex flex-column h-100 justify-content-between">
+                        <div class="p-3 d-flex flex-column h-100 justify-content-between">
                             <div>
                                 <!-- Top Header Badges -->
-                                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-1 px-2.5 py-1 fw-bold" style="font-size: 0.72rem;">
+                                <div class="d-flex justify-content-between align-items-center mb-2 gap-1">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5 fw-bold text-truncate" style="font-size: 0.68rem; max-width: 135px;" title="<?= htmlspecialchars($t['nama_mapel']) ?>">
                                         <i class="bi bi-book me-1"></i><?= htmlspecialchars($t['nama_mapel']) ?>
                                     </span>
 
                                     <div>
                                         <?php if ($isSubmitted): ?>
-                                            <span class="badge bg-success text-white rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.7rem;">
-                                                <i class="bi bi-check-circle-fill me-1"></i>Sudah Dikirim
+                                            <span class="badge bg-success text-white rounded-pill px-2 py-0.5 fw-semibold" style="font-size: 0.65rem;">
+                                                <i class="bi bi-check-circle-fill me-0.5"></i>Terkirim
                                             </span>
                                         <?php elseif (!$isEnrolled): ?>
-                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.7rem;">
-                                                <i class="bi bi-lock-fill me-1"></i>Mapel Terkunci
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5 fw-semibold" style="font-size: 0.65rem;">
+                                                <i class="bi bi-lock-fill me-0.5"></i>Terkunci
                                             </span>
                                         <?php elseif ($isExpired && !$canAccess): ?>
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.7rem;">
-                                                <i class="bi bi-clock-history me-1"></i>Terkunci (Expired)
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5 fw-semibold" style="font-size: 0.65rem;">
+                                                <i class="bi bi-clock-history me-0.5"></i>Expired
                                             </span>
                                         <?php else: ?>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.7rem;">
-                                                <i class="bi bi-clock me-1"></i>Aktif / Belum Dikumpul
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5 fw-semibold" style="font-size: 0.65rem;">
+                                                <i class="bi bi-clock me-0.5"></i>Aktif
                                             </span>
                                         <?php endif; ?>
                                     </div>
                                 </div>
 
-                                <!-- Title -->
-                                <h6 class="fw-bold mb-1.5 text-dark lh-sm" style="font-size: 0.95rem; letter-spacing: -0.2px;"><?= htmlspecialchars($t['judul']) ?></h6>
+                                <!-- Title (Clamped to 2 lines max) -->
+                                <h6 class="fw-bold mb-1.5 text-dark lh-sm text-clamp-2" style="font-size: 0.88rem; letter-spacing: -0.2px; min-height: 2.4em;" title="<?= htmlspecialchars($t['judul']) ?>">
+                                    <?= htmlspecialchars($t['judul']) ?>
+                                </h6>
                                 
                                 <!-- Meta Info (Guru & Deadline) -->
-                                <div class="d-flex align-items-center flex-wrap gap-2.5 mb-2.5 text-muted" style="font-size: 0.78rem;">
-                                    <span><i class="bi bi-person-circle text-primary me-1"></i>Guru: <strong class="text-dark"><?= htmlspecialchars($t['nama_guru']) ?></strong></span>
-                                    <span class="<?= $isNearDeadline ? 'text-danger fw-bold' : 'text-danger' ?>">
-                                        <i class="bi bi-calendar-event me-1"></i>Deadline: <?= date('d M Y, H:i', strtotime($t['deadline'])) ?> WIB
-                                    </span>
+                                <div class="mb-2 text-muted" style="font-size: 0.74rem;">
+                                    <div class="text-truncate mb-0.5"><i class="bi bi-person-circle text-primary me-1"></i>Guru: <strong class="text-dark"><?= htmlspecialchars($t['nama_guru']) ?></strong></div>
+                                    <div class="<?= $isNearDeadline ? 'text-danger fw-bold' : 'text-danger' ?>">
+                                        <i class="bi bi-calendar-event me-1"></i><?= date('d M Y, H:i', strtotime($t['deadline'])) ?> WIB
+                                    </div>
                                 </div>
 
-                                <!-- Task Description Snippet -->
-                                <p class="text-secondary mb-2.5 lh-sm" style="font-size: 0.82rem; color: #475569;">
-                                    <?= nl2br(htmlspecialchars($t['deskripsi'])) ?>
+                                <!-- Task Description Snippet (Clamped) -->
+                                <p class="text-secondary mb-2.5 lh-sm text-clamp-2" style="font-size: 0.78rem; color: #475569; min-height: 2.2em;">
+                                    <?= htmlspecialchars($t['deskripsi']) ?>
                                 </p>
                             </div>
 
@@ -414,23 +426,18 @@
                                 $tFilePath = BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($t['file_path']);
                                 $fileExt = strtoupper(pathinfo($t['file_path'], PATHINFO_EXTENSION));
                             ?>
-                                <div class="p-2 px-2.5 bg-light rounded-3 border mb-2.5">
-                                    <div class="d-flex align-items-center justify-content-between gap-2">
-                                        <div class="d-flex align-items-center gap-2 overflow-hidden">
-                                            <i class="bi bi-file-earmark-arrow-down-fill text-primary fs-6 flex-shrink-0"></i>
-                                            <div class="overflow-hidden">
-                                                <div class="d-flex align-items-center gap-1">
-                                                    <span class="fw-semibold text-dark text-truncate" style="font-size: 0.78rem; max-width: 180px;"><?= htmlspecialchars($t['file_path']) ?></span>
-                                                    <span class="badge bg-secondary-subtle text-secondary rounded px-1.5 py-0.5" style="font-size: 0.65rem;"><?= $fileExt ?></span>
-                                                </div>
-                                            </div>
+                                <div class="p-2 bg-light rounded-3 border mb-2">
+                                    <div class="d-flex align-items-center justify-content-between gap-1">
+                                        <div class="d-flex align-items-center gap-1.5 overflow-hidden">
+                                            <i class="bi bi-file-earmark-arrow-down-fill text-primary flex-shrink-0" style="font-size: 0.95rem;"></i>
+                                            <span class="fw-semibold text-dark text-truncate" style="font-size: 0.72rem; max-width: 105px;"><?= htmlspecialchars($t['file_path']) ?></span>
                                         </div>
-                                        <div class="d-flex align-items-center gap-1 ms-auto flex-shrink-0">
-                                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 fw-bold" style="font-size: 0.73rem;" data-bs-toggle="modal" data-bs-target="#modalPreviewTaskFile<?= $t['id'] ?>">
-                                                <i class="bi bi-eye-fill me-1"></i> Baca
+                                        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.68rem;" data-bs-toggle="modal" data-bs-target="#modalPreviewTaskFile<?= $t['id'] ?>">
+                                                <i class="bi bi-eye-fill me-0.5"></i> Baca
                                             </button>
-                                            <a href="<?= $tFilePath ?>" download class="btn btn-xs btn-primary rounded-pill px-2.5 py-1 fw-bold" style="font-size: 0.73rem;">
-                                                <i class="bi bi-download me-1"></i> Unduh
+                                            <a href="<?= $tFilePath ?>" download class="btn btn-xs btn-primary rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.68rem;">
+                                                <i class="bi bi-download"></i>
                                             </a>
                                         </div>
                                     </div>
@@ -440,81 +447,81 @@
                             <!-- 📥 ACTION AREA (SUBMISSION / STATUS) -->
                             <div class="mt-1">
                                 <?php if (!$isEnrolled): ?>
-                                    <div class="task-action-box bg-warning-subtle border-warning-subtle text-center p-2.5">
-                                        <div class="fw-bold text-warning-emphasis mb-1 small"><i class="bi bi-shield-lock-fill me-1"></i>Akses Penugasan Terkunci</div>
-                                        <p class="text-muted mb-2" style="font-size:0.75rem;">Terdaftar mapel ini dahulu dengan Kode Akses (Key) dari Guru.</p>
-                                        <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-warning text-dark w-100 fw-bold rounded-pill py-1.5" style="font-size:0.78rem;">
+                                    <div class="task-action-box bg-warning-subtle border-warning-subtle text-center p-2">
+                                        <div class="fw-bold text-warning-emphasis mb-0.5" style="font-size:0.75rem;"><i class="bi bi-shield-lock-fill me-1"></i>Mapel Terkunci</div>
+                                        <p class="text-muted mb-1.5" style="font-size:0.7rem;">Gunakan Key resmi Guru.</p>
+                                        <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-warning text-dark w-100 fw-bold rounded-pill py-1" style="font-size:0.74rem;">
                                             <i class="bi bi-key-fill me-1"></i> Input Key Mapel
                                         </a>
                                     </div>
                                 <?php else: ?>
                                     <?php if ($isSubmitted): ?>
                                         <!-- SUBMITTED ANSWER STATUS BOX -->
-                                        <div class="task-action-box bg-success-subtle border-success-subtle p-2.5 rounded-3">
-                                            <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-1">
-                                                <span class="fw-bold text-success d-flex align-items-center gap-1" style="font-size:0.78rem;">
-                                                    <i class="bi bi-check-circle-fill"></i> Jawaban Terkirim
+                                        <div class="task-action-box bg-success-subtle border-success-subtle p-2 rounded-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
+                                                <span class="fw-bold text-success d-flex align-items-center gap-1" style="font-size:0.74rem;">
+                                                    <i class="bi bi-check-circle-fill"></i> Terkirim
                                                 </span>
-                                                <small class="text-muted" style="font-size:0.72rem;">
-                                                    <?= date('d M Y, H:i', strtotime($subData['created_at'])) ?> WIB
+                                                <small class="text-muted" style="font-size:0.68rem;">
+                                                    <?= date('d M, H:i', strtotime($subData['created_at'])) ?>
                                                 </small>
                                             </div>
 
                                             <?php if (!empty($subData['file_path'])): 
                                                 $subFilePath = BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($subData['file_path']);
                                             ?>
-                                                <div class="p-2 bg-white rounded border d-flex align-items-center justify-content-between mb-1.5">
-                                                    <div class="d-flex align-items-center gap-1.5 overflow-hidden">
-                                                        <i class="bi bi-file-earmark-check-fill text-success" style="font-size:0.9rem;"></i>
-                                                        <span class="fw-semibold text-dark text-truncate" style="font-size:0.75rem; max-width: 200px;"><?= htmlspecialchars($subData['file_path']) ?></span>
+                                                <div class="p-1.5 bg-white rounded border d-flex align-items-center justify-content-between mb-1">
+                                                    <div class="d-flex align-items-center gap-1 overflow-hidden">
+                                                        <i class="bi bi-file-earmark-check-fill text-success" style="font-size:0.85rem;"></i>
+                                                        <span class="fw-semibold text-dark text-truncate" style="font-size:0.7rem; max-width: 120px;"><?= htmlspecialchars($subData['file_path']) ?></span>
                                                     </div>
-                                                    <a href="<?= $subFilePath ?>" download class="btn btn-xs btn-outline-success rounded-pill px-2.5 py-0.5 fw-bold" style="font-size:0.72rem;">
-                                                        <i class="bi bi-download me-1"></i> Unduh
+                                                    <a href="<?= $subFilePath ?>" download class="btn btn-xs btn-outline-success rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.68rem;">
+                                                        <i class="bi bi-download"></i>
                                                     </a>
                                                 </div>
                                             <?php endif; ?>
 
                                             <!-- SCORE & TEACHER NOTE -->
                                             <?php if ($subData['nilai'] !== null): ?>
-                                                <div class="p-2 bg-white rounded border border-success-subtle mb-1">
+                                                <div class="p-1.5 bg-white rounded border border-success-subtle mb-1">
                                                     <div class="d-flex align-items-center justify-content-between">
-                                                        <span class="fw-bold text-dark" style="font-size:0.76rem;"><i class="bi bi-star-fill text-warning me-1"></i>Nilai Guru:</span>
-                                                        <span class="badge bg-success text-white fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.8rem;">
+                                                        <span class="fw-bold text-dark" style="font-size:0.72rem;"><i class="bi bi-star-fill text-warning me-1"></i>Nilai:</span>
+                                                        <span class="badge bg-success text-white fw-bold px-2 py-0.5 rounded-pill" style="font-size:0.76rem;">
                                                             <?= number_format($subData['nilai'], 1) ?>
                                                         </span>
                                                     </div>
                                                     <?php if (!empty($subData['catatan_guru'])): ?>
-                                                        <div class="mt-1 pt-1 border-top text-muted" style="font-size:0.74rem;">
-                                                            <strong>Catatan Guru:</strong> <?= htmlspecialchars($subData['catatan_guru']) ?>
+                                                        <div class="mt-1 pt-1 border-top text-muted text-truncate" style="font-size:0.7rem;" title="<?= htmlspecialchars($subData['catatan_guru']) ?>">
+                                                            <strong>Catatan:</strong> <?= htmlspecialchars($subData['catatan_guru']) ?>
                                                         </div>
                                                     <?php endif; ?>
                                                 </div>
                                             <?php else: ?>
-                                                <div class="p-1.5 bg-white rounded border text-center text-muted" style="font-size:0.74rem;">
-                                                    <i class="bi bi-hourglass-split me-1 text-warning"></i>Status: <strong>Belum Dinilai Guru</strong>
+                                                <div class="p-1 bg-white rounded border text-center text-muted" style="font-size:0.7rem;">
+                                                    <i class="bi bi-hourglass-split me-1 text-warning"></i>Belum Dinilai Guru
                                                 </div>
                                             <?php endif; ?>
 
                                             <?php if ($canAccess): ?>
-                                                <div class="mt-2 pt-1 border-top">
-                                                    <button type="button" class="btn btn-xs btn-outline-primary w-100 rounded-pill fw-bold py-1" style="font-size:0.75rem;" data-bs-toggle="collapse" data-bs-target="#reuploadForm<?= $t['id'] ?>">
-                                                        <i class="bi bi-arrow-repeat me-1"></i> Update / Kirim Ulang Jawaban
+                                                <div class="mt-1.5 pt-1 border-top">
+                                                    <button type="button" class="btn btn-xs btn-outline-primary w-100 rounded-pill fw-bold py-1" style="font-size:0.72rem;" data-bs-toggle="collapse" data-bs-target="#reuploadForm<?= $t['id'] ?>">
+                                                        <i class="bi bi-arrow-repeat me-1"></i> Update Jawaban
                                                     </button>
 
-                                                    <div class="collapse mt-2" id="reuploadForm<?= $t['id'] ?>">
-                                                        <form action="<?= BASE_URL ?>index.php?url=siswa/tugas" method="POST" enctype="multipart/form-data" class="p-2.5 bg-white rounded border shadow-sm">
+                                                    <div class="collapse mt-1.5" id="reuploadForm<?= $t['id'] ?>">
+                                                        <form action="<?= BASE_URL ?>index.php?url=siswa/tugas" method="POST" enctype="multipart/form-data" class="p-2 bg-white rounded border shadow-sm">
                                                             <?= Security::csrfField() ?>
                                                             <input type="hidden" name="tugas_id" value="<?= $t['id'] ?>">
                                                             
-                                                            <div class="mb-2">
-                                                                <label class="form-label fw-bold text-dark mb-1" style="font-size:0.75rem;">Upload Berkas Perbaikan</label>
-                                                                <input type="file" name="file" class="form-control form-control-sm rounded" required style="font-size:0.78rem;">
+                                                            <div class="mb-1.5">
+                                                                <label class="form-label fw-bold text-dark mb-0.5" style="font-size:0.7rem;">Upload Berkas Baru</label>
+                                                                <input type="file" name="file" class="form-control form-control-sm rounded" required style="font-size:0.72rem;">
                                                             </div>
-                                                            <div class="mb-2">
-                                                                <input type="text" name="catatan_siswa" class="form-control form-control-sm rounded" placeholder="Catatan perbaikan (Opsional)" style="font-size:0.78rem;">
+                                                            <div class="mb-1.5">
+                                                                <input type="text" name="catatan_siswa" class="form-control form-control-sm rounded" placeholder="Catatan (Opsional)" style="font-size:0.72rem;">
                                                             </div>
-                                                            <button type="submit" class="btn btn-xs btn-primary w-100 rounded-pill fw-bold py-1.5" style="font-size:0.78rem;">
-                                                                <i class="bi bi-send-fill me-1"></i> Kirim Pembaharuan
+                                                            <button type="submit" class="btn btn-xs btn-primary w-100 rounded-pill fw-bold py-1" style="font-size:0.74rem;">
+                                                                <i class="bi bi-send-fill me-1"></i> Kirim Update
                                                             </button>
                                                         </form>
                                                     </div>
@@ -525,13 +532,13 @@
                                         <!-- NEW SUBMISSION FORM BOX (DROPZONE) -->
                                         <div class="task-action-box">
                                             <?php if ($statusAccess === 'disetujui_susulan'): ?>
-                                                <div class="p-1.5 bg-success-subtle text-success border border-success-subtle rounded mb-2 text-center fw-bold" style="font-size:0.74rem;">
-                                                    <i class="bi bi-check-circle-fill me-1"></i> Izin Susulan Disetujui (Pengumpulan Dibuka)
+                                                <div class="p-1 bg-success-subtle text-success border border-success-subtle rounded mb-1.5 text-center fw-bold" style="font-size:0.7rem;">
+                                                    <i class="bi bi-check-circle-fill me-1"></i> Izin Susulan Disetujui
                                                 </div>
                                             <?php endif; ?>
 
-                                            <span class="fw-bold text-primary mb-2 d-block" style="font-size:0.78rem;">
-                                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Unggah Lembar Jawaban Tugas
+                                            <span class="fw-bold text-primary mb-1.5 d-block" style="font-size:0.74rem;">
+                                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Upload Jawaban
                                             </span>
                                             
                                             <form action="<?= BASE_URL ?>index.php?url=siswa/tugas" method="POST" enctype="multipart/form-data">
@@ -539,39 +546,39 @@
                                                 <input type="hidden" name="tugas_id" value="<?= $t['id'] ?>">
 
                                                 <!-- Compact File Dropzone -->
-                                                <div class="custom-dropzone mb-2" id="dropzoneBox<?= $t['id'] ?>" onclick="document.getElementById('fileInput<?= $t['id'] ?>').click()">
+                                                <div class="custom-dropzone mb-1.5" id="dropzoneBox<?= $t['id'] ?>" onclick="document.getElementById('fileInput<?= $t['id'] ?>').click()">
                                                     <input type="file" name="file" id="fileInput<?= $t['id'] ?>" required onchange="handleFileSelected(this, '<?= $t['id'] ?>')">
                                                     <div id="dropzoneInitial<?= $t['id'] ?>">
                                                         <div class="dropzone-icon">
                                                             <i class="bi bi-cloud-upload-fill"></i>
                                                         </div>
-                                                        <div class="fw-bold text-dark mb-0" style="font-size:0.78rem;">Pilih Berkas atau Tarik File Ke Sini</div>
-                                                        <span class="text-muted d-block" style="font-size:0.7rem;">Format: PDF, DOCX, PPTX, ZIP, PNG, JPG (Maks 25MB)</span>
+                                                        <div class="fw-bold text-dark mb-0" style="font-size:0.74rem;">Pilih / Tarik File</div>
+                                                        <span class="text-muted d-block" style="font-size:0.65rem;">PDF, DOCX, ZIP, PNG (Maks 25MB)</span>
                                                     </div>
-                                                    <div id="dropzoneSelected<?= $t['id'] ?>" class="d-none py-1">
-                                                        <i class="bi bi-file-earmark-check-fill text-success fs-5 mb-0.5 d-block"></i>
-                                                        <span id="fileName<?= $t['id'] ?>" class="fw-bold text-dark d-block text-truncate mx-auto" style="font-size:0.76rem; max-width: 220px;">-</span>
-                                                        <small id="fileSize<?= $t['id'] ?>" class="text-muted d-block mb-1" style="font-size:0.7rem;">-</small>
-                                                        <span class="btn btn-xs btn-outline-danger rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.68rem;" onclick="resetFileInput(event, '<?= $t['id'] ?>')">
-                                                            <i class="bi bi-x-circle me-1"></i> Ganti File
+                                                    <div id="dropzoneSelected<?= $t['id'] ?>" class="d-none py-0.5">
+                                                        <i class="bi bi-file-earmark-check-fill text-success fs-6 mb-0 d-block"></i>
+                                                        <span id="fileName<?= $t['id'] ?>" class="fw-bold text-dark d-block text-truncate mx-auto" style="font-size:0.72rem; max-width: 140px;">-</span>
+                                                        <small id="fileSize<?= $t['id'] ?>" class="text-muted d-block mb-1" style="font-size:0.65rem;">-</small>
+                                                        <span class="btn btn-xs btn-outline-danger rounded-pill px-2 py-0.5 fw-bold" style="font-size:0.65rem;" onclick="resetFileInput(event, '<?= $t['id'] ?>')">
+                                                            <i class="bi bi-x-circle me-1"></i> Ganti
                                                         </span>
                                                     </div>
                                                 </div>
 
-                                                <div class="mb-2">
-                                                    <input type="text" name="catatan_siswa" class="form-control form-control-sm rounded" placeholder="Catatan tambahan untuk Guru (Opsional)" style="font-size:0.78rem;">
+                                                <div class="mb-1.5">
+                                                    <input type="text" name="catatan_siswa" class="form-control form-control-sm rounded" placeholder="Catatan (Opsional)" style="font-size:0.72rem;">
                                                 </div>
                                                 
-                                                <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill py-1.5 text-white" style="font-size:0.8rem; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
-                                                    <i class="bi bi-send-fill me-1"></i> Kirim Jawaban Tugas
+                                                <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill py-1.5 text-white" style="font-size:0.76rem; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                                                    <i class="bi bi-send-fill me-1"></i> Kirim Jawaban
                                                 </button>
                                             </form>
                                         </div>
                                     <?php else: ?>
                                         <!-- EXPIRED STATE -->
-                                        <div class="task-action-box text-center border-danger-subtle bg-danger-subtle p-2.5" style="background-color: #fff5f5;">
-                                            <div class="fw-bold text-danger mb-1" style="font-size:0.78rem;"><i class="bi bi-clock-history me-1"></i>Batas Waktu Pengumpulan Berakhir</div>
-                                            <p class="text-muted mb-2" style="font-size:0.74rem;">Tugas telah melewati deadline. Silakan minta izin susulan ke Guru.</p>
+                                        <div class="task-action-box text-center border-danger-subtle bg-danger-subtle p-2" style="background-color: #fff5f5;">
+                                            <div class="fw-bold text-danger mb-0.5" style="font-size:0.74rem;"><i class="bi bi-clock-history me-1"></i>Deadline Berakhir</div>
+                                            <p class="text-muted mb-1.5" style="font-size:0.7rem;">Silakan minta izin susulan ke Guru.</p>
                                             
                                             <?php
                                             $db = Database::getConnection();
@@ -580,16 +587,16 @@
                                             $susStatus = $stmtSus->fetchColumn();
                                             ?>
                                             <?php if ($susStatus === 'pending'): ?>
-                                                <button class="btn btn-warning text-dark w-100 fw-bold rounded-pill py-1.5" style="font-size:0.75rem;" disabled>
-                                                    <i class="bi bi-hourglass-split me-1"></i> Permohonan Susulan Dikirim (Menunggu Guru)
+                                                <button class="btn btn-warning text-dark w-100 fw-bold rounded-pill py-1" style="font-size:0.72rem;" disabled>
+                                                    <i class="bi bi-hourglass-split me-1"></i> Susulan Menunggu Konfirmasi
                                                 </button>
                                             <?php elseif ($susStatus === 'ditolak'): ?>
-                                                <div class="badge bg-danger-subtle text-danger border border-danger-subtle w-100 py-1.5 rounded-pill fw-bold" style="font-size:0.75rem;">
-                                                    <i class="bi bi-x-circle-fill me-1"></i> Permohonan Susulan Ditolak Guru
+                                                <div class="badge bg-danger-subtle text-danger border border-danger-subtle w-100 py-1 rounded-pill fw-bold" style="font-size:0.7rem;">
+                                                    <i class="bi bi-x-circle-fill me-1"></i> Permohonan Ditolak
                                                 </div>
                                             <?php else: ?>
-                                                <button type="button" class="btn btn-outline-danger w-100 fw-bold rounded-pill py-1.5" style="font-size:0.78rem;" data-bs-toggle="modal" data-bs-target="#modalSusulanTugas<?= $t['id'] ?>">
-                                                    <i class="bi bi-envelope-paper-fill me-1"></i> Ajukan Permohonan Susulan
+                                                <button type="button" class="btn btn-outline-danger w-100 fw-bold rounded-pill py-1" style="font-size:0.74rem;" data-bs-toggle="modal" data-bs-target="#modalSusulanTugas<?= $t['id'] ?>">
+                                                    <i class="bi bi-envelope-paper-fill me-1"></i> Ajukan Susulan
                                                 </button>
                                             <?php endif; ?>
                                         </div>
@@ -606,36 +613,36 @@
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content rounded-3 border-0 shadow-lg overflow-hidden">
                             <div class="modal-header border-0 bg-dark text-white p-3" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
-                                <h6 class="modal-title fw-bold text-white mb-0" style="font-size:0.9rem;"><i class="bi bi-envelope-paper-fill text-warning me-1.5"></i>Permohonan Izin Susulan Tugas</h6>
+                                <h6 class="modal-title fw-bold text-white mb-0" style="font-size:0.88rem;"><i class="bi bi-envelope-paper-fill text-warning me-1.5"></i>Permohonan Izin Susulan Tugas</h6>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                             </div>
                             <form action="<?= BASE_URL ?>index.php?url=siswa/tugas" method="POST">
-                                <div class="modal-body p-3.5 bg-light">
+                                <div class="modal-body p-3 bg-light">
                                     <?= Security::csrfField() ?>
                                     <input type="hidden" name="action" value="request_tugas_susulan">
                                     <input type="hidden" name="tugas_id" value="<?= $t['id'] ?>">
 
-                                    <div class="p-2.5 bg-white rounded border mb-2.5 shadow-xs">
-                                        <small class="text-muted d-block" style="font-size:0.72rem;">Tugas Target:</small>
-                                        <h6 class="fw-bold text-dark mb-0.5" style="font-size:0.88rem;"><?= htmlspecialchars($t['judul']) ?></h6>
-                                        <small class="text-primary fw-bold" style="font-size:0.75rem;"><?= htmlspecialchars($t['nama_mapel']) ?></small>
+                                    <div class="p-2.5 bg-white rounded border mb-2 shadow-xs">
+                                        <small class="text-muted d-block" style="font-size:0.7rem;">Tugas Target:</small>
+                                        <h6 class="fw-bold text-dark mb-0.5" style="font-size:0.85rem;"><?= htmlspecialchars($t['judul']) ?></h6>
+                                        <small class="text-primary fw-bold" style="font-size:0.73rem;"><?= htmlspecialchars($t['nama_mapel']) ?></small>
                                     </div>
 
                                     <div class="mb-2">
-                                        <label class="form-label fw-bold text-dark mb-1" style="font-size:0.78rem;">Pilih Alasan Cepat (Atau Ketik Alasan Custom):</label>
+                                        <label class="form-label fw-bold text-dark mb-1" style="font-size:0.75rem;">Pilih Alasan Cepat (Atau Ketik Alasan Custom):</label>
                                         <div class="d-flex flex-wrap gap-1 mb-2">
                                             <span class="chip-reason" onclick="setSusulanReason(this, '<?= $t['id'] ?>')">Sakit / Izin Medis</span>
-                                            <span class="chip-reason" onclick="setSusulanReason(this, '<?= $t['id'] ?>')">Kendala Jaringan Internet / Lampu Padam</span>
-                                            <span class="chip-reason" onclick="setSusulanReason(this, '<?= $t['id'] ?>')">Kendala Laptop / Handphone Rusak</span>
-                                            <span class="chip-reason" onclick="setSusulanReason(this, '<?= $t['id'] ?>')">Urusan Keluarga Important</span>
+                                            <span class="chip-reason" onclick="setSusulanReason(this, '<?= $t['id'] ?>')">Kendala Jaringan / Lampu Padam</span>
+                                            <span class="chip-reason" onclick="setSusulanReason(this, '<?= $t['id'] ?>')">Kendala HP / Laptop</span>
+                                            <span class="chip-reason" onclick="setSusulanReason(this, '<?= $t['id'] ?>')">Urusan Keluarga</span>
                                         </div>
 
-                                        <textarea id="catatanSusulan<?= $t['id'] ?>" name="catatan_susulan" class="form-control form-control-sm rounded" rows="3" placeholder="Jelaskan alasan keterlambatan Anda secara sopan kepada Guru..." style="font-size:0.8rem;" required></textarea>
+                                        <textarea id="catatanSusulan<?= $t['id'] ?>" name="catatan_susulan" class="form-control form-control-sm rounded" rows="3" placeholder="Jelaskan alasan keterlambatan Anda secara sopan kepada Guru..." style="font-size:0.78rem;" required></textarea>
                                     </div>
                                 </div>
                                 <div class="modal-footer border-0 pt-0 p-3 justify-content-between gap-2">
-                                    <button type="button" class="btn btn-light rounded-pill px-3 py-1.5" style="font-size:0.8rem;" data-bs-dismiss="modal">Batal</button>
-                                    <button type="submit" class="btn btn-danger px-4 py-1.5 fw-bold rounded-pill text-white shadow-xs" style="font-size:0.8rem; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);">
+                                    <button type="button" class="btn btn-light rounded-pill px-3 py-1.5" style="font-size:0.78rem;" data-bs-dismiss="modal">Batal</button>
+                                    <button type="submit" class="btn btn-danger px-4 py-1.5 fw-bold rounded-pill text-white shadow-xs" style="font-size:0.78rem; background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);">
                                         <i class="bi bi-send-fill me-1"></i> Kirim Permohonan
                                     </button>
                                 </div>
@@ -666,16 +673,16 @@
                                     <i class="bi bi-file-earmark-text-fill fs-6"></i>
                                 </div>
                                 <div>
-                                    <h6 class="modal-title fw-bold text-white mb-0" style="font-size:0.9rem;">Lampiran Soal Guru: <?= htmlspecialchars($t['judul']) ?></h6>
-                                    <small class="text-info fw-medium" style="font-size:0.75rem;">Mapel: <?= htmlspecialchars($t['nama_mapel']) ?> &bull; Guru: <?= htmlspecialchars($t['nama_guru']) ?></small>
+                                    <h6 class="modal-title fw-bold text-white mb-0" style="font-size:0.88rem;">Lampiran Soal Guru: <?= htmlspecialchars($t['judul']) ?></h6>
+                                    <small class="text-info fw-medium" style="font-size:0.73rem;">Mapel: <?= htmlspecialchars($t['nama_mapel']) ?> &bull; Guru: <?= htmlspecialchars($t['nama_guru']) ?></small>
                                 </div>
                             </div>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                         </div>
-                        <div class="modal-body p-3.5 bg-light">
-                            <div class="p-2.5 bg-white rounded border mb-2.5 shadow-xs">
-                                <h6 class="fw-bold text-dark mb-1" style="font-size:0.85rem;"><i class="bi bi-info-circle text-primary me-1"></i>Instruksi Penugasan:</h6>
-                                <p class="text-secondary small mb-0 lh-sm" style="font-size:0.8rem;"><?= nl2br(htmlspecialchars($t['deskripsi'])) ?></p>
+                        <div class="modal-body p-3 bg-light">
+                            <div class="p-2.5 bg-white rounded border mb-2 shadow-xs">
+                                <h6 class="fw-bold text-dark mb-1" style="font-size:0.82rem;"><i class="bi bi-info-circle text-primary me-1"></i>Instruksi Penugasan:</h6>
+                                <p class="text-secondary small mb-0 lh-sm" style="font-size:0.78rem;"><?= nl2br(htmlspecialchars($t['deskripsi'])) ?></p>
                             </div>
 
                             <div class="border rounded bg-white p-1.5 shadow-sm overflow-hidden text-center">
@@ -687,8 +694,8 @@
                                     <div class="p-4 text-center">
                                         <i class="bi bi-file-earmark-zip-fill fs-2 text-primary mb-1 d-block"></i>
                                         <h6 class="fw-bold text-dark small">Pratinjau Langsung Tidak Tersedia untuk Format Berkas Ini</h6>
-                                        <p class="text-muted small mb-2" style="font-size:0.78rem;">Berkas ini adalah dokumen berformat .<?= $tExt ?>. Silakan unduh berkas untuk membukanya secara penuh.</p>
-                                        <a href="<?= $tFilePath ?>" download class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold" style="font-size:0.78rem;">
+                                        <p class="text-muted small mb-2" style="font-size:0.75rem;">Berkas ini adalah dokumen berformat .<?= $tExt ?>. Silakan unduh berkas untuk membukanya secara penuh.</p>
+                                        <a href="<?= $tFilePath ?>" download class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold" style="font-size:0.76rem;">
                                             <i class="bi bi-download me-1"></i> Unduh Berkas Soal (<?= strtoupper($tExt) ?>)
                                         </a>
                                     </div>
@@ -696,8 +703,8 @@
                             </div>
                         </div>
                         <div class="modal-footer border-0 pt-0 p-3 justify-content-between bg-white border-top">
-                            <button type="button" class="btn btn-light rounded-pill px-3 py-1.5" style="font-size:0.8rem;" data-bs-dismiss="modal">Tutup</button>
-                            <a href="<?= $tFilePath ?>" download class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.8rem;">
+                            <button type="button" class="btn btn-light rounded-pill px-3 py-1.5" style="font-size:0.78rem;" data-bs-dismiss="modal">Tutup</button>
+                            <a href="<?= $tFilePath ?>" download class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.78rem;">
                                 <i class="bi bi-download me-1"></i> Unduh Lampiran Soal
                             </a>
                         </div>
