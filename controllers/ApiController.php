@@ -307,19 +307,24 @@ class ApiController {
                 $stmtP = $this->db->query("SELECT * FROM pengumuman WHERE (target_role = 'siswa' OR target_role = 'semua' OR target_role IS NULL) ORDER BY created_at DESC LIMIT 5");
                 $pengumuman = $stmtP ? $stmtP->fetchAll() : [];
 
-                // 7. Jadwal Hari Ini
+                // 7. Jadwal Pelajaran (Hari ini & Full Rombel)
                 $days = [1=>'Senin', 2=>'Selasa', 3=>'Rabu', 4=>'Kamis', 5=>'Jumat', 6=>'Sabtu', 7=>'Minggu'];
                 $today = $days[date('N')] ?? 'Senin';
-                $stmtJ = $this->db->prepare("
+                
+                $stmtJAll = $this->db->prepare("
                     SELECT j.*, m.nama_mapel, g.nama_lengkap as nama_guru 
                     FROM jadwal j 
                     LEFT JOIN mata_pelajaran m ON j.mapel_id = m.id 
                     LEFT JOIN guru g ON j.guru_id = g.id 
-                    WHERE (j.kelas_id = :kid OR FIND_IN_SET(:kid, j.kelas_ids) OR j.kelas_id IS NULL OR j.kelas_id = 0) AND j.hari = :hari 
-                    ORDER BY j.jam_mulai ASC
+                    WHERE (j.kelas_id = :kid OR FIND_IN_SET(:kid, j.kelas_ids) OR j.kelas_id IS NULL OR j.kelas_id = 0) 
+                    ORDER BY FIELD(j.hari, 'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'), j.jam_mulai ASC
                 ");
-                $stmtJ->execute(['kid' => $kelasId, 'hari' => $today]);
-                $jadwalToday = $stmtJ->fetchAll();
+                $stmtJAll->execute(['kid' => $kelasId]);
+                $jadwalList = $stmtJAll->fetchAll();
+
+                $jadwalToday = array_values(array_filter($jadwalList, function($j) use ($today) {
+                    return strcasecmp($j['hari'] ?? '', $today) === 0;
+                }));
 
                 // 8. Presensi Hari Ini
                 $tglNow = date('Y-m-d');
@@ -362,6 +367,7 @@ class ApiController {
                     'tugas_terdekat' => $tugasTerdekat,
                     'chart_data' => $chartData,
                     'pengumuman' => $pengumuman,
+                    'jadwal_list' => $jadwalList,
                     'jadwal_hari_ini' => $jadwalToday,
                     'absensi_today' => [
                         'has_clocked_in' => $hasClockedIn,

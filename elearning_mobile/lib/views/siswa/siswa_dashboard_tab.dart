@@ -54,7 +54,9 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
     final tugasTerdekat = dashboardData['tugas_terdekat'] as Map?;
     final chartData = dashboardData['chart_data'] as List? ?? [];
     final pengumuman = dashboardData['pengumuman'] as List? ?? [];
+    final jadwalList = dashboardData['jadwal_list'] as List? ?? [];
     final jadwalToday = dashboardData['jadwal_hari_ini'] as List? ?? [];
+    final displayedJadwal = jadwalToday.isNotEmpty ? jadwalToday : jadwalList;
 
     // 11 Features List
     final allFeatures = [
@@ -607,19 +609,36 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
 
             const SizedBox(height: 24),
 
-            // Today's Timetable Section
-            const Text(
-              '📅 Jadwal Pelajaran Hari Ini',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // Today's & Weekly Timetable Section (Matches Web Dashboard)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  jadwalToday.isNotEmpty ? '📅 Jadwal Pelajaran Hari Ini' : '📅 Jadwal KBM Rombel Rujukan',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                if (jadwalToday.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Hari Ini',
+                      style: TextStyle(color: AppTheme.primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
-            if (jadwalToday.isEmpty)
+            if (displayedJadwal.isEmpty)
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Center(
                     child: Text(
-                      'Tidak ada jadwal pelajaran hari ini 🎉',
+                      'Belum ada jadwal pelajaran terdaftar untuk rombel Anda 🎉',
                       style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
                     ),
                   ),
@@ -629,9 +648,16 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: jadwalToday.length,
+                itemCount: displayedJadwal.length,
                 itemBuilder: (context, index) {
-                  final j = jadwalToday[index];
+                  final j = displayedJadwal[index];
+                  final hari = j['hari']?.toString() ?? 'Hari';
+                  final jamMulai = j['jam_mulai']?.toString() ?? '';
+                  final jamSelesai = j['jam_selesai']?.toString() ?? '';
+                  final jamStr = (jamMulai.isNotEmpty && jamSelesai.isNotEmpty)
+                      ? "${jamMulai.length > 5 ? jamMulai.substring(0, 5) : jamMulai} - ${jamSelesai.length > 5 ? jamSelesai.substring(0, 5) : jamSelesai} WIB"
+                      : "Jam KBM";
+
                   return Card(
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(
@@ -643,11 +669,34 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                         ),
                         child: const Icon(Icons.access_time_filled, color: AppTheme.secondaryColor),
                       ),
-                      title: Text(
-                        j['nama_mapel'] ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      title: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            margin: const EdgeInsets.only(right: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              hari,
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              j['nama_mapel'] ?? 'Mata Pelajaran',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                          ),
+                        ],
                       ),
-                      subtitle: Text("Guru: ${j['nama_guru']} • ${j['jam_mulai']} - ${j['jam_selesai']}"),
+                      subtitle: Text(
+                        "Guru: ${j['nama_guru'] ?? 'Guru Pengampu'} • $jamStr",
+                        style: const TextStyle(fontSize: 12),
+                      ),
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -655,8 +704,8 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          j['ruangan'] ?? 'Ruang Kelas',
-                          style: const TextStyle(fontSize: 11, color: Colors.blue, fontWeight: FontWeight.bold),
+                          j['ruangan'] ?? 'Ruang KBM',
+                          style: const TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
