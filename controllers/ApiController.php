@@ -374,19 +374,25 @@ class ApiController {
                 ]);
                 break;
 
-            case 'deprecated_learning_path_old':
+            case 'learning_path':
+            case 'learningPath':
+            case 'alur_belajar':
                 require_once ROOT_PATH . 'models/AcademicModel.php';
                 $academicModel = new AcademicModel();
 
                 $siswaId = intval($siswa['id'] ?? 0);
                 $kelasId = intval($siswa['kelas_id'] ?? 0);
 
-                // Strictly get ONLY enrolled mapels registered via Key Mapel for this specific student
+                // Get enrolled mapels, fallback to all class mapels if not registered via Key Mapel yet
                 $enrolledList = [];
                 try {
                     $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
                 } catch (\Throwable $eEnr) {
                     $enrolledList = [];
+                }
+
+                if (empty($enrolledList) && $kelasId > 0) {
+                    $enrolledList = $academicModel->getMapelByKelas($kelasId);
                 }
 
                 $mapelList = [];
