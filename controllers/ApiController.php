@@ -615,11 +615,13 @@ class ApiController {
                     $stmtM = $this->db->prepare("
                         SELECT m.*, 
                                COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
-                               COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru 
+                               COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
+                               k.nama_kelas 
                         FROM materi m 
                         LEFT JOIN mata_pelajaran mp ON m.mapel_id = mp.id 
                         LEFT JOIN guru g ON m.guru_id = g.id 
                         LEFT JOIN users u ON g.user_id = u.id
+                        LEFT JOIN kelas k ON m.kelas_id = k.id
                         WHERE (m.kelas_id = :kid OR FIND_IN_SET(:kid, m.kelas_ids) OR m.kelas_id IS NULL OR m.kelas_id = 0)
                         ORDER BY m.id DESC
                         LIMIT 50
@@ -631,16 +633,32 @@ class ApiController {
                         $stmtAll = $this->db->query("
                             SELECT m.*, 
                                    COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
-                                   COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru 
+                                   COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
+                                   k.nama_kelas
                             FROM materi m 
                             LEFT JOIN mata_pelajaran mp ON m.mapel_id = mp.id 
                             LEFT JOIN guru g ON m.guru_id = g.id 
                             LEFT JOIN users u ON g.user_id = u.id
+                            LEFT JOIN kelas k ON m.kelas_id = k.id
                             ORDER BY m.id DESC
                             LIMIT 50
                         ");
                         $materi = $stmtAll->fetchAll();
                     }
+
+                    $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
+                    foreach ($materi as &$item) {
+                        $targetIds = !empty($item['kelas_ids']) ? array_map('intval', explode(',', $item['kelas_ids'])) : [(int)$item['kelas_id']];
+                        $names = [];
+                        foreach ($targetIds as $tid) {
+                            if (isset($kelasList[$tid])) {
+                                $names[] = $kelasList[$tid];
+                            }
+                        }
+                        $item['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($item['nama_kelas'] ?? 'Semua Kelas');
+                    }
+                    unset($item);
+
                 } catch (\Throwable $eM) {
                     $materi = [];
                 }
@@ -1950,13 +1968,26 @@ class ApiController {
                 $stmtM = $this->db->prepare("
                     SELECT m.*, mp.nama_mapel, k.nama_kelas 
                     FROM materi m 
-                    JOIN mata_pelajaran mp ON m.mapel_id = mp.id 
-                    JOIN kelas k ON m.kelas_id = k.id 
+                    LEFT JOIN mata_pelajaran mp ON m.mapel_id = mp.id 
+                    LEFT JOIN kelas k ON m.kelas_id = k.id 
                     WHERE m.guru_id = :gid 
                     ORDER BY m.created_at DESC
                 ");
                 $stmtM->execute(['gid' => $guru['id']]);
                 $materi = $stmtM->fetchAll();
+
+                $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
+                foreach ($materi as &$item) {
+                    $targetIds = !empty($item['kelas_ids']) ? array_map('intval', explode(',', $item['kelas_ids'])) : [(int)$item['kelas_id']];
+                    $names = [];
+                    foreach ($targetIds as $tid) {
+                        if (isset($kelasList[$tid])) {
+                            $names[] = $kelasList[$tid];
+                        }
+                    }
+                    $item['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($item['nama_kelas'] ?? 'Semua Kelas');
+                }
+                unset($item);
 
                 $this->jsonResponse(true, 'Kelola Materi Pembelajaran', $materi);
                 break;
