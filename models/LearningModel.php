@@ -48,6 +48,12 @@ class LearningModel extends BaseModel {
         return $this->db->query($sql)->fetchAll();
     }
 
+    public function getMateriById($id) {
+        $stmt = $this->db->prepare("SELECT * FROM materi WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch();
+    }
+
     public function addMateri($guru_id, $mapel_id, $kelas_id, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url) {
         $stmt = $this->db->prepare("
             INSERT INTO materi (guru_id, mapel_id, kelas_id, judul, deskripsi, jenis_file, file_path, youtube_url)

@@ -281,14 +281,6 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold">Kelas Target <span class="text-danger">*</span></label>
-                                <select name="kelas_id" class="form-select" required>
-                                    <?php foreach ($kelasList as $k): ?>
-                                        <option value="<?= $k['id'] ?>" <?= $m['kelas_id'] == $k['id'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
                                 <label class="form-label small fw-bold">Jenis File / Konten <span class="text-danger">*</span></label>
                                 <select name="jenis_file" class="form-select" required>
                                     <option value="pdf" <?= $m['jenis_file'] === 'pdf' ? 'selected' : '' ?>>PDF Document</option>
@@ -297,6 +289,32 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                     <option value="video" <?= $m['jenis_file'] === 'video' ? 'selected' : '' ?>>Video MP4 File</option>
                                     <option value="youtube" <?= $m['jenis_file'] === 'youtube' ? 'selected' : '' ?>>YouTube Video Link</option>
                                 </select>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-bold mb-0">Kelas Target (Bisa Pilih Lebih dari 1 Kelas) <span class="text-danger">*</span></label>
+                                    <div class="form-check me-0">
+                                        <input class="form-check-input select-all-edit" type="checkbox" id="selectAllKelasEdit<?= $m['id'] ?>" data-target="<?= $m['id'] ?>">
+                                        <label class="form-check-label small fw-semibold text-primary" for="selectAllKelasEdit<?= $m['id'] ?>" style="cursor:pointer;">
+                                            <i class="bi bi-check-all me-1"></i>Pilih Semua Kelas
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="border rounded-3 p-2 bg-light" style="max-height: 170px; overflow-y: auto;">
+                                    <div class="row g-2">
+                                        <?php foreach ($kelasList as $k): ?>
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="form-check bg-white p-2 rounded-2 border d-flex align-items-center gap-2 shadow-xs">
+                                                    <input class="form-check-input kelas-edit-checkbox-<?= $m['id'] ?> ms-1" type="checkbox" name="kelas_ids[]" value="<?= $k['id'] ?>" id="kelas_edit_<?= $m['id'] ?>_<?= $k['id'] ?>" <?= $m['kelas_id'] == $k['id'] ? 'checked' : '' ?>>
+                                                    <label class="form-check-label text-dark small fw-medium mb-0 w-100" style="cursor:pointer;" for="kelas_edit_<?= $m['id'] ?>_<?= $k['id'] ?>">
+                                                        <?= htmlspecialchars($k['nama_kelas']) ?>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                                <small class="text-muted d-block mt-1"><i class="bi bi-info-circle me-1"></i>Anda dapat memilih lebih dari 1 kelas untuk memperbarui atau menyebarkan materi ini ke kelas lain.</small>
                             </div>
                             <div class="col-12">
                                 <label class="form-label small fw-bold">Deskripsi / Penjelasan Singkat</label>
@@ -327,6 +345,7 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- ADD MATERI SELECT ALL & VALIDATION ---
     const selectAllCheckbox = document.getElementById('selectAllKelasAdd');
     const kelasCheckboxes = document.querySelectorAll('.kelas-add-checkbox');
     const formAddMateri = document.querySelector('#modalAddMateri form');
@@ -355,6 +374,38 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // --- EDIT MATERI SELECT ALL & VALIDATION ---
+    document.querySelectorAll('.select-all-edit').forEach(function(selectAllCb) {
+        const targetId = selectAllCb.getAttribute('data-target');
+        const editCheckboxes = document.querySelectorAll('.kelas-edit-checkbox-' + targetId);
+
+        selectAllCb.addEventListener('change', function() {
+            editCheckboxes.forEach(cb => {
+                cb.checked = selectAllCb.checked;
+            });
+        });
+
+        editCheckboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const totalChecked = document.querySelectorAll('.kelas-edit-checkbox-' + targetId + ':checked').length;
+                selectAllCb.checked = (totalChecked === editCheckboxes.length);
+            });
+        });
+    });
+
+    document.querySelectorAll('form[action*="guru/materi"]').forEach(function(form) {
+        const actionInput = form.querySelector('input[name="action"]');
+        if (actionInput && actionInput.value === 'update') {
+            form.addEventListener('submit', function(e) {
+                const checkedClasses = form.querySelectorAll('input[name="kelas_ids[]"]:checked');
+                if (checkedClasses.length === 0) {
+                    e.preventDefault();
+                    alert('Silakan pilih minimal 1 Kelas Target terlebih dahulu!');
+                }
+            });
+        }
+    });
 });
 </script>
 
