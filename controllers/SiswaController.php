@@ -67,14 +67,17 @@ class SiswaController {
         $allQuiz = $examModel->getQuizList($kelasId);
 
         $materiList = array_values(array_filter($allMateri, function($m) use ($enrolledMapels) {
+            if (empty($enrolledMapels)) return true;
             return isset($enrolledMapels[$m['mapel_id'] . '_' . $m['guru_id']]) || isset($enrolledMapels[$m['mapel_id']]);
         }));
 
         $tugasList = array_values(array_filter($allTugas, function($t) use ($enrolledMapels) {
+            if (empty($enrolledMapels)) return true;
             return isset($enrolledMapels[$t['mapel_id'] . '_' . $t['guru_id']]) || isset($enrolledMapels[$t['mapel_id']]);
         }));
 
         $quizList = array_values(array_filter($allQuiz, function($q) use ($enrolledMapels) {
+            if (empty($enrolledMapels)) return true;
             return isset($enrolledMapels[$q['mapel_id'] . '_' . $q['guru_id']]) || isset($enrolledMapels[$q['mapel_id']]);
         }));
 
@@ -119,6 +122,7 @@ class SiswaController {
         $allVideos = $learningModel->getVideos($kelasId);
 
         $materiList = array_values(array_filter($allMateri, function($m) use ($enrolledMapels) {
+            if (empty($enrolledMapels)) return true;
             return isset($enrolledMapels[$m['mapel_id'] . '_' . $m['guru_id']]) || isset($enrolledMapels[$m['mapel_id']]);
         }));
 

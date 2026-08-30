@@ -33,15 +33,18 @@ class LearningModel extends BaseModel {
         try {
             $this->db->exec("ALTER TABLE materi ADD COLUMN kelas_ids VARCHAR(255) NULL AFTER kelas_id");
         } catch (Exception $e) {}
+        try {
+            $this->db->exec("UPDATE materi SET kelas_ids = CAST(kelas_id AS CHAR) WHERE kelas_ids IS NULL OR TRIM(kelas_ids) = ''");
+        } catch (Exception $e) {}
     }
 
     // --- MATERI ---
     public function getMateri($kelas_id = null, $guru_id = null) {
         $sql = "
-            SELECT m.*, map.nama_mapel, k.nama_kelas, g.nama_lengkap as nama_guru
+            SELECT m.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, g.nama_lengkap as nama_guru
             FROM materi m
             JOIN mata_pelajaran map ON m.mapel_id = map.id
-            JOIN kelas k ON m.kelas_id = k.id
+            LEFT JOIN kelas k ON m.kelas_id = k.id
             JOIN guru g ON m.guru_id = g.id
             WHERE 1=1
         ";
