@@ -375,13 +375,16 @@ class ExamModel extends BaseModel {
         $sql = "
             SELECT qs.*, q.judul as judul_quiz, 
                    COALESCE(s.nama_lengkap, 'Siswa') as nama_siswa, s.nisn, 
-                   COALESCE(k.nama_kelas, ks.nama_kelas, 'Umum') as nama_kelas, 
+                   COALESCE(ks.nama_kelas, k.nama_kelas, 'Umum') as nama_kelas, 
+                   COALESCE(jur.nama_jurusan, jur_q.nama_jurusan, '-') as nama_jurusan,
                    COALESCE(map.nama_mapel, 'Mata Pelajaran') as nama_mapel
             FROM quiz_susulan qs
             JOIN quiz q ON qs.quiz_id = q.id
             LEFT JOIN siswa s ON qs.siswa_id = s.id
             LEFT JOIN kelas ks ON s.kelas_id = ks.id
+            LEFT JOIN jurusan jur ON s.jurusan_id = jur.id
             LEFT JOIN kelas k ON q.kelas_id = k.id
+            LEFT JOIN jurusan jur_q ON k.jurusan_id = jur_q.id
             LEFT JOIN mata_pelajaran map ON q.mapel_id = map.id
             WHERE 1=1
         ";
