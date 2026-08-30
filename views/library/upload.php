@@ -130,6 +130,14 @@
                         <textarea name="deskripsi" class="form-control rounded-3" rows="3" placeholder="Jelaskan ringkasan materi, modul, atau e-book ini..." style="font-size:0.9rem;"></textarea>
                     </div>
 
+                    <div class="mb-3.5">
+                        <label class="form-label fw-bold small text-dark"><i class="bi bi-image text-primary me-1"></i>Gambar Sampul / Cover Custom (Opsional)</label>
+                        <input type="file" name="cover" class="form-control rounded-3" accept="image/png, image/jpeg, image/webp" style="font-size:0.88rem;">
+                        <small class="text-muted d-block mt-1" style="font-size:0.75rem;">
+                            <i class="bi bi-info-circle me-1 text-primary"></i>Jika dikosongkan, halaman pertama PDF atau tampilan file akan otomatis dijadikan sampul pratinjau.
+                        </small>
+                    </div>
+
                     <!-- Dropzone Upload Area -->
                     <div class="mb-4">
                         <label class="form-label fw-bold small text-dark"><i class="bi bi-file-earmark-arrow-up-fill text-success me-1"></i>Berkas File Koleksi <span class="text-danger">*</span></label>

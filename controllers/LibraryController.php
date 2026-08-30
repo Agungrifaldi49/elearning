@@ -65,6 +65,21 @@ class LibraryController {
 
                     if (move_uploaded_file($file['tmp_name'], $destPath)) {
                         $fileType = in_array($ext, ['mp4','mkv','avi']) ? 'video' : $ext;
+                        
+                        $coverPath = null;
+                        if (!empty($_FILES['cover']['name']) && $_FILES['cover']['error'] === UPLOAD_ERR_OK) {
+                            $cFile = $_FILES['cover'];
+                            $cExt  = strtolower(pathinfo($cFile['name'], PATHINFO_EXTENSION));
+                            if (in_array($cExt, ['jpg', 'jpeg', 'png', 'webp'])) {
+                                $coverDir = ROOT_PATH . 'assets/uploads/library/covers/';
+                                if (!is_dir($coverDir)) mkdir($coverDir, 0755, true);
+                                $cFileName = uniqid('cover_', true) . '.' . $cExt;
+                                if (move_uploaded_file($cFile['tmp_name'], $coverDir . $cFileName)) {
+                                    $coverPath = 'assets/uploads/library/covers/' . $cFileName;
+                                }
+                            }
+                        }
+
                         $this->libraryModel->create([
                             'judul'        => $judul,
                             'penulis'      => $penulis,
@@ -73,6 +88,7 @@ class LibraryController {
                             'kelas_target' => $kelasTarget ?: null,
                             'file_type'    => $fileType,
                             'file_path'    => 'assets/uploads/library/' . $fileName,
+                            'cover_path'   => $coverPath,
                             'file_size'    => $file['size'],
                             'uploader_id'  => AuthHelper::user()['id'],
                         ]);

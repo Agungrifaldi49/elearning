@@ -322,7 +322,7 @@ $canUpload = in_array($userRole, ['administrator', 'Guru']);
                  data-judul="<?= strtolower(htmlspecialchars($book['judul'])) ?>">
                 <div class="book-card-item">
                     <div>
-                        <!-- 3D Cover Header Graphic -->
+                        <!-- 3D Live Cover Preview Graphic -->
                         <div class="position-relative">
                             <?php
                             $coverColors = ['#0d6efd','#10b981','#e11d48','#f59e0b','#8b5cf6','#06b6d4','#1e293b'];
@@ -335,17 +335,44 @@ $canUpload = in_array($userRole, ['administrator', 'Guru']);
                                 'video','mp4','mkv' => 'bi-play-circle-fill',
                                 default => 'bi-file-earmark-text-fill'
                             };
+                            $hasCustomCover = !empty($book['cover_path']) && file_exists(ROOT_PATH . $book['cover_path']);
+                            $isPdfFile = ($fileExt === 'pdf') && file_exists(ROOT_PATH . $book['file_path']);
                             ?>
-                            <div class="book-cover-aspect text-white p-3 text-center"
-                                 style="background: linear-gradient(135deg, <?= $color ?> 0%, <?= $color ?>cc 100%);">
-                                <div class="book-ribbon-spine"></div>
-                                <div class="position-relative z-1">
-                                    <i class="bi <?= $tipeIcon ?> fs-1 mb-1 d-block text-white opacity-90 shadow-xs"></i>
-                                    <div class="fw-bold text-truncate px-2 text-white" style="font-size:0.78rem; max-width: 170px; margin: 0 auto;"><?= htmlspecialchars($book['judul']) ?></div>
+                            <div class="book-cover-aspect overflow-hidden position-relative bg-dark" style="height: 175px;">
+                                <div class="book-ribbon-spine z-3"></div>
+
+                                <?php if ($hasCustomCover): ?>
+                                    <img src="<?= BASE_URL . htmlspecialchars($book['cover_path']) ?>" alt="Cover" class="w-100 h-100 object-fit-cover">
+                                <?php elseif ($isPdfFile): ?>
+                                    <!-- Live PDF 1st Page Thumbnail Embed -->
+                                    <div class="w-100 h-100 position-relative overflow-hidden bg-white">
+                                        <iframe src="<?= BASE_URL . htmlspecialchars($book['file_path']) ?>#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH" 
+                                                style="width: 140%; height: 280px; border: none; pointer-events: none; transform: scale(0.75); transform-origin: top left; opacity: 0.96;" 
+                                                scrolling="no" 
+                                                loading="lazy"></iframe>
+                                        <div class="position-absolute top-0 start-0 w-100 h-100" style="background: linear-gradient(180deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.15) 100%); pointer-events: none;"></div>
+                                    </div>
+                                <?php elseif (in_array($fileExt, ['jpg', 'jpeg', 'png', 'webp', 'gif']) && file_exists(ROOT_PATH . $book['file_path'])): ?>
+                                    <img src="<?= BASE_URL . htmlspecialchars($book['file_path']) ?>" alt="Preview" class="w-100 h-100 object-fit-cover">
+                                <?php elseif (in_array($fileExt, ['video', 'mp4', 'mkv', 'avi']) && file_exists(ROOT_PATH . $book['file_path'])): ?>
+                                    <div class="position-relative w-100 h-100 bg-dark d-flex align-items-center justify-content-center">
+                                        <video src="<?= BASE_URL . htmlspecialchars($book['file_path']) ?>#t=1" preload="metadata" muted class="w-100 h-100 object-fit-cover" style="opacity: 0.8;"></video>
+                                        <div class="position-absolute top-50 start-50 translate-middle text-white bg-dark bg-opacity-60 p-2 rounded-circle shadow-sm">
+                                            <i class="bi bi-play-fill fs-3"></i>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <!-- Elegant Typography Cover Fallback -->
+                                    <div class="w-100 h-100 text-white p-3 text-center d-flex flex-column align-items-center justify-content-center"
+                                         style="background: linear-gradient(135deg, <?= $color ?> 0%, <?= $color ?>cc 100%);">
+                                        <i class="bi <?= $tipeIcon ?> fs-1 mb-1 d-block text-white opacity-90 shadow-xs"></i>
+                                        <div class="fw-bold text-truncate px-2 text-white" style="font-size:0.78rem; max-width: 160px; margin: 0 auto;"><?= htmlspecialchars($book['judul']) ?></div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="position-absolute top-0 end-0 m-2 z-3">
+                                    <span class="badge bg-dark bg-opacity-75 text-white rounded-pill px-2.5 py-1 fw-bold shadow-xs" style="font-size:0.65rem; backdrop-filter: blur(4px);"><?= strtoupper($fileExt) ?></span>
                                 </div>
-                            </div>
-                            <div class="position-absolute top-0 end-0 m-2">
-                                <span class="badge bg-dark bg-opacity-75 rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.65rem; backdrop-filter: blur(4px);"><?= strtoupper($fileExt) ?></span>
                             </div>
                         </div>
 

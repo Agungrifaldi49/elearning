@@ -23,6 +23,7 @@ class LibraryModel {
                     kelas_target VARCHAR(100) NULL,
                     file_type VARCHAR(20) NOT NULL DEFAULT 'pdf',
                     file_path VARCHAR(255) NOT NULL,
+                    cover_path VARCHAR(255) NULL,
                     file_size BIGINT DEFAULT 0,
                     uploader_id INT NOT NULL,
                     view_count INT DEFAULT 0,
@@ -30,6 +31,10 @@ class LibraryModel {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
+
+            try {
+                $this->db->exec("ALTER TABLE library ADD COLUMN cover_path VARCHAR(255) NULL");
+            } catch (Exception $e) {}
         } catch (Exception $e) {
             // Ignore if already exists or DDL is restricted
         }
@@ -80,14 +85,14 @@ class LibraryModel {
      */
     public function create(array $data): bool {
         $stmt = $this->db->prepare("
-            INSERT INTO library (judul, penulis, deskripsi, kategori, kelas_target, file_type, file_path, file_size, uploader_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO library (judul, penulis, deskripsi, kategori, kelas_target, file_type, file_path, cover_path, file_size, uploader_id, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ");
         return $stmt->execute([
             $data['judul'], $data['penulis'] ?? '', $data['deskripsi'] ?? '',
             $data['kategori'] ?? 'Umum', $data['kelas_target'] ?? null,
-            $data['file_type'], $data['file_path'], $data['file_size'] ?? 0,
-            $data['uploader_id']
+            $data['file_type'], $data['file_path'], $data['cover_path'] ?? null,
+            $data['file_size'] ?? 0, $data['uploader_id']
         ]);
     }
 
