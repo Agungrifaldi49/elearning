@@ -133,14 +133,6 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-bold">Kelas Target <span class="text-danger">*</span></label>
-                            <select name="kelas_id" class="form-select" required>
-                                <?php foreach ($kelasList as $k): ?>
-                                    <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
                             <label class="form-label small fw-bold">Jenis File / Konten <span class="text-danger">*</span></label>
                             <select name="jenis_file" class="form-select" required>
                                 <option value="pdf">PDF Document</option>
@@ -149,6 +141,32 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                 <option value="video">Video MP4 File</option>
                                 <option value="youtube">YouTube Video Link</option>
                             </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold mb-0">Kelas Target (Bisa Pilih Lebih dari 1 Kelas) <span class="text-danger">*</span></label>
+                                <div class="form-check me-0">
+                                    <input class="form-check-input" type="checkbox" id="selectAllKelasAdd">
+                                    <label class="form-check-label small fw-semibold text-primary" for="selectAllKelasAdd" style="cursor:pointer;">
+                                        <i class="bi bi-check-all me-1"></i>Pilih Semua Kelas
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="border rounded-3 p-2 bg-light" style="max-height: 170px; overflow-y: auto;">
+                                <div class="row g-2">
+                                    <?php foreach ($kelasList as $k): ?>
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="form-check bg-white p-2 rounded-2 border d-flex align-items-center gap-2 shadow-xs">
+                                                <input class="form-check-input kelas-add-checkbox ms-1" type="checkbox" name="kelas_ids[]" value="<?= $k['id'] ?>" id="kelas_add_<?= $k['id'] ?>">
+                                                <label class="form-check-label text-dark small fw-medium mb-0 w-100" style="cursor:pointer;" for="kelas_add_<?= $k['id'] ?>">
+                                                    <?= htmlspecialchars($k['nama_kelas']) ?>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1"><i class="bi bi-info-circle me-1"></i>Centang satu atau beberapa kelas target untuk mengunggah materi ini sekaligus.</small>
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold">Deskripsi / Penjelasan Singkat</label>
@@ -306,5 +324,38 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
         </div>
     </div>
 <?php endforeach; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('selectAllKelasAdd');
+    const kelasCheckboxes = document.querySelectorAll('.kelas-add-checkbox');
+    const formAddMateri = document.querySelector('#modalAddMateri form');
+
+    if (selectAllCheckbox && kelasCheckboxes.length > 0) {
+        selectAllCheckbox.addEventListener('change', function() {
+            kelasCheckboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+            });
+        });
+
+        kelasCheckboxes.forEach(cb => {
+            cb.addEventListener('change', function() {
+                const totalChecked = document.querySelectorAll('.kelas-add-checkbox:checked').length;
+                selectAllCheckbox.checked = (totalChecked === kelasCheckboxes.length);
+            });
+        });
+    }
+
+    if (formAddMateri) {
+        formAddMateri.addEventListener('submit', function(e) {
+            const checkedClasses = document.querySelectorAll('.kelas-add-checkbox:checked');
+            if (checkedClasses.length === 0) {
+                e.preventDefault();
+                alert('Silakan pilih minimal 1 Kelas Target terlebih dahulu!');
+            }
+        });
+    }
+});
+</script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>

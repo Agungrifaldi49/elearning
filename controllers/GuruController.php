@@ -103,7 +103,22 @@ class GuruController {
                 $judul = Security::sanitize($_POST['judul']);
                 $deskripsi = Security::sanitize($_POST['deskripsi']);
                 $mapel_id = (int)$_POST['mapel_id'];
-                $kelas_id = (int)$_POST['kelas_id'];
+                
+                // Ambil daftar kelas_ids (bisa lebih dari 1 kelas)
+                $kelas_ids = [];
+                if (isset($_POST['kelas_ids']) && is_array($_POST['kelas_ids'])) {
+                    $kelas_ids = array_map('intval', $_POST['kelas_ids']);
+                } elseif (isset($_POST['kelas_id'])) {
+                    $kelas_ids = [(int)$_POST['kelas_id']];
+                }
+                $kelas_ids = array_filter($kelas_ids, function($kId) { return $kId > 0; });
+
+                if (empty($kelas_ids)) {
+                    FlashHelper::setError('Pilih minimal satu kelas target.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/materi');
+                    exit();
+                }
+
                 $jenis_file = $_POST['jenis_file'];
                 $youtube_url = Security::sanitize($_POST['youtube_url'] ?? '');
                 $filePath = null;
@@ -112,8 +127,17 @@ class GuruController {
                     $filePath = UploadHelper::upload($_FILES['file'], 'materi');
                 }
 
-                $learningModel->addMateri($guruId, $mapel_id, $kelas_id, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url);
-                FlashHelper::setSuccess('Materi Pembelajaran baru berhasil diunggah.');
+                $insertedCount = 0;
+                foreach ($kelas_ids as $kId) {
+                    $learningModel->addMateri($guruId, $mapel_id, $kId, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url);
+                    $insertedCount++;
+                }
+
+                if ($insertedCount > 1) {
+                    FlashHelper::setSuccess("Materi Pembelajaran baru berhasil diunggah untuk {$insertedCount} kelas sekaligus.");
+                } else {
+                    FlashHelper::setSuccess('Materi Pembelajaran baru berhasil diunggah.');
+                }
 
             } elseif ($action === 'update' && $id > 0) {
                 $judul = Security::sanitize($_POST['judul']);
