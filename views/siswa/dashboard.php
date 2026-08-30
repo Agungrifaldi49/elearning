@@ -33,8 +33,17 @@ if (!empty($jadwalList)) {
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
+.siswa-dashboard-wrapper, 
+.siswa-dashboard-wrapper h1, .siswa-dashboard-wrapper h2, .siswa-dashboard-wrapper h3, 
+.siswa-dashboard-wrapper h4, .siswa-dashboard-wrapper h5, .siswa-dashboard-wrapper h6, 
+.siswa-dashboard-wrapper p, .siswa-dashboard-wrapper span, .siswa-dashboard-wrapper div, 
+.siswa-dashboard-wrapper a, .siswa-dashboard-wrapper button, .siswa-dashboard-wrapper input, 
+.siswa-dashboard-wrapper select, .siswa-dashboard-wrapper textarea, .siswa-dashboard-wrapper table, 
+.siswa-dashboard-wrapper th, .siswa-dashboard-wrapper td, .siswa-dashboard-wrapper .badge, .siswa-dashboard-wrapper .card {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
 .siswa-dashboard-wrapper {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
     background-color: #f8fafc;
     min-height: 100vh;
 }
