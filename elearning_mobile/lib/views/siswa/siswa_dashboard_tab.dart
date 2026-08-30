@@ -13,6 +13,8 @@ import 'gabung_kelas_screen.dart';
 import 'learning_path_screen.dart';
 import 'sertifikat_screen.dart';
 import 'siswa_absensi_tab.dart';
+import 'siswa_cbt_tab.dart';
+import 'siswa_materi_tab.dart';
 import 'siswa_nilai_tab.dart';
 import 'siswa_tugas_tab.dart';
 
@@ -323,6 +325,10 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   icon: Icons.menu_book_rounded,
                   color: Colors.blue,
                   isDark: isDark,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('Materi Pembelajaran'), backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
+                    body: const SiswaMateriTab(),
+                  ))),
                 ),
                 _buildKpiCard(
                   title: 'Tugas Aktif',
@@ -331,6 +337,10 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   icon: Icons.assignment_rounded,
                   color: Colors.orange,
                   isDark: isDark,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('Tugas & Penugasan'), backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
+                    body: const SiswaTugasTab(),
+                  ))),
                 ),
                 _buildKpiCard(
                   title: 'Kuis & CBT',
@@ -339,6 +349,10 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   icon: Icons.quiz_rounded,
                   color: Colors.purple,
                   isDark: isDark,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('Kuis & CBT Ujian'), backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
+                    body: const SiswaCbtTab(),
+                  ))),
                 ),
                 _buildKpiCard(
                   title: 'Presensi Log',
@@ -347,6 +361,10 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   icon: Icons.event_available_rounded,
                   color: Colors.teal,
                   isDark: isDark,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('Presensi & Kehadiran'), backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
+                    body: const SiswaAbsensiTab(),
+                  ))),
                 ),
               ],
             ),
@@ -721,51 +739,59 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
     required IconData icon,
     required Color color,
     required bool isDark,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkSurface : Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title.toUpperCase(),
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-              ),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 18),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkSurface : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          Text(
-            count,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    title.toUpperCase(),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: color, size: 18),
+                  ),
+                ],
+              ),
+              Text(
+                count,
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color),
+              ),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 10, color: Colors.grey),
+              ),
+            ],
           ),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
-          ),
-        ],
+        ),
       ),
     );
   }

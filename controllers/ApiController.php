@@ -748,6 +748,12 @@ class ApiController {
 
                 foreach ($tugasList as &$t) {
                     $tId = intval($t['id']);
+                    $accessCheck = $learningModel->canSiswaSubmitTugas($tId, $siswaId);
+                    $t['can_submit'] = $accessCheck['access'];
+                    $t['is_expired'] = $accessCheck['is_expired'] ?? false;
+                    $t['lock_status'] = $accessCheck['status'] ?? 'terbuka';
+                    $t['susulan_status'] = $accessCheck['susulan']['status'] ?? null;
+
                     if (isset($submittedMap[$tId])) {
                         $sub = $submittedMap[$tId];
                         $t['submission_id'] = intval($sub['id']);
@@ -839,24 +845,35 @@ class ApiController {
 
                 foreach ($quizList as &$q) {
                     $qId = intval($q['id']);
+                    $accessCheck = $examModel->canSiswaAccessQuiz($qId, $siswaId);
+
+                    $q['can_access'] = $accessCheck['access'];
+                    $q['is_expired'] = $accessCheck['is_expired'] ?? false;
+                    $q['access_status'] = $accessCheck['status'] ?? 'terbuka';
+                    $q['access_reason'] = ($accessCheck['status'] ?? '') === 'diskualifikasi' 
+                        ? 'Anda telah DIDISKUALIFIKASI karena 2x melanggar aturan (berpindah aplikasi / keluar fullscreen)'
+                        : (isset($accessCheck['reason']) ? $accessCheck['reason'] : '');
+                    $q['susulan_status'] = $accessCheck['susulan']['status'] ?? null;
+                    $q['max_attempts'] = isset($accessCheck['max_attempts']) ? intval($accessCheck['max_attempts']) : (isset($q['max_attempts']) ? intval($q['max_attempts']) : 1);
+                    $q['attempt_count'] = isset($accessCheck['attempt_count']) ? intval($accessCheck['attempt_count']) : 0;
+
                     if (isset($completedMap[$qId])) {
                         $cr = $completedMap[$qId];
                         $q['total_nilai'] = $cr['total_nilai'] !== null ? floatval($cr['total_nilai']) : null;
                         $q['nilai_tertinggi'] = $cr['nilai_tertinggi'] !== null ? floatval($cr['nilai_tertinggi']) : null;
                         $q['status_lulus'] = $cr['status_lulus'] ?? null;
                         $q['finished_at'] = $cr['finished_at'] ?? null;
-                        $q['is_disqualified'] = !empty($cr['is_disqualified']);
-                        $q['pelanggaran_count'] = intval($cr['pelanggaran_count'] ?? 0);
-                        $q['attempt_count'] = intval($cr['total_attempts'] ?? 1);
+                        $q['is_disqualified'] = (!empty($cr['is_disqualified']) && (int)$cr['is_disqualified'] === 1) || (($accessCheck['status'] ?? '') === 'diskualifikasi');
+                        $q['pelanggaran_count'] = intval($cr['pelanggaran_count'] ?? $accessCheck['pelanggaran_count'] ?? 0);
+                        $q['attempt_count'] = max($q['attempt_count'], intval($cr['total_attempts'] ?? 1));
                         $q['is_completed'] = true;
                     } else {
                         $q['total_nilai'] = null;
                         $q['nilai_tertinggi'] = null;
                         $q['status_lulus'] = null;
                         $q['finished_at'] = null;
-                        $q['is_disqualified'] = false;
-                        $q['pelanggaran_count'] = 0;
-                        $q['attempt_count'] = 0;
+                        $q['is_disqualified'] = ($accessCheck['status'] ?? '') === 'diskualifikasi';
+                        $q['pelanggaran_count'] = intval($accessCheck['pelanggaran_count'] ?? 0);
                         $q['is_completed'] = false;
                     }
                 }
