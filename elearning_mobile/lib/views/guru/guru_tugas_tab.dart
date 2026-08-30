@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/tugas_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 import '../../services/file_service.dart';
@@ -13,16 +14,31 @@ class GuruTugasTab extends StatefulWidget {
 }
 
 class _GuruTugasTabState extends State<GuruTugasTab> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _selectedMapel = 'Semua';
+
   @override
   void initState() {
     super.initState();
     _loadTugas();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
   }
 
-  void _loadTugas() {
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadTugas() async {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user != null) {
-      Provider.of<GuruProvider>(context, listen: false).fetchTugas(user.id);
+      await Provider.of<GuruProvider>(context, listen: false).fetchTugas(user.id);
     }
   }
 
@@ -35,10 +51,12 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => Padding(
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom + 20,
           top: 20,
@@ -49,28 +67,65 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Buat Tugas Baru',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withAlpha(25),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.add_task_rounded, color: AppTheme.primaryColor, size: 24),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Buat Tugas Modul Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Tambahkan petunjuk penugasan untuk siswa', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  ],
+                ),
+              ],
             ),
             const SizedBox(height: 16),
+
             TextField(
               controller: judulController,
-              decoration: const InputDecoration(labelText: 'Judul Tugas'),
+              decoration: InputDecoration(
+                labelText: 'Judul Tugas Pembelajaran',
+                hintText: 'Contoh: Tugas 1 Modul Auth MVC',
+                prefixIcon: const Icon(Icons.title_rounded),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
             const SizedBox(height: 12),
+
             TextField(
               controller: deskripsiController,
               maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Instruksi Tugas'),
+              decoration: InputDecoration(
+                labelText: 'Instruksi & Rubrik Penilaian',
+                hintText: 'Tuliskan petunjuk pengerjaan tugas secara rinci...',
+                prefixIcon: const Icon(Icons.description_rounded),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
+
+            ElevatedButton.icon(
               onPressed: () async {
                 final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
                 final nav = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
-                if (user != null) {
+                if (user != null && judulController.text.trim().isNotEmpty) {
                   final deadline = DateTime.now().add(const Duration(days: 7)).toString().substring(0, 19);
                   final ok = await Provider.of<GuruProvider>(context, listen: false).createTugas(
                     user.id,
@@ -89,11 +144,118 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                   );
                 }
               },
+              icon: const Icon(Icons.send_rounded, size: 18),
+              label: const Text('Publikasikan Tugas Baru'),
               style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
+                minimumSize: const Size(double.infinity, 50),
                 backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
-              child: const Text('Publikasikan Tugas'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTaskDetailDialog(TugasModel t) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(12)),
+                  child: const Icon(Icons.menu_book_rounded, color: AppTheme.primaryColor, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(t.judul, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('Mapel: ${t.namaMapel} • Target: ${t.namaKelas ?? 'Semua Kelas'}', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                    ],
+                  ),
+                ),
+                IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Deadline Box
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.amber.shade200)),
+              child: Row(
+                children: [
+                  Icon(Icons.alarm_rounded, color: Colors.amber.shade900, size: 20),
+                  const SizedBox(width: 8),
+                  Text('Batas Deadline: ${t.deadline}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.amber.shade900)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            const Text('Petunjuk Pengerjaan & Rubrik Penilaian:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
+              child: Text(t.deskripsi, style: const TextStyle(fontSize: 12, height: 1.5, color: Colors.black87)),
+            ),
+            const SizedBox(height: 16),
+
+            if (t.filePath != null && t.filePath!.isNotEmpty) ...[
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  FileService.showInAppPreview(context, t.filePath!, 'Lampiran Soal: ${t.judul}', studentName: 'Guru');
+                },
+                icon: const Icon(Icons.file_present_rounded),
+                label: const Text('Buka Berkas Soal / Modul'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 46),
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _viewSubmissions(t.id, t.judul);
+              },
+              icon: const Icon(Icons.grading_rounded),
+              label: Text('Periksa & Nilai Siswa (${t.totalPengumpulan ?? 0})'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(double.infinity, 46),
+                backgroundColor: Colors.amber.shade700,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ],
         ),
@@ -105,8 +267,7 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user == null) return;
 
-    final submissions = await Provider.of<GuruProvider>(context, listen: false)
-        .fetchSubmissions(user.id, tugasId);
+    final submissions = await Provider.of<GuruProvider>(context, listen: false).fetchSubmissions(user.id, tugasId);
 
     if (!mounted) return;
 
@@ -126,20 +287,15 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Sheet Drag Handle
             Center(
               child: Container(
                 width: 40,
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
               ),
             ),
             
-            // Modal Header
             Row(
               children: [
                 Container(
@@ -176,7 +332,6 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
             ),
             const Divider(height: 24),
 
-            // Submissions List
             Expanded(
               child: submissions.isEmpty
                   ? Center(
@@ -237,7 +392,6 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Student Info & NIS Header
                               Row(
                                 children: [
                                   CircleAvatar(
@@ -262,7 +416,6 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                                     ),
                                   ),
 
-                                  // Score Status Badge
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
@@ -286,7 +439,6 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                               ),
                               const SizedBox(height: 10),
 
-                              // Catatan / Note Box if available
                               if (catatan.isNotEmpty) ...[
                                 Container(
                                   width: double.infinity,
@@ -313,7 +465,6 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                                 ),
                               ],
 
-                              // File Preview / Google Drive Action Box
                               if (hasUrl || filePath.isNotEmpty) ...[
                                 Container(
                                   padding: const EdgeInsets.all(10),
@@ -351,7 +502,6 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                                       ),
                                       const SizedBox(height: 8),
 
-                                      // Dual Buttons: In-App Preview & External Open/Download
                                       Row(
                                         children: [
                                           Expanded(
@@ -406,7 +556,6 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                                 const SizedBox(height: 8),
                               ],
 
-                              // Grading Action Bar
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
@@ -489,7 +638,6 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
             ),
             const SizedBox(height: 10),
 
-            // Quick Score Preset Chips
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -560,58 +708,473 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
   @override
   Widget build(BuildContext context) {
     final guruProvider = Provider.of<GuruProvider>(context);
-    final tugasList = guruProvider.tugasList;
+    final allTugas = guruProvider.tugasList;
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                '📝 Kelola Tugas',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              ElevatedButton.icon(
-                onPressed: _showAddTugasModal,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Buat Tugas'),
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+    // Filter tasks by search query and mapel
+    final filteredTugas = allTugas.where((t) {
+      final matchesSearch = _searchQuery.isEmpty ||
+          t.judul.toLowerCase().contains(_searchQuery) ||
+          t.namaMapel.toLowerCase().contains(_searchQuery) ||
+          (t.namaKelas ?? '').toLowerCase().contains(_searchQuery);
+      final matchesMapel = _selectedMapel == 'Semua' || t.namaMapel == _selectedMapel;
+      return matchesSearch && matchesMapel;
+    }).toList();
 
-          Expanded(
-            child: guruProvider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : tugasList.isEmpty
-                    ? const Center(child: Text('Belum ada tugas dibuat.'))
-                    : ListView.builder(
-                        itemCount: tugasList.length,
-                        itemBuilder: (context, idx) {
-                          final t = tugasList[idx];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              title: Text(t.judul, style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text("Mapel: ${t.namaMapel} • Kelas: ${t.namaKelas ?? '-'}"),
-                              trailing: ElevatedButton(
-                                onPressed: () => _viewSubmissions(t.id, t.judul),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.amber.shade700,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+    // Extract list of mapels for filter chips
+    final mapelSet = <String>{'Semua'};
+    for (var t in allTugas) {
+      if (t.namaMapel.isNotEmpty) mapelSet.add(t.namaMapel);
+    }
+
+    // Stats calculations
+    final totalTugasCount = allTugas.length;
+    int totalKirimanCount = 0;
+    for (var t in allTugas) {
+      totalKirimanCount += (t.totalPengumpulan ?? 0);
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadTugas,
+      color: AppTheme.primaryColor,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 🚀 EXECUTIVE GLASSMORPHIC HERO BANNER
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0D9488)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withAlpha(50),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.assignment_rounded, size: 14, color: Colors.black87),
+                              SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  'Control Center Tugas',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.black87),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                child: Text("Koreksi (${t.totalPengumpulan ?? 0})"),
                               ),
-                            ),
-                          );
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: _showAddTugasModal,
+                        icon: const Icon(Icons.add_circle_rounded, size: 16),
+                        label: const Text('Buat Tugas'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Kelola Penugasan & Rubrik',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Buat tugas modul baru, unggah petunjuk pengerjaan, periksa berkas kiriman siswa, dan berikan skor nilai.',
+                    style: TextStyle(fontSize: 12, color: Colors.white.withAlpha(200), height: 1.4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // 📊 KPI SUMMARY STATS CARDS
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.bookmark_added_rounded, color: Colors.teal.shade700, size: 20),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Total Tugas', style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                              Text('$totalTugasCount Modul', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87), overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, 2)),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.groups_rounded, color: Colors.blue.shade700, size: 20),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Total Kiriman', style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                              Text('$totalKirimanCount Berkas', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87), overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // 🔍 SEARCH BAR & FILTER CHIPS
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Cari judul tugas, mapel, atau kelas...',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () => _searchController.clear(),
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Mapel Filter Chips
+            if (mapelSet.length > 1)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: mapelSet.map((mName) {
+                    final isSel = _selectedMapel == mName;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        selected: isSel,
+                        label: Text(mName),
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isSel ? FontWeight.bold : FontWeight.w500,
+                          color: isSel ? Colors.white : Colors.black87,
+                        ),
+                        selectedColor: AppTheme.primaryColor,
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(color: isSel ? AppTheme.primaryColor : Colors.grey.shade300),
+                        ),
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedMapel = mName;
+                          });
                         },
                       ),
-          ),
-        ],
+                    );
+                  }).toList(),
+                ),
+              ),
+            const SizedBox(height: 16),
+
+            // 📑 TASK MODULES LIST
+            if (guruProvider.isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (filteredTugas.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Column(
+                    children: [
+                      Icon(Icons.assignment_late_outlined, size: 54, color: Colors.grey.shade400),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Belum Ada Penugasan',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _searchQuery.isNotEmpty ? 'Tidak ada tugas sesuai kata kunci pencarian.' : 'Klik tombol "+ Buat Tugas" untuk menambah modul baru.',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: filteredTugas.length,
+                itemBuilder: (context, index) {
+                  final t = filteredTugas[index];
+                  final subCount = t.totalPengumpulan ?? 0;
+                  final DateTime? deadlineDt = DateTime.tryParse(t.deadline);
+                  final bool isExpired = deadlineDt != null && DateTime.now().isAfter(deadlineDt);
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.grey.shade200),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(8),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top Status Accent Bar
+                          Container(
+                            height: 4,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: isExpired
+                                    ? [Colors.red.shade400, Colors.red.shade700]
+                                    : [AppTheme.primaryColor, Colors.teal],
+                              ),
+                            ),
+                          ),
+
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Mapel & Class Header Badges
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Flexible(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.teal.shade50,
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.teal.shade200),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.book_rounded, size: 12, color: Colors.teal.shade800),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text(
+                                                t.namaMapel,
+                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.shade50,
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: Border.all(color: Colors.blue.shade200),
+                                        ),
+                                        child: Text(
+                                          t.namaKelas ?? 'Semua Kelas',
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+
+                                // Task Title
+                                Text(
+                                  t.judul,
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87, height: 1.3),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 6),
+
+                                // Description Snippet
+                                Text(
+                                  t.deskripsi,
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.4),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 12),
+
+                                // Deadline & Submission Bar
+                                Row(
+                                  children: [
+                                    Icon(
+                                      isExpired ? Icons.error_outline_rounded : Icons.access_time_rounded,
+                                      size: 14,
+                                      color: isExpired ? Colors.red : Colors.amber.shade900,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        isExpired ? 'Expired: ${t.deadline}' : 'Deadline: ${t.deadline}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isExpired ? Colors.red : Colors.amber.shade900,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+
+                                // Actions Row (Koreksi + Detail)
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 3,
+                                      child: ElevatedButton.icon(
+                                        onPressed: () => _viewSubmissions(t.id, t.judul),
+                                        icon: const Icon(Icons.assignment_turned_in_rounded, size: 16),
+                                        label: Text('Koreksi & Nilai ($subCount)'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.amber.shade700,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                          elevation: 1,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      flex: 2,
+                                      child: OutlinedButton.icon(
+                                        onPressed: () => _showTaskDetailDialog(t),
+                                        icon: const Icon(Icons.info_outline_rounded, size: 16),
+                                        label: const Text('Detail'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppTheme.primaryColor,
+                                          side: const BorderSide(color: AppTheme.primaryColor),
+                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }

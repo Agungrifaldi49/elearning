@@ -145,8 +145,8 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: const [
+                        const Row(
+                          children: [
                             Icon(Icons.rate_review_rounded, size: 16, color: Colors.green),
                             SizedBox(width: 6),
                             Text('Catatan / Feedback Guru:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 12)),
@@ -190,6 +190,8 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                   child: ElevatedButton.icon(
                     onPressed: () async {
                       final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+                      final nav = Navigator.of(context);
+                      final messenger = ScaffoldMessenger.of(context);
                       if (user != null) {
                         final ok = await Provider.of<SiswaProvider>(context, listen: false).submitTugas(
                           user.id,
@@ -197,9 +199,8 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                           catatanController.text,
                           fileController.text,
                         );
-                        if (!mounted) return;
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        nav.pop();
+                        messenger.showSnackBar(
                           SnackBar(
                             content: Text(ok ? 'Tugas berhasil dikumpulkan!' : 'Gagal mengirim tugas'),
                             backgroundColor: ok ? Colors.green : Colors.red,
@@ -342,23 +343,27 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.indigo.shade50,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            t.namaMapel,
-                                            style: TextStyle(
-                                              color: Colors.indigo.shade900,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11,
+                                        Flexible(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.indigo.shade50,
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              t.namaMapel,
+                                              style: TextStyle(
+                                                color: Colors.indigo.shade900,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 11,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                         ),
+                                        const SizedBox(width: 6),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
                                             color: t.isGraded
                                                 ? Colors.green.shade100
@@ -397,9 +402,12 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                                       children: [
                                         const Icon(Icons.access_time_rounded, size: 14, color: Colors.redAccent),
                                         const SizedBox(width: 4),
-                                        Text(
-                                          "Batas: ${t.deadline}",
-                                          style: const TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.bold),
+                                        Expanded(
+                                          child: Text(
+                                            "Batas: ${t.deadline}",
+                                            style: const TextStyle(fontSize: 12, color: Colors.redAccent, fontWeight: FontWeight.bold),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -421,25 +429,32 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.person, size: 14, color: Colors.grey),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              t.namaGuru ?? '-',
-                                              style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
-                                            ),
-                                          ],
+                                        Expanded(
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.person, size: 14, color: Colors.grey),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  t.namaGuru ?? '-',
+                                                  style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
+                                        const SizedBox(width: 6),
                                         ElevatedButton.icon(
                                           onPressed: () => _showTugasDetailAndSubmit(t),
-                                          icon: Icon(t.isSubmitted ? Icons.edit_note_rounded : Icons.upload_file_rounded, size: 16),
-                                          label: Text(t.isSubmitted ? 'Edit Jawaban' : 'Kumpul Tugas', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                          icon: Icon(t.isSubmitted ? Icons.edit_note_rounded : Icons.upload_file_rounded, size: 14),
+                                          label: Text(t.isSubmitted ? 'Edit Jawaban' : 'Kumpul Tugas', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: t.isSubmitted ? Colors.blue.shade800 : AppTheme.secondaryColor,
                                             foregroundColor: Colors.white,
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            visualDensity: VisualDensity.compact,
                                           ),
                                         ),
                                       ],
