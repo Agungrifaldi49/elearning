@@ -428,7 +428,7 @@ class ApiController {
                 $siswaId = intval($siswa['id'] ?? 0);
                 $kelasId = intval($siswa['kelas_id'] ?? 0);
 
-                // Get enrolled mapels, fallback to all class mapels if not registered via Key Mapel yet
+                // Get enrolled mapels, fallback and merge all class mapels
                 $enrolledList = [];
                 try {
                     $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
@@ -436,13 +436,34 @@ class ApiController {
                     $enrolledList = [];
                 }
 
-                if (empty($enrolledList) && $kelasId > 0) {
-                    $enrolledList = $academicModel->getMapelByKelas($kelasId);
+                $classMapels = [];
+                if ($kelasId > 0) {
+                    $classMapels = $academicModel->getMapelByKelas($kelasId);
+                }
+                if (empty($classMapels)) {
+                    $classMapels = $academicModel->getMapel();
                 }
 
-                if (empty($enrolledList)) {
-                    $enrolledList = $academicModel->getMapel();
+                $seenMapelIds = [];
+                $mergedList = [];
+
+                foreach ($enrolledList as $em) {
+                    $mId = intval($em['mapel_id'] ?? $em['id'] ?? 0);
+                    if ($mId > 0 && !isset($seenMapelIds[$mId])) {
+                        $seenMapelIds[$mId] = true;
+                        $mergedList[] = $em;
+                    }
                 }
+
+                foreach ($classMapels as $cm) {
+                    $mId = intval($cm['mapel_id'] ?? $cm['id'] ?? 0);
+                    if ($mId > 0 && !isset($seenMapelIds[$mId])) {
+                        $seenMapelIds[$mId] = true;
+                        $mergedList[] = $cm;
+                    }
+                }
+
+                $enrolledList = $mergedList;
 
                 $mapelList = [];
                 $selesaiCount = 0;
@@ -452,7 +473,6 @@ class ApiController {
 
                 foreach ($enrolledList as $em) {
                     $mId = intval($em['mapel_id'] ?? $em['id'] ?? 0);
-                    $gId = intval($em['guru_id'] ?? 0);
                     $kId = !empty($em['kelas_id']) ? intval($em['kelas_id']) : $kelasId;
                     $namaMapel = $em['nama_mapel'] ?? 'Mata Pelajaran';
                     $kodeMapel = $em['kode_mapel'] ?? ('MP' . $mId);
@@ -464,11 +484,10 @@ class ApiController {
                         LEFT JOIN guru g ON m.guru_id = g.id
                         LEFT JOIN users u ON g.user_id = u.id
                         WHERE m.mapel_id = :mid
-                          AND (:gid = 0 OR m.guru_id = :gid)
                           AND (:kid = 0 OR m.kelas_id = :kid OR FIND_IN_SET(:kid, m.kelas_ids) OR m.kelas_id IS NULL OR m.kelas_id = 0)
                         ORDER BY m.id ASC
                     ");
-                    $stmtMat->execute(['mid' => $mId, 'gid' => $gId, 'kid' => $kId]);
+                    $stmtMat->execute(['mid' => $mId, 'kid' => $kId]);
                     $materiRows = $stmtMat->fetchAll();
 
                     $stmtTug = $this->db->prepare("
@@ -479,11 +498,10 @@ class ApiController {
                         LEFT JOIN users u ON g.user_id = u.id
                         LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = :sid)
                         WHERE t.mapel_id = :mid
-                          AND (:gid = 0 OR t.guru_id = :gid)
                           AND (:kid = 0 OR t.kelas_id = :kid OR FIND_IN_SET(:kid, t.kelas_ids) OR t.kelas_id IS NULL OR t.kelas_id = 0)
                         ORDER BY t.id ASC
                     ");
-                    $stmtTug->execute(['mid' => $mId, 'gid' => $gId, 'kid' => $kId, 'sid' => $siswaId]);
+                    $stmtTug->execute(['mid' => $mId, 'kid' => $kId, 'sid' => $siswaId]);
                     $tugasRows = $stmtTug->fetchAll();
 
                     $stmtQz = $this->db->prepare("
@@ -496,12 +514,11 @@ class ApiController {
                             SELECT * FROM hasil_quiz WHERE siswa_id = :sid
                         ) hq ON hq.quiz_id = q.id
                         WHERE q.mapel_id = :mid
-                          AND (:gid = 0 OR q.guru_id = :gid)
                           AND (:kid = 0 OR q.kelas_id = :kid OR FIND_IN_SET(:kid, q.kelas_ids) OR q.kelas_id IS NULL OR q.kelas_id = 0)
-                          AND q.status = 'published'
+                          AND (q.status IS NULL OR q.status = 'published')
                         ORDER BY q.id ASC
                     ");
-                    $stmtQz->execute(['mid' => $mId, 'gid' => $gId, 'kid' => $kId, 'sid' => $siswaId]);
+                    $stmtQz->execute(['mid' => $mId, 'kid' => $kId, 'sid' => $siswaId]);
                     $quizRows = $stmtQz->fetchAll();
 
                     $stmtUj = $this->db->prepare("
@@ -514,12 +531,11 @@ class ApiController {
                             SELECT * FROM hasil_ujian WHERE siswa_id = :sid
                         ) hu ON hu.ujian_id = u.id
                         WHERE u.mapel_id = :mid
-                          AND (:gid = 0 OR u.guru_id = :gid)
                           AND (:kid = 0 OR u.kelas_id = :kid OR FIND_IN_SET(:kid, u.kelas_ids) OR u.kelas_id IS NULL OR u.kelas_id = 0)
                           AND u.is_active = 1
                         ORDER BY u.id ASC
                     ");
-                    $stmtUj->execute(['mid' => $mId, 'gid' => $gId, 'kid' => $kId, 'sid' => $siswaId]);
+                    $stmtUj->execute(['mid' => $mId, 'kid' => $kId, 'sid' => $siswaId]);
                     $ujianRows = $stmtUj->fetchAll();
 
                     $sequenceItems = [];
