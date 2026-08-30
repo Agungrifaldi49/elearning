@@ -89,16 +89,46 @@ class SiswaController {
 
         $db = Database::getConnection();
         $stmtChart = $db->prepare("
-            SELECT m.nama_mapel, ROUND(AVG(pt.nilai), 1) as avg_nilai
-            FROM pengumpulan_tugas pt
-            JOIN tugas t ON pt.tugas_id = t.id
-            JOIN mata_pelajaran m ON t.mapel_id = m.id
-            WHERE pt.siswa_id = ? AND pt.nilai IS NOT NULL
+            SELECT m.id as mapel_id, m.nama_mapel, 
+                   ROUND(AVG(COALESCE(pt.nilai, hq.total_nilai)), 1) as avg_nilai
+            FROM mata_pelajaran m
+            LEFT JOIN tugas t ON t.mapel_id = m.id
+            LEFT JOIN pengumpulan_tugas pt ON pt.tugas_id = t.id AND pt.siswa_id = ? AND pt.nilai IS NOT NULL
+            LEFT JOIN quiz q ON q.mapel_id = m.id
+            LEFT JOIN hasil_quiz hq ON hq.quiz_id = q.id AND hq.siswa_id = ? AND hq.total_nilai IS NOT NULL
+            WHERE pt.nilai IS NOT NULL OR hq.total_nilai IS NOT NULL
             GROUP BY m.id, m.nama_mapel
-            LIMIT 6
+            LIMIT 8
         ");
-        $stmtChart->execute([$siswaId]);
+        $stmtChart->execute([$siswaId, $siswaId]);
         $chartData = $stmtChart->fetchAll();
+
+        if (empty($chartData)) {
+            $stmtEnrolled = $db->prepare("
+                SELECT DISTINCT m.nama_mapel
+                FROM siswa_mapel sm
+                JOIN mata_pelajaran m ON sm.mapel_id = m.id
+                WHERE sm.siswa_id = ?
+                LIMIT 6
+            ");
+            $stmtEnrolled->execute([$siswaId]);
+            $enrolledNames = $stmtEnrolled->fetchAll(PDO::FETCH_COLUMN);
+
+            if (empty($enrolledNames)) {
+                $enrolledNames = array_unique(array_column($tugasList, 'nama_mapel'));
+            }
+            if (empty($enrolledNames)) {
+                $enrolledNames = ['Pemrograman Web', 'Basis Data', 'Matematika', 'Bahasa Inggris', 'Informatika'];
+            }
+
+            $chartData = [];
+            foreach ($enrolledNames as $eName) {
+                $chartData[] = [
+                    'nama_mapel' => $eName,
+                    'avg_nilai' => 0
+                ];
+            }
+        }
 
         require_once ROOT_PATH . 'views/siswa/dashboard.php';
     }
