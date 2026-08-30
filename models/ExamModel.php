@@ -833,7 +833,10 @@ class ExamModel extends BaseModel {
         } catch (Exception $e) {}
 
         $sql = "
-            SELECT hq.*, q.judul as nama_quiz, map.nama_mapel, k.nama_kelas, jur.nama_jurusan, s.nama_lengkap as nama_siswa, s.nis,
+            SELECT hq.*, q.judul as nama_quiz, map.nama_mapel, 
+                   COALESCE(k.nama_kelas, k_q.nama_kelas, 'Semua Kelas') as nama_kelas, 
+                   COALESCE(jur.nama_jurusan, jur_q.nama_jurusan, '-') as nama_jurusan, 
+                   s.nama_lengkap as nama_siswa, s.nis,
             (SELECT COUNT(*) FROM soal s2 WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay') as total_essay_count,
             (SELECT COUNT(*) FROM soal s2 LEFT JOIN jawaban_siswa js2 ON js2.soal_id = s2.id AND js2.siswa_id = hq.siswa_id AND js2.quiz_id = hq.quiz_id WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay' AND (js2.nilai IS NULL OR js2.id IS NULL)) as ungraded_essay_count,
             (SELECT COUNT(*) FROM soal s2 JOIN jawaban_siswa js2 ON js2.soal_id = s2.id AND js2.siswa_id = hq.siswa_id AND js2.quiz_id = hq.quiz_id WHERE s2.quiz_id = hq.quiz_id AND s2.jenis_soal = 'essay' AND js2.nilai IS NOT NULL) as graded_essay_count
@@ -846,8 +849,10 @@ class ExamModel extends BaseModel {
             JOIN quiz q ON hq.quiz_id = q.id
             JOIN mata_pelajaran map ON q.mapel_id = map.id
             JOIN siswa s ON hq.siswa_id = s.id
-            LEFT JOIN kelas k ON (s.kelas_id = k.id OR q.kelas_id = k.id)
-            LEFT JOIN jurusan jur ON (s.jurusan_id = jur.id OR k.jurusan_id = jur.id)
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            LEFT JOIN jurusan jur ON s.jurusan_id = jur.id
+            LEFT JOIN kelas k_q ON q.kelas_id = k_q.id
+            LEFT JOIN jurusan jur_q ON k_q.jurusan_id = jur_q.id
         ";
         if ($guruId !== null) {
             $sql .= " WHERE q.guru_id = " . (int)$guruId;
@@ -919,17 +924,37 @@ class ExamModel extends BaseModel {
         $quiz = $this->getQuizById($quizId);
         if (!$quiz) return null;
 
-        $kelasId = (int)$quiz['kelas_id'];
+        $kelasIds = [];
+        if (!empty($quiz['kelas_ids'])) {
+            $kelasIds = array_map('intval', explode(',', $quiz['kelas_ids']));
+        }
+        if (empty($kelasIds) && !empty($quiz['kelas_id'])) {
+            $kelasIds = [(int)$quiz['kelas_id']];
+        }
+        $kelasIds = array_values(array_filter($kelasIds, function($id) { return $id > 0; }));
 
-        $stmtSiswa = $this->db->prepare("
-            SELECT DISTINCT s.id, s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, k.nama_kelas, j.nama_jurusan
-            FROM siswa s
-            LEFT JOIN kelas k ON s.kelas_id = k.id
-            LEFT JOIN jurusan j ON s.jurusan_id = j.id
-            WHERE s.kelas_id = ? OR s.id IN (SELECT siswa_id FROM hasil_quiz WHERE quiz_id = ?)
-            ORDER BY s.nama_lengkap ASC
-        ");
-        $stmtSiswa->execute([$kelasId, $quizId]);
+        if (!empty($kelasIds)) {
+            $inKelasStr = implode(',', $kelasIds);
+            $stmtSiswa = $this->db->prepare("
+                SELECT DISTINCT s.id, s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, k.nama_kelas, j.nama_jurusan
+                FROM siswa s
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                LEFT JOIN jurusan j ON s.jurusan_id = j.id
+                WHERE s.kelas_id IN ({$inKelasStr}) OR s.id IN (SELECT siswa_id FROM hasil_quiz WHERE quiz_id = ?)
+                ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
+            ");
+            $stmtSiswa->execute([$quizId]);
+        } else {
+            $stmtSiswa = $this->db->prepare("
+                SELECT DISTINCT s.id, s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, k.nama_kelas, j.nama_jurusan
+                FROM siswa s
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                LEFT JOIN jurusan j ON s.jurusan_id = j.id
+                WHERE s.id IN (SELECT siswa_id FROM hasil_quiz WHERE quiz_id = ?)
+                ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
+            ");
+            $stmtSiswa->execute([$quizId]);
+        }
         $allStudents = $stmtSiswa->fetchAll();
 
         if (empty($allStudents)) {
