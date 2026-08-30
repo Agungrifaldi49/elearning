@@ -316,49 +316,89 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                               // File Preview / Google Drive Action Box
                               if (hasUrl || filePath.isNotEmpty) ...[
                                 Container(
-                                  padding: const EdgeInsets.all(8),
+                                  padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
                                     color: isDrive ? Colors.green.shade50 : Colors.blue.shade50,
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: isDrive ? Colors.green.shade200 : Colors.blue.shade200,
                                     ),
                                   ),
-                                  child: Row(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Icon(
-                                        isDrive ? Icons.add_to_drive_rounded : Icons.insert_drive_file_rounded,
-                                        color: isDrive ? Colors.green.shade700 : AppTheme.primaryColor,
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          isDrive ? 'Link Google Drive Siswa' : (filePath.isNotEmpty ? filePath : 'Lampiran Berkas Jawaban'),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDrive ? Colors.green.shade900 : Colors.blue.shade900,
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            isDrive ? Icons.add_to_drive_rounded : Icons.insert_drive_file_rounded,
+                                            color: isDrive ? Colors.green.shade700 : AppTheme.primaryColor,
+                                            size: 20,
                                           ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              isDrive ? 'Link Google Drive Siswa' : (filePath.isNotEmpty ? filePath : 'Lampiran Berkas Jawaban'),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: isDrive ? Colors.green.shade900 : Colors.blue.shade900,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      ElevatedButton.icon(
-                                        onPressed: () {
-                                          if (targetOpenUrl.isNotEmpty) {
-                                            FileService.openFileOrUrl(context, targetOpenUrl);
-                                          }
-                                        },
-                                        icon: Icon(isDrive ? Icons.open_in_new_rounded : Icons.visibility_rounded, size: 14),
-                                        label: Text(isDrive ? 'Buka Drive' : 'Lihat Berkas'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: isDrive ? Colors.green.shade700 : AppTheme.primaryColor,
-                                          foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                          textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                                          visualDensity: VisualDensity.compact,
-                                        ),
+                                      const SizedBox(height: 8),
+
+                                      // Dual Buttons: In-App Preview & External Open/Download
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              onPressed: () {
+                                                if (targetOpenUrl.isNotEmpty) {
+                                                  FileService.showInAppPreview(
+                                                    context,
+                                                    targetOpenUrl,
+                                                    isDrive ? 'Google Drive Jawaban' : (filePath.isNotEmpty ? filePath : 'Berkas Jawaban'),
+                                                    studentName: namaSiswa,
+                                                  );
+                                                }
+                                              },
+                                              icon: Icon(isDrive ? Icons.visibility_rounded : Icons.remove_red_eye_rounded, size: 14),
+                                              label: Text(isDrive ? 'Pratinjau Drive' : 'Lihat di App'),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: isDrive ? Colors.green.shade700 : AppTheme.primaryColor,
+                                                foregroundColor: Colors.white,
+                                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                                visualDensity: VisualDensity.compact,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: OutlinedButton.icon(
+                                              onPressed: () {
+                                                if (targetOpenUrl.isNotEmpty) {
+                                                  FileService.openFileOrUrl(context, targetOpenUrl, preferInApp: false);
+                                                }
+                                              },
+                                              icon: Icon(isDrive ? Icons.open_in_new_rounded : Icons.download_rounded, size: 14),
+                                              label: Text(isDrive ? 'Buka Link' : 'Unduh File'),
+                                              style: OutlinedButton.styleFrom(
+                                                foregroundColor: isDrive ? Colors.green.shade900 : AppTheme.primaryColor,
+                                                side: BorderSide(color: isDrive ? Colors.green.shade400 : AppTheme.primaryColor),
+                                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                                visualDensity: VisualDensity.compact,
+                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ],
                                   ),
