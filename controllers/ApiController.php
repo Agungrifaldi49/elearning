@@ -1826,6 +1826,7 @@ class ApiController {
                         $judul = trim($input['judul'] ?? '');
                         $deskripsi = trim($input['deskripsi'] ?? '');
                         $mapelId = intval($input['mapel_id'] ?? 0);
+                        $filePath = trim($input['file_path'] ?? '');
                         
                         $kelasIds = [];
                         if (isset($input['kelas_ids']) && is_array($input['kelas_ids'])) {
@@ -1849,8 +1850,8 @@ class ApiController {
                         $kelasIdsStr = implode(',', $kelasIds);
 
                         $stmtIns = $this->db->prepare("
-                            INSERT INTO tugas (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, deadline, created_at) 
-                            VALUES (:gid, :mpid, :kid, :kids, :jdl, :desk, :dl, NOW())
+                            INSERT INTO tugas (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, file_path, deadline, created_at) 
+                            VALUES (:gid, :mpid, :kid, :kids, :jdl, :desk, :fp, :dl, NOW())
                         ");
                         $stmtIns->execute([
                             'gid' => $guru['id'],
@@ -1859,6 +1860,7 @@ class ApiController {
                             'kids' => $kelasIdsStr,
                             'jdl' => $judul,
                             'desk' => $deskripsi,
+                            'fp' => $filePath,
                             'dl' => $deadline
                         ]);
 
@@ -1891,20 +1893,31 @@ class ApiController {
                 $stmtT->execute(['gid' => $guru['id']]);
                 $tugas = $stmtT->fetchAll();
 
-                $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
+                $kelasListRaw = $this->db->query("SELECT id, nama_kelas FROM kelas ORDER BY nama_kelas ASC")->fetchAll();
+                $mapelListRaw = $this->db->query("SELECT id, nama_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll();
+
+                $kelasListMap = [];
+                foreach ($kelasListRaw as $k) {
+                    $kelasListMap[$k['id']] = $k['nama_kelas'];
+                }
+
                 foreach ($tugas as &$item) {
                     $targetIds = !empty($item['kelas_ids']) ? array_map('intval', explode(',', $item['kelas_ids'])) : [(int)$item['kelas_id']];
                     $names = [];
                     foreach ($targetIds as $tid) {
-                        if (isset($kelasList[$tid])) {
-                            $names[] = $kelasList[$tid];
+                        if (isset($kelasListMap[$tid])) {
+                            $names[] = $kelasListMap[$tid];
                         }
                     }
                     $item['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($item['nama_kelas'] ?? 'Semua Kelas');
                 }
                 unset($item);
 
-                $this->jsonResponse(true, 'Kelola Tugas', $tugas);
+                $this->jsonResponse(true, 'Kelola Tugas', [
+                    'tugas' => $tugas,
+                    'mapel_list' => $mapelListRaw,
+                    'kelas_list' => $kelasListRaw
+                ]);
                 break;
 
             case 'submissions':

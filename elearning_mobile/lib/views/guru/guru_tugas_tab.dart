@@ -43,119 +43,362 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
   }
 
   void _showAddTugasModal() {
+    final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user == null) return;
+
     final judulController = TextEditingController();
     final deskripsiController = TextEditingController();
-    int selectedMapel = 1;
-    int selectedKelas = 1;
+    final fileAttachmentController = TextEditingController();
+
+    // Mapel options
+    final List<Map<String, dynamic>> mapels = guruProvider.mapelList.isNotEmpty
+        ? guruProvider.mapelList
+        : [
+            {'id': 1, 'nama_mapel': 'Pemrograman Web & Perangkat Bergerak'},
+            {'id': 2, 'nama_mapel': 'Basis Data'},
+            {'id': 3, 'nama_mapel': 'Pemrograman Berorientasi Objek'},
+            {'id': 4, 'nama_mapel': 'Pemodelan Perangkat Lunak'},
+          ];
+
+    // Kelas options
+    final List<Map<String, dynamic>> kelases = guruProvider.kelasList.isNotEmpty
+        ? guruProvider.kelasList
+        : [
+            {'id': 1, 'nama_kelas': 'X RPL 1'},
+            {'id': 2, 'nama_kelas': 'X RPL 2'},
+            {'id': 3, 'nama_kelas': 'XI RPL 1'},
+            {'id': 4, 'nama_kelas': 'XI RPL 2'},
+            {'id': 5, 'nama_kelas': 'XII RPL 1'},
+          ];
+
+    int selectedMapelId = mapels.first['id'] is int
+        ? mapels.first['id']
+        : int.tryParse(mapels.first['id'].toString()) ?? 1;
+
+    final Set<int> selectedKelasIds = {
+      kelases.first['id'] is int
+          ? kelases.first['id']
+          : int.tryParse(kelases.first['id'].toString()) ?? 1
+    };
+
+    DateTime selectedDeadline = DateTime.now().add(const Duration(days: 7));
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          top: 20,
-          left: 20,
-          right: 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withAlpha(25),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.add_task_rounded, color: AppTheme.primaryColor, size: 24),
-                ),
-                const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Buat Tugas Modul Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text('Tambahkan petunjuk penugasan untuk siswa', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final String deadlineFormatted =
+              "${selectedDeadline.year}-${selectedDeadline.month.toString().padLeft(2, '0')}-${selectedDeadline.day.toString().padLeft(2, '0')} ${selectedDeadline.hour.toString().padLeft(2, '0')}:${selectedDeadline.minute.toString().padLeft(2, '0')}:00";
 
-            TextField(
-              controller: judulController,
-              decoration: InputDecoration(
-                labelText: 'Judul Tugas Pembelajaran',
-                hintText: 'Contoh: Tugas 1 Modul Auth MVC',
-                prefixIcon: const Icon(Icons.title_rounded),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            const SizedBox(height: 12),
-
-            TextField(
-              controller: deskripsiController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: 'Instruksi & Rubrik Penilaian',
-                hintText: 'Tuliskan petunjuk pengerjaan tugas secara rinci...',
-                prefixIcon: const Icon(Icons.description_rounded),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+              top: 20,
+              left: 20,
+              right: 20,
             ),
-            const SizedBox(height: 20),
-
-            ElevatedButton.icon(
-              onPressed: () async {
-                final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-                final nav = Navigator.of(context);
-                final messenger = ScaffoldMessenger.of(context);
-                if (user != null && judulController.text.trim().isNotEmpty) {
-                  final deadline = DateTime.now().add(const Duration(days: 7)).toString().substring(0, 19);
-                  final ok = await Provider.of<GuruProvider>(context, listen: false).createTugas(
-                    user.id,
-                    judulController.text,
-                    deskripsiController.text,
-                    selectedMapel,
-                    selectedKelas,
-                    deadline,
-                  );
-                  nav.pop();
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text(ok ? 'Tugas berhasil dipublikasikan!' : 'Gagal membuat tugas'),
-                      backgroundColor: ok ? AppTheme.secondaryColor : Colors.red,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
                     ),
-                  );
-                }
-              },
-              icon: const Icon(Icons.send_rounded, size: 18),
-              label: const Text('Publikasikan Tugas Baru'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withAlpha(25),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.add_task_rounded, color: AppTheme.primaryColor, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Buat Tugas Modul Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            Text('Input petunjuk, target kelas, deadline, & berkas lampiran', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+
+                  // 1. Judul Tugas
+                  const Text('Judul Penugasan *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: judulController,
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: Tugas 1 Modul Auth & CRUD MVC',
+                      prefixIcon: const Icon(Icons.title_rounded, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 2. Mata Pelajaran Dropdown
+                  const Text('Mata Pelajaran *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<int>(
+                    initialValue: selectedMapelId,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.book_rounded, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                    items: mapels.map((mp) {
+                      final id = mp['id'] is int ? mp['id'] as int : int.parse(mp['id'].toString());
+                      return DropdownMenuItem<int>(
+                        value: id,
+                        child: Text(
+                          mp['nama_mapel']?.toString() ?? 'Mapel #$id',
+                          style: const TextStyle(fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        setModalState(() {
+                          selectedMapelId = val;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 3. Target Kelas Multi-Select
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Kelas Target (Bisa Multi-Select) *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      TextButton.icon(
+                        onPressed: () {
+                          setModalState(() {
+                            if (selectedKelasIds.length == kelases.length) {
+                              selectedKelasIds.clear();
+                              if (kelases.isNotEmpty) {
+                                final firstId = kelases.first['id'] is int ? kelases.first['id'] as int : int.parse(kelases.first['id'].toString());
+                                selectedKelasIds.add(firstId);
+                              }
+                            } else {
+                              for (var k in kelases) {
+                                final kId = k['id'] is int ? k['id'] as int : int.parse(k['id'].toString());
+                                selectedKelasIds.add(kId);
+                              }
+                            }
+                          });
+                        },
+                        icon: const Icon(Icons.done_all_rounded, size: 14),
+                        label: Text(
+                          selectedKelasIds.length == kelases.length ? 'Batal Semua' : 'Pilih Semua Kelas',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.primaryColor,
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: kelases.map((k) {
+                      final kId = k['id'] is int ? k['id'] as int : int.parse(k['id'].toString());
+                      final kName = k['nama_kelas']?.toString() ?? 'Kelas #$kId';
+                      final isSelected = selectedKelasIds.contains(kId);
+
+                      return FilterChip(
+                        selected: isSelected,
+                        label: Text(kName),
+                        labelStyle: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected ? Colors.white : Colors.black87,
+                        ),
+                        selectedColor: AppTheme.primaryColor,
+                        backgroundColor: Colors.grey.shade100,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300),
+                        ),
+                        onSelected: (bool selected) {
+                          setModalState(() {
+                            if (selected) {
+                              selectedKelasIds.add(kId);
+                            } else {
+                              if (selectedKelasIds.length > 1) {
+                                selectedKelasIds.remove(kId);
+                              }
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 4. Batas Akhir (Deadline Picker)
+                  const Text('Batas Akhir (Deadline) *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  InkWell(
+                    onTap: () async {
+                      final pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDeadline,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (pickedDate != null && context.mounted) {
+                        final pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(selectedDeadline),
+                        );
+                        if (pickedTime != null) {
+                          setModalState(() {
+                            selectedDeadline = DateTime(
+                              pickedDate.year,
+                              pickedDate.month,
+                              pickedDate.day,
+                              pickedTime.hour,
+                              pickedTime.minute,
+                            );
+                          });
+                        }
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.event_available_rounded, color: Colors.amber.shade900, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Tanggal & Waktu Batas Akhir', style: TextStyle(fontSize: 10, color: Colors.amber.shade900, fontWeight: FontWeight.w600)),
+                                Text(
+                                  deadlineFormatted,
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.edit_calendar_rounded, size: 18, color: AppTheme.primaryColor),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 5. Deskripsi & Rubrik Penilaian
+                  const Text('Deskripsi / Petunjuk Pengerjaan & Rubrik *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: deskripsiController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: 'Tuliskan petunjuk pengerjaan dan kriteria rubrik penilaian...',
+                      prefixIcon: const Icon(Icons.description_rounded, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // 6. Lampiran File Soal / Link Google Drive (Opsional)
+                  const Text('Lampiran File Soal / Link Drive (Opsional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: fileAttachmentController,
+                    decoration: InputDecoration(
+                      hintText: 'Contoh: modul_tugas.pdf atau https://drive.google.com/...',
+                      prefixIcon: const Icon(Icons.attach_file_rounded, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Submit Button
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      if (judulController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Judul tugas wajib diisi!'), backgroundColor: Colors.red),
+                        );
+                        return;
+                      }
+
+                      final nav = Navigator.of(context);
+                      final messenger = ScaffoldMessenger.of(context);
+
+                      final ok = await guruProvider.createTugas(
+                        user.id,
+                        judulController.text.trim(),
+                        deskripsiController.text.trim(),
+                        selectedMapelId,
+                        selectedKelasIds.toList(),
+                        deadlineFormatted,
+                        filePath: fileAttachmentController.text.trim(),
+                      );
+
+                      nav.pop();
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(ok ? 'Tugas berhasil dipublikasikan!' : 'Gagal membuat tugas'),
+                          backgroundColor: ok ? AppTheme.secondaryColor : Colors.red,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.send_rounded, size: 18),
+                    label: const Text('Publikasikan Tugas Baru'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

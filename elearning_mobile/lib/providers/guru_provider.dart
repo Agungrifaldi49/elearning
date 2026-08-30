@@ -14,6 +14,8 @@ class GuruProvider with ChangeNotifier {
   List<JadwalModel> _jadwalList = [];
   List<MateriModel> _materiList = [];
   List<TugasModel> _tugasList = [];
+  List<Map<String, dynamic>> _mapelList = [];
+  List<Map<String, dynamic>> _kelasList = [];
   List<QuizModel> _quizList = [];
   List<ForumModel> _forumTopicList = [];
   List<ChatContactModel> _chatContacts = [];
@@ -27,6 +29,8 @@ class GuruProvider with ChangeNotifier {
   List<JadwalModel> get jadwalList => _jadwalList;
   List<MateriModel> get materiList => _materiList;
   List<TugasModel> get tugasList => _tugasList;
+  List<Map<String, dynamic>> get mapelList => _mapelList;
+  List<Map<String, dynamic>> get kelasList => _kelasList;
   List<QuizModel> get quizList => _quizList;
   List<ForumModel> get forumTopicList => _forumTopicList;
   List<ChatContactModel> get chatContacts => _chatContacts;
@@ -112,23 +116,54 @@ class GuruProvider with ChangeNotifier {
     notifyListeners();
 
     final res = await ApiService.get('guru/tugas', params: {'user_id': userId.toString()});
-    if (res['success'] == true && res['data'] is List) {
-      _tugasList = (res['data'] as List).map((e) => TugasModel.fromJson(e)).toList();
+    if (res['success'] == true && res['data'] != null) {
+      if (res['data'] is List) {
+        _tugasList = (res['data'] as List).map((e) => TugasModel.fromJson(e)).toList();
+      } else if (res['data'] is Map) {
+        final dataMap = res['data'] as Map<String, dynamic>;
+        if (dataMap['tugas'] is List) {
+          _tugasList = (dataMap['tugas'] as List).map((e) => TugasModel.fromJson(e)).toList();
+        }
+        if (dataMap['mapel_list'] is List) {
+          _mapelList = List<Map<String, dynamic>>.from(dataMap['mapel_list']);
+        }
+        if (dataMap['kelas_list'] is List) {
+          _kelasList = List<Map<String, dynamic>>.from(dataMap['kelas_list']);
+        }
+      }
     }
     _isLoading = false;
     notifyListeners();
   }
 
-  Future<bool> createTugas(int userId, String judul, String deskripsi, int mapelId, int kelasId, String deadline) async {
-    final res = await ApiService.post('guru/tugas', {
+  Future<bool> createTugas(
+    int userId,
+    String judul,
+    String deskripsi,
+    int mapelId,
+    dynamic kelasIdOrIds,
+    String deadline, {
+    String? filePath,
+  }) async {
+    final Map<String, dynamic> body = {
       'user_id': userId,
       'action': 'create',
       'judul': judul,
       'deskripsi': deskripsi,
       'mapel_id': mapelId,
-      'kelas_id': kelasId,
       'deadline': deadline,
-    });
+      'file_path': filePath ?? '',
+    };
+
+    if (kelasIdOrIds is List) {
+      body['kelas_ids'] = kelasIdOrIds;
+      body['kelas_id'] = kelasIdOrIds.isNotEmpty ? kelasIdOrIds[0] : 0;
+    } else {
+      body['kelas_id'] = kelasIdOrIds;
+      body['kelas_ids'] = [kelasIdOrIds];
+    }
+
+    final res = await ApiService.post('guru/tugas', body);
     if (res['success'] == true) {
       await fetchTugas(userId);
       return true;
