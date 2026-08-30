@@ -370,11 +370,14 @@ class LearningModel extends BaseModel {
 
     public function getTugasSusulanRequestsByGuru($guruId) {
         $stmt = $this->db->prepare("
-            SELECT ts.*, t.judul as judul_tugas, s.nama_lengkap as nama_siswa, s.nisn, k.nama_kelas, map.nama_mapel
+            SELECT ts.*, t.judul as judul_tugas, s.nama_lengkap as nama_siswa, s.nisn, 
+                   COALESCE(ks.nama_kelas, k.nama_kelas, 'Umum') as nama_kelas, 
+                   map.nama_mapel
             FROM tugas_susulan ts
             JOIN tugas t ON ts.tugas_id = t.id
             JOIN siswa s ON ts.siswa_id = s.id
-            JOIN kelas k ON t.kelas_id = k.id
+            LEFT JOIN kelas ks ON s.kelas_id = ks.id
+            LEFT JOIN kelas k ON t.kelas_id = k.id
             JOIN mata_pelajaran map ON t.mapel_id = map.id
             WHERE t.guru_id = ?
             ORDER BY ts.id DESC

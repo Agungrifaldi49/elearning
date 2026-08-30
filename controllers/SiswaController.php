@@ -213,12 +213,23 @@ class SiswaController {
 
             // Strict Enrollment & Class Isolation Check before submitting task
             $db = Database::getConnection();
-            $stmtT = $db->prepare("SELECT mapel_id, guru_id, kelas_id FROM tugas WHERE id = ?");
+            $stmtT = $db->prepare("SELECT mapel_id, guru_id, kelas_id, kelas_ids FROM tugas WHERE id = ?");
             $stmtT->execute([$tugas_id]);
             $tInfo = $stmtT->fetch();
 
             if ($tInfo) {
-                if ((int)$tInfo['kelas_id'] !== (int)$kelasId) {
+                $targetKelasIds = [];
+                if (!empty($tInfo['kelas_ids'])) {
+                    $targetKelasIds = array_map('intval', explode(',', $tInfo['kelas_ids']));
+                }
+                if (!empty($tInfo['kelas_id'])) {
+                    $targetKelasIds[] = (int)$tInfo['kelas_id'];
+                }
+                $targetKelasIds = array_values(array_unique(array_filter($targetKelasIds, function($id) { return $id > 0; })));
+
+                $hasAccess = empty($targetKelasIds) || in_array((int)$kelasId, $targetKelasIds);
+
+                if (!$hasAccess) {
                     FlashHelper::setError('Akses Terkunci! Penugasan ini diperuntukkan untuk kelas/jurusan lain.');
                     header('Location: ' . BASE_URL . 'index.php?url=siswa/tugas');
                     exit();
