@@ -175,7 +175,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                         ),
                         child: Text(
                           "T.A. ${activeTa['tahun_ajaran']} — ${activeTa['semester']}",
-                          style: const TextStyle(color: Colors.black80, fontSize: 11, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -344,7 +344,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   title: 'Presensi Log',
                   count: (stats['presensi_log'] ?? certStats['presensi_log'] ?? '0%').toString(),
                   subtitle: 'Kehadiran Real',
-                  icon: Icons.calendar_check_rounded,
+                  icon: Icons.event_available_rounded,
                   color: Colors.teal,
                   isDark: isDark,
                 ),

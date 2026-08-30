@@ -237,8 +237,13 @@ class ApiController {
             case 'dashboard':
                 require_once ROOT_PATH . 'models/SiswaModel.php';
                 require_once ROOT_PATH . 'models/AcademicModel.php';
+                require_once ROOT_PATH . 'models/LearningModel.php';
+                require_once ROOT_PATH . 'models/ExamModel.php';
+
                 $siswaModel = new SiswaModel();
                 $academicModel = new AcademicModel();
+                $learningModel = new LearningModel();
+                $examModel = new ExamModel();
 
                 $siswaId = intval($siswa['id'] ?? 0);
                 $kelasId = intval($siswa['kelas_id'] ?? 0);
@@ -249,41 +254,34 @@ class ApiController {
                 // 2. Real Certificate & Performance Stats
                 $certStats = $siswaModel->getSiswaCertificateRealStats($siswaId);
 
-                // 3. Stats (Materi, Tugas, Quiz)
-                $stmtMat = $this->db->prepare("SELECT * FROM materi WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)");
-                $stmtMat->execute(['kid' => $kelasId]);
-                $matRows = $stmtMat->fetchAll();
-                if (!empty($enrolledMapels)) {
-                    $matRows = array_filter($matRows, function($m) use ($enrolledMapels, $kelasId) {
-                        return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]) || intval($m['kelas_id'] ?? 0) === $kelasId || (isset($m['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $m['kelas_ids']))));
-                    });
-                }
-                $totalMateri = count($matRows);
+                // 3. Complete list using Web Model logic
+                $allMateri = $learningModel->getMateri($kelasId);
+                $allTugas = $learningModel->getTugas($kelasId);
+                $allQuiz = $examModel->getQuizList($kelasId);
 
-                $stmtTug = $this->db->prepare("SELECT * FROM tugas WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) ORDER BY deadline ASC");
-                $stmtTug->execute(['kid' => $kelasId]);
-                $tugRows = $stmtTug->fetchAll();
-                if (!empty($enrolledMapels)) {
-                    $tugRows = array_values(array_filter($tugRows, function($t) use ($enrolledMapels, $kelasId) {
-                        return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]) || intval($t['kelas_id'] ?? 0) === $kelasId || (isset($t['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $t['kelas_ids']))));
-                    }));
-                }
-                $totalTugas = count($tugRows);
+                $materiList = array_values(array_filter($allMateri, function($m) use ($enrolledMapels) {
+                    if (empty($enrolledMapels)) return true;
+                    return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]);
+                }));
 
-                $stmtQz = $this->db->prepare("SELECT * FROM quiz WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status='published' OR status IS NULL)");
-                $stmtQz->execute(['kid' => $kelasId]);
-                $qzRows = $stmtQz->fetchAll();
-                if (!empty($enrolledMapels)) {
-                    $qzRows = array_values(array_filter($qzRows, function($q) use ($enrolledMapels, $kelasId) {
-                        return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]) || intval($q['kelas_id'] ?? 0) === $kelasId || (isset($q['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $q['kelas_ids']))));
-                    }));
-                }
-                $totalQuiz = count($qzRows);
+                $tugasList = array_values(array_filter($allTugas, function($t) use ($enrolledMapels) {
+                    if (empty($enrolledMapels)) return true;
+                    return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]);
+                }));
+
+                $quizList = array_values(array_filter($allQuiz, function($q) use ($enrolledMapels) {
+                    if (empty($enrolledMapels)) return true;
+                    return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]);
+                }));
+
+                $totalMateri = count($materiList);
+                $totalTugas = count($tugasList);
+                $totalQuiz = count($quizList);
 
                 // 4. Nearest Task Deadline
                 $tugasTerdekat = null;
-                if (!empty($tugRows)) {
-                    $firstTugas = $tugRows[0];
+                if (!empty($tugasList)) {
+                    $firstTugas = $tugasList[0];
                     $tugasTerdekat = [
                         'id' => intval($firstTugas['id']),
                         'judul' => $firstTugas['judul'] ?? '',
@@ -703,95 +701,75 @@ class ApiController {
                 break;
 
             case 'materi':
+                require_once ROOT_PATH . 'models/LearningModel.php';
+                $learningModel = new LearningModel();
                 $kelasId = intval($siswa['kelas_id'] ?? 0);
-                try {
-                    $stmtM = $this->db->prepare("
-                        SELECT m.*, 
-                               COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
-                               COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
-                               k.nama_kelas 
-                        FROM materi m 
-                        LEFT JOIN mata_pelajaran mp ON m.mapel_id = mp.id 
-                        LEFT JOIN guru g ON m.guru_id = g.id 
-                        LEFT JOIN users u ON g.user_id = u.id
-                        LEFT JOIN kelas k ON m.kelas_id = k.id
-                        WHERE (m.kelas_id = :kid OR FIND_IN_SET(:kid, m.kelas_ids) OR m.kelas_id IS NULL OR m.kelas_id = 0)
-                        ORDER BY m.id DESC
-                        LIMIT 50
-                    ");
-                    $stmtM->execute(['kid' => $kelasId]);
-                    $materi = $stmtM->fetchAll();
 
-                    if (!empty($enrolledMapels)) {
-                        $materi = array_values(array_filter($materi, function($m) use ($enrolledMapels, $kelasId) {
-                            return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]) || intval($m['kelas_id'] ?? 0) === $kelasId || (isset($m['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $m['kelas_ids']))));
-                        }));
-                    }
+                $allMateri = $learningModel->getMateri($kelasId);
+                $allVideos = $learningModel->getVideos($kelasId);
 
-                    $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
-                    foreach ($materi as &$item) {
-                        $targetIds = !empty($item['kelas_ids']) ? array_map('intval', explode(',', $item['kelas_ids'])) : [(int)$item['kelas_id']];
-                        $names = [];
-                        foreach ($targetIds as $tid) {
-                            if (isset($kelasList[$tid])) {
-                                $names[] = $kelasList[$tid];
-                            }
-                        }
-                        $item['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($item['nama_kelas'] ?? 'Semua Kelas');
-                    }
-                    unset($item);
+                $materiList = array_values(array_filter($allMateri, function($m) use ($enrolledMapels) {
+                    if (empty($enrolledMapels)) return true;
+                    return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]);
+                }));
 
-                } catch (\Throwable $eM) {
-                    $materi = [];
-                }
+                $videoList = array_values(array_filter($allVideos, function($v) use ($enrolledMapels) {
+                    if (empty($enrolledMapels)) return true;
+                    return isset($enrolledMapels[$v['mapel_id'] . '_' . ($v['guru_id'] ?? 0)]) || isset($enrolledMapels[$v['mapel_id']]);
+                }));
 
-                $this->jsonResponse(true, 'Daftar Materi Pembelajaran', $materi);
+                $this->jsonResponse(true, 'Daftar Materi Pembelajaran', [
+                    'materi' => $materiList,
+                    'videos' => $videoList
+                ]);
                 break;
 
             case 'tugas':
+                require_once ROOT_PATH . 'models/LearningModel.php';
+                $learningModel = new LearningModel();
                 $siswaId = intval($siswa['id'] ?? 0);
                 $kelasId = intval($siswa['kelas_id'] ?? 0);
-                try {
-                    $stmtT = $this->db->prepare("
-                        SELECT t.*, 
-                               COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
-                               COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru, 
-                               pt.id as submission_id, pt.nilai, pt.komentar_guru, pt.submitted_at 
-                        FROM tugas t 
-                        LEFT JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
-                        LEFT JOIN guru g ON t.guru_id = g.id 
-                        LEFT JOIN users u ON g.user_id = u.id
-                        LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = :sid)
-                        WHERE (t.kelas_id = :kid OR FIND_IN_SET(:kid, t.kelas_ids) OR t.kelas_id IS NULL OR t.kelas_id = 0)
-                        ORDER BY t.id DESC
-                        LIMIT 50
-                    ");
-                    $stmtT->execute(['sid' => $siswaId, 'kid' => $kelasId]);
-                    $tugas = $stmtT->fetchAll();
 
-                    if (!empty($enrolledMapels)) {
-                        $tugas = array_values(array_filter($tugas, function($t) use ($enrolledMapels, $kelasId) {
-                            return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]) || intval($t['kelas_id'] ?? 0) === $kelasId || (isset($t['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $t['kelas_ids']))));
-                        }));
-                    }
+                $allTugas = $learningModel->getTugas($kelasId);
 
-                    $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
-                    foreach ($tugas as &$item) {
-                        $targetIds = !empty($item['kelas_ids']) ? array_map('intval', explode(',', $item['kelas_ids'])) : [(int)$item['kelas_id']];
-                        $names = [];
-                        foreach ($targetIds as $tid) {
-                            if (isset($kelasList[$tid])) {
-                                $names[] = $kelasList[$tid];
-                            }
-                        }
-                        $item['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($item['nama_kelas'] ?? 'Semua Kelas');
-                    }
-                    unset($item);
-                } catch (\Throwable $eT) {
-                    $tugas = [];
+                // Fetch student submission map from pengumpulan_tugas
+                $stmtSub = $this->db->prepare("SELECT * FROM pengumpulan_tugas WHERE siswa_id = ?");
+                $stmtSub->execute([$siswaId]);
+                $submittedList = $stmtSub->fetchAll();
+                $submittedMap = [];
+                foreach ($submittedList as $sub) {
+                    $submittedMap[$sub['tugas_id']] = $sub;
                 }
 
-                $this->jsonResponse(true, 'Daftar Tugas Siswa', $tugas);
+                $tugasList = array_values(array_filter($allTugas, function($t) use ($enrolledMapels) {
+                    if (empty($enrolledMapels)) return true;
+                    return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]);
+                }));
+
+                foreach ($tugasList as &$t) {
+                    $tId = intval($t['id']);
+                    if (isset($submittedMap[$tId])) {
+                        $sub = $submittedMap[$tId];
+                        $t['submission_id'] = intval($sub['id']);
+                        $t['nilai'] = $sub['nilai'] !== null ? floatval($sub['nilai']) : null;
+                        $t['catatan_siswa'] = $sub['catatan_siswa'] ?? '';
+                        $t['komentar_guru'] = $sub['komentar_guru'] ?? '';
+                        $t['submitted_at'] = $sub['submitted_at'] ?? null;
+                        $t['file_path_siswa'] = $sub['file_path'] ?? null;
+                        $t['is_submitted'] = true;
+                    } else {
+                        $t['submission_id'] = null;
+                        $t['nilai'] = null;
+                        $t['catatan_siswa'] = null;
+                        $t['komentar_guru'] = null;
+                        $t['submitted_at'] = null;
+                        $t['file_path_siswa'] = null;
+                        $t['is_submitted'] = false;
+                    }
+                }
+                unset($t);
+
+                $this->jsonResponse(true, 'Daftar Tugas Siswa', $tugasList);
                 break;
 
             case 'submit_tugas':
@@ -835,65 +813,56 @@ class ApiController {
             case 'quiz':
                 require_once ROOT_PATH . 'models/ExamModel.php';
                 $examModel = new ExamModel();
+                $siswaId = intval($siswa['id'] ?? 0);
+                $kelasId = intval($siswa['kelas_id'] ?? 0);
 
-                $stmtQ = $this->db->prepare("
-                    SELECT q.*, mp.nama_mapel, g.nama_lengkap as nama_guru, 
-                           hq.total_nilai, hq.status_lulus, hq.finished_at,
-                           hq.is_disqualified, hq.pelanggaran_count
-                    FROM quiz q 
-                    LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
-                    LEFT JOIN guru g ON q.guru_id = g.id 
-                    LEFT JOIN (
-                        SELECT h1.* FROM hasil_quiz h1
-                        INNER JOIN (
-                            SELECT quiz_id, siswa_id, MAX(id) as max_id 
-                            FROM hasil_quiz 
-                            WHERE siswa_id = :sid 
-                            GROUP BY quiz_id, siswa_id
-                        ) h2 ON h1.id = h2.max_id
-                    ) hq ON hq.quiz_id = q.id
-                    WHERE (q.kelas_id = :kid OR FIND_IN_SET(:kid, q.kelas_ids) OR q.kelas_id IS NULL OR q.kelas_id = 0) AND (q.status = 'published' OR q.status IS NULL)
-                    ORDER BY q.created_at DESC
+                $allQuiz = $examModel->getQuizList($kelasId);
+
+                // Fetch student completed quiz attempts from hasil_quiz
+                $stmtCompleted = $this->db->prepare("
+                    SELECT quiz_id, total_nilai, nilai_tertinggi, status_lulus, finished_at, is_disqualified, pelanggaran_count,
+                           (SELECT COUNT(*) FROM hasil_quiz_history hqh WHERE hqh.siswa_id = hasil_quiz.siswa_id AND hqh.quiz_id = hasil_quiz.quiz_id) as total_attempts
+                    FROM hasil_quiz 
+                    WHERE siswa_id = ?
                 ");
-                $stmtQ->execute(['sid' => $siswa['id'], 'kid' => $siswa['kelas_id']]);
-                $quizList = $stmtQ->fetchAll();
-
-                if (!empty($enrolledMapels)) {
-                    $quizList = array_values(array_filter($quizList, function($q) use ($enrolledMapels, $kelasId) {
-                        return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]) || intval($q['kelas_id'] ?? 0) === $kelasId || (isset($q['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $q['kelas_ids']))));
-                    }));
+                $stmtCompleted->execute([$siswaId]);
+                $completedRows = $stmtCompleted->fetchAll();
+                $completedMap = [];
+                foreach ($completedRows as $cr) {
+                    $completedMap[$cr['quiz_id']] = $cr;
                 }
 
-                $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
-                foreach ($quizList as &$q) {
-                    $targetIds = !empty($q['kelas_ids']) ? array_map('intval', explode(',', $q['kelas_ids'])) : [(int)$q['kelas_id']];
-                    $names = [];
-                    foreach ($targetIds as $tid) {
-                        if (isset($kelasList[$tid])) {
-                            $names[] = $kelasList[$tid];
-                        }
-                    }
-                    $q['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($q['nama_kelas'] ?? 'Semua Kelas');
+                $quizList = array_values(array_filter($allQuiz, function($q) use ($enrolledMapels) {
+                    if (empty($enrolledMapels)) return true;
+                    return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]);
+                }));
 
-                    $accessCheck = $examModel->canSiswaAccessQuiz($q['id'], $siswa['id']);
-                    $q['can_access'] = $accessCheck['access'];
-                    $q['access_status'] = $accessCheck['status'] ?? 'terbuka';
-                    $q['access_reason'] = ($accessCheck['status'] ?? '') === 'diskualifikasi' 
-                        ? 'Anda telah DIDISKUALIFIKASI karena 2x melanggar aturan (berpindah aplikasi / keluar fullscreen)'
-                        : (isset($accessCheck['reason']) ? $accessCheck['reason'] : '');
-                    
-                    $stmtS = $this->db->prepare("SELECT status FROM quiz_susulan WHERE quiz_id = ? AND siswa_id = ? ORDER BY id DESC LIMIT 1");
-                    $stmtS->execute([$q['id'], $siswa['id']]);
-                    $susRow = $stmtS->fetch();
-                    $q['susulan_status'] = $susRow['status'] ?? null;
-                    $q['is_disqualified'] = (!empty($q['is_disqualified']) && (int)$q['is_disqualified'] === 1) || (($accessCheck['status'] ?? '') === 'diskualifikasi');
-                    $q['pelanggaran_count'] = intval($q['pelanggaran_count'] ?? 0);
-                    $q['max_attempts'] = isset($q['max_attempts']) ? intval($q['max_attempts']) : (isset($accessCheck['max_attempts']) ? intval($accessCheck['max_attempts']) : 1);
-                    $q['attempt_count'] = intval($accessCheck['attempt_count'] ?? ($q['finished_at'] != null ? 1 : 0));
+                foreach ($quizList as &$q) {
+                    $qId = intval($q['id']);
+                    if (isset($completedMap[$qId])) {
+                        $cr = $completedMap[$qId];
+                        $q['total_nilai'] = $cr['total_nilai'] !== null ? floatval($cr['total_nilai']) : null;
+                        $q['nilai_tertinggi'] = $cr['nilai_tertinggi'] !== null ? floatval($cr['nilai_tertinggi']) : null;
+                        $q['status_lulus'] = $cr['status_lulus'] ?? null;
+                        $q['finished_at'] = $cr['finished_at'] ?? null;
+                        $q['is_disqualified'] = !empty($cr['is_disqualified']);
+                        $q['pelanggaran_count'] = intval($cr['pelanggaran_count'] ?? 0);
+                        $q['attempt_count'] = intval($cr['total_attempts'] ?? 1);
+                        $q['is_completed'] = true;
+                    } else {
+                        $q['total_nilai'] = null;
+                        $q['nilai_tertinggi'] = null;
+                        $q['status_lulus'] = null;
+                        $q['finished_at'] = null;
+                        $q['is_disqualified'] = false;
+                        $q['pelanggaran_count'] = 0;
+                        $q['attempt_count'] = 0;
+                        $q['is_completed'] = false;
+                    }
                 }
                 unset($q);
 
-                $this->jsonResponse(true, 'Daftar Quiz & CBT', $quizList);
+                $this->jsonResponse(true, 'Daftar Quiz / CBT Ujian Siswa', $quizList);
                 break;
 
             case 'quiz_detail':
