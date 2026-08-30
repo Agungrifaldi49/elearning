@@ -38,7 +38,11 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
   Future<void> _loadTugas() async {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user != null) {
-      await Provider.of<GuruProvider>(context, listen: false).fetchTugas(user.id);
+      final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+      await Future.wait([
+        guruProvider.fetchTugas(user.id),
+        guruProvider.fetchJadwal(user.id),
+      ]);
     }
   }
 
@@ -51,35 +55,57 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
     final deskripsiController = TextEditingController();
     final fileAttachmentController = TextEditingController();
 
-    // Mapel options
-    final List<Map<String, dynamic>> mapels = guruProvider.mapelList.isNotEmpty
-        ? guruProvider.mapelList
-        : [
-            {'id': 1, 'nama_mapel': 'Pemrograman Web & Perangkat Bergerak'},
-            {'id': 2, 'nama_mapel': 'Basis Data'},
-            {'id': 3, 'nama_mapel': 'Pemrograman Berorientasi Objek'},
-            {'id': 4, 'nama_mapel': 'Pemodelan Perangkat Lunak'},
-          ];
+    // Dynamically build mapel options strictly from teacher's schedule & assigned subjects
+    final List<Map<String, dynamic>> mapels = [];
+    final Set<int> mapelIdsSeen = {};
 
-    // Kelas options
-    final List<Map<String, dynamic>> kelases = guruProvider.kelasList.isNotEmpty
-        ? guruProvider.kelasList
-        : [
-            {'id': 1, 'nama_kelas': 'X RPL 1'},
-            {'id': 2, 'nama_kelas': 'X RPL 2'},
-            {'id': 3, 'nama_kelas': 'XI RPL 1'},
-            {'id': 4, 'nama_kelas': 'XI RPL 2'},
-            {'id': 5, 'nama_kelas': 'XII RPL 1'},
-          ];
+    for (var j in guruProvider.jadwalList) {
+      if (j.mapelId > 0 && !mapelIdsSeen.contains(j.mapelId)) {
+        mapelIdsSeen.add(j.mapelId);
+        mapels.add({
+          'id': j.mapelId,
+          'nama_mapel': (j.namaMapel.isNotEmpty) ? j.namaMapel : 'Mapel #${j.mapelId}',
+        });
+      }
+    }
 
-    int selectedMapelId = mapels.first['id'] is int
-        ? mapels.first['id']
-        : int.tryParse(mapels.first['id'].toString()) ?? 1;
+    for (var m in guruProvider.mapelList) {
+      final mId = m['id'] is int ? m['id'] as int : int.tryParse(m['id'].toString()) ?? 0;
+      if (mId > 0 && !mapelIdsSeen.contains(mId)) {
+        mapelIdsSeen.add(mId);
+        mapels.add(m);
+      }
+    }
+
+    // Dynamically build kelas options strictly from teacher's schedule & assigned classes
+    final List<Map<String, dynamic>> kelases = [];
+    final Set<int> kelasIdsSeen = {};
+
+    for (var j in guruProvider.jadwalList) {
+      if (j.kelasId > 0 && !kelasIdsSeen.contains(j.kelasId)) {
+        kelasIdsSeen.add(j.kelasId);
+        kelases.add({
+          'id': j.kelasId,
+          'nama_kelas': (j.namaKelas != null && j.namaKelas!.isNotEmpty) ? j.namaKelas! : 'Kelas #${j.kelasId}',
+        });
+      }
+    }
+
+    for (var k in guruProvider.kelasList) {
+      final kId = k['id'] is int ? k['id'] as int : int.tryParse(k['id'].toString()) ?? 0;
+      if (kId > 0 && !kelasIdsSeen.contains(kId)) {
+        kelasIdsSeen.add(kId);
+        kelases.add(k);
+      }
+    }
+
+    int selectedMapelId = mapels.isNotEmpty
+        ? (mapels.first['id'] is int ? mapels.first['id'] as int : int.tryParse(mapels.first['id'].toString()) ?? 1)
+        : 1;
 
     final Set<int> selectedKelasIds = {
-      kelases.first['id'] is int
-          ? kelases.first['id']
-          : int.tryParse(kelases.first['id'].toString()) ?? 1
+      if (kelases.isNotEmpty)
+        (kelases.first['id'] is int ? kelases.first['id'] as int : int.tryParse(kelases.first['id'].toString()) ?? 1)
     };
 
     DateTime selectedDeadline = DateTime.now().add(const Duration(days: 7));

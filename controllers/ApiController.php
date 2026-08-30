@@ -1893,20 +1893,25 @@ class ApiController {
                 $stmtT->execute(['gid' => $guru['id']]);
                 $tugas = $stmtT->fetchAll();
 
-                $kelasListRaw = $this->db->query("SELECT id, nama_kelas FROM kelas ORDER BY nama_kelas ASC")->fetchAll();
-                $mapelListRaw = $this->db->query("SELECT id, nama_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll();
-
-                $kelasListMap = [];
-                foreach ($kelasListRaw as $k) {
-                    $kelasListMap[$k['id']] = $k['nama_kelas'];
+                $academicModel = new AcademicModel();
+                $mapelListRaw = $academicModel->getMapelByGuru($guru['id']);
+                if (empty($mapelListRaw)) {
+                    $mapelListRaw = $academicModel->getMapel();
                 }
+
+                $kelasListRaw = $academicModel->getKelasByGuru($guru['id']);
+                if (empty($kelasListRaw)) {
+                    $kelasListRaw = $academicModel->getKelas();
+                }
+
+                $allKelasMap = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
 
                 foreach ($tugas as &$item) {
                     $targetIds = !empty($item['kelas_ids']) ? array_map('intval', explode(',', $item['kelas_ids'])) : [(int)$item['kelas_id']];
                     $names = [];
                     foreach ($targetIds as $tid) {
-                        if (isset($kelasListMap[$tid])) {
-                            $names[] = $kelasListMap[$tid];
+                        if (isset($allKelasMap[$tid])) {
+                            $names[] = $allKelasMap[$tid];
                         }
                     }
                     $item['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($item['nama_kelas'] ?? 'Semua Kelas');
