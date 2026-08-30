@@ -13,10 +13,13 @@ if (!empty($books)) {
     foreach ($books as $bItem) {
         $fType = strtolower($bItem['file_type'] ?? 'pdf');
         if ($fType === 'pdf') $pdfCount++;
-        if (in_array($fType, ['video','mp4','mkv'])) $videoCount++;
+        if (in_array($fType, ['video','mp4','mkv','avi'])) $videoCount++;
         $totalViewsCount += (int)($bItem['view_count'] ?? 0);
     }
 }
+$userRole = AuthHelper::user()['role_name'] ?? '';
+$isAdmin = ($userRole === 'administrator');
+$canUpload = in_array($userRole, ['administrator', 'Guru']);
 ?>
 
 <style>
@@ -25,26 +28,37 @@ if (!empty($books)) {
 
 .library-wrapper {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
-    padding-top: 28px !important;
+    background-color: #f8fafc;
+    min-height: 100vh;
 }
 
-/* Glassmorphic Hero Banner */
+/* Glassmorphic Premium Hero Banner */
 .library-hero-banner {
     background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #2563eb 100%);
-    border-radius: 20px;
-    box-shadow: 0 12px 30px -5px rgba(37, 99, 235, 0.25);
+    border-radius: 24px;
+    box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.25);
     position: relative;
     overflow: hidden;
+    color: #ffffff;
 }
-
+.library-hero-banner::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.25) 0%, rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
+}
 .library-hero-banner::after {
     content: '';
     position: absolute;
-    top: -40%;
-    right: -15%;
-    width: 360px;
-    height: 360px;
-    background: radial-gradient(circle, rgba(96, 165, 250, 0.25) 0%, rgba(255, 255, 255, 0) 70%);
+    bottom: -40%;
+    left: -10%;
+    width: 350px;
+    height: 350px;
+    background: radial-gradient(circle, rgba(147, 51, 234, 0.2) 0%, rgba(255, 255, 255, 0) 70%);
     pointer-events: none;
 }
 
@@ -53,14 +67,28 @@ if (!empty($books)) {
     border: 1px solid #e2e8f0;
     border-radius: 16px;
     background: #ffffff;
-    transition: all 0.2s ease;
+    padding: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+    transition: all 0.25s ease;
+    height: 100%;
 }
 .lib-kpi-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+    border-color: #cbd5e1;
+}
+.lib-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
 }
 
-/* 3D Glassmorphic Book Card */
+/* 3D Modern Book Card */
 .book-card-item {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -68,40 +96,41 @@ if (!empty($books)) {
     transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 .book-card-item:hover {
     transform: translateY(-5px);
-    box-shadow: 0 16px 32px -5px rgba(15, 23, 42, 0.12) !important;
+    box-shadow: 0 16px 35px -5px rgba(15, 23, 42, 0.1) !important;
     border-color: #cbd5e1;
 }
 
+/* Book Cover Styling */
 .book-cover-aspect {
-    height: 165px;
+    height: 160px;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: inset -4px 0 12px rgba(0, 0, 0, 0.2);
+    box-shadow: inset -5px 0 15px rgba(0, 0, 0, 0.25);
 }
-
-/* Book Ribbon Accent */
 .book-ribbon-spine {
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    width: 10px;
+    width: 12px;
     background: rgba(0, 0, 0, 0.25);
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.15);
 }
 
-.book-title-clamp {
+.text-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     word-break: break-word;
-    font-size: 0.93rem;
-    line-height: 1.35;
 }
 
 /* Category Filter Pills Bar */
@@ -111,116 +140,118 @@ if (!empty($books)) {
     color: #475569;
     font-weight: 600;
     font-size: 0.8rem;
-    border-radius: 30px;
+    border-radius: 50rem;
     padding: 6px 16px;
     transition: all 0.2s ease;
     white-space: nowrap;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
-.cat-pill-btn:hover, .cat-pill-btn.active {
-    background: #2563eb;
+.cat-pill-btn:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+.cat-pill-btn.active {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     color: #ffffff;
     border-color: #2563eb;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
 }
 
-/* Responsive Overrides */
-@media (max-width: 575.98px) {
-    .library-hero-banner {
-        padding: 1.25rem !important;
-        border-radius: 16px !important;
-    }
-    .book-cover-aspect {
-        height: 135px;
-    }
-    .book-cover-aspect .fs-1 {
-        font-size: 1.75rem !important;
-    }
-    .lib-kpi-card {
-        padding: 0.65rem !important;
-    }
-    .lib-kpi-card .fs-4 {
-        font-size: 1.15rem !important;
-    }
+.hover-scale {
+    transition: transform 0.2s ease;
+}
+.hover-scale:hover {
+    transform: scale(1.02);
 }
 </style>
 
-<main class="main-content px-2 px-sm-3 px-md-4 py-3 library-wrapper">
-<div class="container-fluid pt-3">
+<!-- Top Clearance for Fixed Navbar -->
+<main class="main-content px-3 px-md-4 library-wrapper pt-4 mt-4 mt-md-5 pb-5">
+<div class="container-fluid max-width-1400 pt-2">
 
-    <!-- Hero Banner Header -->
+    <!-- 🚀 HERO BANNER PERPUSTAKAAN -->
     <div class="library-hero-banner text-white p-4 p-md-5 mb-4">
         <div class="d-flex justify-content-between align-items-start align-items-md-center flex-column flex-md-row gap-3 position-relative z-1">
             <div class="d-flex align-items-center gap-3">
-                <div class="bg-primary bg-gradient p-3.5 rounded-4 text-white shadow-sm d-flex align-items-center justify-content-center flex-shrink-0" style="width: 58px; height: 58px; background: #2563eb;">
-                    <i class="bi bi-book-fill fs-2"></i>
+                <div class="bg-primary text-white p-3.5 rounded-4 shadow-md d-flex align-items-center justify-content-center flex-shrink-0" style="width: 60px; height: 60px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                    <i class="bi bi-journal-bookmark-fill fs-2"></i>
                 </div>
                 <div>
-                    <h3 class="fw-bold text-white mb-1" style="letter-spacing: -0.4px;">Perpustakaan Digital SMK Muthia Harapan</h3>
-                    <p class="text-blue-100 small mb-0 fw-medium">Pusat Koleksi E-Book, Modul KBM Guru, Referensi Kejuruan, dan Media Pembelajaran Digital.</p>
+                    <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-warning text-dark shadow-xs small fw-bold mb-2">
+                        <i class="bi bi-mortarboard-fill text-dark fs-6"></i>
+                        <span>Pusat Literasi & Reference Center</span>
+                    </div>
+                    <h3 class="fw-extrabold text-white mb-1" style="letter-spacing: -0.5px;">Perpustakaan Digital SMK Muthia Harapan</h3>
+                    <p class="text-white text-opacity-85 small mb-0 lh-base" style="max-width: 680px;">
+                        Koleksi E-Book Digital, Modul Pembelajaran Guru, Referensi Kejuruan, dan Media Video Pembelajaran Interaktif.
+                    </p>
                 </div>
             </div>
 
-            <?php if (in_array(AuthHelper::user()['role_name'] ?? '', ['administrator', 'Guru'])): ?>
-            <a href="<?= BASE_URL ?>index.php?url=library/upload" class="btn btn-warning text-dark fw-bold rounded-pill shadow-sm px-4 py-2.5 text-nowrap" style="font-size: 0.88rem; width: fit-content; max-width: 100%;">
-                <i class="bi bi-cloud-upload-fill me-1.5"></i> Upload Koleksi Baru
+            <?php if ($canUpload): ?>
+            <a href="<?= BASE_URL ?>index.php?url=library/upload" class="btn btn-warning text-dark fw-bold rounded-pill shadow-lg px-4 py-2.5 d-inline-flex align-items-center gap-2 hover-scale text-nowrap" style="font-size: 0.88rem;">
+                <i class="bi bi-cloud-upload-fill fs-5"></i>
+                <span>Upload Koleksi Baru</span>
             </a>
             <?php endif; ?>
         </div>
     </div>
 
-    <!-- KPI Stats Summary Bar -->
-    <div class="row g-2.5 mb-4">
+    <!-- 📊 KPI STATS SUMMARY BAR (4 COLUMNS) -->
+    <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
-            <div class="lib-kpi-card p-3 d-flex align-items-center gap-2.5">
-                <div class="bg-primary bg-opacity-10 text-primary p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
-                    <i class="bi bi-bookshelf fs-4"></i>
+            <div class="lib-kpi-card d-flex align-items-center gap-3">
+                <div class="lib-kpi-icon bg-primary-subtle text-primary">
+                    <i class="bi bi-bookshelf"></i>
                 </div>
-                <div>
-                    <small class="text-muted d-block" style="font-size:0.72rem;">Total Koleksi</small>
-                    <strong class="text-dark fs-5 mb-0 fw-extrabold"><?= number_format($totalBooksCount) ?></strong>
+                <div class="overflow-hidden">
+                    <h4 class="fw-extrabold text-dark mb-0 lh-1"><?= number_format($totalBooksCount) ?></h4>
+                    <span class="text-muted fw-semibold" style="font-size:0.75rem;">Total Koleksi</span>
                 </div>
             </div>
         </div>
 
         <div class="col-6 col-md-3">
-            <div class="lib-kpi-card p-3 d-flex align-items-center gap-2.5">
-                <div class="bg-danger bg-opacity-10 text-danger p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
-                    <i class="bi bi-file-earmark-pdf-fill fs-4"></i>
+            <div class="lib-kpi-card d-flex align-items-center gap-3">
+                <div class="lib-kpi-icon bg-danger-subtle text-danger">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
                 </div>
-                <div>
-                    <small class="text-muted d-block" style="font-size:0.72rem;">E-Book PDF</small>
-                    <strong class="text-dark fs-5 mb-0 fw-extrabold"><?= number_format($pdfCount) ?></strong>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-6 col-md-3">
-            <div class="lib-kpi-card p-3 d-flex align-items-center gap-2.5">
-                <div class="bg-info bg-opacity-10 text-info p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
-                    <i class="bi bi-play-circle-fill fs-4"></i>
-                </div>
-                <div>
-                    <small class="text-muted d-block" style="font-size:0.72rem;">Video &amp; Modul</small>
-                    <strong class="text-dark fs-5 mb-0 fw-extrabold"><?= number_format($totalBooksCount - $pdfCount) ?></strong>
+                <div class="overflow-hidden">
+                    <h4 class="fw-extrabold text-dark mb-0 lh-1"><?= number_format($pdfCount) ?></h4>
+                    <span class="text-muted fw-semibold" style="font-size:0.75rem;">E-Book PDF</span>
                 </div>
             </div>
         </div>
 
         <div class="col-6 col-md-3">
-            <div class="lib-kpi-card p-3 d-flex align-items-center gap-2.5">
-                <div class="bg-success bg-opacity-10 text-success p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
-                    <i class="bi bi-eye-fill fs-4"></i>
+            <div class="lib-kpi-card d-flex align-items-center gap-3">
+                <div class="lib-kpi-icon bg-indigo-subtle text-indigo" style="background-color: #e0e7ff; color: #4338ca;">
+                    <i class="bi bi-play-circle-fill"></i>
                 </div>
-                <div>
-                    <small class="text-muted d-block" style="font-size:0.72rem;">Total Dibaca</small>
-                    <strong class="text-dark fs-5 mb-0 fw-extrabold"><?= number_format($totalViewsCount) ?>x</strong>
+                <div class="overflow-hidden">
+                    <h4 class="fw-extrabold text-dark mb-0 lh-1"><?= number_format($totalBooksCount - $pdfCount) ?></h4>
+                    <span class="text-muted fw-semibold" style="font-size:0.75rem;">Video & Modul</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="lib-kpi-card d-flex align-items-center gap-3">
+                <div class="lib-kpi-icon bg-success-subtle text-success">
+                    <i class="bi bi-eye-fill"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <h4 class="fw-extrabold text-dark mb-0 lh-1"><?= number_format($totalViewsCount) ?>x</h4>
+                    <span class="text-muted fw-semibold" style="font-size:0.75rem;">Total Dibaca</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Search & Filters Container -->
+    <!-- 🎛️ SEARCH & FILTERS CONTAINER -->
     <div class="card border-0 rounded-4 shadow-sm p-3.5 mb-4 bg-white">
         <div class="row g-2.5 align-items-center mb-3">
             <div class="col-12 col-md-4">
@@ -228,11 +259,11 @@ if (!empty($books)) {
                     <span class="input-group-text bg-light border-end-0 rounded-start-pill ps-3 text-muted">
                         <i class="bi bi-search"></i>
                     </span>
-                    <input type="text" id="searchInput" class="form-control bg-light border-start-0 rounded-end-pill ps-0" placeholder="Cari judul e-book, penulis..." style="font-size:0.85rem;">
+                    <input type="text" id="searchInput" class="form-control bg-light border-start-0 rounded-end-pill ps-0 text-dark" placeholder="Cari judul e-book, penulis..." style="font-size:0.85rem;">
                 </div>
             </div>
             <div class="col-6 col-md-3">
-                <select id="filterKategori" class="form-select rounded-pill fw-bold text-dark" style="font-size:0.83rem;">
+                <select id="filterKategori" class="form-select rounded-pill text-dark fw-medium" style="font-size:0.83rem;">
                     <option value="">Semua Kategori</option>
                     <option value="Kejuruan">Kejuruan / Produktif</option>
                     <option value="Matematika">Matematika</option>
@@ -244,7 +275,7 @@ if (!empty($books)) {
                 </select>
             </div>
             <div class="col-6 col-md-3">
-                <select id="filterTipe" class="form-select rounded-pill fw-bold text-dark" style="font-size:0.83rem;">
+                <select id="filterTipe" class="form-select rounded-pill text-dark fw-medium" style="font-size:0.83rem;">
                     <option value="">Semua Format</option>
                     <option value="pdf">PDF E-Book</option>
                     <option value="docx">Word (DOCX)</option>
@@ -254,30 +285,30 @@ if (!empty($books)) {
             </div>
             <div class="col-12 col-md-2">
                 <button type="button" class="btn btn-outline-danger fw-bold rounded-pill w-100 py-2 d-flex align-items-center justify-content-center gap-1.5 shadow-xs" onclick="resetFilter()" title="Reset Semua Filter" style="font-size:0.82rem;">
-                    <i class="bi bi-arrow-counterclockwise fs-6"></i> Reset Filter
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset
                 </button>
             </div>
         </div>
 
         <!-- Quick Category Pills Horizontal Strip -->
-        <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" style="-webkit-overflow-scrolling: touch;">
+        <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" style="scrollbar-width: thin;">
             <button type="button" class="cat-pill-btn active" onclick="selectCategoryPill('', this)">Semua Koleksi</button>
-            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Kejuruan', this)"><i class="bi bi-laptop me-1"></i>Kejuruan / Produktif</button>
-            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Matematika', this)"><i class="bi bi-calculator me-1"></i>Matematika</button>
-            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('IPA', this)"><i class="bi bi-virus me-1"></i>IPA &amp; Sains</button>
-            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('IPS', this)"><i class="bi bi-globe me-1"></i>IPS &amp; Sejarah</button>
-            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Bahasa', this)"><i class="bi bi-translate me-1"></i>Bahasa</button>
-            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Modul', this)"><i class="bi bi-journal-check me-1"></i>Modul Guru</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Kejuruan', this)"><i class="bi bi-laptop"></i>Kejuruan / Produktif</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Matematika', this)"><i class="bi bi-calculator"></i>Matematika</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('IPA', this)"><i class="bi bi-virus"></i>IPA &amp; Sains</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('IPS', this)"><i class="bi bi-globe"></i>IPS &amp; Sejarah</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Bahasa', this)"><i class="bi bi-translate"></i>Bahasa</button>
+            <button type="button" class="cat-pill-btn" onclick="selectCategoryPill('Modul', this)"><i class="bi bi-journal-check"></i>Modul Guru</button>
         </div>
     </div>
 
-    <!-- Catalog Collection Grid -->
+    <!-- 📚 CATALOG COLLECTION GRID (RESPONSIVE 3-4 COLUMNS) -->
     <div class="row g-3" id="bookGrid">
         <?php if (empty($books)): ?>
             <div class="col-12">
                 <div class="card border-0 rounded-4 shadow-sm p-5 text-center text-muted bg-white">
-                    <div class="bg-slate-100 text-slate-400 rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px; background-color: #f1f5f9;">
-                        <i class="bi bi-bookshelf fs-1 text-secondary"></i>
+                    <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px;">
+                        <i class="bi bi-journal-x fs-1"></i>
                     </div>
                     <h6 class="fw-bold text-dark mb-1">Perpustakaan Masih Kosong</h6>
                     <p class="small text-muted mb-0">Belum ada koleksi yang diunggah. Guru dan Admin dapat menambahkan e-book dan modul pembelajaran.</p>
@@ -285,16 +316,16 @@ if (!empty($books)) {
             </div>
         <?php else: ?>
             <?php foreach ($books as $book): ?>
-            <div class="col-6 col-md-4 col-lg-3 book-item"
+            <div class="col-12 col-sm-6 col-lg-4 col-xl-3 book-item"
                  data-kategori="<?= htmlspecialchars($book['kategori']) ?>"
                  data-tipe="<?= htmlspecialchars($book['file_type'] ?? 'pdf') ?>"
                  data-judul="<?= strtolower(htmlspecialchars($book['judul'])) ?>">
-                <div class="book-card-item h-100 d-flex flex-column justify-content-between">
+                <div class="book-card-item">
                     <div>
-                        <!-- Cover Header Graphic -->
+                        <!-- 3D Cover Header Graphic -->
                         <div class="position-relative">
                             <?php
-                            $coverColors = ['#0d6efd','#10b981','#ef4444','#f59e0b','#8b5cf6','#06b6d4'];
+                            $coverColors = ['#0d6efd','#10b981','#e11d48','#f59e0b','#8b5cf6','#06b6d4','#1e293b'];
                             $color = $coverColors[crc32($book['judul']) % count($coverColors)];
                             $fileExt = strtolower($book['file_type'] ?? 'pdf');
                             $tipeIcon = match($fileExt) {
@@ -309,45 +340,56 @@ if (!empty($books)) {
                                  style="background: linear-gradient(135deg, <?= $color ?> 0%, <?= $color ?>cc 100%);">
                                 <div class="book-ribbon-spine"></div>
                                 <div class="position-relative z-1">
-                                    <i class="bi <?= $tipeIcon ?> fs-1 mb-1 d-block shadow-xs"></i>
-                                    <div class="fw-bold text-truncate px-2" style="font-size:0.78rem; max-width: 150px; margin: 0 auto; opacity: 0.95;"><?= htmlspecialchars($book['judul']) ?></div>
+                                    <i class="bi <?= $tipeIcon ?> fs-1 mb-1 d-block text-white opacity-90 shadow-xs"></i>
+                                    <div class="fw-bold text-truncate px-2 text-white" style="font-size:0.78rem; max-width: 170px; margin: 0 auto;"><?= htmlspecialchars($book['judul']) ?></div>
                                 </div>
                             </div>
                             <div class="position-absolute top-0 end-0 m-2">
-                                <span class="badge bg-dark bg-opacity-75 rounded-pill px-2.5 py-1" style="font-size:0.65rem;"><?= strtoupper($fileExt) ?></span>
+                                <span class="badge bg-dark bg-opacity-75 rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.65rem; backdrop-filter: blur(4px);"><?= strtoupper($fileExt) ?></span>
                             </div>
                         </div>
 
                         <!-- Book Content Info -->
                         <div class="p-3">
-                            <h6 class="fw-bold text-dark mb-1.5 book-title-clamp" title="<?= htmlspecialchars($book['judul']) ?>">
+                            <h6 class="fw-bold text-dark mb-1.5 text-clamp-2" style="font-size: 0.9rem; line-height: 1.35; min-height: 2.4em;" title="<?= htmlspecialchars($book['judul']) ?>">
                                 <?= htmlspecialchars($book['judul']) ?>
                             </h6>
-                            <div class="mb-2" style="font-size:0.72rem;">
-                                <span class="text-muted"><i class="bi bi-person-fill text-primary me-1"></i><?= htmlspecialchars($book['penulis'] ?: 'Tim Guru') ?></span>
+                            <div class="mb-2 text-muted" style="font-size:0.75rem;">
+                                <span class="text-truncate d-block"><i class="bi bi-person-circle text-primary me-1"></i><?= htmlspecialchars($book['penulis'] ?: 'Tim Guru') ?></span>
                             </div>
 
                             <div class="d-flex gap-1 flex-wrap mb-2">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size:.65rem;"><?= htmlspecialchars($book['kategori'] ?? 'Umum') ?></span>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size:.68rem;"><?= htmlspecialchars($book['kategori'] ?? 'Umum') ?></span>
                                 <?php if (!empty($book['kelas_target'])): ?>
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size:.65rem;"><?= htmlspecialchars($book['kelas_target']) ?></span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size:.68rem;"><?= htmlspecialchars($book['kelas_target']) ?></span>
                                 <?php endif; ?>
                             </div>
                         </div>
                     </div>
 
                     <!-- Footer Action Strip -->
-                    <div class="p-3 pt-0">
-                        <div class="d-flex align-items-center justify-content-between pt-2 border-top">
-                            <div class="text-muted" style="font-size:.7rem;">
+                    <div class="p-3 pt-0 mt-auto">
+                        <div class="d-flex align-items-center justify-content-between pt-2.5 border-top">
+                            <div class="text-muted" style="font-size:.72rem;">
                                 <i class="bi bi-eye text-primary me-0.5"></i><?= number_format($book['view_count'] ?? 0) ?>
                                 &nbsp;&bull;&nbsp;
                                 <i class="bi bi-download text-success me-0.5"></i><?= number_format($book['download_count'] ?? 0) ?>
                             </div>
-                            <a href="<?= BASE_URL ?>index.php?url=library/view&id=<?= $book['id'] ?>"
-                               class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold text-white shadow-xs" style="font-size:.75rem; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
-                                <i class="bi bi-box-arrow-up-right me-1"></i> Buka
-                            </a>
+                            <div class="d-flex align-items-center gap-1">
+                                <?php if ($isAdmin): ?>
+                                    <a href="<?= BASE_URL ?>index.php?url=library/delete&id=<?= $book['id'] ?>&csrf_token=<?= Security::generateCsrfToken() ?>" 
+                                       class="btn btn-xs btn-outline-danger rounded-circle p-1 d-inline-flex align-items-center justify-content-center" 
+                                       style="width: 28px; height: 28px;"
+                                       onclick="return confirm('Apakah Anda yakin ingin menghapus koleksi e-book ini?')"
+                                       title="Hapus Koleksi">
+                                        <i class="bi bi-trash-fill" style="font-size: 0.72rem;"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <a href="<?= BASE_URL ?>index.php?url=library/view&id=<?= $book['id'] ?>"
+                                   class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold text-white shadow-xs hover-scale" style="font-size:.75rem; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i> Buka
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
