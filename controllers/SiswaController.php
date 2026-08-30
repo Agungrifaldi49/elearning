@@ -351,12 +351,13 @@ class SiswaController {
 
             // Strict Enrollment & Class Isolation Check before taking quiz
             $db = Database::getConnection();
-            $stmtQ = $db->prepare("SELECT mapel_id, guru_id, kelas_id FROM quiz WHERE id = ?");
+            $stmtQ = $db->prepare("SELECT mapel_id, guru_id, kelas_id, kelas_ids FROM quiz WHERE id = ?");
             $stmtQ->execute([$quiz_id]);
             $qInfo = $stmtQ->fetch();
 
             if ($qInfo) {
-                if ((int)$qInfo['kelas_id'] !== (int)$kelasId) {
+                $targetIds = !empty($qInfo['kelas_ids']) ? array_map('intval', explode(',', $qInfo['kelas_ids'])) : [(int)$qInfo['kelas_id']];
+                if (!in_array((int)$kelasId, $targetIds) && (int)$qInfo['kelas_id'] !== 0) {
                     FlashHelper::setError('Akses Terkunci! Kuis ini diperuntukkan untuk kelas/jurusan lain.');
                     header('Location: ' . BASE_URL . 'index.php?url=siswa/quiz');
                     exit();
@@ -411,28 +412,22 @@ class SiswaController {
             exit();
         }
 
-        $allQuiz = $examModel->getQuizList($kelasId);
-        $cbtList = $examModel->getUjianCBT($kelasId);
-        $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
-
         $db = Database::getConnection();
-        $stmtH = $db->prepare("
+        $stmtCompleted = $db->prepare("
             SELECT quiz_id, total_nilai, nilai_tertinggi, 
-            GREATEST(
-                COALESCE(attempt_count, 0),
-                (SELECT COUNT(*) FROM hasil_quiz_history hqh WHERE hqh.siswa_id = hasil_quiz.siswa_id AND hqh.quiz_id = hasil_quiz.quiz_id)
-            ) AS attempt_count, 
-            status_lulus 
+                   (SELECT hqh.status_lulus FROM hasil_quiz_history hqh WHERE hqh.siswa_id = hasil_quiz.siswa_id AND hqh.quiz_id = hasil_quiz.quiz_id ORDER BY hqh.id DESC LIMIT 1) as status_lulus,
+                   (SELECT COUNT(*) FROM hasil_quiz_history hqh WHERE hqh.siswa_id = hasil_quiz.siswa_id AND hqh.quiz_id = hasil_quiz.quiz_id) as total_attempts
             FROM hasil_quiz 
             WHERE siswa_id = ?
         ");
-        $stmtH->execute([$siswaId]);
-        $completedResults = $stmtH->fetchAll();
+        $stmtCompleted->execute([$siswaId]);
+        $completedRows = $stmtCompleted->fetchAll();
         $completedMap = [];
-        foreach ($completedResults as $cr) {
+        foreach ($completedRows as $cr) {
             $completedMap[$cr['quiz_id']] = $cr;
         }
 
+        $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
         $enrolledMapels = [];
         foreach ($enrolledList as $em) {
             $enrolledMapels[$em['mapel_id'] . '_' . $em['guru_id']] = true;
@@ -440,6 +435,7 @@ class SiswaController {
         }
 
         $quizList = array_values(array_filter($allQuiz, function($q) use ($enrolledMapels) {
+            if (empty($enrolledMapels)) return true;
             return isset($enrolledMapels[$q['mapel_id'] . '_' . $q['guru_id']]) || isset($enrolledMapels[$q['mapel_id']]);
         }));
 

@@ -433,10 +433,24 @@ class GuruController {
                 $kategori = $_POST['kategori'] ?? 'kuis';
                 $accessKey = !empty($_POST['access_key']) ? trim(strtoupper($_POST['access_key'])) : null;
 
+                $kelas_ids = [];
+                if (isset($_POST['kelas_ids']) && is_array($_POST['kelas_ids'])) {
+                    $kelas_ids = array_map('intval', $_POST['kelas_ids']);
+                } elseif (isset($_POST['kelas_id'])) {
+                    $kelas_ids = [(int)$_POST['kelas_id']];
+                }
+                $kelas_ids = array_values(array_filter($kelas_ids, function($kId) { return $kId > 0; }));
+
+                if (empty($kelas_ids)) {
+                    FlashHelper::setError('Pilih minimal satu kelas target.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
+
                 $quizId = $examModel->createQuiz(
                     $guruId,
                     (int)$_POST['mapel_id'],
-                    (int)$_POST['kelas_id'],
+                    $kelas_ids,
                     Security::sanitize($_POST['judul']),
                     Security::sanitize($_POST['deskripsi']),
                     $durasi,
@@ -591,10 +605,24 @@ class GuruController {
                 $kategori = $_POST['kategori'] ?? 'kuis';
                 $accessKey = !empty($_POST['access_key']) ? trim(strtoupper($_POST['access_key'])) : null;
 
+                $kelas_ids = [];
+                if (isset($_POST['kelas_ids']) && is_array($_POST['kelas_ids'])) {
+                    $kelas_ids = array_map('intval', $_POST['kelas_ids']);
+                } elseif (isset($_POST['kelas_id'])) {
+                    $kelas_ids = [(int)$_POST['kelas_id']];
+                }
+                $kelas_ids = array_values(array_filter($kelas_ids, function($kId) { return $kId > 0; }));
+
+                if (empty($kelas_ids)) {
+                    FlashHelper::setError('Pilih minimal satu kelas target.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
+
                 $quizId = $examModel->createQuiz(
                     $guruId,
                     (int)$_POST['mapel_id'],
-                    (int)$_POST['kelas_id'],
+                    $kelas_ids,
                     Security::sanitize($_POST['judul']),
                     Security::sanitize($_POST['deskripsi']),
                     $durasi,
@@ -718,10 +746,25 @@ class GuruController {
                 $maxAttempts = isset($_POST['max_attempts']) ? (int)$_POST['max_attempts'] : 1;
                 $kategori = $_POST['kategori'] ?? 'kuis';
                 $accessKey = !empty($_POST['access_key']) ? trim(strtoupper($_POST['access_key'])) : null;
+
+                $kelas_ids = [];
+                if (isset($_POST['kelas_ids']) && is_array($_POST['kelas_ids'])) {
+                    $kelas_ids = array_map('intval', $_POST['kelas_ids']);
+                } elseif (isset($_POST['kelas_id'])) {
+                    $kelas_ids = [(int)$_POST['kelas_id']];
+                }
+                $kelas_ids = array_values(array_filter($kelas_ids, function($kId) { return $kId > 0; }));
+
+                if (empty($kelas_ids)) {
+                    FlashHelper::setError('Pilih minimal satu kelas target.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
+
                 $examModel->updateQuiz(
                     $id,
                     (int)$_POST['mapel_id'],
-                    (int)$_POST['kelas_id'],
+                    $kelas_ids,
                     Security::sanitize($_POST['judul']),
                     Security::sanitize($_POST['deskripsi']),
                     (int)$_POST['durasi_menit'],

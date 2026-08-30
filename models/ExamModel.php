@@ -10,6 +10,7 @@ class ExamModel extends BaseModel {
         parent::__construct();
         $this->ensureGambarColumn();
         $this->ensureDeadlineAndSusulanTables();
+        $this->ensureQuizKelasIdsColumn();
         $this->recalibrateAllQuizScores();
     }
 
@@ -19,6 +20,19 @@ class ExamModel extends BaseModel {
             if (empty($cols)) {
                 $this->db->exec("ALTER TABLE soal ADD COLUMN gambar VARCHAR(255) NULL");
             }
+        } catch (Exception $e) {}
+    }
+
+    private function ensureQuizKelasIdsColumn() {
+        try {
+            $cols = $this->db->query("SHOW COLUMNS FROM quiz LIKE 'kelas_ids'")->fetchAll();
+            if (empty($cols)) {
+                $this->db->exec("ALTER TABLE quiz ADD COLUMN kelas_ids VARCHAR(255) NULL AFTER kelas_id");
+            }
+        } catch (Exception $e) {}
+
+        try {
+            $this->db->exec("UPDATE quiz SET kelas_ids = CAST(kelas_id AS CHAR) WHERE kelas_ids IS NULL OR TRIM(kelas_ids) = ''");
         } catch (Exception $e) {}
     }
 
@@ -92,7 +106,7 @@ class ExamModel extends BaseModel {
     // --- QUIZ ---
     public function getQuizList($kelas_id = null, $guru_id = null) {
         $sql = "
-            SELECT q.*, map.nama_mapel, k.nama_kelas, g.nama_lengkap as nama_guru
+            SELECT q.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, g.nama_lengkap as nama_guru
             FROM quiz q
             LEFT JOIN mata_pelajaran map ON q.mapel_id = map.id
             LEFT JOIN kelas k ON q.kelas_id = k.id
@@ -100,7 +114,8 @@ class ExamModel extends BaseModel {
             WHERE 1=1
         ";
         if ($kelas_id) {
-            $sql .= " AND q.kelas_id = " . (int)$kelas_id;
+            $kid = (int)$kelas_id;
+            $sql .= " AND (FIND_IN_SET({$kid}, q.kelas_ids) OR q.kelas_id = {$kid})";
         }
         if ($guru_id) {
             $sql .= " AND q.guru_id = " . (int)$guru_id;
@@ -122,21 +137,33 @@ class ExamModel extends BaseModel {
         return $stmt->fetch();
     }
 
-    public function createQuiz($guru_id, $mapel_id, $kelas_id, $judul, $deskripsi, $durasi, $jumlah_soal, $random_soal, $random_jawaban, $deadline = null, $max_attempts = 1, $kategori = 'kuis', $access_key = null) {
+    public function createQuiz($guru_id, $mapel_id, $kelas_ids, $judul, $deskripsi, $durasi, $jumlah_soal, $random_soal, $random_jawaban, $deadline = null, $max_attempts = 1, $kategori = 'kuis', $access_key = null) {
+        $kelasIdArray = is_array($kelas_ids) ? array_map('intval', $kelas_ids) : [(int)$kelas_ids];
+        $kelasIdArray = array_values(array_filter($kelasIdArray, function($id) { return $id > 0; }));
+        
+        $primaryKelasId = $kelasIdArray[0] ?? 0;
+        $kelasIdsStr = !empty($kelasIdArray) ? implode(',', $kelasIdArray) : (string)$primaryKelasId;
+
         $stmt = $this->db->prepare("
-            INSERT INTO quiz (guru_id, mapel_id, kelas_id, judul, deskripsi, durasi_menit, jumlah_soal, random_soal, random_jawaban, deadline, max_attempts, kategori, access_key)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO quiz (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, durasi_menit, jumlah_soal, random_soal, random_jawaban, deadline, max_attempts, kategori, access_key)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        $stmt->execute([$guru_id, $mapel_id, $kelas_id, $judul, $deskripsi, $durasi, $jumlah_soal, $random_soal, $random_jawaban, $deadline ?: null, (int)$max_attempts, $kategori, $access_key ?: null]);
+        $stmt->execute([$guru_id, $mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $durasi, $jumlah_soal, $random_soal, $random_jawaban, $deadline ?: null, (int)$max_attempts, $kategori, $access_key ?: null]);
         return $this->db->lastInsertId();
     }
 
-    public function updateQuiz($id, $mapel_id, $kelas_id, $judul, $deskripsi, $durasi, $random_soal, $deadline = null, $max_attempts = 1, $kategori = 'kuis', $access_key = null) {
+    public function updateQuiz($id, $mapel_id, $kelas_ids, $judul, $deskripsi, $durasi, $random_soal, $deadline = null, $max_attempts = 1, $kategori = 'kuis', $access_key = null) {
+        $kelasIdArray = is_array($kelas_ids) ? array_map('intval', $kelas_ids) : [(int)$kelas_ids];
+        $kelasIdArray = array_values(array_filter($kelasIdArray, function($kId) { return $kId > 0; }));
+        
+        $primaryKelasId = $kelasIdArray[0] ?? 0;
+        $kelasIdsStr = !empty($kelasIdArray) ? implode(',', $kelasIdArray) : (string)$primaryKelasId;
+
         $stmt = $this->db->prepare("
-            UPDATE quiz SET mapel_id = ?, kelas_id = ?, judul = ?, deskripsi = ?, durasi_menit = ?, random_soal = ?, deadline = ?, max_attempts = ?, kategori = ?, access_key = ?
+            UPDATE quiz SET mapel_id = ?, kelas_id = ?, kelas_ids = ?, judul = ?, deskripsi = ?, durasi_menit = ?, random_soal = ?, deadline = ?, max_attempts = ?, kategori = ?, access_key = ?
             WHERE id = ?
         ");
-        return $stmt->execute([$mapel_id, $kelas_id, $judul, $deskripsi, $durasi, $random_soal, $deadline ?: null, (int)$max_attempts, $kategori, $access_key ?: null, $id]);
+        return $stmt->execute([$mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $durasi, $random_soal, $deadline ?: null, (int)$max_attempts, $kategori, $access_key ?: null, $id]);
     }
 
     public function verifyAccessKey($quizId, $inputKey) {

@@ -356,7 +356,12 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($quizList as $i => $q): 
+                                    <?php 
+                                    $kelasListMap = [];
+                                    foreach ($kelasList as $k) {
+                                        $kelasListMap[$k['id']] = $k['nama_kelas'];
+                                    }
+                                    foreach ($quizList as $i => $q): 
                                         $examModel = new ExamModel();
                                         $soalList = $examModel->getSoalByQuiz($q['id']);
                                     ?>
@@ -383,7 +388,15 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                                 <small class="text-muted d-block"><?= htmlspecialchars($q['deskripsi'] ?? 'Tanpa deskripsi') ?></small>
                                             </td>
                                             <td><span class="badge-mapel-tag"><i class="bi bi-journal-bookmark me-1"></i><?= htmlspecialchars($q['nama_mapel']) ?></span></td>
-                                            <td><span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3 py-1.5 fw-bold"><?= htmlspecialchars($q['nama_kelas']) ?></span></td>
+                                            <td>
+                                                <?php 
+                                                $targetIds = !empty($q['kelas_ids']) ? array_map('intval', explode(',', $q['kelas_ids'])) : [(int)$q['kelas_id']];
+                                                foreach ($targetIds as $tid):
+                                                    $kNama = $kelasListMap[$tid] ?? $q['nama_kelas'];
+                                                ?>
+                                                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2.5 py-1 fw-bold me-1 mb-1"><?= htmlspecialchars($kNama) ?></span>
+                                                <?php endforeach; ?>
+                                            </td>
                                             <td><span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1.5 fw-bold"><i class="bi bi-clock me-1"></i><?= $q['durasi_menit'] ?> Menit</span></td>
                                             <td>
                                                 <?php if (!empty($q['deadline'])): 
@@ -1134,13 +1147,28 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Kelas Target <span class="text-danger">*</span></label>
-                            <select name="kelas_id" class="form-select" required>
-                                <?php foreach ($kelasList as $k): ?>
-                                    <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold mb-0">Kelas Target <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none small fw-bold text-primary" id="selectAllKelasQuizExcel">
+                                    <i class="bi bi-check-all me-1"></i> Pilih Semua Kelas
+                                </button>
+                            </div>
+                            <div class="p-3 bg-light rounded-3 border" style="max-height: 150px; overflow-y: auto;">
+                                <div class="row g-2">
+                                    <?php foreach ($kelasList as $k): ?>
+                                        <div class="col-6 col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input kelas-checkbox-quiz-excel" type="checkbox" name="kelas_ids[]" value="<?= $k['id'] ?>" id="add_quiz_excel_k_<?= $k['id'] ?>">
+                                                <label class="form-check-label small fw-medium text-dark cursor-pointer" for="add_quiz_excel_k_<?= $k['id'] ?>">
+                                                    <?= htmlspecialchars($k['nama_kelas']) ?>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size:0.72rem;">Bisa memilih lebih dari 1 kelas sekaligus.</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Durasi Ujian (Menit) <span class="text-danger">*</span></label>
@@ -1250,13 +1278,28 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Kelas Target <span class="text-danger">*</span></label>
-                            <select name="kelas_id" class="form-select" required>
-                                <?php foreach ($kelasList as $k): ?>
-                                    <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold mb-0">Kelas Target <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none small fw-bold text-primary" id="selectAllKelasQuizManual">
+                                    <i class="bi bi-check-all me-1"></i> Pilih Semua Kelas
+                                </button>
+                            </div>
+                            <div class="p-3 bg-light rounded-3 border" style="max-height: 150px; overflow-y: auto;">
+                                <div class="row g-2">
+                                    <?php foreach ($kelasList as $k): ?>
+                                        <div class="col-6 col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input kelas-checkbox-quiz-manual" type="checkbox" name="kelas_ids[]" value="<?= $k['id'] ?>" id="add_quiz_manual_k_<?= $k['id'] ?>">
+                                                <label class="form-check-label small fw-medium text-dark cursor-pointer" for="add_quiz_manual_k_<?= $k['id'] ?>">
+                                                    <?= htmlspecialchars($k['nama_kelas']) ?>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size:0.72rem;">Bisa memilih lebih dari 1 kelas sekaligus.</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Durasi Ujian (Menit) <span class="text-danger">*</span></label>
@@ -1795,14 +1838,33 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Kelas Target <span class="text-danger">*</span></label>
-                                <select name="kelas_id" class="form-select" required>
-                                    <?php foreach ($kelasList as $k): ?>
-                                        <option value="<?= $k['id'] ?>" <?= $q['kelas_id'] == $k['id'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold mb-0">Kelas Target <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none small fw-bold text-primary select-all-quiz-edit" data-target="edit_quiz_k_<?= $q['id'] ?>">
+                                    <i class="bi bi-check-all me-1"></i> Pilih Semua Kelas
+                                </button>
                             </div>
+                            <div class="p-3 bg-light rounded-3 border" style="max-height: 150px; overflow-y: auto;">
+                                <div class="row g-2">
+                                    <?php 
+                                    $editTargetIds = !empty($q['kelas_ids']) ? array_map('intval', explode(',', $q['kelas_ids'])) : [(int)$q['kelas_id']];
+                                    foreach ($kelasList as $k): 
+                                        $isChecked = in_array((int)$k['id'], $editTargetIds);
+                                    ?>
+                                        <div class="col-6 col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input edit_quiz_k_<?= $q['id'] ?>" type="checkbox" name="kelas_ids[]" value="<?= $k['id'] ?>" id="edit_quiz_k_<?= $q['id'] ?>_<?= $k['id'] ?>" <?= $isChecked ? 'checked' : '' ?>>
+                                                <label class="form-check-label small fw-medium text-dark cursor-pointer" for="edit_quiz_k_<?= $q['id'] ?>_<?= $k['id'] ?>">
+                                                    <?= htmlspecialchars($k['nama_kelas']) ?>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size:0.72rem;">Bisa memilih lebih dari 1 kelas sekaligus.</small>
+                        </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Durasi Ujian (Menit) <span class="text-danger">*</span></label>
                                 <input type="number" name="durasi_menit" class="form-control" value="<?= $q['durasi_menit'] ?>" required>
@@ -2431,6 +2493,55 @@ document.addEventListener('DOMContentLoaded', function() {
             const bsTab = new bootstrap.Tab(targetBtn);
             bsTab.show();
         }
+    }
+
+    const selectAllExcel = document.getElementById('selectAllKelasQuizExcel');
+    if (selectAllExcel) {
+        selectAllExcel.addEventListener('click', function() {
+            const boxes = document.querySelectorAll('.kelas-checkbox-quiz-excel');
+            const allChecked = Array.from(boxes).every(b => b.checked);
+            boxes.forEach(b => b.checked = !allChecked);
+        });
+    }
+
+    const selectAllManual = document.getElementById('selectAllKelasQuizManual');
+    if (selectAllManual) {
+        selectAllManual.addEventListener('click', function() {
+            const boxes = document.querySelectorAll('.kelas-checkbox-quiz-manual');
+            const allChecked = Array.from(boxes).every(b => b.checked);
+            boxes.forEach(b => b.checked = !allChecked);
+        });
+    }
+
+    document.querySelectorAll('.select-all-quiz-edit').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetClass = this.getAttribute('data-target');
+            const boxes = document.querySelectorAll('.' + targetClass);
+            const allChecked = Array.from(boxes).every(b => b.checked);
+            boxes.forEach(b => b.checked = !allChecked);
+        });
+    });
+
+    const addExcelForm = document.querySelector('#modalAddQuizExcel form');
+    if (addExcelForm) {
+        addExcelForm.addEventListener('submit', function(e) {
+            const checked = addExcelForm.querySelectorAll('input[name="kelas_ids[]"]:checked');
+            if (checked.length === 0) {
+                e.preventDefault();
+                alert('Pilih minimal satu kelas target.');
+            }
+        });
+    }
+
+    const addManualForm = document.querySelector('#modalAddQuizManual form');
+    if (addManualForm) {
+        addManualForm.addEventListener('submit', function(e) {
+            const checked = addManualForm.querySelectorAll('input[name="kelas_ids[]"]:checked');
+            if (checked.length === 0) {
+                e.preventDefault();
+                alert('Pilih minimal satu kelas target.');
+            }
+        });
     }
 });
 </script>
