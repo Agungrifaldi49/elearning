@@ -4,16 +4,20 @@
 
 <style>
 /* Modern Tugas Guru Portal Styling */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 .tugas-guru-page-wrapper {
-    padding-top: 28px !important;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    background-color: #f8fafc;
+    min-height: 100vh;
 }
 
 /* Glassmorphic Hero Banner */
 .tugas-guru-hero {
     background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%);
-    border-radius: 20px;
+    border-radius: 24px;
     color: #ffffff;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    box-shadow: 0 15px 35px -10px rgba(15, 23, 42, 0.2);
     position: relative;
     overflow: hidden;
 }
@@ -91,15 +95,18 @@
     border-radius: 50rem;
 }
 
-/* Responsive Table Overrides */
-@media (max-width: 767.98px) {
-    .tugas-guru-hero {
-        padding: 20px !important;
-    }
-    .tugas-nav-tabs .nav-link {
-        padding: 8px 14px;
-        font-size: 0.82rem;
-    }
+.hover-scale {
+    transition: transform 0.2s ease;
+}
+.hover-scale:hover {
+    transform: scale(1.02);
+}
+
+.text-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 </style>
 
@@ -107,8 +114,8 @@
 $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'administrator');
 ?>
 
-<main class="main-content px-3 px-md-4 tugas-guru-page-wrapper pt-4 mt-4 mt-md-5">
-    <div class="container-fluid">
+<main class="main-content px-3 px-md-4 tugas-guru-page-wrapper pt-4 mt-4 mt-md-5 pb-5">
+    <div class="container-fluid max-width-1400 pt-2">
         <?php if ($isAdminMonitoring): ?>
             <div class="alert alert-info border-0 rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left: 5px solid #0284c7 !important;">
                 <div class="bg-primary text-white p-2.5 rounded-3 shadow-xs">
@@ -116,7 +123,7 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                 </div>
                 <div>
                     <h6 class="fw-bold text-dark mb-0"><i class="bi bi-eye-fill me-1 text-primary"></i>Mode Monitoring Administrator (Pengawasan Guru)</h6>
-                    <small class="text-secondary fw-medium">Secara hak akses, Administrator hanya berwenang **mengawasi / memantau (Monitoring Only)** data penugasan & evaluasi siswa. Admin dapat melihat detail petunjuk tugas dan pengumpulan siswa tanpa membuat, mengedit, atau menghapus tugas milik Guru.</small>
+                    <small class="text-secondary fw-medium">Secara hak akses, Administrator berwenang **mengawasi (Monitoring Only)** data penugasan & evaluasi siswa. Admin dapat melihat detail petunjuk tugas dan pengumpulan siswa tanpa membuat, mengedit, atau menghapus tugas milik Guru.</small>
                 </div>
             </div>
         <?php endif; ?>
@@ -129,9 +136,9 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                         <i class="bi bi-card-checklist text-dark fs-6"></i>
                         <span>Control Center Penugasan & Evaluation</span>
                     </div>
-                    <h2 class="fw-bold mb-2 text-white" style="letter-spacing: -0.5px;">Kelola Penugasan & Rubrik Evaluation</h2>
+                    <h2 class="fw-bold mb-2 text-white" style="letter-spacing: -0.5px;">Kelola Penugasan & Rubrik Evaluasi</h2>
                     <p class="text-white text-opacity-85 small mb-0 lh-lg" style="max-width: 650px;">
-                        Buat tugas modul baru, unggah berkas petunjuk pengerjaan, atur deadline penutupan, periksa berkas kiriman siswa, serta berikan skor nilai portofolio secara terstruktur.
+                        Buat tugas modul baru, unggah berkas petunjuk pengerjaan, periksa berkas jawaban siswa secara langsung (*Live Preview*), serta berikan skor nilai rubrik portofolio secara terstruktur.
                     </p>
                 </div>
                 <?php if (!$isAdminMonitoring): ?>
@@ -255,7 +262,7 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                         </div>
                         <?php if (!$isAdminMonitoring): ?>
                             <div class="col-12 col-sm-6 col-md-4 text-sm-end">
-                                <button class="btn btn-teal text-white px-3 py-2 rounded-pill fw-bold shadow-sm small" style="background:#0d9488;" data-bs-toggle="modal" data-bs-target="#modalAddTugas">
+                                <button class="btn btn-teal text-white px-3 py-2 rounded-pill fw-bold shadow-sm small hover-scale" style="background:#0d9488;" data-bs-toggle="modal" data-bs-target="#modalAddTugas">
                                     <i class="bi bi-plus-circle me-1"></i> Buat Tugas Baru
                                 </button>
                             </div>
@@ -321,11 +328,11 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                             </td>
                                             <td class="text-center">
                                                  <div class="d-inline-flex gap-1.5 align-items-center justify-content-center">
-                                                     <button class="btn btn-sm btn-primary px-3 rounded-pill shadow-xs fw-bold" style="font-size:0.78rem;" data-bs-toggle="modal" data-bs-target="#modalGrade<?= $t['id'] ?>" title="Lihat Pengumpulan & Nilai Siswa">
+                                                     <button class="btn btn-sm btn-primary px-3 rounded-pill shadow-xs fw-bold hover-scale" style="font-size:0.78rem; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);" data-bs-toggle="modal" data-bs-target="#modalGrade<?= $t['id'] ?>" title="Lihat Pengumpulan & Nilai Siswa">
                                                          <i class="bi bi-award-fill me-1"></i> <?= $isAdminMonitoring ? 'Pengumpulan' : 'Nilai Siswa' ?> (<?= $subCount ?>)
                                                      </button>
 
-                                                     <button class="btn btn-sm btn-info text-white px-2.5 rounded-pill shadow-xs fw-bold" style="font-size:0.78rem;" data-bs-toggle="modal" data-bs-target="#modalPreviewTugas<?= $t['id'] ?>" title="Detail / Petunjuk Tugas">
+                                                     <button class="btn btn-sm btn-info text-white px-2.5 rounded-pill shadow-xs fw-bold hover-scale" style="font-size:0.78rem;" data-bs-toggle="modal" data-bs-target="#modalPreviewTugas<?= $t['id'] ?>" title="Detail / Petunjuk Tugas">
                                                          <i class="bi bi-eye-fill me-1"></i> Detail
                                                      </button>
 
@@ -367,98 +374,98 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                                          </div>
                                                      <?php endif; ?>
                                                  </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                                             </td>
+                                         </tr>
+                                     <?php endforeach; ?>
+                                 <?php endif; ?>
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+             </div>
 
-            <!-- TAB 2: IZIN SUSULAN TUGAS SISWA -->
-            <div class="tab-pane fade" id="tab-susulan-tugas" role="tabpanel">
-                <div class="table-card-custom p-4 border-top border-4 border-danger">
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                        <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-envelope-paper-heart-fill text-danger me-2"></i>Permintaan Izin Susulan Pengumpulan Tugas Siswa</h5>
-                        <span class="badge bg-danger px-3 py-1.5 rounded-pill fw-bold">Total: <?= count($tugasSusulanRequests ?? []) ?> Pengajuan</span>
-                    </div>
+             <!-- TAB 2: IZIN SUSULAN TUGAS SISWA -->
+             <div class="tab-pane fade" id="tab-susulan-tugas" role="tabpanel">
+                 <div class="table-card-custom p-4 border-top border-4 border-danger">
+                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                         <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-envelope-paper-heart-fill text-danger me-2"></i>Permintaan Izin Susulan Pengumpulan Tugas Siswa</h5>
+                         <span class="badge bg-danger px-3 py-1.5 rounded-pill fw-bold">Total: <?= count($tugasSusulanRequests ?? []) ?> Pengajuan</span>
+                     </div>
 
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Nama Siswa</th>
-                                    <th>Kelas Target</th>
-                                    <th>Judul Tugas</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th>Catatan Pengajuan</th>
-                                    <th>Status Izin</th>
-                                    <th class="text-center">Aksi Persetujuan Guru</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($tugasSusulanRequests)): ?>
-                                    <tr>
-                                        <td colspan="7" class="text-center py-5 text-muted">
-                                            <i class="bi bi-check-all fs-1 text-slate-300 d-block mb-2"></i>
-                                            Belum ada pengajuan izin susulan tugas dari siswa.
-                                        </td>
-                                    </tr>
-                                <?php else: ?>
-                                    <?php foreach ($tugasSusulanRequests as $req): ?>
-                                        <tr>
-                                            <td class="fw-bold text-dark"><?= htmlspecialchars($req['nama_siswa']) ?></td>
-                                            <td><span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3 py-1.5 fw-bold"><?= htmlspecialchars($req['nama_kelas']) ?></span></td>
-                                            <td><?= htmlspecialchars($req['judul_tugas']) ?></td>
-                                            <td><span class="badge-mapel-tag"><?= htmlspecialchars($req['nama_mapel']) ?></span></td>
-                                            <td class="small text-muted"><?= htmlspecialchars($req['catatan'] ?? 'Pengajuan Susulan Tugas') ?></td>
-                                            <td>
-                                                <?php if ($req['status'] === 'disetujui'): ?>
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold"><i class="bi bi-check-circle me-1"></i>Disetujui</span>
-                                                <?php elseif ($req['status'] === 'ditolak'): ?>
-                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1.5 fw-bold"><i class="bi bi-x-circle me-1"></i>Ditolak</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1.5 fw-bold"><i class="bi bi-hourglass-split me-1"></i>Menunggu Konfirmasi</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="d-inline-flex gap-1.5">
-                                                    <?php if ($req['status'] !== 'disetujui'): ?>
-                                                        <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" class="d-inline">
-                                                            <?= Security::csrfField() ?>
-                                                            <input type="hidden" name="action" value="approve_tugas_susulan">
-                                                            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
-                                                            <button type="submit" class="btn btn-sm btn-success px-3 rounded-pill fw-bold" style="font-size:0.75rem;">
-                                                                <i class="bi bi-check-circle me-1"></i> Izinkan
-                                                            </button>
-                                                        </form>
-                                                    <?php endif; ?>
+                     <div class="table-responsive">
+                         <table class="table table-hover align-middle">
+                             <thead class="table-light">
+                                 <tr>
+                                     <th>Nama Siswa</th>
+                                     <th>Kelas Target</th>
+                                     <th>Judul Tugas</th>
+                                     <th>Mata Pelajaran</th>
+                                     <th>Catatan Pengajuan</th>
+                                     <th>Status Izin</th>
+                                     <th class="text-center">Aksi Persetujuan Guru</th>
+                                 </tr>
+                             </thead>
+                             <tbody>
+                                 <?php if (empty($tugasSusulanRequests)): ?>
+                                     <tr>
+                                         <td colspan="7" class="text-center py-5 text-muted">
+                                             <i class="bi bi-check-all fs-1 text-slate-300 d-block mb-2"></i>
+                                             Belum ada pengajuan izin susulan tugas dari siswa.
+                                         </td>
+                                     </tr>
+                                 <?php else: ?>
+                                     <?php foreach ($tugasSusulanRequests as $req): ?>
+                                         <tr>
+                                             <td class="fw-bold text-dark"><?= htmlspecialchars($req['nama_siswa']) ?></td>
+                                             <td><span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3 py-1.5 fw-bold"><?= htmlspecialchars($req['nama_kelas']) ?></span></td>
+                                             <td><?= htmlspecialchars($req['judul_tugas']) ?></td>
+                                             <td><span class="badge-mapel-tag"><?= htmlspecialchars($req['nama_mapel']) ?></span></td>
+                                             <td class="small text-muted"><?= htmlspecialchars($req['catatan'] ?? 'Pengajuan Susulan Tugas') ?></td>
+                                             <td>
+                                                 <?php if ($req['status'] === 'disetujui'): ?>
+                                                     <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold"><i class="bi bi-check-circle me-1"></i>Disetujui</span>
+                                                 <?php elseif ($req['status'] === 'ditolak'): ?>
+                                                     <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1.5 fw-bold"><i class="bi bi-x-circle me-1"></i>Ditolak</span>
+                                                 <?php else: ?>
+                                                     <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1.5 fw-bold"><i class="bi bi-hourglass-split me-1"></i>Menunggu Konfirmasi</span>
+                                                 <?php endif; ?>
+                                             </td>
+                                             <td class="text-center">
+                                                 <div class="d-inline-flex gap-1.5">
+                                                     <?php if ($req['status'] !== 'disetujui'): ?>
+                                                         <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" class="d-inline">
+                                                             <?= Security::csrfField() ?>
+                                                             <input type="hidden" name="action" value="approve_tugas_susulan">
+                                                             <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
+                                                             <button type="submit" class="btn btn-sm btn-success px-3 rounded-pill fw-bold" style="font-size:0.75rem;">
+                                                                 <i class="bi bi-check-circle me-1"></i> Izinkan
+                                                             </button>
+                                                         </form>
+                                                     <?php endif; ?>
 
-                                                    <?php if ($req['status'] !== 'ditolak'): ?>
-                                                        <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" class="d-inline">
-                                                            <?= Security::csrfField() ?>
-                                                            <input type="hidden" name="action" value="reject_tugas_susulan">
-                                                            <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger px-3 rounded-pill fw-bold" style="font-size:0.75rem;">
-                                                                <i class="bi bi-x-circle me-1"></i> Tolak
-                                                            </button>
-                                                        </form>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                                                     <?php if ($req['status'] !== 'ditolak'): ?>
+                                                         <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" class="d-inline">
+                                                             <?= Security::csrfField() ?>
+                                                             <input type="hidden" name="action" value="reject_tugas_susulan">
+                                                             <input type="hidden" name="request_id" value="<?= $req['id'] ?>">
+                                                             <button type="submit" class="btn btn-sm btn-outline-danger px-3 rounded-pill fw-bold" style="font-size:0.75rem;">
+                                                                 <i class="bi bi-x-circle me-1"></i> Tolak
+                                                             </button>
+                                                         </form>
+                                                     <?php endif; ?>
+                                                 </div>
+                                             </td>
+                                         </tr>
+                                     <?php endforeach; ?>
+                                 <?php endif; ?>
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+             </div>
 
-        </div>
-    </div>
+         </div>
+     </div>
 </main>
 
 <!-- ════════════════════════════════════════════════════════════════ -->
@@ -539,7 +546,7 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                 </div>
                 <div class="modal-footer border-0 pt-0 p-4 justify-content-between">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-teal text-white px-4 rounded-pill fw-bold shadow-sm" style="background:#0d9488;">
+                    <button type="submit" class="btn btn-teal text-white px-4 rounded-pill fw-bold shadow-sm hover-scale" style="background:#0d9488;">
                         <i class="bi bi-save-fill me-1"></i> Simpan Tugas
                     </button>
                 </div>
@@ -598,9 +605,10 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                     <small class="text-muted"><?= htmlspecialchars($t['file_path']) ?></small>
                                 </div>
                             </div>
-                            <a href="<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['file_path']) ?>" class="btn btn-sm btn-outline-primary fw-bold rounded-pill" download>
-                                <i class="bi bi-download me-1"></i> Unduh Lampiran
-                            </a>
+                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold"
+                                    onclick="previewSubmissionFile('<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['file_path']) ?>', '<?= htmlspecialchars($t['file_path']) ?>', 'Guru (Bahan Soal)')">
+                                <i class="bi bi-eye-fill me-1"></i> Pratinjau
+                            </button>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -702,65 +710,152 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
         </div>
     </div>
 
-    <!-- Modal Grade Submissions -->
+    <!-- Modal Grade Submissions (Extra Wide & Modern) -->
     <div class="modal fade" id="modalGrade<?= $t['id'] ?>" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
-                <div class="modal-header border-0 bg-dark text-white p-3.5" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <div class="bg-primary rounded-3 p-2 text-white shadow-xs">
-                            <i class="bi bi-award-fill fs-5"></i>
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 rounded-4 shadow-2xl overflow-hidden bg-white">
+                <div class="modal-header border-0 bg-dark text-white p-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-warning text-dark rounded-4 p-2.5 shadow-sm d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+                            <i class="bi bi-award-fill fs-3"></i>
                         </div>
                         <div>
-                            <h6 class="modal-title fw-bold text-white mb-0">Pengumpulan & Grading Siswa: <?= htmlspecialchars($t['judul']) ?></h6>
-                            <small class="text-info fw-medium" style="font-size:0.75rem;">Periksa hasil berkas jawaban dan berikan nilai portofolio siswa</small>
+                            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                <span class="badge bg-white text-dark px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.72rem;"><?= htmlspecialchars($t['nama_mapel']) ?></span>
+                                <span class="badge bg-warning text-dark px-2.5 py-1 rounded-pill fw-bold" style="font-size:0.72rem;"><?= count($submissions) ?> Berkas Terkumpul</span>
+                            </div>
+                            <h5 class="modal-title fw-bold text-white mb-0" style="letter-spacing:-0.3px;">Pengumpulan & Penilaian Rubrik: <?= htmlspecialchars($t['judul']) ?></h5>
                         </div>
                     </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4">
+
+                <div class="modal-body p-4 bg-light">
+                    <!-- Instruction Snippet Banner -->
+                    <div class="p-3 bg-white rounded-3 border mb-4 shadow-xs">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div>
+                                <small class="text-uppercase fw-bold text-muted d-block" style="font-size:0.68rem;">Petunjuk Pengerjaan & Rubrik Tugas:</small>
+                                <span class="text-dark small fw-medium text-clamp-2"><?= htmlspecialchars(mb_strimwidth($t['deskripsi'], 0, 180, '...')) ?></span>
+                            </div>
+                            <?php if (!empty($t['file_path'])): ?>
+                                <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-3 py-1 fw-bold"
+                                        onclick="previewSubmissionFile('<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['file_path']) ?>', 'Lampiran Soal Guru: <?= htmlspecialchars($t['judul']) ?>', 'Bahan Soal Guru')">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i> Lihat Soal Modul
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                     <?php if (empty($submissions)): ?>
-                        <div class="text-center py-5 text-muted">
-                            <i class="bi bi-inbox fs-1 d-block mb-2 text-slate-300"></i>
-                            Belum ada siswa yang mengumpulkan tugas ini.
+                        <div class="card border-0 rounded-4 shadow-sm p-5 text-center text-muted bg-white">
+                            <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px;">
+                                <i class="bi bi-inbox fs-1"></i>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-1">Belum Ada Pengumpulan Siswa</h6>
+                            <p class="small text-muted mb-0">Belum ada berkas tugas yang dikirimkan oleh siswa untuk rombel ini.</p>
                         </div>
                     <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table align-middle table-hover">
-                                <thead class="table-light">
-                                    <tr><th>Nama Siswa</th><th>Waktu Kirim</th><th>Berkas Jawaban</th><th>Skor Nilai</th><th>Input Form Grading Guru</th></tr>
+                        <div class="table-responsive rounded-4 border bg-white shadow-xs">
+                            <table class="table align-middle table-hover mb-0">
+                                <thead class="table-light border-bottom">
+                                    <tr style="font-size: 0.82rem;" class="text-uppercase text-muted fw-bold">
+                                        <th class="ps-3" style="width: 25%;">Informasi Siswa</th>
+                                        <th style="width: 15%;">Waktu Pengiriman</th>
+                                        <th style="width: 25%;">Berkas Kiriman Siswa</th>
+                                        <th style="width: 12%;">Status & Skor</th>
+                                        <th style="width: 23%;" class="pe-3">Form Grading Guru & Rubrik</th>
+                                    </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($submissions as $sub): ?>
+                                    <?php foreach ($submissions as $sub): 
+                                        $subFile = $sub['file_path'] ?? '';
+                                        $fileExt = !empty($subFile) ? strtolower(pathinfo($subFile, PATHINFO_EXTENSION)) : '';
+                                        $fileUrl = !empty($subFile) ? BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($subFile) : '';
+                                    ?>
                                         <tr>
-                                            <td>
-                                                <div class="fw-bold text-dark"><i class="bi bi-person-circle text-primary me-1"></i><?= htmlspecialchars($sub['nama_lengkap']) ?></div>
-                                                <small class="text-muted">NIS: <?= htmlspecialchars($sub['nis']) ?></small>
+                                            <td class="ps-3">
+                                                <div class="d-flex align-items-center gap-2.5">
+                                                    <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width:38px; height:38px;">
+                                                        <i class="bi bi-person-fill fs-5"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold text-dark fs-6 mb-0"><?= htmlspecialchars($sub['nama_lengkap']) ?></div>
+                                                        <small class="text-muted d-block" style="font-size:0.75rem;">NIS: <strong><?= htmlspecialchars($sub['nis']) ?></strong> &bull; Kelas: <?= htmlspecialchars($sub['nama_kelas'] ?? '-') ?></small>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td><small class="text-muted"><?= date('d/m/Y H:i', strtotime($sub['submitted_at'])) ?> WIB</small></td>
                                             <td>
-                                                <?php if ($sub['file_path']): ?>
-                                                    <a href="<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($sub['file_path']) ?>" download class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1" style="font-size:0.75rem;">
-                                                        <i class="bi bi-download me-1"></i> Unduh
-                                                    </a>
+                                                <div class="small fw-semibold text-dark"><i class="bi bi-clock-history text-primary me-1"></i><?= date('d M Y', strtotime($sub['submitted_at'])) ?></div>
+                                                <small class="text-muted" style="font-size:0.72rem;"><?= date('H:i', strtotime($sub['submitted_at'])) ?> WIB</small>
+                                            </td>
+                                            <td>
+                                                <?php if ($subFile): ?>
+                                                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                                        <!-- Preview Button (View without download) -->
+                                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs hover-scale" style="font-size:0.75rem;"
+                                                                onclick="previewSubmissionFile('<?= $fileUrl ?>', '<?= htmlspecialchars($subFile) ?>', '<?= htmlspecialchars($sub['nama_lengkap']) ?>')">
+                                                            <i class="bi bi-eye-fill me-1"></i> Lihat Berkas
+                                                        </button>
+
+                                                        <!-- Download Button -->
+                                                        <a href="<?= $fileUrl ?>" download class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.75rem;" title="Unduh File Berkas">
+                                                            <i class="bi bi-download me-1"></i> Unduh
+                                                        </a>
+
+                                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0.5" style="font-size:0.68rem;"><?= strtoupper($fileExt) ?></span>
+                                                    </div>
                                                 <?php else: ?>
-                                                    <span class="badge bg-light text-muted border">Tanpa File</span>
+                                                    <span class="badge bg-light text-muted border rounded-pill px-2.5 py-1" style="font-size:0.72rem;"><i class="bi bi-x-circle me-1"></i>Tanpa File</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <span class="badge bg-<?= ($sub['nilai'] !== null && $sub['nilai'] >= 75) ? 'success' : ($sub['nilai'] !== null ? 'danger' : 'warning text-dark') ?> fs-6 rounded-pill px-3 py-1.5">
-                                                    <?= $sub['nilai'] !== null ? $sub['nilai'] : 'Belum' ?>
-                                                </span>
+                                                <?php if ($sub['nilai'] !== null): ?>
+                                                    <?php
+                                                    $valScore = (float)$sub['nilai'];
+                                                    $scoreBadgeClass = ($valScore >= 85) ? 'bg-success text-white' : (($valScore >= 75) ? 'bg-primary text-white' : 'bg-danger text-white');
+                                                    ?>
+                                                    <span class="badge <?= $scoreBadgeClass ?> fs-6 rounded-pill px-3 py-1.5 shadow-xs fw-extrabold">
+                                                        <?= number_format($valScore, 1) ?> / 100
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning text-dark border border-warning-subtle rounded-pill px-2.5 py-1.5 fw-bold" style="font-size:0.72rem;">
+                                                        <i class="bi bi-hourglass-split me-1"></i>Belum Dinilai
+                                                    </span>
+                                                <?php endif; ?>
                                             </td>
-                                            <td>
-                                                <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" class="d-flex gap-1.5 align-items-center">
-                                                    <?= Security::csrfField() ?>
-                                                    <input type="hidden" name="action" value="grade">
-                                                    <input type="hidden" name="pengumpulan_id" value="<?= $sub['id'] ?>">
-                                                    <input type="number" name="nilai" class="form-control form-control-sm fw-bold" style="width:75px;" value="<?= $sub['nilai'] ?>" placeholder="0-100" min="0" max="100" required>
-                                                    <input type="text" name="komentar" class="form-control form-control-sm" value="<?= htmlspecialchars($sub['komentar_guru'] ?? '') ?>" placeholder="Catatan">
-                                                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-2.5">Simpan</button>
-                                                </form>
+                                            <td class="pe-3">
+                                                <?php if (!$isAdminMonitoring): ?>
+                                                    <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" class="bg-light p-2 rounded-3 border">
+                                                        <?= Security::csrfField() ?>
+                                                        <input type="hidden" name="action" value="grade">
+                                                        <input type="hidden" name="pengumpulan_id" value="<?= $sub['id'] ?>">
+
+                                                        <div class="input-group input-group-sm mb-1.5">
+                                                            <span class="input-group-text bg-white fw-bold text-primary">Skor</span>
+                                                            <input type="number" name="nilai" class="form-control fw-extrabold text-primary" value="<?= $sub['nilai'] ?>" placeholder="0-100" min="0" max="100" required style="font-size:0.9rem;">
+                                                        </div>
+
+                                                        <div class="mb-1.5">
+                                                            <input type="text" name="komentar" class="form-control form-control-sm text-dark" value="<?= htmlspecialchars($sub['komentar_guru'] ?? '') ?>" placeholder="Catatan rubrik / evaluasi...">
+                                                        </div>
+
+                                                        <!-- Preset Score Chips -->
+                                                        <div class="d-flex align-items-center justify-content-between gap-1">
+                                                            <div class="d-flex gap-1">
+                                                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('form').querySelector('input[name=\'nilai\']').value=100">100</button>
+                                                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('form').querySelector('input[name=\'nilai\']').value=90">90</button>
+                                                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('form').querySelector('input[name=\'nilai\']').value=85">85</button>
+                                                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('form').querySelector('input[name=\'nilai\']').value=75">75</button>
+                                                            </div>
+                                                            <button type="submit" class="btn btn-sm btn-success fw-bold rounded-pill px-3 py-0.5 text-nowrap" style="font-size:0.75rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                                                <i class="bi bi-check-lg me-1"></i> Simpan
+                                                            </button>
+                                                        </div>
+                                                    </form>
+                                                <?php else: ?>
+                                                    <small class="text-muted fw-semibold"><i class="bi bi-chat-quote me-1"></i><?= htmlspecialchars($sub['komentar_guru'] ?? 'Belum ada catatan rubrik') ?></small>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -769,15 +864,79 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                         </div>
                     <?php endif; ?>
                 </div>
-                <div class="modal-footer border-0 pt-0 p-4">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Tutup</button>
+
+                <div class="modal-footer border-0 pt-0 p-4 justify-content-between bg-white border-top">
+                    <span class="text-muted small"><i class="bi bi-info-circle me-1 text-primary"></i>Semua nilai yang disimpan otomatis tersinkronisasi ke E-Rapor Digital.</span>
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
     </div>
 <?php endforeach; ?>
 
+<!-- Universal Document & File Preview Modal for Teachers -->
+<div class="modal fade" id="modalSubmissionFileViewer" tabindex="-1" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 rounded-4 shadow-2xl overflow-hidden bg-white">
+            <div class="modal-header border-0 bg-dark text-white p-3.5" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary bg-gradient p-2.5 rounded-3 text-white shadow-sm">
+                        <i class="bi bi-file-earmark-text-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold text-white mb-0" id="viewerFileName">Pratinjau Berkas Jawaban Siswa</h6>
+                        <small class="text-info fw-medium" style="font-size:0.75rem;" id="viewerStudentInfo">Pengirim: Siswa</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="#" id="viewerDownloadBtn" class="btn btn-sm btn-success fw-bold rounded-pill px-3.5 py-1.5 shadow-xs" download>
+                        <i class="bi bi-download me-1.5"></i> Unduh Berkas
+                    </a>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 bg-dark d-flex align-items-center justify-content-center" id="viewerContentBody" style="min-height: 580px;">
+                <!-- Dynamic Content (PDF Iframe, Image, Video, Office Download Box) -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+function previewSubmissionFile(fileUrl, fileName, studentName) {
+    document.getElementById('viewerFileName').textContent = fileName;
+    document.getElementById('viewerStudentInfo').textContent = 'Berkas Kiriman: ' + studentName;
+    document.getElementById('viewerDownloadBtn').href = fileUrl;
+
+    const ext = fileName.split('.').pop().toLowerCase();
+    const container = document.getElementById('viewerContentBody');
+    container.innerHTML = '';
+
+    if (ext === 'pdf') {
+        container.innerHTML = `<iframe src="${fileUrl}" style="width:100%; height:660px; border:none;" allowfullscreen></iframe>`;
+    } else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+        container.innerHTML = `<div class="p-4 text-center w-100"><img src="${fileUrl}" alt="Preview" class="img-fluid rounded-4 shadow-lg" style="max-height: 600px; object-fit: contain;"></div>`;
+    } else if (['mp4', 'mkv', 'webm', 'avi'].includes(ext)) {
+        container.innerHTML = `<div class="p-4 w-100 text-center"><video src="${fileUrl}" controls class="w-100 rounded-4 shadow-lg" style="max-height: 580px;"></video></div>`;
+    } else {
+        container.innerHTML = `
+            <div class="p-5 text-center my-auto bg-white w-100" style="min-height: 580px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:80px; height:80px;">
+                    <i class="bi bi-file-earmark-arrow-down-fill fs-1"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-1">Pratinjau Dokumen Format ${ext.toUpperCase()}</h5>
+                <p class="text-muted small mb-4 mx-auto" style="max-width: 440px;">Dokumen ini berformat Microsoft Office / Berkas Terkompresi (${ext.toUpperCase()}). Silakan unduh berkas untuk membukanya di komputer atau HP Anda.</p>
+                <a href="${fileUrl}" download class="btn btn-primary fw-bold rounded-pill px-4 py-2.5 shadow-sm text-white">
+                    <i class="bi bi-download me-1.5"></i> Unduh Berkas ${ext.toUpperCase()} Sekarang
+                </a>
+            </div>
+        `;
+    }
+
+    const viewerModal = new bootstrap.Modal(document.getElementById('modalSubmissionFileViewer'));
+    viewerModal.show();
+}
+
 function filterGuruTugasTable() {
     const searchVal = document.getElementById('searchTugasInput').value.toLowerCase();
     const filterMapel = document.getElementById('filterTugasMapel').value;
