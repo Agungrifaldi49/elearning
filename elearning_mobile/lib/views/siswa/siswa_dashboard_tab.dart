@@ -58,6 +58,37 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
     final jadwalToday = dashboardData['jadwal_hari_ini'] as List? ?? [];
     final displayedJadwal = jadwalToday.isNotEmpty ? jadwalToday : jadwalList;
 
+    final siswaProf = siswaProvider.siswaProfile ?? dashboardData['siswa_profile'] as Map?;
+    final hakInfo = siswaProvider.hakAksesInfo ?? dashboardData['hak_akses_info'] as Map?;
+
+    final namaSiswa = siswaProf?['nama_lengkap'] ?? user?.fullName ?? "Siswa";
+    final kelasSiswa = siswaProf?['nama_kelas'] ?? user?.namaKelas ?? "Rombel Kelas";
+    final jurusanSiswa = siswaProf?['nama_jurusan'] ?? user?.namaJurusan ?? "SMK Muthia Harapan";
+    final nisSiswa = siswaProf?['nis']?.toString() ?? user?.nis ?? "-";
+    final nisnSiswa = siswaProf?['nisn']?.toString() ?? user?.nisn ?? "-";
+    final statusHakAkses = hakInfo?['hak_akses'] ?? siswaProf?['hak_akses'] ?? user?.hakAkses ?? "Siswa (Aktif)";
+
+    final int rawMateri = (stats['materi'] != null && stats['materi'] is num) ? (stats['materi'] as num).toInt() : 0;
+    final int rawTugas = (stats['tugas'] != null && stats['tugas'] is num) ? (stats['tugas'] as num).toInt() : 0;
+    final int rawQuiz = (stats['quiz'] != null && stats['quiz'] is num) ? (stats['quiz'] as num).toInt() : 0;
+
+    final displayMateri = (rawMateri > 0)
+        ? rawMateri.toString()
+        : (siswaProvider.materiList.isNotEmpty ? siswaProvider.materiList.length.toString() : '0');
+
+    final displayTugas = (rawTugas > 0)
+        ? rawTugas.toString()
+        : (siswaProvider.tugasList.isNotEmpty ? siswaProvider.tugasList.length.toString() : '0');
+
+    final displayQuiz = (rawQuiz > 0)
+        ? rawQuiz.toString()
+        : (siswaProvider.quizList.isNotEmpty ? siswaProvider.quizList.length.toString() : '0');
+
+    final rawPresensiLog = stats['presensi_log'] ?? certStats['presensi_log'];
+    final displayPresensiLog = (rawPresensiLog != null && rawPresensiLog.toString() != 'Belum Ada Data' && rawPresensiLog.toString().isNotEmpty)
+        ? rawPresensiLog.toString()
+        : '0%';
+
     // 11 Features List
     final allFeatures = [
       _buildFeatureGridItem(
@@ -138,7 +169,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Hero Card (Matches Web Design)
+            // Welcome Hero Card (Matches Web Design & Database Permissions)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -166,9 +197,34 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                           color: Colors.white.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
-                          'Portal Pembelajaran Siswa',
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified_user_rounded, color: Colors.white, size: 13),
+                            SizedBox(width: 4),
+                            Text(
+                              'Portal Pembelajaran Siswa',
+                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.greenAccent.shade700,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.shield_rounded, color: Colors.white, size: 13),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Hak Akses: $statusHakAkses",
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
                       ),
                       Container(
@@ -186,7 +242,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Selamat Datang, ${user?.fullName ?? "Siswa"}! 👋',
+                    'Selamat Datang, $namaSiswa! 👋',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -195,8 +251,13 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    "Kelas: ${user?.namaKelas ?? 'Rombel Kelas'}  |  Jurusan: ${user?.namaJurusan ?? 'SMK Muthia Harapan'}",
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    "Kelas: $kelasSiswa  |  Jurusan: $jurusanSiswa",
+                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    "NIS: $nisSiswa  |  NISN: $nisnSiswa",
+                    style: const TextStyle(color: Colors.white70, fontSize: 11),
                   ),
                 ],
               ),
@@ -322,7 +383,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
               children: [
                 _buildKpiCard(
                   title: 'Materi Dibaca',
-                  count: stats['materi'].toString(),
+                  count: displayMateri,
                   subtitle: 'Tersedia Rombel',
                   icon: Icons.menu_book_rounded,
                   color: Colors.blue,
@@ -334,7 +395,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                 ),
                 _buildKpiCard(
                   title: 'Tugas Aktif',
-                  count: stats['tugas'].toString(),
+                  count: displayTugas,
                   subtitle: 'Perlu Dikumpulkan',
                   icon: Icons.assignment_rounded,
                   color: Colors.orange,
@@ -346,7 +407,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                 ),
                 _buildKpiCard(
                   title: 'Kuis & CBT',
-                  count: stats['quiz'].toString(),
+                  count: displayQuiz,
                   subtitle: 'Evaluasi Sekolah',
                   icon: Icons.quiz_rounded,
                   color: Colors.purple,
@@ -358,7 +419,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                 ),
                 _buildKpiCard(
                   title: 'Presensi Log',
-                  count: (stats['presensi_log'] ?? certStats['presensi_log'] ?? '0%').toString(),
+                  count: displayPresensiLog,
                   subtitle: 'Kehadiran Real',
                   icon: Icons.event_available_rounded,
                   color: Colors.teal,

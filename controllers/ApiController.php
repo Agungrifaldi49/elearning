@@ -131,6 +131,14 @@ class ApiController {
                         $details = $stmtS->fetch() ?: null;
                     } catch (\Throwable $eS2) {}
                 }
+
+                if (!$details) {
+                    try {
+                        require_once ROOT_PATH . 'models/SiswaModel.php';
+                        $sm = new SiswaModel();
+                        $details = $sm->ensureSiswaProfile($user['id'], $user['full_name']);
+                    } catch (\Throwable $eEns) {}
+                }
             }
 
             $avFile = $user['avatar'] ?? ($details['foto'] ?? ($details['foto_profil'] ?? ($details['avatar'] ?? '')));
@@ -263,16 +271,25 @@ class ApiController {
                     if (empty($enrolledMapels)) return true;
                     return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]);
                 }));
+                if (empty($materiList) && !empty($allMateri)) {
+                    $materiList = $allMateri;
+                }
 
                 $tugasList = array_values(array_filter($allTugas, function($t) use ($enrolledMapels) {
                     if (empty($enrolledMapels)) return true;
                     return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]);
                 }));
+                if (empty($tugasList) && !empty($allTugas)) {
+                    $tugasList = $allTugas;
+                }
 
                 $quizList = array_values(array_filter($allQuiz, function($q) use ($enrolledMapels) {
                     if (empty($enrolledMapels)) return true;
                     return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]);
                 }));
+                if (empty($quizList) && !empty($allQuiz)) {
+                    $quizList = $allQuiz;
+                }
 
                 $totalMateri = count($materiList);
                 $totalTugas = count($tugasList);
@@ -354,15 +371,37 @@ class ApiController {
                     }
                 }
 
+                $presensiLogVal = $certStats['presensi_log'] ?? '0%';
+                if ($presensiLogVal === 'Belum Ada Data') {
+                    $presensiLogVal = '0%';
+                }
+
+                $hakAksesInfo = [
+                    'role' => 'Siswa',
+                    'role_id' => 3,
+                    'status_akun' => $siswa['status'] ?? 'aktif',
+                    'hak_akses' => 'Siswa (Aktif)',
+                    'is_active' => true,
+                    'nis' => $siswa['nis'] ?? '-',
+                    'nisn' => $siswa['nisn'] ?? '-',
+                    'kelas' => $siswa['nama_kelas'] ?? '-',
+                    'jurusan' => $siswa['nama_jurusan'] ?? '-',
+                ];
+
                 $this->jsonResponse(true, 'Data Dashboard Siswa Terhubung Realtime', [
                     'active_ta' => $activeTa ?: ['tahun_ajaran' => '2025/2026', 'semester' => 'Ganjil'],
-                    'siswa_profile' => $siswa,
+                    'siswa_profile' => array_merge($siswa ?: [], [
+                        'role_name' => 'Siswa',
+                        'hak_akses' => 'Siswa (Aktif)',
+                        'status' => $siswa['status'] ?? 'aktif'
+                    ]),
+                    'hak_akses_info' => $hakAksesInfo,
                     'cert_stats' => $certStats,
                     'stats' => [
                         'materi' => $totalMateri,
                         'tugas' => $totalTugas,
                         'quiz' => $totalQuiz,
-                        'presensi_log' => $certStats['presensi_log'] ?? '0%'
+                        'presensi_log' => $presensiLogVal
                     ],
                     'tugas_terdekat' => $tugasTerdekat,
                     'chart_data' => $chartData,

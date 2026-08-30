@@ -31,8 +31,13 @@ class SiswaProvider with ChangeNotifier {
   Set<int> _seenForumIds = {};
   int _unreadChatCount = 0;
 
+  Map<String, dynamic>? _siswaProfile;
+  Map<String, dynamic>? _hakAksesInfo;
+
   bool get isLoading => _isLoading;
   Map<String, dynamic>? get dashboardData => _dashboardData;
+  Map<String, dynamic>? get siswaProfile => _siswaProfile;
+  Map<String, dynamic>? get hakAksesInfo => _hakAksesInfo;
   List<JadwalModel> get jadwalList => _jadwalList;
   List<MateriModel> get materiList => _materiList;
   List<TugasModel> get tugasList => _tugasList;
@@ -230,6 +235,12 @@ class SiswaProvider with ChangeNotifier {
     final res = await ApiService.get('siswa/dashboard', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] != null) {
       _dashboardData = res['data'];
+      if (res['data']['siswa_profile'] is Map) {
+        _siswaProfile = Map<String, dynamic>.from(res['data']['siswa_profile']);
+      }
+      if (res['data']['hak_akses_info'] is Map) {
+        _hakAksesInfo = Map<String, dynamic>.from(res['data']['hak_akses_info']);
+      }
       final absToday = res['data']['absensi_today'];
       if (absToday is Map) {
         _hasClockedInToday = absToday['has_clocked_in'] == true;

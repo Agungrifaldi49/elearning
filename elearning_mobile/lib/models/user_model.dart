@@ -57,6 +57,9 @@ class UserModel {
   String get namaKelas => details?['nama_kelas']?.toString() ?? 'Kelas';
   String get namaJurusan => details?['nama_jurusan']?.toString() ?? 'Jurusan SMK';
 
+  String get status => details?['status']?.toString() ?? 'aktif';
+  String get hakAkses => isSiswa ? 'Siswa (${status.toUpperCase()})' : (isGuru ? 'Guru Pengampu' : roleName);
+
   String get subTitle {
     if (isSiswa && details != null) {
       return "$namaKelas - $namaJurusan";

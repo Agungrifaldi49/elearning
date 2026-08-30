@@ -115,7 +115,7 @@ class ExamModel extends BaseModel {
         ";
         if ($kelas_id) {
             $kid = (int)$kelas_id;
-            $sql .= " AND (FIND_IN_SET({$kid}, q.kelas_ids) OR q.kelas_id = {$kid})";
+            $sql .= " AND (FIND_IN_SET({$kid}, q.kelas_ids) OR q.kelas_id = {$kid} OR q.kelas_id = 0 OR q.kelas_id IS NULL OR q.kelas_ids IS NULL OR TRIM(q.kelas_ids) = '')";
         }
         if ($guru_id) {
             $sql .= " AND q.guru_id = " . (int)$guru_id;

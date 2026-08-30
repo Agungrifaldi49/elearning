@@ -60,7 +60,7 @@ class LearningModel extends BaseModel {
         ";
         if ($kelas_id) {
             $kid = (int)$kelas_id;
-            $sql .= " AND (FIND_IN_SET({$kid}, m.kelas_ids) OR m.kelas_id = {$kid})";
+            $sql .= " AND (FIND_IN_SET({$kid}, m.kelas_ids) OR m.kelas_id = {$kid} OR m.kelas_id = 0 OR m.kelas_id IS NULL OR m.kelas_ids IS NULL OR TRIM(m.kelas_ids) = '')";
         }
         if ($guru_id) {
             $sql .= " AND m.guru_id = " . (int)$guru_id;
@@ -168,7 +168,7 @@ class LearningModel extends BaseModel {
         ";
         if ($kelas_id) {
             $kid = (int)$kelas_id;
-            $sql .= " AND (FIND_IN_SET({$kid}, t.kelas_ids) OR t.kelas_id = {$kid})";
+            $sql .= " AND (FIND_IN_SET({$kid}, t.kelas_ids) OR t.kelas_id = {$kid} OR t.kelas_id = 0 OR t.kelas_id IS NULL OR t.kelas_ids IS NULL OR TRIM(t.kelas_ids) = '')";
         }
         if ($guru_id) {
             $sql .= " AND t.guru_id = " . (int)$guru_id;
