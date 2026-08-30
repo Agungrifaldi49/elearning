@@ -1,3 +1,5 @@
+import '../services/api_service.dart';
+
 class UserModel {
   final int id;
   final int roleId;
@@ -41,7 +43,7 @@ class UserModel {
       return avatar;
     }
     if (avatar.isNotEmpty && avatar != 'default_avatar.png' && avatar != 'default.png') {
-      return 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/$avatar';
+      return ApiService.getFileUrl('assets/uploads/profile/$avatar');
     }
     return '';
   }

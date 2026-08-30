@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/materi_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/siswa_provider.dart';
+import '../../services/api_service.dart';
 import '../../services/file_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -34,10 +35,9 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
   void _showMateriDetailModal(MateriModel m) {
     Provider.of<SiswaProvider>(context, listen: false).markMateriAsSeen(m.id);
 
-    const baseUrl = "https://smkmuthiaharapancicalengka.my.id/assets/uploads/materi/";
     final fileUrl = (m.filePath != null && m.filePath!.startsWith('http'))
         ? m.filePath!
-        : "$baseUrl${m.filePath ?? ''}";
+        : ApiService.getFileUrl('assets/uploads/materi/${m.filePath ?? ''}');
 
     showModalBottomSheet(
       context: context,
@@ -285,7 +285,6 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
                           itemBuilder: (context, index) {
                             final m = filteredList[index];
                             final bool hasVideo = m.youtubeUrl != null && m.youtubeUrl!.isNotEmpty;
-                            final bool hasPdf = m.filePath != null && m.filePath!.isNotEmpty;
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 14),

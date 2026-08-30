@@ -74,6 +74,24 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.computer_rounded, color: Colors.purple),
+                title: const Text('Localhost PC (Apache / XAMPP)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                subtitle: const Text('http://localhost/elearning/api.php?action=', style: TextStyle(fontSize: 11)),
+                onTap: () {
+                  serverController.text = 'http://localhost/elearning/api.php?action=';
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.phone_android_rounded, color: Colors.amber),
+                title: const Text('Emulator Android (10.0.2.2)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                subtitle: const Text('http://10.0.2.2/elearning/api.php?action=', style: TextStyle(fontSize: 11)),
+                onTap: () {
+                  serverController.text = 'http://10.0.2.2/elearning/api.php?action=';
+                },
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.wifi_rounded, color: Colors.blue),
                 title: const Text('Server Wi-Fi Lokal (IP 192.168.100.26)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                 subtitle: const Text('http://192.168.100.26/api.php?action=', style: TextStyle(fontSize: 11)),

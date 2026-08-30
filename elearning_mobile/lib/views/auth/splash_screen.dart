@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/api_service.dart';
 import '../siswa/siswa_main_screen.dart';
 import '../guru/guru_main_screen.dart';
 import 'login_screen.dart';
@@ -124,6 +125,7 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _startAuthCheck() async {
+    await ApiService.initBaseUrl();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.checkAutoLogin();
 

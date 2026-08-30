@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/materi_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
+import '../../services/api_service.dart';
 import '../../services/file_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -28,10 +29,9 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
   }
 
   void _showMateriDetailModal(MateriModel m) {
-    final baseUrl = "https://smkmuthiaharapancicalengka.my.id/assets/uploads/materi/";
     final fileUrl = (m.filePath != null && m.filePath!.startsWith('http'))
         ? m.filePath!
-        : "$baseUrl${m.filePath ?? ''}";
+        : ApiService.getFileUrl('assets/uploads/materi/${m.filePath ?? ''}');
 
     showModalBottomSheet(
       context: context,

@@ -135,7 +135,7 @@ class ApiController {
 
             $avFile = $user['avatar'] ?? ($details['foto'] ?? ($details['foto_profil'] ?? ($details['avatar'] ?? '')));
             if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                $user['avatar_url'] = 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                $user['avatar_url'] = BASE_URL . 'assets/uploads/profile/' . $avFile;
             } else {
                 $user['avatar_url'] = null;
             }
@@ -419,7 +419,7 @@ class ApiController {
                     // 1. Real Materi added by Guru
                     foreach ($materiRows as $mItem) {
                         $fileUrl = !empty($mItem['file_path']) 
-                            ? (str_starts_with($mItem['file_path'], 'http') ? $mItem['file_path'] : 'https://smkmuthiaharapancicalengka.my.id/' . ltrim($mItem['file_path'], '/'))
+                            ? (str_starts_with($mItem['file_path'], 'http') ? $mItem['file_path'] : BASE_URL . ltrim($mItem['file_path'], '/'))
                             : null;
 
                         $sequenceItems[] = [
@@ -2765,7 +2765,7 @@ class ApiController {
             if ($user) {
                 $avFile = $user['avatar'] ?? ($details['foto'] ?? ($details['foto_profil'] ?? ($details['avatar'] ?? '')));
                 if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                    $user['avatar_url'] = 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                    $user['avatar_url'] = BASE_URL . 'assets/uploads/profile/' . $avFile;
                 } else {
                     $user['avatar_url'] = null;
                 }
@@ -3074,7 +3074,7 @@ class ApiController {
             }
 
             $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-            $host = $_SERVER['HTTP_HOST'] ?? 'smkmuthiaharapancicalengka.my.id';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
             if ($topic) {
                 $avFile = $topic['avatar_file'] ?? ($topic['avatar'] ?? ($topic['foto_profil'] ?? ''));
@@ -3262,7 +3262,7 @@ class ApiController {
             }
 
             $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-            $host = $_SERVER['HTTP_HOST'] ?? 'smkmuthiaharapancicalengka.my.id';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
             foreach ($list as &$f) {
                 if (!isset($f['kategori']) || empty($f['kategori'])) $f['kategori'] = 'Umum';
@@ -3431,7 +3431,7 @@ class ApiController {
 
                 $avFile = $c['avatar_file'] ?? '';
                 if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {
-                    $c['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : 'https://smkmuthiaharapancicalengka.my.id/assets/uploads/profile/' . $avFile;
+                    $c['avatar_url'] = strpos($avFile, 'http') === 0 ? $avFile : BASE_URL . 'assets/uploads/profile/' . $avFile;
                 } else {
                     $c['avatar_url'] = null;
                 }
@@ -3474,11 +3474,8 @@ class ApiController {
             $books = $stmt->fetchAll();
 
             $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-            $host = $_SERVER['HTTP_HOST'] ?? 'smkmuthiaharapancicalengka.my.id';
-            $baseUrl = "{$scheme}://{$host}/";
-            if (strpos($host, 'smkmuthia') === false && strpos($host, 'localhost') === false) {
-                $baseUrl = 'https://smkmuthiaharapancicalengka.my.id/';
-            }
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $baseUrl = BASE_URL;
 
             foreach ($books as &$b) {
                 if (!empty($b['file_path'])) {

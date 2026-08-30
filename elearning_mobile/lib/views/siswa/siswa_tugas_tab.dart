@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../models/tugas_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/siswa_provider.dart';
+import '../../services/api_service.dart';
 import '../../services/file_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -37,10 +38,9 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
     final catatanController = TextEditingController();
     final fileController = TextEditingController();
 
-    const baseUrl = "https://smkmuthiaharapancicalengka.my.id/assets/uploads/tugas/";
     final fileUrl = (t.filePath != null && t.filePath!.startsWith('http'))
         ? t.filePath!
-        : "$baseUrl${t.filePath ?? ''}";
+        : ApiService.getFileUrl('assets/uploads/tugas/${t.filePath ?? ''}');
 
     showModalBottomSheet(
       context: context,

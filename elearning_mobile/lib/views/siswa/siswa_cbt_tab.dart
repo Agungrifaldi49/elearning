@@ -30,13 +30,15 @@ class _SiswaCbtTabState extends State<SiswaCbtTab> {
   }
 
   void _showRequestPermissionModal(QuizModel quiz, {String? reasonHint}) {
-    String defaultText = 'Mohon izin untuk membuka kunci kuis CBT / Ujian Susulan.';
-    if (quiz.isSuspended) {
-      defaultText = 'Mohon izin untuk membuka kunci suspend kuis karena tidak sengaja berpindah aplikasi/fullscreen.';
-    } else if (quiz.isMaxAttemptsReached) {
-      defaultText = 'Mohon izin untuk diberikan kesempatan ujian susulan / remidi (Batas percobaan ${quiz.attemptCount}/${quiz.maxAttempts} tercapai).';
-    } else if (quiz.isTerkunci) {
-      defaultText = 'Mohon izin ujian susulan karena kuis telah melewati batas waktu deadline.';
+    String defaultText = reasonHint ?? 'Mohon izin untuk membuka kunci kuis CBT / Ujian Susulan.';
+    if (reasonHint == null) {
+      if (quiz.isSuspended) {
+        defaultText = 'Mohon izin untuk membuka kunci suspend kuis karena tidak sengaja berpindah aplikasi/fullscreen.';
+      } else if (quiz.isMaxAttemptsReached) {
+        defaultText = 'Mohon izin untuk diberikan kesempatan ujian susulan / remidi (Batas percobaan ${quiz.attemptCount}/${quiz.maxAttempts} tercapai).';
+      } else if (quiz.isTerkunci) {
+        defaultText = 'Mohon izin ujian susulan karena kuis telah melewati batas waktu deadline.';
+      }
     }
 
     final catatanController = TextEditingController(text: defaultText);

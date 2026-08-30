@@ -28,6 +28,35 @@ class ApiService {
     } catch (_) {}
   }
 
+  /// Extracts root web server URL from configured [baseUrl]
+  static String get serverRootUrl {
+    String url = baseUrl;
+    int apiIdx = url.indexOf('api.php');
+    if (apiIdx != -1) {
+      url = url.substring(0, apiIdx);
+    } else {
+      int queryIdx = url.indexOf('?');
+      if (queryIdx != -1) {
+        url = url.substring(0, queryIdx);
+      }
+    }
+    if (!url.endsWith('/')) {
+      url = '$url/';
+    }
+    return url;
+  }
+
+  /// Converts relative asset/upload path to absolute server URL matching active server environment
+  static String getFileUrl(String? path) {
+    if (path == null || path.trim().isEmpty) return '';
+    final trimmed = path.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    final cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    return '$serverRootUrl$cleanPath';
+  }
+
   static Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> body) async {
     try {
       final uri = Uri.parse('$baseUrl$endpoint');

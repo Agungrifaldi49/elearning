@@ -80,8 +80,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final String penulis = book['penulis'] ?? '-';
     final String kategori = book['kategori'] ?? 'Umum';
     final String deskripsi = book['deskripsi'] ?? 'Koleksi e-book / modul digital Perpustakaan SMK Muthia Harapan Cicalengka.';
-    final String fileUrl = book['file_url'] ??
-        (book['file_path'] != null ? "https://smkmuthiaharapancicalengka.my.id/${book['file_path']}" : "https://smkmuthiaharapancicalengka.my.id/assets/docs/panduan.pdf");
+    final String fileUrl = book['file_url'] ?? ApiService.getFileUrl(book['file_path'] ?? 'assets/docs/panduan.pdf');
     final String fileType = (book['file_type'] ?? 'PDF').toString().toUpperCase();
     final double rating = double.tryParse((book['rating'] ?? 4.8).toString()) ?? 4.8;
     final int views = int.tryParse((book['views_count'] ?? 150).toString()) ?? 150;
