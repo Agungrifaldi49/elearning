@@ -57,32 +57,52 @@ class QuizModel {
     this.accessKey,
   });
 
+  static int _parseInt(dynamic val, [int defaultVal = 0]) {
+    if (val == null) return defaultVal;
+    if (val is int) return val;
+    if (val is num) return val.toInt();
+    if (val is String) {
+      return int.tryParse(val) ?? (double.tryParse(val)?.toInt() ?? defaultVal);
+    }
+    return defaultVal;
+  }
+
+  static double? _parseDouble(dynamic val) {
+    if (val == null) return null;
+    if (val is double) return val;
+    if (val is num) return val.toDouble();
+    if (val is String) {
+      return double.tryParse(val);
+    }
+    return null;
+  }
+
   factory QuizModel.fromJson(Map<String, dynamic> json) {
     return QuizModel(
-      id: int.parse(json['id'].toString()),
-      guruId: int.parse(json['guru_id'].toString()),
-      mapelId: int.parse(json['mapel_id'].toString()),
-      kelasId: int.parse(json['kelas_id'].toString()),
+      id: _parseInt(json['id']),
+      guruId: _parseInt(json['guru_id']),
+      mapelId: _parseInt(json['mapel_id']),
+      kelasId: _parseInt(json['kelas_id']),
       judul: json['judul'] ?? '',
       deskripsi: json['deskripsi'] ?? '',
-      durasiMenit: int.parse((json['durasi_menit'] ?? 30).toString()),
-      jumlahSoal: int.parse((json['jumlah_soal'] ?? 10).toString()),
+      durasiMenit: _parseInt(json['durasi_menit'], 30),
+      jumlahSoal: _parseInt(json['jumlah_soal'], 10),
       status: json['status'] ?? 'published',
       namaMapel: json['nama_mapel'] ?? '',
       namaGuru: json['nama_guru'],
       namaKelas: json['nama_kelas'],
-      totalNilai: json['total_nilai'] != null ? double.parse(json['total_nilai'].toString()) : null,
+      totalNilai: _parseDouble(json['total_nilai']),
       statusLulus: json['status_lulus'],
       finishedAt: json['finished_at'],
-      totalPeserta: json['total_peserta'] != null ? int.parse(json['total_peserta'].toString()) : null,
+      totalPeserta: json['total_peserta'] != null ? _parseInt(json['total_peserta']) : null,
       isDisqualified: json['is_disqualified'] == true || json['is_disqualified'].toString() == '1' || json['access_status'] == 'diskualifikasi',
-      pelanggaranCount: int.parse((json['pelanggaran_count'] ?? 0).toString()),
+      pelanggaranCount: _parseInt(json['pelanggaran_count']),
       canAccess: json['can_access'] != false && json['can_access'].toString() != 'false',
       accessStatus: json['access_status'] ?? 'terbuka',
       susulanStatus: json['susulan_status'],
       accessReason: json['access_reason'],
-      maxAttempts: int.parse((json['max_attempts'] ?? 1).toString()),
-      attemptCount: int.parse((json['attempt_count'] ?? 0).toString()),
+      maxAttempts: _parseInt(json['max_attempts'], 1),
+      attemptCount: _parseInt(json['attempt_count']),
       kategori: json['kategori'] ?? 'kuis',
       accessKey: json['access_key'] ?? json['token'] ?? json['kunci_akses'],
     );
@@ -126,6 +146,16 @@ class SoalModel {
     required this.pilihan,
   });
 
+  static int _parseInt(dynamic val, [int defaultVal = 0]) {
+    if (val == null) return defaultVal;
+    if (val is int) return val;
+    if (val is num) return val.toInt();
+    if (val is String) {
+      return int.tryParse(val) ?? (double.tryParse(val)?.toInt() ?? defaultVal);
+    }
+    return defaultVal;
+  }
+
   factory SoalModel.fromJson(Map<String, dynamic> json) {
     var pList = (json['pilihan'] as List? ?? []).map((e) => PilihanModel.fromJson(e)).toList();
     String? gPath = json['file_gambar'] ?? json['gambar'];
@@ -138,36 +168,22 @@ class SoalModel {
       } else {
         String cleanPath = pathStr.replaceFirst(RegExp(r'^/'), '');
         if (!cleanPath.startsWith('assets/uploads/') && !cleanPath.startsWith('uploads/')) {
-          cleanPath = 'assets/uploads/soal/' + cleanPath;
+          cleanPath = 'assets/uploads/soal/$cleanPath';
         } else if (cleanPath.startsWith('uploads/')) {
-          cleanPath = 'assets/' + cleanPath;
+          cleanPath = 'assets/$cleanPath';
         }
-
-        String rootUrl = ApiService.baseUrl;
-        int apiIdx = rootUrl.indexOf('/api.php');
-        if (apiIdx != -1) {
-          rootUrl = rootUrl.substring(0, apiIdx);
-        } else {
-          int queryIdx = rootUrl.indexOf('?');
-          if (queryIdx != -1) {
-            rootUrl = rootUrl.substring(0, queryIdx);
-          }
-        }
-        if (!rootUrl.endsWith('/')) {
-          rootUrl += '/';
-        }
-        gUrl = rootUrl + cleanPath;
+        gUrl = ApiService.getFileUrl(cleanPath);
       }
     }
 
     return SoalModel(
-      id: int.parse(json['id'].toString()),
-      quizId: int.parse(json['quiz_id'].toString()),
+      id: _parseInt(json['id']),
+      quizId: _parseInt(json['quiz_id']),
       jenisSoal: json['jenis_soal'] ?? 'pg',
       pertanyaan: json['pertanyaan'] ?? '',
       fileGambar: gPath,
       fileGambarUrl: gUrl,
-      bobot: int.parse((json['bobot'] ?? 10).toString()),
+      bobot: _parseInt(json['bobot'], 10),
       pilihan: pList,
     );
   }
@@ -186,10 +202,20 @@ class PilihanModel {
     required this.teksPilihan,
   });
 
+  static int _parseInt(dynamic val, [int defaultVal = 0]) {
+    if (val == null) return defaultVal;
+    if (val is int) return val;
+    if (val is num) return val.toInt();
+    if (val is String) {
+      return int.tryParse(val) ?? (double.tryParse(val)?.toInt() ?? defaultVal);
+    }
+    return defaultVal;
+  }
+
   factory PilihanModel.fromJson(Map<String, dynamic> json) {
     return PilihanModel(
-      id: int.parse(json['id'].toString()),
-      soalId: int.parse(json['soal_id'].toString()),
+      id: _parseInt(json['id']),
+      soalId: _parseInt(json['soal_id']),
       teksPilihan: json['teks_pilihan'] ?? '',
     );
   }

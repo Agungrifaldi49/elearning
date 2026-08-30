@@ -35,12 +35,32 @@ class TugasModel {
     this.totalPengumpulan,
   });
 
+  static int _parseInt(dynamic val, [int defaultVal = 0]) {
+    if (val == null) return defaultVal;
+    if (val is int) return val;
+    if (val is num) return val.toInt();
+    if (val is String) {
+      return int.tryParse(val) ?? (double.tryParse(val)?.toInt() ?? defaultVal);
+    }
+    return defaultVal;
+  }
+
+  static double? _parseDouble(dynamic val) {
+    if (val == null) return null;
+    if (val is double) return val;
+    if (val is num) return val.toDouble();
+    if (val is String) {
+      return double.tryParse(val);
+    }
+    return null;
+  }
+
   factory TugasModel.fromJson(Map<String, dynamic> json) {
     return TugasModel(
-      id: int.parse(json['id'].toString()),
-      guruId: int.parse(json['guru_id'].toString()),
-      mapelId: int.parse(json['mapel_id'].toString()),
-      kelasId: int.parse(json['kelas_id'].toString()),
+      id: _parseInt(json['id']),
+      guruId: _parseInt(json['guru_id']),
+      mapelId: _parseInt(json['mapel_id']),
+      kelasId: _parseInt(json['kelas_id']),
       judul: json['judul'] ?? '',
       deskripsi: json['deskripsi'] ?? '',
       filePath: json['file_path'],
@@ -48,11 +68,11 @@ class TugasModel {
       namaMapel: json['nama_mapel'] ?? '',
       namaGuru: json['nama_guru'],
       namaKelas: json['nama_kelas'],
-      submissionId: json['submission_id'] != null ? int.parse(json['submission_id'].toString()) : null,
-      nilai: json['nilai'] != null ? double.parse(json['nilai'].toString()) : null,
+      submissionId: json['submission_id'] != null ? _parseInt(json['submission_id']) : null,
+      nilai: _parseDouble(json['nilai']),
       komentarGuru: json['komentar_guru'],
       submittedAt: json['submitted_at'],
-      totalPengumpulan: json['total_pengumpulan'] != null ? int.parse(json['total_pengumpulan'].toString()) : null,
+      totalPengumpulan: json['total_pengumpulan'] != null ? _parseInt(json['total_pengumpulan']) : null,
     );
   }
 

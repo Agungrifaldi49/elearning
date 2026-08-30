@@ -29,12 +29,22 @@ class MateriModel {
     required this.createdAt,
   });
 
+  static int _parseInt(dynamic val, [int defaultVal = 0]) {
+    if (val == null) return defaultVal;
+    if (val is int) return val;
+    if (val is num) return val.toInt();
+    if (val is String) {
+      return int.tryParse(val) ?? (double.tryParse(val)?.toInt() ?? defaultVal);
+    }
+    return defaultVal;
+  }
+
   factory MateriModel.fromJson(Map<String, dynamic> json) {
     return MateriModel(
-      id: int.parse(json['id'].toString()),
-      guruId: int.parse(json['guru_id'].toString()),
-      mapelId: int.parse(json['mapel_id'].toString()),
-      kelasId: int.parse(json['kelas_id'].toString()),
+      id: _parseInt(json['id']),
+      guruId: _parseInt(json['guru_id']),
+      mapelId: _parseInt(json['mapel_id']),
+      kelasId: _parseInt(json['kelas_id']),
       judul: json['judul'] ?? '',
       deskripsi: json['deskripsi'] ?? '',
       jenisFile: json['jenis_file'] ?? 'pdf',

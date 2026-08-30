@@ -198,6 +198,17 @@ class ApiController {
             }
         }
 
+        if (!$siswa && $userId > 0) {
+            $stmtU = $this->db->prepare("SELECT id, full_name, role_id FROM users WHERE id = ? LIMIT 1");
+            $stmtU->execute([$userId]);
+            $uObj = $stmtU->fetch();
+            if ($uObj) {
+                require_once ROOT_PATH . 'models/SiswaModel.php';
+                $sm = new SiswaModel();
+                $siswa = $sm->ensureSiswaProfile($uObj['id'], $uObj['full_name']);
+            }
+        }
+
         if (!$siswa) {
             $this->jsonResponse(false, 'Data siswa tidak ditemukan', null, 404);
         }
@@ -224,13 +235,13 @@ class ApiController {
 
         switch ($endpoint) {
             case 'dashboard':
-                // Stats filtered by enrolled mapels if student has enrollments
+                // Stats filtered by enrolled mapels or class assignment
                 $stmtMat = $this->db->prepare("SELECT * FROM materi WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)");
                 $stmtMat->execute(['kid' => $siswa['kelas_id']]);
                 $matRows = $stmtMat->fetchAll();
                 if (!empty($enrolledMapels)) {
-                    $matRows = array_filter($matRows, function($m) use ($enrolledMapels) {
-                        return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]);
+                    $matRows = array_filter($matRows, function($m) use ($enrolledMapels, $kelasId) {
+                        return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]) || intval($m['kelas_id'] ?? 0) === $kelasId || (isset($m['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $m['kelas_ids']))));
                     });
                 }
                 $totalMateri = count($matRows);
@@ -239,8 +250,8 @@ class ApiController {
                 $stmtTug->execute(['kid' => $siswa['kelas_id']]);
                 $tugRows = $stmtTug->fetchAll();
                 if (!empty($enrolledMapels)) {
-                    $tugRows = array_filter($tugRows, function($t) use ($enrolledMapels) {
-                        return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]);
+                    $tugRows = array_filter($tugRows, function($t) use ($enrolledMapels, $kelasId) {
+                        return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]) || intval($t['kelas_id'] ?? 0) === $kelasId || (isset($t['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $t['kelas_ids']))));
                     });
                 }
                 $totalTugas = count($tugRows);
@@ -249,8 +260,8 @@ class ApiController {
                 $stmtQz->execute(['kid' => $siswa['kelas_id']]);
                 $qzRows = $stmtQz->fetchAll();
                 if (!empty($enrolledMapels)) {
-                    $qzRows = array_filter($qzRows, function($q) use ($enrolledMapels) {
-                        return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]);
+                    $qzRows = array_filter($qzRows, function($q) use ($enrolledMapels, $kelasId) {
+                        return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]) || intval($q['kelas_id'] ?? 0) === $kelasId || (isset($q['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $q['kelas_ids']))));
                     });
                 }
                 $totalQuiz = count($qzRows);
@@ -668,8 +679,8 @@ class ApiController {
                     $materi = $stmtM->fetchAll();
 
                     if (!empty($enrolledMapels)) {
-                        $materi = array_values(array_filter($materi, function($m) use ($enrolledMapels) {
-                            return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]);
+                        $materi = array_values(array_filter($materi, function($m) use ($enrolledMapels, $kelasId) {
+                            return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]) || intval($m['kelas_id'] ?? 0) === $kelasId || (isset($m['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $m['kelas_ids']))));
                         }));
                     }
 
@@ -715,8 +726,8 @@ class ApiController {
                     $tugas = $stmtT->fetchAll();
 
                     if (!empty($enrolledMapels)) {
-                        $tugas = array_values(array_filter($tugas, function($t) use ($enrolledMapels) {
-                            return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]);
+                        $tugas = array_values(array_filter($tugas, function($t) use ($enrolledMapels, $kelasId) {
+                            return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]) || intval($t['kelas_id'] ?? 0) === $kelasId || (isset($t['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $t['kelas_ids']))));
                         }));
                     }
 
@@ -741,9 +752,14 @@ class ApiController {
 
             case 'submit_tugas':
                 $input = $this->getPostInput();
-                $tugasId = intval($input['tugas_id'] ?? 0);
-                $catatan = trim($input['catatan_siswa'] ?? '');
-                $filePath = trim($input['file_path'] ?? '');
+                $tugasId = intval($_POST['tugas_id'] ?? $input['tugas_id'] ?? 0);
+                $catatan = trim($_POST['catatan_siswa'] ?? $input['catatan_siswa'] ?? '');
+                $filePath = trim($_POST['file_path'] ?? $input['file_path'] ?? '');
+
+                if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+                    require_once ROOT_PATH . 'helpers/UploadHelper.php';
+                    $filePath = UploadHelper::upload($_FILES['file'], 'tugas');
+                }
 
                 if ($tugasId <= 0) {
                     $this->jsonResponse(false, 'ID Tugas tidak valid', null, 400);
@@ -781,8 +797,8 @@ class ApiController {
                            hq.total_nilai, hq.status_lulus, hq.finished_at,
                            hq.is_disqualified, hq.pelanggaran_count
                     FROM quiz q 
-                    JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
-                    JOIN guru g ON q.guru_id = g.id 
+                    LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
+                    LEFT JOIN guru g ON q.guru_id = g.id 
                     LEFT JOIN (
                         SELECT h1.* FROM hasil_quiz h1
                         INNER JOIN (
@@ -799,8 +815,8 @@ class ApiController {
                 $quizList = $stmtQ->fetchAll();
 
                 if (!empty($enrolledMapels)) {
-                    $quizList = array_values(array_filter($quizList, function($q) use ($enrolledMapels) {
-                        return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]);
+                    $quizList = array_values(array_filter($quizList, function($q) use ($enrolledMapels, $kelasId) {
+                        return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]) || intval($q['kelas_id'] ?? 0) === $kelasId || (isset($q['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $q['kelas_ids']))));
                     }));
                 }
 
@@ -1507,7 +1523,7 @@ class ApiController {
                     $enrolledMapel = $academicModel->getSiswaEnrolledMapels($siswaId);
 
                     if (empty($enrolledMapel) && $siswaId > 0) {
-                        // Fallback: check if student enrolled via key without guru_id constraint
+                        // Fallback 1: check if student enrolled via key without guru_id constraint
                         $stmtMapelFB = $this->db->prepare("
                             SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru
                             FROM siswa_mapel_enrollment sme
@@ -1518,6 +1534,19 @@ class ApiController {
                         ");
                         $stmtMapelFB->execute(['sid' => $siswaId]);
                         $enrolledMapel = $stmtMapelFB->fetchAll();
+                    }
+
+                    if (empty($enrolledMapel)) {
+                        // Fallback 2: fetch mapels belonging to student's class
+                        $stmtMapelFB2 = $this->db->prepare("
+                            SELECT DISTINCT mp.id as mapel_id, mp.nama_mapel, mp.kode_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru
+                            FROM mata_pelajaran mp
+                            LEFT JOIN guru g ON mp.guru_id = g.id
+                            WHERE mp.kelas_id = :kid OR mp.kelas_id IS NULL OR mp.kelas_id = 0
+                            ORDER BY mp.id ASC
+                        ");
+                        $stmtMapelFB2->execute(['kid' => $kelasId]);
+                        $enrolledMapel = $stmtMapelFB2->fetchAll();
                     }
 
                     $mapelList = [];

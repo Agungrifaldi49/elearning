@@ -27,12 +27,22 @@ class JadwalModel {
     this.namaKelas,
   });
 
+  static int _parseInt(dynamic val, [int defaultVal = 0]) {
+    if (val == null) return defaultVal;
+    if (val is int) return val;
+    if (val is num) return val.toInt();
+    if (val is String) {
+      return int.tryParse(val) ?? (double.tryParse(val)?.toInt() ?? defaultVal);
+    }
+    return defaultVal;
+  }
+
   factory JadwalModel.fromJson(Map<String, dynamic> json) {
     return JadwalModel(
-      id: int.parse(json['id'].toString()),
-      kelasId: int.parse(json['kelas_id'].toString()),
-      mapelId: int.parse(json['mapel_id'].toString()),
-      guruId: int.parse(json['guru_id'].toString()),
+      id: _parseInt(json['id']),
+      kelasId: _parseInt(json['kelas_id']),
+      mapelId: _parseInt(json['mapel_id']),
+      guruId: _parseInt(json['guru_id']),
       hari: json['hari'] ?? '',
       jamMulai: json['jam_mulai'] ?? '',
       jamSelesai: json['jam_selesai'] ?? '',
