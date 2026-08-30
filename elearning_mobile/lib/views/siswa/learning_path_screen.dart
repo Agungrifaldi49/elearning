@@ -30,7 +30,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     setState(() => _isLoading = true);
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     final userId = user?.id ?? 0;
-    final res = await ApiService.get('siswa/learning_path?user_id=$userId');
+    final res = await ApiService.get('siswa/learning_path', params: {'user_id': userId.toString()});
     if (mounted) {
       if (res['success'] == true && res['data'] is Map) {
         setState(() {

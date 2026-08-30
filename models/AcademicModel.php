@@ -134,6 +134,36 @@ class AcademicModel extends BaseModel {
         ")->fetchAll();
     }
 
+    public function getMapelByKelas($kelas_id) {
+        $this->ensureEnrollmentTables();
+        $kid = (int)$kelas_id;
+        if ($kid <= 0) {
+            return $this->getMapel();
+        }
+
+        $stmtK = $this->db->prepare("SELECT jurusan_id FROM kelas WHERE id = ?");
+        $stmtK->execute([$kid]);
+        $jurusanId = (int)$stmtK->fetchColumn();
+
+        $sql = "
+            SELECT DISTINCT m.*, j.nama_jurusan
+            FROM mata_pelajaran m
+            LEFT JOIN jurusan j ON m.jurusan_id = j.id
+            WHERE m.id IN (
+                SELECT mapel_id FROM jadwal WHERE (kelas_id = {$kid} OR FIND_IN_SET({$kid}, kelas_ids)) AND mapel_id IS NOT NULL
+                UNION
+                SELECT mapel_id FROM materi WHERE (kelas_id = {$kid} OR FIND_IN_SET({$kid}, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0) AND mapel_id IS NOT NULL
+                UNION
+                SELECT mapel_id FROM tugas WHERE (kelas_id = {$kid} OR FIND_IN_SET({$kid}, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0) AND mapel_id IS NOT NULL
+                UNION
+                SELECT mapel_id FROM quiz WHERE (kelas_id = {$kid} OR FIND_IN_SET({$kid}, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0) AND mapel_id IS NOT NULL
+            )
+            OR (m.jurusan_id = {$jurusanId} OR m.jurusan_id IS NULL OR m.jurusan_id = 0)
+            ORDER BY m.nama_mapel ASC
+        ";
+        return $this->db->query($sql)->fetchAll();
+    }
+
     public function getMapelByGuru($guru_id) {
         $this->ensureEnrollmentTables();
         $gId = (int)$guru_id;

@@ -440,6 +440,10 @@ class ApiController {
                     $enrolledList = $academicModel->getMapelByKelas($kelasId);
                 }
 
+                if (empty($enrolledList)) {
+                    $enrolledList = $academicModel->getMapel();
+                }
+
                 $mapelList = [];
                 $selesaiCount = 0;
                 $prosesCount = 0;
@@ -469,7 +473,7 @@ class ApiController {
 
                     $stmtTug = $this->db->prepare("
                         SELECT t.*, COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
-                               pt.id as submission_id, pt.nilai, pt.submitted_at
+                                pt.id as submission_id, pt.nilai, pt.submitted_at
                         FROM tugas t
                         LEFT JOIN guru g ON t.guru_id = g.id
                         LEFT JOIN users u ON g.user_id = u.id
@@ -484,7 +488,7 @@ class ApiController {
 
                     $stmtQz = $this->db->prepare("
                         SELECT q.*, COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
-                               hq.id as hasil_id, hq.total_nilai, hq.status_lulus, hq.finished_at
+                                hq.id as hasil_id, hq.total_nilai, hq.status_lulus, hq.finished_at
                         FROM quiz q
                         LEFT JOIN guru g ON q.guru_id = g.id
                         LEFT JOIN users u ON g.user_id = u.id
@@ -493,7 +497,7 @@ class ApiController {
                         ) hq ON hq.quiz_id = q.id
                         WHERE q.mapel_id = :mid
                           AND (:gid = 0 OR q.guru_id = :gid)
-                          AND (:kid = 0 OR q.kelas_id = :kid OR q.kelas_id IS NULL OR q.kelas_id = 0)
+                          AND (:kid = 0 OR q.kelas_id = :kid OR FIND_IN_SET(:kid, q.kelas_ids) OR q.kelas_id IS NULL OR q.kelas_id = 0)
                           AND q.status = 'published'
                         ORDER BY q.id ASC
                     ");
@@ -502,7 +506,7 @@ class ApiController {
 
                     $stmtUj = $this->db->prepare("
                         SELECT u.*, COALESCE(g.nama_lengkap, us.full_name, 'Guru Pengampu') as nama_guru,
-                               hu.id as hasil_id, hu.total_nilai, hu.status as status_hasil, hu.finished_at
+                                hu.id as hasil_id, hu.total_nilai, hu.status as status_hasil, hu.finished_at
                         FROM ujian u
                         LEFT JOIN guru g ON u.guru_id = g.id
                         LEFT JOIN users us ON g.user_id = us.id
@@ -511,7 +515,7 @@ class ApiController {
                         ) hu ON hu.ujian_id = u.id
                         WHERE u.mapel_id = :mid
                           AND (:gid = 0 OR u.guru_id = :gid)
-                          AND (:kid = 0 OR u.kelas_id = :kid OR u.kelas_id IS NULL OR u.kelas_id = 0)
+                          AND (:kid = 0 OR u.kelas_id = :kid OR FIND_IN_SET(:kid, u.kelas_ids) OR u.kelas_id IS NULL OR u.kelas_id = 0)
                           AND u.is_active = 1
                         ORDER BY u.id ASC
                     ");
@@ -727,6 +731,8 @@ class ApiController {
                 $this->jsonResponse(true, 'Alur Learning Path Siswa', [
                     'tingkat' => $siswa['nama_kelas'] ?? 'Kelas Siswa',
                     'jurusan' => $siswa['nama_jurusan'] ?? 'Teknik & Kejuruan',
+                    'nama_kelas' => $siswa['nama_kelas'] ?? 'Kelas Siswa',
+                    'nama_jurusan' => $siswa['nama_jurusan'] ?? 'Teknik & Kejuruan',
                     'capaian_persen' => $capaianPersen,
                     'total_mapel' => $totalMapel,
                     'selesai_count' => $selesaiCount,
