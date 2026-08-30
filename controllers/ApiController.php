@@ -205,7 +205,7 @@ class ApiController {
         switch ($endpoint) {
             case 'dashboard':
                 // Stats
-                $stmtMat = $this->db->prepare("SELECT COUNT(*) as count FROM materi WHERE kelas_id = :kid");
+                $stmtMat = $this->db->prepare("SELECT COUNT(*) as count FROM materi WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)");
                 $stmtMat->execute(['kid' => $siswa['kelas_id']]);
                 $totalMateri = $stmtMat->fetch()['count'];
 
@@ -319,7 +319,7 @@ class ApiController {
                         LEFT JOIN users u ON g.user_id = u.id
                         WHERE m.mapel_id = :mid
                           AND (:gid = 0 OR m.guru_id = :gid)
-                          AND (:kid = 0 OR m.kelas_id = :kid OR m.kelas_id IS NULL OR m.kelas_id = 0)
+                          AND (:kid = 0 OR m.kelas_id = :kid OR FIND_IN_SET(:kid, m.kelas_ids) OR m.kelas_id IS NULL OR m.kelas_id = 0)
                         ORDER BY m.id ASC
                     ");
                     $stmtMat->execute(['mid' => $mId, 'gid' => $gId, 'kid' => $kId]);
@@ -620,7 +620,7 @@ class ApiController {
                         LEFT JOIN mata_pelajaran mp ON m.mapel_id = mp.id 
                         LEFT JOIN guru g ON m.guru_id = g.id 
                         LEFT JOIN users u ON g.user_id = u.id
-                        WHERE (m.kelas_id = :kid OR m.kelas_id IS NULL OR m.kelas_id = 0)
+                        WHERE (m.kelas_id = :kid OR FIND_IN_SET(:kid, m.kelas_ids) OR m.kelas_id IS NULL OR m.kelas_id = 0)
                         ORDER BY m.id DESC
                         LIMIT 50
                     ");
@@ -1472,7 +1472,7 @@ class ApiController {
                         // 1. Materi
                         $stmtMat = $this->db->prepare("
                             SELECT COUNT(*) FROM materi 
-                            WHERE mapel_id = :mid AND (kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)
+                            WHERE mapel_id = :mid AND (kelas_id = :kid OR FIND_IN_SET(:kid, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0)
                         ");
                         $stmtMat->execute(['mid' => $mid, 'kid' => $kelasId]);
                         $totMat = intval($stmtMat->fetchColumn());
@@ -1607,7 +1607,7 @@ class ApiController {
                             SELECT m.*, g.nama_lengkap as nama_guru
                             FROM materi m
                             LEFT JOIN guru g ON m.guru_id = g.id
-                            WHERE m.mapel_id = :mid AND (m.kelas_id = :kid OR m.kelas_id IS NULL OR m.kelas_id = 0)
+                            WHERE m.mapel_id = :mid AND (m.kelas_id = :kid OR FIND_IN_SET(:kid, m.kelas_ids) OR m.kelas_id IS NULL OR m.kelas_id = 0)
                             ORDER BY m.created_at ASC
                         ");
                         $stmtMatItems->execute(['mid' => $mid, 'kid' => $kelasId]);
