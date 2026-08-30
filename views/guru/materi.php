@@ -52,12 +52,27 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                 <td colspan="7" class="text-center py-4 text-muted">Belum ada materi pembelajaran yang diunggah.</td>
                             </tr>
                         <?php else: ?>
+                            <?php 
+                            $kelasMap = !empty($kelasList) ? array_column($kelasList, 'nama_kelas', 'id') : [];
+                            ?>
                             <?php foreach ($materiList as $i => $m): ?>
                                 <tr>
                                     <td><?= $i + 1 ?></td>
                                     <td class="fw-bold text-dark"><?= htmlspecialchars($m['judul']) ?></td>
                                     <td><?= htmlspecialchars($m['nama_mapel']) ?></td>
-                                    <td><span class="badge bg-info text-dark"><?= htmlspecialchars($m['nama_kelas']) ?></span></td>
+                                    <td>
+                                        <?php
+                                        $targetIds = !empty($m['kelas_ids']) ? array_map('intval', explode(',', $m['kelas_ids'])) : [(int)$m['kelas_id']];
+                                        foreach ($targetIds as $tid):
+                                            $kName = $kelasMap[$tid] ?? ($tid == $m['kelas_id'] ? $m['nama_kelas'] : '');
+                                            if (!empty($kName)):
+                                        ?>
+                                            <span class="badge bg-info text-dark me-1 mb-1"><?= htmlspecialchars($kName) ?></span>
+                                        <?php 
+                                            endif;
+                                        endforeach;
+                                        ?>
+                                    </td>
                                     <td><span class="badge bg-primary text-uppercase"><?= htmlspecialchars($m['jenis_file']) ?></span></td>
                                     <td><small class="text-muted"><?= date('d/m/Y H:i', strtotime($m['created_at'])) ?></small></td>
                                     <td class="text-center">
@@ -302,10 +317,13 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                 </div>
                                 <div class="border rounded-3 p-2 bg-light" style="max-height: 170px; overflow-y: auto;">
                                     <div class="row g-2">
+                                        <?php
+                                        $editTargetIds = !empty($m['kelas_ids']) ? array_map('intval', explode(',', $m['kelas_ids'])) : [(int)$m['kelas_id']];
+                                        ?>
                                         <?php foreach ($kelasList as $k): ?>
                                             <div class="col-md-4 col-sm-6">
                                                 <div class="form-check bg-white p-2 rounded-2 border d-flex align-items-center gap-2 shadow-xs">
-                                                    <input class="form-check-input kelas-edit-checkbox-<?= $m['id'] ?> ms-1" type="checkbox" name="kelas_ids[]" value="<?= $k['id'] ?>" id="kelas_edit_<?= $m['id'] ?>_<?= $k['id'] ?>" <?= $m['kelas_id'] == $k['id'] ? 'checked' : '' ?>>
+                                                    <input class="form-check-input kelas-edit-checkbox-<?= $m['id'] ?> ms-1" type="checkbox" name="kelas_ids[]" value="<?= $k['id'] ?>" id="kelas_edit_<?= $m['id'] ?>_<?= $k['id'] ?>" <?= in_array((int)$k['id'], $editTargetIds) ? 'checked' : '' ?>>
                                                     <label class="form-check-label text-dark small fw-medium mb-0 w-100" style="cursor:pointer;" for="kelas_edit_<?= $m['id'] ?>_<?= $k['id'] ?>">
                                                         <?= htmlspecialchars($k['nama_kelas']) ?>
                                                     </label>

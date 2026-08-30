@@ -9,6 +9,7 @@ class LearningModel extends BaseModel {
     public function __construct() {
         parent::__construct();
         $this->ensureTugasSusulanTable();
+        $this->ensureMateriKelasIdsColumn();
     }
 
     private function ensureTugasSusulanTable() {
@@ -28,6 +29,12 @@ class LearningModel extends BaseModel {
         } catch (Exception $e) {}
     }
 
+    private function ensureMateriKelasIdsColumn() {
+        try {
+            $this->db->exec("ALTER TABLE materi ADD COLUMN kelas_ids VARCHAR(255) NULL AFTER kelas_id");
+        } catch (Exception $e) {}
+    }
+
     // --- MATERI ---
     public function getMateri($kelas_id = null, $guru_id = null) {
         $sql = "
@@ -39,7 +46,8 @@ class LearningModel extends BaseModel {
             WHERE 1=1
         ";
         if ($kelas_id) {
-            $sql .= " AND m.kelas_id = " . (int)$kelas_id;
+            $kid = (int)$kelas_id;
+            $sql .= " AND (FIND_IN_SET({$kid}, m.kelas_ids) OR m.kelas_id = {$kid})";
         }
         if ($guru_id) {
             $sql .= " AND m.guru_id = " . (int)$guru_id;
@@ -54,27 +62,39 @@ class LearningModel extends BaseModel {
         return $stmt->fetch();
     }
 
-    public function addMateri($guru_id, $mapel_id, $kelas_id, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url) {
+    public function addMateri($guru_id, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url) {
+        $kelasIdArray = is_array($kelas_ids) ? array_map('intval', $kelas_ids) : [(int)$kelas_ids];
+        $kelasIdArray = array_values(array_filter($kelasIdArray, function($id) { return $id > 0; }));
+        
+        $primaryKelasId = $kelasIdArray[0] ?? 0;
+        $kelasIdsStr = !empty($kelasIdArray) ? implode(',', $kelasIdArray) : (string)$primaryKelasId;
+
         $stmt = $this->db->prepare("
-            INSERT INTO materi (guru_id, mapel_id, kelas_id, judul, deskripsi, jenis_file, file_path, youtube_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO materi (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, jenis_file, file_path, youtube_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([$guru_id, $mapel_id, $kelas_id, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url]);
+        return $stmt->execute([$guru_id, $mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url]);
     }
 
-    public function updateMateri($id, $mapel_id, $kelas_id, $judul, $deskripsi, $jenis_file, $file_path = null, $youtube_url = null) {
+    public function updateMateri($id, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $file_path = null, $youtube_url = null) {
+        $kelasIdArray = is_array($kelas_ids) ? array_map('intval', $kelas_ids) : [(int)$kelas_ids];
+        $kelasIdArray = array_values(array_filter($kelasIdArray, function($kId) { return $kId > 0; }));
+        
+        $primaryKelasId = $kelasIdArray[0] ?? 0;
+        $kelasIdsStr = !empty($kelasIdArray) ? implode(',', $kelasIdArray) : (string)$primaryKelasId;
+
         if ($file_path) {
             $stmt = $this->db->prepare("
-                UPDATE materi SET mapel_id = ?, kelas_id = ?, judul = ?, deskripsi = ?, jenis_file = ?, file_path = ?, youtube_url = ?
+                UPDATE materi SET mapel_id = ?, kelas_id = ?, kelas_ids = ?, judul = ?, deskripsi = ?, jenis_file = ?, file_path = ?, youtube_url = ?
                 WHERE id = ?
             ");
-            return $stmt->execute([$mapel_id, $kelas_id, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url, $id]);
+            return $stmt->execute([$mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url, $id]);
         } else {
             $stmt = $this->db->prepare("
-                UPDATE materi SET mapel_id = ?, kelas_id = ?, judul = ?, deskripsi = ?, jenis_file = ?, youtube_url = ?
+                UPDATE materi SET mapel_id = ?, kelas_id = ?, kelas_ids = ?, judul = ?, deskripsi = ?, jenis_file = ?, youtube_url = ?
                 WHERE id = ?
             ");
-            return $stmt->execute([$mapel_id, $kelas_id, $judul, $deskripsi, $jenis_file, $youtube_url, $id]);
+            return $stmt->execute([$mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $jenis_file, $youtube_url, $id]);
         }
     }
 

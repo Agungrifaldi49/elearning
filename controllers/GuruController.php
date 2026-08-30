@@ -104,14 +104,14 @@ class GuruController {
                 $deskripsi = Security::sanitize($_POST['deskripsi']);
                 $mapel_id = (int)$_POST['mapel_id'];
                 
-                // Ambil daftar kelas_ids (bisa lebih dari 1 kelas)
+                // Ambil daftar kelas_ids
                 $kelas_ids = [];
                 if (isset($_POST['kelas_ids']) && is_array($_POST['kelas_ids'])) {
                     $kelas_ids = array_map('intval', $_POST['kelas_ids']);
                 } elseif (isset($_POST['kelas_id'])) {
                     $kelas_ids = [(int)$_POST['kelas_id']];
                 }
-                $kelas_ids = array_filter($kelas_ids, function($kId) { return $kId > 0; });
+                $kelas_ids = array_values(array_filter($kelas_ids, function($kId) { return $kId > 0; }));
 
                 if (empty($kelas_ids)) {
                     FlashHelper::setError('Pilih minimal satu kelas target.');
@@ -127,17 +127,9 @@ class GuruController {
                     $filePath = UploadHelper::upload($_FILES['file'], 'materi');
                 }
 
-                $insertedCount = 0;
-                foreach ($kelas_ids as $kId) {
-                    $learningModel->addMateri($guruId, $mapel_id, $kId, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url);
-                    $insertedCount++;
-                }
-
-                if ($insertedCount > 1) {
-                    FlashHelper::setSuccess("Materi Pembelajaran baru berhasil diunggah untuk {$insertedCount} kelas sekaligus.");
-                } else {
-                    FlashHelper::setSuccess('Materi Pembelajaran baru berhasil diunggah.');
-                }
+                // Simpan 1 baris materi dengan seluruh kelas_ids yang dicentang
+                $learningModel->addMateri($guruId, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url);
+                FlashHelper::setSuccess('Materi Pembelajaran baru berhasil diunggah.');
 
             } elseif ($action === 'update' && $id > 0) {
                 $judul = Security::sanitize($_POST['judul']);
@@ -166,25 +158,9 @@ class GuruController {
                     $filePath = UploadHelper::upload($_FILES['file'], 'materi');
                 }
 
-                $existingMateri = $learningModel->getMateriById($id);
-                $effectiveFilePath = $filePath ?: ($existingMateri['file_path'] ?? null);
-
-                // Update kelas pertama pada entri materi ini
-                $firstKelasId = array_shift($kelas_ids);
-                $learningModel->updateMateri($id, $mapel_id, $firstKelasId, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url);
-
-                // Jika ada kelas tambahan lain yang dicentang saat edit, buatkan entri materi baru untuk kelas tersebut
-                $additionalCount = 0;
-                foreach ($kelas_ids as $kId) {
-                    $learningModel->addMateri($guruId, $mapel_id, $kId, $judul, $deskripsi, $jenis_file, $effectiveFilePath, $youtube_url);
-                    $additionalCount++;
-                }
-
-                if ($additionalCount > 0) {
-                    FlashHelper::setSuccess("Data Materi Pembelajaran berhasil diperbarui dan disebarkan ke " . ($additionalCount + 1) . " kelas.");
-                } else {
-                    FlashHelper::setSuccess('Data Materi Pembelajaran berhasil diperbarui.');
-                }
+                // Update 1 baris materi tersebut dengan kelas_ids baru tanpa duplikasi
+                $learningModel->updateMateri($id, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url);
+                FlashHelper::setSuccess('Data Materi Pembelajaran berhasil diperbarui.');
 
             } elseif ($action === 'delete' && $id > 0) {
                 $learningModel->deleteMateri($id);

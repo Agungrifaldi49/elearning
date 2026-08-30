@@ -1920,27 +1920,29 @@ class ApiController {
                             $kelasIds = array_map('intval', explode(',', (string)$input['kelas_id']));
                         }
                     }
-                    $kelasIds = array_filter($kelasIds, function($id) { return $id > 0; });
+                    $kelasIds = array_values(array_filter($kelasIds, function($id) { return $id > 0; }));
 
                     if (empty($judul) || $mapelId <= 0 || empty($kelasIds)) {
                         $this->jsonResponse(false, 'Judul, Mapel, dan minimal 1 Kelas wajib diisi', null, 400);
                     }
 
+                    $primaryKelasId = $kelasIds[0] ?? 0;
+                    $kelasIdsStr = implode(',', $kelasIds);
+
                     $stmtIns = $this->db->prepare("
-                        INSERT INTO materi (guru_id, mapel_id, kelas_id, judul, deskripsi, jenis_file, youtube_url, created_at) 
-                        VALUES (:gid, :mpid, :kid, :jdl, :desk, :jf, :yt, NOW())
+                        INSERT INTO materi (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, jenis_file, youtube_url, created_at) 
+                        VALUES (:gid, :mpid, :kid, :kids, :jdl, :desk, :jf, :yt, NOW())
                     ");
-                    foreach ($kelasIds as $kId) {
-                        $stmtIns->execute([
-                            'gid' => $guru['id'],
-                            'mpid' => $mapelId,
-                            'kid' => $kId,
-                            'jdl' => $judul,
-                            'desk' => $deskripsi,
-                            'jf' => $jenisFile,
-                            'yt' => $youtubeUrl
-                        ]);
-                    }
+                    $stmtIns->execute([
+                        'gid' => $guru['id'],
+                        'mpid' => $mapelId,
+                        'kid' => $primaryKelasId,
+                        'kids' => $kelasIdsStr,
+                        'jdl' => $judul,
+                        'desk' => $deskripsi,
+                        'jf' => $jenisFile,
+                        'yt' => $youtubeUrl
+                    ]);
 
                     $this->jsonResponse(true, 'Materi berhasil ditambahkan untuk kelas yang dipilih!');
                 }
