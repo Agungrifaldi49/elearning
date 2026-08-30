@@ -1908,16 +1908,45 @@ class ApiController {
                 break;
 
             case 'submissions':
-                $tugasId = intval($_GET['tugas_id'] ?? 0);
+                $tugasId = intval($_GET['tugas_id'] ?? $_POST['tugas_id'] ?? 0);
                 $stmtSub = $this->db->prepare("
-                    SELECT pt.*, s.nama_lengkap as nama_siswa, s.nis 
+                    SELECT pt.*, s.nama_lengkap as nama_siswa, s.nis, s.nisn, 
+                           COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas
                     FROM pengumpulan_tugas pt 
                     JOIN siswa s ON pt.siswa_id = s.id 
+                    LEFT JOIN kelas k ON s.kelas_id = k.id
                     WHERE pt.tugas_id = :tid 
                     ORDER BY pt.submitted_at DESC
                 ");
                 $stmtSub->execute(['tid' => $tugasId]);
                 $submissions = $stmtSub->fetchAll();
+
+                $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                $baseUrl = "{$scheme}://{$host}/";
+
+                foreach ($submissions as &$sub) {
+                    $fPath = trim($sub['file_path'] ?? '');
+                    $catatan = trim($sub['catatan_siswa'] ?? '');
+
+                    $extractedUrl = null;
+                    if (preg_match('/(https?:\/\/[^\s]+)/i', $catatan, $m)) {
+                        $extractedUrl = $m[1];
+                    }
+
+                    if (!empty($fPath)) {
+                        if (str_starts_with($fPath, 'http://') || str_starts_with($fPath, 'https://')) {
+                            $sub['file_url'] = $fPath;
+                        } else {
+                            $sub['file_url'] = $baseUrl . 'assets/uploads/tugas/' . ltrim($fPath, '/');
+                        }
+                    } else if (!empty($extractedUrl)) {
+                        $sub['file_url'] = $extractedUrl;
+                    } else {
+                        $sub['file_url'] = null;
+                    }
+                }
+                unset($sub);
 
                 $this->jsonResponse(true, 'Daftar Pengumpulan Tugas', $submissions);
                 break;
