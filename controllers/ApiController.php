@@ -202,20 +202,58 @@ class ApiController {
             $this->jsonResponse(false, 'Data siswa tidak ditemukan', null, 404);
         }
 
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        $academicModel = new AcademicModel();
+        $siswaId = intval($siswa['id'] ?? 0);
+        $kelasId = intval($siswa['kelas_id'] ?? 0);
+
+        $enrolledList = [];
+        try {
+            $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
+        } catch (\Throwable $eEnr) {
+            $enrolledList = [];
+        }
+
+        $enrolledMapels = [];
+        foreach ($enrolledList as $em) {
+            if (!empty($em['mapel_id'])) {
+                $enrolledMapels[$em['mapel_id'] . '_' . ($em['guru_id'] ?? 0)] = true;
+                $enrolledMapels[$em['mapel_id']] = true;
+            }
+        }
+
         switch ($endpoint) {
             case 'dashboard':
-                // Stats
-                $stmtMat = $this->db->prepare("SELECT COUNT(*) as count FROM materi WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)");
+                // Stats filtered by enrolled mapels if student has enrollments
+                $stmtMat = $this->db->prepare("SELECT * FROM materi WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)");
                 $stmtMat->execute(['kid' => $siswa['kelas_id']]);
-                $totalMateri = $stmtMat->fetch()['count'];
+                $matRows = $stmtMat->fetchAll();
+                if (!empty($enrolledMapels)) {
+                    $matRows = array_filter($matRows, function($m) use ($enrolledMapels) {
+                        return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]);
+                    });
+                }
+                $totalMateri = count($matRows);
 
-                $stmtTug = $this->db->prepare("SELECT COUNT(*) as count FROM tugas WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)");
+                $stmtTug = $this->db->prepare("SELECT * FROM tugas WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)");
                 $stmtTug->execute(['kid' => $siswa['kelas_id']]);
-                $totalTugas = $stmtTug->fetch()['count'];
+                $tugRows = $stmtTug->fetchAll();
+                if (!empty($enrolledMapels)) {
+                    $tugRows = array_filter($tugRows, function($t) use ($enrolledMapels) {
+                        return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]);
+                    });
+                }
+                $totalTugas = count($tugRows);
 
-                $stmtQz = $this->db->prepare("SELECT COUNT(*) as count FROM quiz WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status='published' OR status IS NULL)");
+                $stmtQz = $this->db->prepare("SELECT * FROM quiz WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status='published' OR status IS NULL)");
                 $stmtQz->execute(['kid' => $siswa['kelas_id']]);
-                $totalQuiz = $stmtQz->fetch()['count'];
+                $qzRows = $stmtQz->fetchAll();
+                if (!empty($enrolledMapels)) {
+                    $qzRows = array_filter($qzRows, function($q) use ($enrolledMapels) {
+                        return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]);
+                    });
+                }
+                $totalQuiz = count($qzRows);
 
                 // Announcements
                 $stmtP = $this->db->query("SELECT * FROM pengumuman ORDER BY created_at DESC LIMIT 5");
@@ -629,21 +667,10 @@ class ApiController {
                     $stmtM->execute(['kid' => $kelasId]);
                     $materi = $stmtM->fetchAll();
 
-                    if (empty($materi)) {
-                        $stmtAll = $this->db->query("
-                            SELECT m.*, 
-                                   COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
-                                   COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
-                                   k.nama_kelas
-                            FROM materi m 
-                            LEFT JOIN mata_pelajaran mp ON m.mapel_id = mp.id 
-                            LEFT JOIN guru g ON m.guru_id = g.id 
-                            LEFT JOIN users u ON g.user_id = u.id
-                            LEFT JOIN kelas k ON m.kelas_id = k.id
-                            ORDER BY m.id DESC
-                            LIMIT 50
-                        ");
-                        $materi = $stmtAll->fetchAll();
+                    if (!empty($enrolledMapels)) {
+                        $materi = array_values(array_filter($materi, function($m) use ($enrolledMapels) {
+                            return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]);
+                        }));
                     }
 
                     $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -687,21 +714,10 @@ class ApiController {
                     $stmtT->execute(['sid' => $siswaId, 'kid' => $kelasId]);
                     $tugas = $stmtT->fetchAll();
 
-                    if (empty($tugas)) {
-                        $stmtAllT = $this->db->query("
-                            SELECT t.*, 
-                                   COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
-                                   COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru, 
-                                   pt.id as submission_id, pt.nilai, pt.komentar_guru, pt.submitted_at 
-                            FROM tugas t 
-                            LEFT JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
-                            LEFT JOIN guru g ON t.guru_id = g.id 
-                            LEFT JOIN users u ON g.user_id = u.id
-                            LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = {$siswaId})
-                            ORDER BY t.id DESC
-                            LIMIT 50
-                        ");
-                        $tugas = $stmtAllT->fetchAll();
+                    if (!empty($enrolledMapels)) {
+                        $tugas = array_values(array_filter($tugas, function($t) use ($enrolledMapels) {
+                            return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]);
+                        }));
                     }
 
                     $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -781,6 +797,12 @@ class ApiController {
                 ");
                 $stmtQ->execute(['sid' => $siswa['id'], 'kid' => $siswa['kelas_id']]);
                 $quizList = $stmtQ->fetchAll();
+
+                if (!empty($enrolledMapels)) {
+                    $quizList = array_values(array_filter($quizList, function($q) use ($enrolledMapels) {
+                        return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]);
+                    }));
+                }
 
                 $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
                 foreach ($quizList as &$q) {
@@ -1698,7 +1720,7 @@ class ApiController {
                             SELECT q.*, g.nama_lengkap as nama_guru
                             FROM quiz q
                             LEFT JOIN guru g ON q.guru_id = g.id
-                            WHERE q.mapel_id = :mid AND (q.kelas_id = :kid OR q.kelas_id IS NULL OR q.kelas_id = 0) AND (q.status IS NULL OR q.status = 'published')
+                            WHERE q.mapel_id = :mid AND (q.kelas_id = :kid OR FIND_IN_SET(:kid, q.kelas_ids) OR q.kelas_id IS NULL OR q.kelas_id = 0) AND (q.status IS NULL OR q.status = 'published')
                             ORDER BY q.created_at ASC
                         ");
                         $stmtQzItems->execute(['mid' => $mid, 'kid' => $kelasId]);
