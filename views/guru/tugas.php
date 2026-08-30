@@ -283,7 +283,12 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php foreach ($tugasList as $i => $t): 
+                                    <?php 
+                                    $kelasListMap = [];
+                                    foreach ($kelasList as $k) {
+                                        $kelasListMap[$k['id']] = $k['nama_kelas'];
+                                    }
+                                    foreach ($tugasList as $i => $t): 
                                         $subs = $learningModel->getPengumpulanByTugas($t['id']);
                                         $subCount = count($subs);
                                     ?>
@@ -294,7 +299,15 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                                 <small class="text-muted d-block"><?= count($subs) ?> Siswa Mengumpulkan</small>
                                             </td>
                                             <td><span class="badge-mapel-tag"><i class="bi bi-journal-bookmark me-1"></i><?= htmlspecialchars($t['nama_mapel']) ?></span></td>
-                                            <td><span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3 py-1.5 fw-bold"><?= htmlspecialchars($t['nama_kelas']) ?></span></td>
+                                            <td>
+                                                <?php 
+                                                $targetIds = !empty($t['kelas_ids']) ? array_map('intval', explode(',', $t['kelas_ids'])) : [(int)$t['kelas_id']];
+                                                foreach ($targetIds as $tid):
+                                                    $kNama = $kelasListMap[$tid] ?? $t['nama_kelas'];
+                                                ?>
+                                                    <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2.5 py-1 fw-bold me-1 mb-1"><?= htmlspecialchars($kNama) ?></span>
+                                                <?php endforeach; ?>
+                                            </td>
                                             <td>
                                                 <?php if (!empty($t['deadline'])): 
                                                     $isExp = (date('Y-m-d H:i:s') > $t['deadline']);
@@ -486,13 +499,28 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">Kelas Target <span class="text-danger">*</span></label>
-                            <select name="kelas_id" class="form-select" required>
-                                <?php foreach ($kelasList as $k): ?>
-                                    <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold mb-0">Kelas Target <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none small fw-bold text-teal" id="selectAllKelasTugasAdd">
+                                    <i class="bi bi-check-all me-1"></i> Pilih Semua Kelas
+                                </button>
+                            </div>
+                            <div class="p-3 bg-light rounded-3 border" style="max-height: 150px; overflow-y: auto;">
+                                <div class="row g-2">
+                                    <?php foreach ($kelasList as $k): ?>
+                                        <div class="col-6 col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input kelas-checkbox-add-tugas" type="checkbox" name="kelas_ids[]" value="<?= $k['id'] ?>" id="add_tugas_k_<?= $k['id'] ?>">
+                                                <label class="form-check-label small fw-medium text-dark cursor-pointer" for="add_tugas_k_<?= $k['id'] ?>">
+                                                    <?= htmlspecialchars($k['nama_kelas']) ?>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size:0.72rem;">Bisa memilih lebih dari 1 kelas sekaligus.</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Batas Akhir (Deadline) <span class="text-danger">*</span></label>
@@ -621,14 +649,33 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-bold">Kelas Target <span class="text-danger">*</span></label>
-                                <select name="kelas_id" class="form-select" required>
-                                    <?php foreach ($kelasList as $k): ?>
-                                        <option value="<?= $k['id'] ?>" <?= $t['kelas_id'] == $k['id'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label small fw-bold mb-0">Kelas Target <span class="text-danger">*</span></label>
+                                <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none small fw-bold text-teal select-all-tugas-edit" data-target="edit_tugas_k_<?= $t['id'] ?>">
+                                    <i class="bi bi-check-all me-1"></i> Pilih Semua Kelas
+                                </button>
                             </div>
+                            <div class="p-3 bg-light rounded-3 border" style="max-height: 150px; overflow-y: auto;">
+                                <div class="row g-2">
+                                    <?php 
+                                    $editTargetIds = !empty($t['kelas_ids']) ? array_map('intval', explode(',', $t['kelas_ids'])) : [(int)$t['kelas_id']];
+                                    foreach ($kelasList as $k): 
+                                        $isChecked = in_array((int)$k['id'], $editTargetIds);
+                                    ?>
+                                        <div class="col-6 col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input edit_tugas_k_<?= $t['id'] ?>" type="checkbox" name="kelas_ids[]" value="<?= $k['id'] ?>" id="edit_tugas_k_<?= $t['id'] ?>_<?= $k['id'] ?>" <?= $isChecked ? 'checked' : '' ?>>
+                                                <label class="form-check-label small fw-medium text-dark cursor-pointer" for="edit_tugas_k_<?= $t['id'] ?>_<?= $k['id'] ?>">
+                                                    <?= htmlspecialchars($k['nama_kelas']) ?>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size:0.72rem;">Bisa memilih lebih dari 1 kelas sekaligus.</small>
+                        </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Batas Akhir (Deadline) <span class="text-danger">*</span></label>
                                 <input type="datetime-local" name="deadline" class="form-control" value="<?= date('Y-m-d\TH:i', strtotime($t['deadline'])) ?>" required>
@@ -750,6 +797,37 @@ function filterGuruTugasTable() {
         }
     });
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllAdd = document.getElementById('selectAllKelasTugasAdd');
+    if (selectAllAdd) {
+        selectAllAdd.addEventListener('click', function() {
+            const boxes = document.querySelectorAll('.kelas-checkbox-add-tugas');
+            const allChecked = Array.from(boxes).every(b => b.checked);
+            boxes.forEach(b => b.checked = !allChecked);
+        });
+    }
+
+    document.querySelectorAll('.select-all-tugas-edit').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetClass = this.getAttribute('data-target');
+            const boxes = document.querySelectorAll('.' + targetClass);
+            const allChecked = Array.from(boxes).every(b => b.checked);
+            boxes.forEach(b => b.checked = !allChecked);
+        });
+    });
+
+    const addForm = document.querySelector('#modalAddTugas form');
+    if (addForm) {
+        addForm.addEventListener('submit', function(e) {
+            const checked = addForm.querySelectorAll('input[name="kelas_ids[]"]:checked');
+            if (checked.length === 0) {
+                e.preventDefault();
+                alert('Pilih minimal satu kelas target.');
+            }
+        });
+    }
+});
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>

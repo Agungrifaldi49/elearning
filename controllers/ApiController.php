@@ -209,7 +209,7 @@ class ApiController {
                 $stmtMat->execute(['kid' => $siswa['kelas_id']]);
                 $totalMateri = $stmtMat->fetch()['count'];
 
-                $stmtTug = $this->db->prepare("SELECT COUNT(*) as count FROM tugas WHERE kelas_id = :kid");
+                $stmtTug = $this->db->prepare("SELECT COUNT(*) as count FROM tugas WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)");
                 $stmtTug->execute(['kid' => $siswa['kelas_id']]);
                 $totalTugas = $stmtTug->fetch()['count'];
 
@@ -334,7 +334,7 @@ class ApiController {
                         LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = :sid)
                         WHERE t.mapel_id = :mid
                           AND (:gid = 0 OR t.guru_id = :gid)
-                          AND (:kid = 0 OR t.kelas_id = :kid OR t.kelas_id IS NULL OR t.kelas_id = 0)
+                          AND (:kid = 0 OR t.kelas_id = :kid OR FIND_IN_SET(:kid, t.kelas_ids) OR t.kelas_id IS NULL OR t.kelas_id = 0)
                         ORDER BY t.id ASC
                     ");
                     $stmtTug->execute(['mid' => $mId, 'gid' => $gId, 'kid' => $kId, 'sid' => $siswaId]);
@@ -680,7 +680,7 @@ class ApiController {
                         LEFT JOIN guru g ON t.guru_id = g.id 
                         LEFT JOIN users u ON g.user_id = u.id
                         LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = :sid)
-                        WHERE (t.kelas_id = :kid OR t.kelas_id IS NULL OR t.kelas_id = 0)
+                        WHERE (t.kelas_id = :kid OR FIND_IN_SET(:kid, t.kelas_ids) OR t.kelas_id IS NULL OR t.kelas_id = 0)
                         ORDER BY t.id DESC
                         LIMIT 50
                     ");
@@ -703,6 +703,19 @@ class ApiController {
                         ");
                         $tugas = $stmtAllT->fetchAll();
                     }
+
+                    $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
+                    foreach ($tugas as &$item) {
+                        $targetIds = !empty($item['kelas_ids']) ? array_map('intval', explode(',', $item['kelas_ids'])) : [(int)$item['kelas_id']];
+                        $names = [];
+                        foreach ($targetIds as $tid) {
+                            if (isset($kelasList[$tid])) {
+                                $names[] = $kelasList[$tid];
+                            }
+                        }
+                        $item['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($item['nama_kelas'] ?? 'Semua Kelas');
+                    }
+                    unset($item);
                 } catch (\Throwable $eT) {
                     $tugas = [];
                 }
@@ -1498,7 +1511,7 @@ class ApiController {
                         // 2. Tugas
                         $stmtTug = $this->db->prepare("
                             SELECT COUNT(*) FROM tugas 
-                            WHERE mapel_id = :mid AND (kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)
+                            WHERE mapel_id = :mid AND (kelas_id = :kid OR FIND_IN_SET(:kid, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0)
                         ");
                         $stmtTug->execute(['mid' => $mid, 'kid' => $kelasId]);
                         $totTug = intval($stmtTug->fetchColumn());
@@ -1647,7 +1660,7 @@ class ApiController {
                             SELECT t.*, g.nama_lengkap as nama_guru
                             FROM tugas t
                             LEFT JOIN guru g ON t.guru_id = g.id
-                            WHERE t.mapel_id = :mid AND (t.kelas_id = :kid OR t.kelas_id IS NULL OR t.kelas_id = 0)
+                            WHERE t.mapel_id = :mid AND (t.kelas_id = :kid OR FIND_IN_SET(:kid, t.kelas_ids) OR t.kelas_id IS NULL OR t.kelas_id = 0)
                             ORDER BY t.created_at ASC
                         ");
                         $stmtTugItems->execute(['mid' => $mid, 'kid' => $kelasId]);
@@ -2001,21 +2014,37 @@ class ApiController {
                         $judul = trim($input['judul'] ?? '');
                         $deskripsi = trim($input['deskripsi'] ?? '');
                         $mapelId = intval($input['mapel_id'] ?? 0);
-                        $kelasId = intval($input['kelas_id'] ?? 0);
+                        
+                        $kelasIds = [];
+                        if (isset($input['kelas_ids']) && is_array($input['kelas_ids'])) {
+                            $kelasIds = array_map('intval', $input['kelas_ids']);
+                        } elseif (!empty($input['kelas_id'])) {
+                            if (is_array($input['kelas_id'])) {
+                                $kelasIds = array_map('intval', $input['kelas_id']);
+                            } else {
+                                $kelasIds = array_map('intval', explode(',', (string)$input['kelas_id']));
+                            }
+                        }
+                        $kelasIds = array_values(array_filter($kelasIds, function($id) { return $id > 0; }));
+
                         $deadline = $input['deadline'] ?? date('Y-m-d H:i:s', strtotime('+7 days'));
 
-                        if (empty($judul) || $mapelId <= 0 || $kelasId <= 0) {
-                            $this->jsonResponse(false, 'Judul, Mapel, dan Kelas wajib diisi', null, 400);
+                        if (empty($judul) || $mapelId <= 0 || empty($kelasIds)) {
+                            $this->jsonResponse(false, 'Judul, Mapel, dan minimal 1 Kelas wajib diisi', null, 400);
                         }
 
+                        $primaryKelasId = $kelasIds[0] ?? 0;
+                        $kelasIdsStr = implode(',', $kelasIds);
+
                         $stmtIns = $this->db->prepare("
-                            INSERT INTO tugas (guru_id, mapel_id, kelas_id, judul, deskripsi, deadline, created_at) 
-                            VALUES (:gid, :mpid, :kid, :jdl, :desk, :dl, NOW())
+                            INSERT INTO tugas (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, deadline, created_at) 
+                            VALUES (:gid, :mpid, :kid, :kids, :jdl, :desk, :dl, NOW())
                         ");
                         $stmtIns->execute([
                             'gid' => $guru['id'],
                             'mpid' => $mapelId,
-                            'kid' => $kelasId,
+                            'kid' => $primaryKelasId,
+                            'kids' => $kelasIdsStr,
                             'jdl' => $judul,
                             'desk' => $deskripsi,
                             'dl' => $deadline
@@ -2042,13 +2071,26 @@ class ApiController {
                     SELECT t.*, mp.nama_mapel, k.nama_kelas,
                            (SELECT COUNT(*) FROM pengumpulan_tugas pt WHERE pt.tugas_id = t.id) as total_pengumpulan 
                     FROM tugas t 
-                    JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
-                    JOIN kelas k ON t.kelas_id = k.id 
+                    LEFT JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
+                    LEFT JOIN kelas k ON t.kelas_id = k.id 
                     WHERE t.guru_id = :gid 
                     ORDER BY t.created_at DESC
                 ");
                 $stmtT->execute(['gid' => $guru['id']]);
                 $tugas = $stmtT->fetchAll();
+
+                $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
+                foreach ($tugas as &$item) {
+                    $targetIds = !empty($item['kelas_ids']) ? array_map('intval', explode(',', $item['kelas_ids'])) : [(int)$item['kelas_id']];
+                    $names = [];
+                    foreach ($targetIds as $tid) {
+                        if (isset($kelasList[$tid])) {
+                            $names[] = $kelasList[$tid];
+                        }
+                    }
+                    $item['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($item['nama_kelas'] ?? 'Semua Kelas');
+                }
+                unset($item);
 
                 $this->jsonResponse(true, 'Kelola Tugas', $tugas);
                 break;

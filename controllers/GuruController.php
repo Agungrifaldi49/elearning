@@ -214,7 +214,21 @@ class GuruController {
                 $judul = Security::sanitize($_POST['judul']);
                 $deskripsi = Security::sanitize($_POST['deskripsi']);
                 $mapel_id = (int)$_POST['mapel_id'];
-                $kelas_id = (int)$_POST['kelas_id'];
+                
+                $kelas_ids = [];
+                if (isset($_POST['kelas_ids']) && is_array($_POST['kelas_ids'])) {
+                    $kelas_ids = array_map('intval', $_POST['kelas_ids']);
+                } elseif (isset($_POST['kelas_id'])) {
+                    $kelas_ids = [(int)$_POST['kelas_id']];
+                }
+                $kelas_ids = array_values(array_filter($kelas_ids, function($kId) { return $kId > 0; }));
+
+                if (empty($kelas_ids)) {
+                    FlashHelper::setError('Pilih minimal satu kelas target.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/tugas');
+                    exit();
+                }
+
                 $deadline = $_POST['deadline'];
                 $filePath = null;
 
@@ -222,15 +236,17 @@ class GuruController {
                     $filePath = UploadHelper::upload($_FILES['file'], 'tugas');
                 }
 
-                $learningModel->addTugas($guruId, $mapel_id, $kelas_id, $judul, $deskripsi, $filePath, $deadline);
+                $learningModel->addTugas($guruId, $mapel_id, $kelas_ids, $judul, $deskripsi, $filePath, $deadline);
                 
                 $commModel = new CommunicationModel();
-                $commModel->sendNotificationToClass(
-                    $kelas_id, 
-                    '📝 Tugas Pembelajaran Baru', 
-                    "Guru mempublikasikan Tugas Baru: {$judul}. Batas deadline: {$deadline}.", 
-                    'index.php?url=siswa/tugas'
-                );
+                foreach ($kelas_ids as $kId) {
+                    $commModel->sendNotificationToClass(
+                        $kId, 
+                        '📝 Tugas Pembelajaran Baru', 
+                        "Guru mempublikasikan Tugas Baru: {$judul}. Batas deadline: {$deadline}.", 
+                        'index.php?url=siswa/tugas'
+                    );
+                }
 
                 FlashHelper::setSuccess('Tugas baru berhasil dibuat.');
 
@@ -239,7 +255,21 @@ class GuruController {
                 $judul = Security::sanitize($_POST['judul']);
                 $deskripsi = Security::sanitize($_POST['deskripsi']);
                 $mapel_id = (int)$_POST['mapel_id'];
-                $kelas_id = (int)$_POST['kelas_id'];
+                
+                $kelas_ids = [];
+                if (isset($_POST['kelas_ids']) && is_array($_POST['kelas_ids'])) {
+                    $kelas_ids = array_map('intval', $_POST['kelas_ids']);
+                } elseif (isset($_POST['kelas_id'])) {
+                    $kelas_ids = [(int)$_POST['kelas_id']];
+                }
+                $kelas_ids = array_values(array_filter($kelas_ids, function($kId) { return $kId > 0; }));
+
+                if (empty($kelas_ids)) {
+                    FlashHelper::setError('Pilih minimal satu kelas target.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/tugas');
+                    exit();
+                }
+
                 $deadline = $_POST['deadline'];
                 $filePath = null;
 
@@ -247,7 +277,7 @@ class GuruController {
                     $filePath = UploadHelper::upload($_FILES['file'], 'tugas');
                 }
 
-                $learningModel->updateTugas($id, $mapel_id, $kelas_id, $judul, $deskripsi, $filePath, $deadline);
+                $learningModel->updateTugas($id, $mapel_id, $kelas_ids, $judul, $deskripsi, $filePath, $deadline);
                 FlashHelper::setSuccess('Data Penugasan berhasil diperbarui.');
 
             } elseif ($action === 'delete') {

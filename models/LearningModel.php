@@ -10,6 +10,7 @@ class LearningModel extends BaseModel {
         parent::__construct();
         $this->ensureTugasSusulanTable();
         $this->ensureMateriKelasIdsColumn();
+        $this->ensureTugasKelasIdsColumn();
     }
 
     private function ensureTugasSusulanTable() {
@@ -35,6 +36,15 @@ class LearningModel extends BaseModel {
         } catch (Exception $e) {}
         try {
             $this->db->exec("UPDATE materi SET kelas_ids = CAST(kelas_id AS CHAR) WHERE kelas_ids IS NULL OR TRIM(kelas_ids) = ''");
+        } catch (Exception $e) {}
+    }
+
+    private function ensureTugasKelasIdsColumn() {
+        try {
+            $this->db->exec("ALTER TABLE tugas ADD COLUMN kelas_ids VARCHAR(255) NULL AFTER kelas_id");
+        } catch (Exception $e) {}
+        try {
+            $this->db->exec("UPDATE tugas SET kelas_ids = CAST(kelas_id AS CHAR) WHERE kelas_ids IS NULL OR TRIM(kelas_ids) = ''");
         } catch (Exception $e) {}
     }
 
@@ -149,15 +159,16 @@ class LearningModel extends BaseModel {
     // --- TUGAS ---
     public function getTugas($kelas_id = null, $guru_id = null) {
         $sql = "
-            SELECT t.*, map.nama_mapel, k.nama_kelas, g.nama_lengkap as nama_guru
+            SELECT t.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, g.nama_lengkap as nama_guru
             FROM tugas t
             JOIN mata_pelajaran map ON t.mapel_id = map.id
-            JOIN kelas k ON t.kelas_id = k.id
+            LEFT JOIN kelas k ON t.kelas_id = k.id
             JOIN guru g ON t.guru_id = g.id
             WHERE 1=1
         ";
         if ($kelas_id) {
-            $sql .= " AND t.kelas_id = " . (int)$kelas_id;
+            $kid = (int)$kelas_id;
+            $sql .= " AND (FIND_IN_SET({$kid}, t.kelas_ids) OR t.kelas_id = {$kid})";
         }
         if ($guru_id) {
             $sql .= " AND t.guru_id = " . (int)$guru_id;
@@ -166,27 +177,39 @@ class LearningModel extends BaseModel {
         return $this->db->query($sql)->fetchAll();
     }
 
-    public function addTugas($guru_id, $mapel_id, $kelas_id, $judul, $deskripsi, $file_path, $deadline) {
+    public function addTugas($guru_id, $mapel_id, $kelas_ids, $judul, $deskripsi, $file_path, $deadline) {
+        $kelasIdArray = is_array($kelas_ids) ? array_map('intval', $kelas_ids) : [(int)$kelas_ids];
+        $kelasIdArray = array_values(array_filter($kelasIdArray, function($id) { return $id > 0; }));
+        
+        $primaryKelasId = $kelasIdArray[0] ?? 0;
+        $kelasIdsStr = !empty($kelasIdArray) ? implode(',', $kelasIdArray) : (string)$primaryKelasId;
+
         $stmt = $this->db->prepare("
-            INSERT INTO tugas (guru_id, mapel_id, kelas_id, judul, deskripsi, file_path, deadline)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tugas (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, file_path, deadline)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([$guru_id, $mapel_id, $kelas_id, $judul, $deskripsi, $file_path, $deadline]);
+        return $stmt->execute([$guru_id, $mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $file_path, $deadline]);
     }
 
-    public function updateTugas($id, $mapel_id, $kelas_id, $judul, $deskripsi, $file_path = null, $deadline = null) {
+    public function updateTugas($id, $mapel_id, $kelas_ids, $judul, $deskripsi, $file_path = null, $deadline = null) {
+        $kelasIdArray = is_array($kelas_ids) ? array_map('intval', $kelas_ids) : [(int)$kelas_ids];
+        $kelasIdArray = array_values(array_filter($kelasIdArray, function($kId) { return $kId > 0; }));
+        
+        $primaryKelasId = $kelasIdArray[0] ?? 0;
+        $kelasIdsStr = !empty($kelasIdArray) ? implode(',', $kelasIdArray) : (string)$primaryKelasId;
+
         if ($file_path) {
             $stmt = $this->db->prepare("
-                UPDATE tugas SET mapel_id = ?, kelas_id = ?, judul = ?, deskripsi = ?, file_path = ?, deadline = ?
+                UPDATE tugas SET mapel_id = ?, kelas_id = ?, kelas_ids = ?, judul = ?, deskripsi = ?, file_path = ?, deadline = ?
                 WHERE id = ?
             ");
-            return $stmt->execute([$mapel_id, $kelas_id, $judul, $deskripsi, $file_path, $deadline, $id]);
+            return $stmt->execute([$mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $file_path, $deadline, $id]);
         } else {
             $stmt = $this->db->prepare("
-                UPDATE tugas SET mapel_id = ?, kelas_id = ?, judul = ?, deskripsi = ?, deadline = ?
+                UPDATE tugas SET mapel_id = ?, kelas_id = ?, kelas_ids = ?, judul = ?, deskripsi = ?, deadline = ?
                 WHERE id = ?
             ");
-            return $stmt->execute([$mapel_id, $kelas_id, $judul, $deskripsi, $deadline, $id]);
+            return $stmt->execute([$mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $deadline, $id]);
         }
     }
 
