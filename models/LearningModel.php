@@ -169,9 +169,10 @@ class LearningModel extends BaseModel {
         if ($kelas_id) {
             $kid = (int)$kelas_id;
             $sql .= " AND (
-                (t.kelas_ids IS NOT NULL AND TRIM(t.kelas_ids) != '' AND FIND_IN_SET({$kid}, t.kelas_ids))
-                OR
-                ((t.kelas_ids IS NULL OR TRIM(t.kelas_ids) = '') AND (t.kelas_id = {$kid} OR t.kelas_id = 0 OR t.kelas_id IS NULL))
+                t.kelas_id = {$kid} 
+                OR t.kelas_id = 0 
+                OR t.kelas_id IS NULL 
+                OR (t.kelas_ids IS NOT NULL AND FIND_IN_SET({$kid}, REPLACE(t.kelas_ids, ' ', '')) > 0)
             )";
         }
         if ($guru_id) {

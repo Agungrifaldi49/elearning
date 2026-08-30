@@ -818,6 +818,9 @@ class ApiController {
                     if (empty($enrolledMapels)) return true;
                     return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]);
                 }));
+                if (empty($tugasList) && !empty($allTugas)) {
+                    $tugasList = $allTugas;
+                }
 
                 foreach ($tugasList as &$t) {
                     $tId = intval($t['id']);
