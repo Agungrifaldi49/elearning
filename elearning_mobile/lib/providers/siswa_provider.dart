@@ -258,8 +258,19 @@ class SiswaProvider with ChangeNotifier {
     notifyListeners();
 
     final res = await ApiService.get('siswa/materi', params: {'user_id': userId.toString()});
-    if (res['success'] == true && res['data'] is List) {
-      _materiList = (res['data'] as List).map((e) => MateriModel.fromJson(e)).toList();
+    if (res['success'] == true && res['data'] != null) {
+      List rawList = [];
+      if (res['data'] is List) {
+        rawList = res['data'];
+      } else if (res['data'] is Map) {
+        final map = res['data'] as Map;
+        if (map['materi'] is List) {
+          rawList = map['materi'];
+        } else if (map['data'] is List) {
+          rawList = map['data'];
+        }
+      }
+      _materiList = rawList.map((e) => MateriModel.fromJson(Map<String, dynamic>.from(e))).toList();
     }
     _isLoading = false;
     notifyListeners();
@@ -270,8 +281,19 @@ class SiswaProvider with ChangeNotifier {
     notifyListeners();
 
     final res = await ApiService.get('siswa/tugas', params: {'user_id': userId.toString()});
-    if (res['success'] == true && res['data'] is List) {
-      _tugasList = (res['data'] as List).map((e) => TugasModel.fromJson(e)).toList();
+    if (res['success'] == true && res['data'] != null) {
+      List rawList = [];
+      if (res['data'] is List) {
+        rawList = res['data'];
+      } else if (res['data'] is Map) {
+        final map = res['data'] as Map;
+        if (map['tugas'] is List) {
+          rawList = map['tugas'];
+        } else if (map['data'] is List) {
+          rawList = map['data'];
+        }
+      }
+      _tugasList = rawList.map((e) => TugasModel.fromJson(Map<String, dynamic>.from(e))).toList();
     }
     _isLoading = false;
     notifyListeners();
@@ -296,8 +318,19 @@ class SiswaProvider with ChangeNotifier {
     notifyListeners();
 
     final res = await ApiService.get('siswa/quiz', params: {'user_id': userId.toString()});
-    if (res['success'] == true && res['data'] is List) {
-      _quizList = (res['data'] as List).map((e) => QuizModel.fromJson(e)).toList();
+    if (res['success'] == true && res['data'] != null) {
+      List rawList = [];
+      if (res['data'] is List) {
+        rawList = res['data'];
+      } else if (res['data'] is Map) {
+        final map = res['data'] as Map;
+        if (map['quiz'] is List) {
+          rawList = map['quiz'];
+        } else if (map['data'] is List) {
+          rawList = map['data'];
+        }
+      }
+      _quizList = rawList.map((e) => QuizModel.fromJson(Map<String, dynamic>.from(e))).toList();
     }
     _isLoading = false;
     notifyListeners();
@@ -493,8 +526,19 @@ class SiswaProvider with ChangeNotifier {
 
   Future<void> fetchMateriSilent(int userId) async {
     final res = await ApiService.get('siswa/materi', params: {'user_id': userId.toString()});
-    if (res['success'] == true && res['data'] is List) {
-      final list = (res['data'] as List).map((e) => MateriModel.fromJson(e)).toList();
+    if (res['success'] == true && res['data'] != null) {
+      List rawList = [];
+      if (res['data'] is List) {
+        rawList = res['data'];
+      } else if (res['data'] is Map) {
+        final map = res['data'] as Map;
+        if (map['materi'] is List) {
+          rawList = map['materi'];
+        } else if (map['data'] is List) {
+          rawList = map['data'];
+        }
+      }
+      final list = rawList.map((e) => MateriModel.fromJson(Map<String, dynamic>.from(e))).toList();
       if (list.length != _materiList.length) {
         _materiList = list;
         notifyListeners();
@@ -504,8 +548,19 @@ class SiswaProvider with ChangeNotifier {
 
   Future<void> fetchQuizSilent(int userId) async {
     final res = await ApiService.get('siswa/quiz', params: {'user_id': userId.toString()});
-    if (res['success'] == true && res['data'] is List) {
-      final list = (res['data'] as List).map((e) => QuizModel.fromJson(e)).toList();
+    if (res['success'] == true && res['data'] != null) {
+      List rawList = [];
+      if (res['data'] is List) {
+        rawList = res['data'];
+      } else if (res['data'] is Map) {
+        final map = res['data'] as Map;
+        if (map['quiz'] is List) {
+          rawList = map['quiz'];
+        } else if (map['data'] is List) {
+          rawList = map['data'];
+        }
+      }
+      final list = rawList.map((e) => QuizModel.fromJson(Map<String, dynamic>.from(e))).toList();
       if (list.length != _quizList.length) {
         _quizList = list;
         notifyListeners();

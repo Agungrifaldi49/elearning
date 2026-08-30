@@ -32,9 +32,9 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     final userId = user?.id ?? 0;
     final res = await ApiService.get('siswa/learning_path?user_id=$userId');
     if (mounted) {
-      if (res['success'] == true && res['data'] is Map<String, dynamic>) {
+      if (res['success'] == true && res['data'] is Map) {
         setState(() {
-          _data = res['data'];
+          _data = Map<String, dynamic>.from(res['data'] as Map);
           _isLoading = false;
         });
       } else {

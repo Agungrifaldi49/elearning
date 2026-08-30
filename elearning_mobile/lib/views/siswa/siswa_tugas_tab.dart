@@ -38,9 +38,7 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
     final catatanController = TextEditingController();
     final fileController = TextEditingController();
 
-    final fileUrl = (t.filePath != null && t.filePath!.startsWith('http'))
-        ? t.filePath!
-        : ApiService.getFileUrl('assets/uploads/tugas/${t.filePath ?? ''}');
+    final fileUrl = ApiService.getFileUrl(t.filePath);
 
     showModalBottomSheet(
       context: context,

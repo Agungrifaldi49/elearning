@@ -35,9 +35,7 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
   void _showMateriDetailModal(MateriModel m) {
     Provider.of<SiswaProvider>(context, listen: false).markMateriAsSeen(m.id);
 
-    final fileUrl = (m.filePath != null && m.filePath!.startsWith('http'))
-        ? m.filePath!
-        : ApiService.getFileUrl('assets/uploads/materi/${m.filePath ?? ''}');
+    final fileUrl = ApiService.getFileUrl(m.filePath);
 
     showModalBottomSheet(
       context: context,
