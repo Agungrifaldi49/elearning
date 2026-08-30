@@ -235,9 +235,23 @@ class ApiController {
 
         switch ($endpoint) {
             case 'dashboard':
-                // Stats filtered by enrolled mapels or class assignment
+                require_once ROOT_PATH . 'models/SiswaModel.php';
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                $siswaModel = new SiswaModel();
+                $academicModel = new AcademicModel();
+
+                $siswaId = intval($siswa['id'] ?? 0);
+                $kelasId = intval($siswa['kelas_id'] ?? 0);
+
+                // 1. Active Academic Year & Semester
+                $activeTa = $academicModel->getActiveTahunAjaran();
+
+                // 2. Real Certificate & Performance Stats
+                $certStats = $siswaModel->getSiswaCertificateRealStats($siswaId);
+
+                // 3. Stats (Materi, Tugas, Quiz)
                 $stmtMat = $this->db->prepare("SELECT * FROM materi WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)");
-                $stmtMat->execute(['kid' => $siswa['kelas_id']]);
+                $stmtMat->execute(['kid' => $kelasId]);
                 $matRows = $stmtMat->fetchAll();
                 if (!empty($enrolledMapels)) {
                     $matRows = array_filter($matRows, function($m) use ($enrolledMapels, $kelasId) {
@@ -246,52 +260,77 @@ class ApiController {
                 }
                 $totalMateri = count($matRows);
 
-                $stmtTug = $this->db->prepare("SELECT * FROM tugas WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0)");
-                $stmtTug->execute(['kid' => $siswa['kelas_id']]);
+                $stmtTug = $this->db->prepare("SELECT * FROM tugas WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) ORDER BY deadline ASC");
+                $stmtTug->execute(['kid' => $kelasId]);
                 $tugRows = $stmtTug->fetchAll();
                 if (!empty($enrolledMapels)) {
-                    $tugRows = array_filter($tugRows, function($t) use ($enrolledMapels, $kelasId) {
+                    $tugRows = array_values(array_filter($tugRows, function($t) use ($enrolledMapels, $kelasId) {
                         return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]) || intval($t['kelas_id'] ?? 0) === $kelasId || (isset($t['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $t['kelas_ids']))));
-                    });
+                    }));
                 }
                 $totalTugas = count($tugRows);
 
                 $stmtQz = $this->db->prepare("SELECT * FROM quiz WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status='published' OR status IS NULL)");
-                $stmtQz->execute(['kid' => $siswa['kelas_id']]);
+                $stmtQz->execute(['kid' => $kelasId]);
                 $qzRows = $stmtQz->fetchAll();
                 if (!empty($enrolledMapels)) {
-                    $qzRows = array_filter($qzRows, function($q) use ($enrolledMapels, $kelasId) {
+                    $qzRows = array_values(array_filter($qzRows, function($q) use ($enrolledMapels, $kelasId) {
                         return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]) || intval($q['kelas_id'] ?? 0) === $kelasId || (isset($q['kelas_ids']) && in_array($kelasId, array_map('intval', explode(',', $q['kelas_ids']))));
-                    });
+                    }));
                 }
                 $totalQuiz = count($qzRows);
 
-                // Announcements
-                $stmtP = $this->db->query("SELECT * FROM pengumuman ORDER BY created_at DESC LIMIT 5");
-                $pengumuman = $stmtP->fetchAll();
+                // 4. Nearest Task Deadline
+                $tugasTerdekat = null;
+                if (!empty($tugRows)) {
+                    $firstTugas = $tugRows[0];
+                    $tugasTerdekat = [
+                        'id' => intval($firstTugas['id']),
+                        'judul' => $firstTugas['judul'] ?? '',
+                        'deadline' => $firstTugas['deadline'] ?? '',
+                        'mapel_id' => intval($firstTugas['mapel_id'] ?? 0)
+                    ];
+                }
 
-                // Jadwal Hari Ini
+                // 5. Chart Data (Average grade per subject)
+                $stmtChart = $this->db->prepare("
+                    SELECT m.nama_mapel, ROUND(AVG(pt.nilai), 1) as avg_nilai
+                    FROM pengumpulan_tugas pt
+                    JOIN tugas t ON pt.tugas_id = t.id
+                    JOIN mata_pelajaran m ON t.mapel_id = m.id
+                    WHERE pt.siswa_id = ? AND pt.nilai IS NOT NULL
+                    GROUP BY m.id, m.nama_mapel
+                    LIMIT 6
+                ");
+                $stmtChart->execute([$siswaId]);
+                $chartData = $stmtChart->fetchAll();
+
+                // 6. Announcements
+                $stmtP = $this->db->query("SELECT * FROM pengumuman WHERE (target_role = 'siswa' OR target_role = 'semua' OR target_role IS NULL) ORDER BY created_at DESC LIMIT 5");
+                $pengumuman = $stmtP ? $stmtP->fetchAll() : [];
+
+                // 7. Jadwal Hari Ini
                 $days = [1=>'Senin', 2=>'Selasa', 3=>'Rabu', 4=>'Kamis', 5=>'Jumat', 6=>'Sabtu', 7=>'Minggu'];
                 $today = $days[date('N')] ?? 'Senin';
                 $stmtJ = $this->db->prepare("
                     SELECT j.*, m.nama_mapel, g.nama_lengkap as nama_guru 
                     FROM jadwal j 
-                    JOIN mata_pelajaran m ON j.mapel_id = m.id 
-                    JOIN guru g ON j.guru_id = g.id 
-                    WHERE j.kelas_id = :kid AND j.hari = :hari 
+                    LEFT JOIN mata_pelajaran m ON j.mapel_id = m.id 
+                    LEFT JOIN guru g ON j.guru_id = g.id 
+                    WHERE (j.kelas_id = :kid OR FIND_IN_SET(:kid, j.kelas_ids) OR j.kelas_id IS NULL OR j.kelas_id = 0) AND j.hari = :hari 
                     ORDER BY j.jam_mulai ASC
                 ");
-                $stmtJ->execute(['kid' => $siswa['kelas_id'], 'hari' => $today]);
+                $stmtJ->execute(['kid' => $kelasId, 'hari' => $today]);
                 $jadwalToday = $stmtJ->fetchAll();
 
-                // Presensi Hari Ini
+                // 8. Presensi Hari Ini
                 $tglNow = date('Y-m-d');
                 $stmtAbsToday = $this->db->prepare("
                     SELECT * FROM absensi 
                     WHERE siswa_id = :sid AND (tanggal = :tgl1 OR DATE(created_at) = :tgl2 OR DATE(waktu_masuk) = :tgl3)
                     ORDER BY id DESC LIMIT 1
                 ");
-                $stmtAbsToday->execute(['sid' => $siswa['id'], 'tgl1' => $tglNow, 'tgl2' => $tglNow, 'tgl3' => $tglNow]);
+                $stmtAbsToday->execute(['sid' => $siswaId, 'tgl1' => $tglNow, 'tgl2' => $tglNow, 'tgl3' => $tglNow]);
                 $absToday = $stmtAbsToday->fetch();
 
                 $hasClockedIn = false;
@@ -312,13 +351,18 @@ class ApiController {
                     }
                 }
 
-                $this->jsonResponse(true, 'Data Dashboard Siswa', [
-                    'siswa' => $siswa,
+                $this->jsonResponse(true, 'Data Dashboard Siswa Terhubung Realtime', [
+                    'active_ta' => $activeTa ?: ['tahun_ajaran' => '2025/2026', 'semester' => 'Ganjil'],
+                    'siswa_profile' => $siswa,
+                    'cert_stats' => $certStats,
                     'stats' => [
                         'materi' => $totalMateri,
                         'tugas' => $totalTugas,
-                        'quiz' => $totalQuiz
+                        'quiz' => $totalQuiz,
+                        'presensi_log' => $certStats['presensi_log'] ?? '0%'
                     ],
+                    'tugas_terdekat' => $tugasTerdekat,
+                    'chart_data' => $chartData,
                     'pengumuman' => $pengumuman,
                     'jadwal_hari_ini' => $jadwalToday,
                     'absensi_today' => [

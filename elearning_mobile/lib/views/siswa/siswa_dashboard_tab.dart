@@ -14,6 +14,7 @@ import 'learning_path_screen.dart';
 import 'sertifikat_screen.dart';
 import 'siswa_absensi_tab.dart';
 import 'siswa_nilai_tab.dart';
+import 'siswa_tugas_tab.dart';
 
 class SiswaDashboardTab extends StatefulWidget {
   const SiswaDashboardTab({super.key});
@@ -40,13 +41,20 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
 
   @override
   Widget build(BuildContext context) {
+    final user = Provider.of<AuthProvider>(context).currentUser;
     final siswaProvider = Provider.of<SiswaProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final stats = siswaProvider.dashboardData?['stats'] ?? {'materi': 0, 'tugas': 0, 'quiz': 0};
-    final pengumuman = siswaProvider.dashboardData?['pengumuman'] as List? ?? [];
-    final jadwalToday = siswaProvider.dashboardData?['jadwal_hari_ini'] as List? ?? [];
+    final dashboardData = siswaProvider.dashboardData ?? {};
 
-    // Complete 11 Features List
+    final activeTa = dashboardData['active_ta'] as Map? ?? {'tahun_ajaran': '2025/2026', 'semester': 'Ganjil'};
+    final certStats = dashboardData['cert_stats'] as Map? ?? {'predikat': 'Belum Ada Data', 'presensi_log': '0%', 'evaluasi_lms': '0.0 / 100'};
+    final stats = dashboardData['stats'] as Map? ?? {'materi': 0, 'tugas': 0, 'quiz': 0, 'presensi_log': '0%'};
+    final tugasTerdekat = dashboardData['tugas_terdekat'] as Map?;
+    final chartData = dashboardData['chart_data'] as List? ?? [];
+    final pengumuman = dashboardData['pengumuman'] as List? ?? [];
+    final jadwalToday = dashboardData['jadwal_hari_ini'] as List? ?? [];
+
+    // 11 Features List
     final allFeatures = [
       _buildFeatureGridItem(
         icon: Icons.badge_rounded,
@@ -126,7 +134,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Banner Card
+            // Welcome Hero Card (Matches Web Design)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -144,46 +152,53 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Portal Siswa Mobile',
-                            style: TextStyle(color: Colors.white70, fontSize: 13),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Semangat Belajar! 🚀',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(Icons.school, color: Colors.white, size: 28),
+                        child: const Text(
+                          'Portal Pembelajaran Siswa',
+                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          "T.A. ${activeTa['tahun_ajaran']} — ${activeTa['semester']}",
+                          style: const TextStyle(color: Colors.black80, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'SMK Muthia Harapan Cicalengka - LMS Mobile Engine',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Selamat Datang, ${user?.fullName ?? "Siswa"}! 👋',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "Kelas: ${user?.namaKelas ?? 'Rombel Kelas'}  |  Jurusan: ${user?.namaJurusan ?? 'SMK Muthia Harapan'}",
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
             ),
 
+            // Clock-In / Clock-Out Reminder Bar
             if (!siswaProvider.hasClockedInToday) ...[
               const SizedBox(height: 12),
               InkWell(
@@ -292,34 +307,227 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
 
             const SizedBox(height: 20),
 
-            // Quick Stats Row
-            Row(
+            // 4 Real Database KPI Stats Cards (Matches Web)
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.5,
               children: [
-                _buildStatCard(
-                  title: 'Materi',
+                _buildKpiCard(
+                  title: 'Materi Dibaca',
                   count: stats['materi'].toString(),
+                  subtitle: 'Tersedia Rombel',
                   icon: Icons.menu_book_rounded,
                   color: Colors.blue,
                   isDark: isDark,
                 ),
-                const SizedBox(width: 12),
-                _buildStatCard(
-                  title: 'Tugas',
+                _buildKpiCard(
+                  title: 'Tugas Aktif',
                   count: stats['tugas'].toString(),
+                  subtitle: 'Perlu Dikumpulkan',
                   icon: Icons.assignment_rounded,
                   color: Colors.orange,
                   isDark: isDark,
                 ),
-                const SizedBox(width: 12),
-                _buildStatCard(
-                  title: 'Quiz/CBT',
+                _buildKpiCard(
+                  title: 'Kuis & CBT',
                   count: stats['quiz'].toString(),
+                  subtitle: 'Evaluasi Sekolah',
                   icon: Icons.quiz_rounded,
                   color: Colors.purple,
                   isDark: isDark,
                 ),
+                _buildKpiCard(
+                  title: 'Presensi Log',
+                  count: (stats['presensi_log'] ?? certStats['presensi_log'] ?? '0%').toString(),
+                  subtitle: 'Kehadiran Real',
+                  icon: Icons.calendar_check_rounded,
+                  color: Colors.teal,
+                  isDark: isDark,
+                ),
               ],
             ),
+
+            // Nearest Assignment Deadline Widget
+            if (tugasTerdekat != null && (tugasTerdekat['judul'] ?? '').isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.darkSurface : Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.amber.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade700,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.timer_outlined, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'TENGGAT PENUGASAN TERDEKAT',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            tugasTerdekat['judul'] ?? 'Tugas KBM',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "Deadline: ${tugasTerdekat['deadline'] ?? '-'}",
+                            style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaTugasTab())),
+                      child: const Text('Kerjakan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Real Predikat & LMS Certificate Summary Card
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.darkSurface : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.green.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(Icons.workspace_premium_rounded, color: Colors.green.shade700, size: 28),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Evaluasi & Predikat Belajar Real',
+                          style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          certStats['predikat']?.toString() ?? 'Belum Ada Data',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "Rerata LMS: ${certStats['evaluasi_lms'] ?? '0.0 / 100'}",
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.green.shade800,
+                      side: BorderSide(color: Colors.green.shade400),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SertifikatScreen())),
+                    child: const Text('Sertifikat', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+
+            // Subject Grade Performance Breakdown (Chart Representation)
+            if (chartData.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const Text(
+                '📊 Rerata Nilai Evaluasi Per-Mapel',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.darkSurface : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  children: chartData.map((cd) {
+                    final mapelName = cd['nama_mapel']?.toString() ?? 'Mapel';
+                    final avgGrade = double.tryParse(cd['avg_nilai']?.toString() ?? '0') ?? 0.0;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(mapelName, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                              Text(
+                                "${avgGrade.toStringAsFixed(1)} / 100",
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: (avgGrade / 100).clamp(0.0, 1.0),
+                              minHeight: 6,
+                              backgroundColor: Colors.grey.shade100,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                avgGrade >= 85 ? Colors.green : (avgGrade >= 75 ? Colors.blue : Colors.orange),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
 
             const SizedBox(height: 20),
 
@@ -486,7 +694,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            p['isi_pengumuman'] ?? p['konten'] ?? '',
+                            p['isi_pengumuman'] ?? p['isi'] ?? p['konten'] ?? '',
                             style: const TextStyle(fontSize: 14),
                           ),
                           const SizedBox(height: 8),
@@ -506,42 +714,58 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
     );
   }
 
-  Widget _buildStatCard({
+  Widget _buildKpiCard({
     required String title,
     required String count,
+    required String subtitle,
     required IconData icon,
     required Color color,
     required bool isDark,
   }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkSurface : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              count,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title.toUpperCase(),
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+              ),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+            ],
+          ),
+          Text(
+            count,
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color),
+          ),
+          Text(
+            subtitle,
+            style: const TextStyle(fontSize: 10, color: Colors.grey),
+          ),
+        ],
       ),
     );
   }
