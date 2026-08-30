@@ -412,6 +412,9 @@ class SiswaController {
             exit();
         }
 
+        $allQuiz = $examModel->getQuizList($kelasId);
+        $cbtList = $examModel->getUjianCBT($kelasId);
+
         $db = Database::getConnection();
         $stmtCompleted = $db->prepare("
             SELECT quiz_id, total_nilai, nilai_tertinggi, 
