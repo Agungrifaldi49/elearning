@@ -37,9 +37,8 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
     if (user != null) {
       final guruProvider = Provider.of<GuruProvider>(context, listen: false);
       guruProvider.fetchMateri(user.id);
-      if (guruProvider.mapelList.isEmpty || guruProvider.kelasList.isEmpty) {
-        guruProvider.fetchTugas(user.id);
-      }
+      guruProvider.fetchJadwal(user.id);
+      guruProvider.fetchTugas(user.id);
     }
   }
 
@@ -287,15 +286,52 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
 
   void _showAddMateriModal() {
     final guruProvider = Provider.of<GuruProvider>(context, listen: false);
-    final mapelList = guruProvider.mapelList;
-    final kelasList = guruProvider.kelasList;
+    final jadwalList = guruProvider.jadwalList;
+    final mapelListRaw = guruProvider.mapelList;
+    final kelasListRaw = guruProvider.kelasList;
+
+    // Construct unique Mapel Options from Schedule & Assignments
+    final Map<int, String> mapelOptions = {};
+    for (var j in jadwalList) {
+      if (j.mapelId > 0 && j.namaMapel.isNotEmpty) {
+        mapelOptions[j.mapelId] = j.namaMapel;
+      }
+    }
+    for (var m in mapelListRaw) {
+      final mId = int.tryParse(m['id'].toString()) ?? 0;
+      final mName = m['nama_mapel'] ?? m['nama'] ?? '';
+      if (mId > 0 && mName.isNotEmpty) {
+        mapelOptions[mId] = mName;
+      }
+    }
+    if (mapelOptions.isEmpty) {
+      mapelOptions[1] = 'Mata Pelajaran Umum';
+    }
+
+    // Construct unique Kelas Options from Schedule & Assignments
+    final Map<int, String> kelasOptions = {};
+    for (var j in jadwalList) {
+      if (j.kelasId > 0 && j.namaKelas != null && j.namaKelas!.isNotEmpty) {
+        kelasOptions[j.kelasId] = j.namaKelas!;
+      }
+    }
+    for (var k in kelasListRaw) {
+      final kId = int.tryParse(k['id'].toString()) ?? 0;
+      final kName = k['nama_kelas'] ?? k['nama'] ?? '';
+      if (kId > 0 && kName.isNotEmpty) {
+        kelasOptions[kId] = kName;
+      }
+    }
+    if (kelasOptions.isEmpty) {
+      kelasOptions[1] = 'Semua Kelas';
+    }
 
     final judulController = TextEditingController();
     final deskripsiController = TextEditingController();
     final mediaController = TextEditingController();
 
-    int selectedMapel = mapelList.isNotEmpty ? (int.tryParse(mapelList[0]['id'].toString()) ?? 1) : 1;
-    int selectedKelas = kelasList.isNotEmpty ? (int.tryParse(kelasList[0]['id'].toString()) ?? 1) : 1;
+    int selectedMapel = mapelOptions.keys.first;
+    int selectedKelas = kelasOptions.keys.first;
     String jenisFile = 'pdf';
 
     showModalBottomSheet(
@@ -370,7 +406,7 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                     children: [
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          initialValue: selectedMapel,
+                          initialValue: mapelOptions.containsKey(selectedMapel) ? selectedMapel : mapelOptions.keys.first,
                           decoration: InputDecoration(
                             labelText: 'Mata Pelajaran',
                             prefixIcon: const Icon(Icons.book_rounded, size: 20),
@@ -378,12 +414,14 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                           ),
                           isExpanded: true,
-                          items: mapelList.map<DropdownMenuItem<int>>((m) {
-                            final idVal = int.tryParse(m['id'].toString()) ?? 1;
-                            final nameVal = m['nama_mapel'] ?? m['nama'] ?? 'Mapel';
+                          items: mapelOptions.entries.map<DropdownMenuItem<int>>((entry) {
                             return DropdownMenuItem<int>(
-                              value: idVal,
-                              child: Text(nameVal, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                              value: entry.key,
+                              child: Text(
+                                entry.value,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
                             );
                           }).toList(),
                           onChanged: (val) {
@@ -394,7 +432,7 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: DropdownButtonFormField<int>(
-                          initialValue: selectedKelas,
+                          initialValue: kelasOptions.containsKey(selectedKelas) ? selectedKelas : kelasOptions.keys.first,
                           decoration: InputDecoration(
                             labelText: 'Target Kelas',
                             prefixIcon: const Icon(Icons.class_rounded, size: 20),
@@ -402,12 +440,14 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                           ),
                           isExpanded: true,
-                          items: kelasList.map<DropdownMenuItem<int>>((k) {
-                            final idVal = int.tryParse(k['id'].toString()) ?? 1;
-                            final nameVal = k['nama_kelas'] ?? k['nama'] ?? 'Kelas';
+                          items: kelasOptions.entries.map<DropdownMenuItem<int>>((entry) {
                             return DropdownMenuItem<int>(
-                              value: idVal,
-                              child: Text(nameVal, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                              value: entry.key,
+                              child: Text(
+                                entry.value,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
                             );
                           }).toList(),
                           onChanged: (val) {
