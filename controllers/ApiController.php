@@ -213,7 +213,7 @@ class ApiController {
                 $stmtTug->execute(['kid' => $siswa['kelas_id']]);
                 $totalTugas = $stmtTug->fetch()['count'];
 
-                $stmtQz = $this->db->prepare("SELECT COUNT(*) as count FROM quiz WHERE kelas_id = :kid AND status='published'");
+                $stmtQz = $this->db->prepare("SELECT COUNT(*) as count FROM quiz WHERE (FIND_IN_SET(:kid, kelas_ids) OR kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status='published' OR status IS NULL)");
                 $stmtQz->execute(['kid' => $siswa['kelas_id']]);
                 $totalQuiz = $stmtQz->fetch()['count'];
 
@@ -776,13 +776,23 @@ class ApiController {
                             GROUP BY quiz_id, siswa_id
                         ) h2 ON h1.id = h2.max_id
                     ) hq ON hq.quiz_id = q.id
-                    WHERE q.kelas_id = :kid AND q.status = 'published'
+                    WHERE (q.kelas_id = :kid OR FIND_IN_SET(:kid, q.kelas_ids) OR q.kelas_id IS NULL OR q.kelas_id = 0) AND (q.status = 'published' OR q.status IS NULL)
                     ORDER BY q.created_at DESC
                 ");
                 $stmtQ->execute(['sid' => $siswa['id'], 'kid' => $siswa['kelas_id']]);
                 $quizList = $stmtQ->fetchAll();
 
+                $kelasList = $this->db->query("SELECT id, nama_kelas FROM kelas")->fetchAll(PDO::FETCH_KEY_PAIR);
                 foreach ($quizList as &$q) {
+                    $targetIds = !empty($q['kelas_ids']) ? array_map('intval', explode(',', $q['kelas_ids'])) : [(int)$q['kelas_id']];
+                    $names = [];
+                    foreach ($targetIds as $tid) {
+                        if (isset($kelasList[$tid])) {
+                            $names[] = $kelasList[$tid];
+                        }
+                    }
+                    $q['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($q['nama_kelas'] ?? 'Semua Kelas');
+
                     $accessCheck = $examModel->canSiswaAccessQuiz($q['id'], $siswa['id']);
                     $q['can_access'] = $accessCheck['access'];
                     $q['access_status'] = $accessCheck['status'] ?? 'terbuka';
@@ -799,6 +809,7 @@ class ApiController {
                     $q['max_attempts'] = isset($q['max_attempts']) ? intval($q['max_attempts']) : (isset($accessCheck['max_attempts']) ? intval($accessCheck['max_attempts']) : 1);
                     $q['attempt_count'] = intval($accessCheck['attempt_count'] ?? ($q['finished_at'] != null ? 1 : 0));
                 }
+                unset($q);
 
                 $this->jsonResponse(true, 'Daftar Quiz & CBT', $quizList);
                 break;
@@ -1528,7 +1539,7 @@ class ApiController {
                         // 3. Quiz Harian
                         $stmtQz = $this->db->prepare("
                             SELECT COUNT(*) FROM quiz 
-                            WHERE mapel_id = :mid AND (kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status IS NULL OR status = 'published') AND UPPER(judul) NOT LIKE '%UTS%' AND UPPER(judul) NOT LIKE '%UAS%'
+                            WHERE mapel_id = :mid AND (kelas_id = :kid OR FIND_IN_SET(:kid, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0) AND (status IS NULL OR status = 'published') AND UPPER(judul) NOT LIKE '%UTS%' AND UPPER(judul) NOT LIKE '%UAS%'
                         ");
                         $stmtQz->execute(['mid' => $mid, 'kid' => $kelasId]);
                         $totQz = intval($stmtQz->fetchColumn());
@@ -1545,7 +1556,7 @@ class ApiController {
                         // 4. UTS (Quiz UTS or Ujian UTS)
                         $stmtUts = $this->db->prepare("
                             SELECT 
-                              (SELECT COUNT(*) FROM quiz WHERE mapel_id = :mid AND (kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status IS NULL OR status = 'published') AND UPPER(judul) LIKE '%UTS%')
+                              (SELECT COUNT(*) FROM quiz WHERE mapel_id = :mid AND (kelas_id = :kid OR FIND_IN_SET(:kid, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0) AND (status IS NULL OR status = 'published') AND UPPER(judul) LIKE '%UTS%')
                               +
                               (SELECT COUNT(*) FROM ujian WHERE mapel_id = :mid2 AND (kelas_id = :kid2 OR kelas_id IS NULL OR kelas_id = 0) AND jenis_ujian = 'UTS')
                             as total_uts
@@ -1566,7 +1577,7 @@ class ApiController {
                         // 5. UAS (Quiz UAS or Ujian UAS)
                         $stmtUas = $this->db->prepare("
                             SELECT 
-                              (SELECT COUNT(*) FROM quiz WHERE mapel_id = :mid AND (kelas_id = :kid OR kelas_id IS NULL OR kelas_id = 0) AND (status IS NULL OR status = 'published') AND UPPER(judul) LIKE '%UAS%')
+                              (SELECT COUNT(*) FROM quiz WHERE mapel_id = :mid AND (kelas_id = :kid OR FIND_IN_SET(:kid, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0) AND (status IS NULL OR status = 'published') AND UPPER(judul) LIKE '%UAS%')
                               +
                               (SELECT COUNT(*) FROM ujian WHERE mapel_id = :mid2 AND (kelas_id = :kid2 OR kelas_id IS NULL OR kelas_id = 0) AND jenis_ujian = 'UAS')
                             as total_uas
