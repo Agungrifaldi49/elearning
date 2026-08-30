@@ -94,13 +94,32 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Icon(Icons.person_outline, size: 16, color: Colors.grey.shade600),
-                  const SizedBox(width: 4),
-                  Text("Pengampu: ${m.namaGuru ?? '-'}", style: TextStyle(color: Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.bold)),
-                  const Spacer(),
-                  Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
-                  const SizedBox(width: 4),
-                  Text(m.createdAt, style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(Icons.person_outline, size: 16, color: Colors.grey.shade600),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            "Pengampu: ${m.namaGuru ?? '-'}",
+                            style: TextStyle(color: Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
+                      const SizedBox(width: 4),
+                      Text(
+                        m.createdAt.length >= 10 ? m.createdAt.substring(0, 10) : m.createdAt,
+                        style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -349,18 +368,23 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
                                     ),
                                     const Divider(height: 20),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.person, size: 14, color: Colors.grey),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              m.namaGuru ?? '-',
-                                              style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
-                                            ),
-                                          ],
+                                        Expanded(
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.person, size: 14, color: Colors.grey),
+                                              const SizedBox(width: 4),
+                                              Expanded(
+                                                child: Text(
+                                                  m.namaGuru ?? '-',
+                                                  style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
+                                        const SizedBox(width: 8),
                                         ElevatedButton.icon(
                                           onPressed: () => _showMateriDetailModal(m),
                                           icon: const Icon(Icons.menu_book_rounded, size: 16),
@@ -369,7 +393,7 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
                                             backgroundColor: AppTheme.primaryColor,
                                             foregroundColor: Colors.white,
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                           ),
                                         ),
                                       ],
