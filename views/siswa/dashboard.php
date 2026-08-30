@@ -31,28 +31,11 @@ if (!empty($jadwalList)) {
 ?>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
-.siswa-dashboard-wrapper, 
-.siswa-dashboard-wrapper h1, .siswa-dashboard-wrapper h2, .siswa-dashboard-wrapper h3, 
-.siswa-dashboard-wrapper h4, .siswa-dashboard-wrapper h5, .siswa-dashboard-wrapper h6, 
-.siswa-dashboard-wrapper p, .siswa-dashboard-wrapper span, .siswa-dashboard-wrapper div, 
-.siswa-dashboard-wrapper a, .siswa-dashboard-wrapper button, .siswa-dashboard-wrapper input, 
-.siswa-dashboard-wrapper select, .siswa-dashboard-wrapper textarea, .siswa-dashboard-wrapper table, 
-.siswa-dashboard-wrapper th, .siswa-dashboard-wrapper td, .siswa-dashboard-wrapper .badge, .siswa-dashboard-wrapper .card {
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-}
-
-.siswa-dashboard-wrapper {
-    background-color: #f8fafc;
-    min-height: 100vh;
-}
-
 .siswa-hero-card {
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #0f172a 100%);
-    border-radius: 1.25rem;
+    border-radius: 1rem;
     color: #ffffff;
-    box-shadow: 0 12px 30px -5px rgba(2, 132, 199, 0.25);
+    box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.25);
     position: relative;
     overflow: hidden;
 }
@@ -61,8 +44,8 @@ if (!empty($jadwalList)) {
     position: absolute;
     top: -40%;
     right: -10%;
-    width: 300px;
-    height: 300px;
+    width: 280px;
+    height: 280px;
     background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
     border-radius: 50%;
     pointer-events: none;
@@ -71,7 +54,7 @@ if (!empty($jadwalList)) {
 .stat-kpi-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 1rem;
+    border-radius: 0.85rem;
     padding: 1.25rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
     transition: all 0.25s ease;
@@ -87,9 +70,9 @@ if (!empty($jadwalList)) {
     border: 1px solid #cbd5e1;
     background-color: #ffffff;
     color: #475569;
-    font-weight: 700;
-    font-size: 0.78rem;
-    padding: 5px 14px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 6px 14px;
     border-radius: 50rem;
     transition: all 0.2s ease;
     cursor: pointer;
@@ -100,47 +83,39 @@ if (!empty($jadwalList)) {
     color: #0f172a;
 }
 .day-tab-btn.active {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    background: #0d6efd;
     color: #ffffff !important;
-    border-color: #2563eb;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-}
-
-.hover-scale {
-    transition: transform 0.2s ease;
-}
-.hover-scale:hover {
-    transform: scale(1.02);
+    border-color: #0d6efd;
+    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2);
 }
 </style>
 
-<!-- Top Clearance for Fixed Navbar -->
-<main class="main-content px-3 px-md-4 siswa-dashboard-wrapper pt-4 mt-4 mt-md-5 pb-5">
-<div class="container-fluid max-width-1400 pt-2">
+<main class="main-content px-3 px-md-4">
+<div class="container-fluid">
 
     <!-- Executive Student Welcome Hero Card -->
-    <div class="siswa-hero-card p-4 p-md-5 mb-4 shadow-lg">
-        <div class="row align-items-center g-4 relative-zIndex-1">
+    <div class="siswa-hero-card p-4 p-md-5 mb-4 shadow-sm">
+        <div class="row align-items-center g-4">
             <div class="col-12 col-lg-8">
                 <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
                     <!-- Title Badge: Black/Dark High-Contrast Text on Solid White -->
-                    <span class="badge bg-white text-dark px-3.5 py-2 rounded-pill fw-extrabold text-uppercase shadow-sm" style="font-size: 0.78rem; letter-spacing: 0.2px;">
-                        <i class="bi bi-person-workspace text-primary me-1.5 fs-6"></i> Portal Pembelajaran Digital Siswa
+                    <span class="badge bg-white text-dark px-3 py-1.5 rounded-pill fw-bold text-uppercase shadow-xs" style="font-size: 0.75rem;">
+                        <i class="bi bi-person-workspace text-primary me-1.5"></i> Portal Pembelajaran Digital Siswa
                     </span>
-                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold shadow-xs" style="font-size: 0.78rem;">
+                    <span class="badge bg-warning text-dark px-3 py-1.5 rounded-pill fw-bold shadow-xs" style="font-size: 0.75rem;">
                         <i class="bi bi-calendar-event me-1"></i> T.A. <?= htmlspecialchars($activeTa['tahun_ajaran'] ?? '2025/2026') ?> — Semester <?= htmlspecialchars($activeTa['semester'] ?? 'Ganjil') ?>
                     </span>
                 </div>
-                <h3 class="fw-extrabold mb-2 text-white" style="letter-spacing: -0.5px;">Selamat Datang, <?= htmlspecialchars($user['full_name']) ?>!</h3>
-                <p class="text-white text-opacity-90 mb-0 leading-relaxed small" style="max-width: 650px;">
-                    Rombel Kelas Utama: <strong class="text-white border-bottom border-white border-opacity-50 pb-0.5"><?= htmlspecialchars($siswaProfile['nama_kelas'] ?? 'Rombel Kelas') ?></strong> 
-                    &nbsp;|&nbsp; Jurusan: <strong class="text-white border-bottom border-white border-opacity-50 pb-0.5"><?= htmlspecialchars($siswaProfile['nama_jurusan'] ?? 'Kejuruan') ?></strong>
+                <h3 class="fw-bold mb-2 text-white">Selamat Datang, <?= htmlspecialchars($user['full_name']) ?>!</h3>
+                <p class="text-white text-opacity-90 mb-0 small" style="max-width: 650px;">
+                    Rombel Kelas Utama: <strong class="text-white"><?= htmlspecialchars($siswaProfile['nama_kelas'] ?? 'Rombel Kelas') ?></strong> 
+                    &nbsp;|&nbsp; Jurusan: <strong class="text-white"><?= htmlspecialchars($siswaProfile['nama_jurusan'] ?? 'Kejuruan') ?></strong>
                 </p>
             </div>
             
             <div class="col-12 col-lg-4 text-lg-end">
-                <a href="<?= BASE_URL ?>index.php?url=siswa/kartuPelajar" class="btn btn-warning text-dark fw-bold px-4 py-2.5 rounded-pill shadow-lg text-nowrap w-100 w-sm-auto hover-scale" style="font-size: 0.88rem;">
-                    <i class="bi bi-credit-card-2-front-fill me-1.5 fs-5"></i> Kartu Pelajar Digital
+                <a href="<?= BASE_URL ?>index.php?url=siswa/kartuPelajar" class="btn btn-warning text-dark fw-bold px-4 py-2.5 rounded-3 shadow-sm text-nowrap w-100 w-sm-auto">
+                    <i class="bi bi-credit-card-2-front-fill me-1.5"></i> Kartu Pelajar Digital
                 </a>
             </div>
         </div>
@@ -153,7 +128,7 @@ if (!empty($jadwalList)) {
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <span class="text-muted small fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Materi Siap Dibaca</span>
-                        <h3 class="fw-extrabold mb-0 text-primary"><?= count($materiList) ?></h3>
+                        <h3 class="fw-bold mb-0 text-primary"><?= count($materiList) ?></h3>
                     </div>
                     <div class="bg-primary-subtle text-primary p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
                         <i class="bi bi-book-fill"></i>
@@ -168,7 +143,7 @@ if (!empty($jadwalList)) {
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <span class="text-muted small fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Tugas Aktif KBM</span>
-                        <h3 class="fw-extrabold mb-0 text-warning"><?= count($tugasList) ?></h3>
+                        <h3 class="fw-bold mb-0 text-warning"><?= count($tugasList) ?></h3>
                     </div>
                     <div class="bg-warning-subtle text-warning p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
                         <i class="bi bi-card-checklist"></i>
@@ -183,7 +158,7 @@ if (!empty($jadwalList)) {
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <span class="text-muted small fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Kuis & Ujian CBT</span>
-                        <h3 class="fw-extrabold mb-0 text-success"><?= count($quizList) ?></h3>
+                        <h3 class="fw-bold mb-0 text-success"><?= count($quizList) ?></h3>
                     </div>
                     <div class="bg-success-subtle text-success p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
                         <i class="bi bi-patch-check-fill"></i>
@@ -198,7 +173,7 @@ if (!empty($jadwalList)) {
                 <div class="d-flex align-items-center justify-content-between">
                     <div>
                         <span class="text-muted small fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Presensi Log Real</span>
-                        <h3 class="fw-extrabold mb-0 text-info"><?= htmlspecialchars($certStats['presensi_log'] ?? '0%') ?></h3>
+                        <h3 class="fw-bold mb-0 text-info"><?= htmlspecialchars($certStats['presensi_log'] ?? '0%') ?></h3>
                     </div>
                     <div class="bg-info-subtle text-info p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
                         <i class="bi bi-calendar-check-fill"></i>
@@ -220,7 +195,7 @@ if (!empty($jadwalList)) {
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2.5 border-bottom">
                         <div>
-                            <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2" style="letter-spacing: -0.3px;">
+                            <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
                                 <i class="bi bi-bar-chart-line-fill text-primary fs-4"></i>
                                 <span>Grafik Evaluasi & Rerata Nilai Real Per-Mapel</span>
                             </h5>
@@ -247,7 +222,7 @@ if (!empty($jadwalList)) {
                         <h6 class="fw-bold mb-1 text-dark fs-5"><?= htmlspecialchars($tugasList[0]['judul']) ?></h6>
                         <small class="text-muted">Batas Pengumpulan: <strong class="text-danger"><?= date('d M Y, H:i', strtotime($tugasList[0]['deadline'])) ?> WIB</strong></small>
                     </div>
-                    <a href="<?= BASE_URL ?>index.php?url=siswa/tugas" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill shadow-xs hover-scale" style="font-size:0.85rem;">
+                    <a href="<?= BASE_URL ?>index.php?url=siswa/tugas" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-3 shadow-xs" style="font-size:0.85rem;">
                         <i class="bi bi-pencil-square me-1"></i> Kerjakan Sekarang
                     </a>
                 </div>
@@ -259,7 +234,7 @@ if (!empty($jadwalList)) {
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2.5 border-bottom">
                         <div>
-                            <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2" style="letter-spacing: -0.3px;">
+                            <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
                                 <i class="bi bi-calendar3 text-primary fs-4"></i>
                                 <span>Jadwal Pelajaran KBM Rombel Hari Ini</span>
                             </h5>
@@ -344,13 +319,13 @@ if (!empty($jadwalList)) {
 
                     <div class="p-3 bg-light rounded-4 border mb-3 text-center">
                         <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size:0.72rem;">Predikat Hasil Belajar</div>
-                        <div class="fs-4 fw-extrabold text-primary mb-1"><?= htmlspecialchars($certStats['predikat'] ?? 'Belum Ada Data') ?></div>
+                        <div class="fs-4 fw-bold text-primary mb-1"><?= htmlspecialchars($certStats['predikat'] ?? 'Belum Ada Data') ?></div>
                         <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 fw-bold rounded-pill" style="font-size:0.75rem;">
                             Rerata LMS: <?= htmlspecialchars($certStats['evaluasi_lms'] ?? '0.0') ?>
                         </span>
                     </div>
 
-                    <a href="<?= BASE_URL ?>index.php?url=siswa/sertifikat" class="btn btn-outline-success w-100 fw-bold rounded-pill py-2 text-nowrap hover-scale" style="font-size: 0.85rem;">
+                    <a href="<?= BASE_URL ?>index.php?url=siswa/sertifikat" class="btn btn-outline-success w-100 fw-bold rounded-3 py-2 text-nowrap" style="font-size: 0.85rem;">
                         <i class="bi bi-patch-check me-1"></i> Lihat Sertifikat Digital
                     </a>
                 </div>
@@ -407,11 +382,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 datasets: [{
                     label: 'Rerata Nilai Real (0-100)',
                     data: nilaiData,
-                    backgroundColor: 'rgba(37, 99, 235, 0.8)',
-                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(13, 110, 253, 0.75)',
+                    borderColor: '#0d6efd',
                     borderWidth: 2,
-                    borderRadius: 8,
-                    hoverBackgroundColor: '#1d4ed8'
+                    borderRadius: 6,
+                    hoverBackgroundColor: '#0b5ed7'
                 }]
             },
             options: {
@@ -422,13 +397,12 @@ document.addEventListener("DOMContentLoaded", function() {
                         beginAtZero: true,
                         max: 100,
                         ticks: {
-                            stepSize: 20,
-                            font: { family: 'Plus Jakarta Sans', size: 11 }
+                            stepSize: 20
                         },
                         grid: { color: '#f1f5f9' }
                     },
                     x: {
-                        ticks: { font: { family: 'Plus Jakarta Sans', size: 11, weight: 'bold' } },
+                        ticks: { font: { weight: 'bold' } },
                         grid: { display: false }
                     }
                 },
