@@ -33,8 +33,17 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     final res = await ApiService.get('siswa/learning_path', params: {'user_id': userId.toString()});
     if (mounted) {
       if (res['success'] == true && res['data'] is Map) {
+        final dataMap = Map<String, dynamic>.from(res['data'] as Map);
+        final List mapelList = (dataMap['mapel_list'] is List) ? dataMap['mapel_list'] : [];
+        _expandedMapelIds.clear();
+        for (var m in mapelList) {
+          final mId = int.tryParse((m['mapel_id'] ?? m['id'] ?? 0).toString()) ?? 0;
+          if (mId > 0) {
+            _expandedMapelIds.add(mId);
+          }
+        }
         setState(() {
-          _data = Map<String, dynamic>.from(res['data'] as Map);
+          _data = dataMap;
           _isLoading = false;
         });
       } else {
@@ -372,7 +381,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
   }
 
   Widget _buildSubjectCard(dynamic m, bool isDark) {
-    final int mapelId = int.tryParse((m['mapel_id'] ?? 0).toString()) ?? 0;
+    final int mapelId = int.tryParse((m['mapel_id'] ?? m['id'] ?? 0).toString()) ?? 0;
     final String namaMapel = (m['nama_mapel'] ?? 'Mata Pelajaran').toString();
     final String kodeMapel = (m['kode_mapel'] ?? 'MP').toString();
     final String namaGuru = (m['nama_guru'] ?? 'Guru Pengampu').toString();
