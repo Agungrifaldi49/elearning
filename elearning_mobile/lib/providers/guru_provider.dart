@@ -94,16 +94,25 @@ class GuruProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> createMateri(int userId, String judul, String deskripsi, int mapelId, int kelasId, String jenisFile, String youtubeUrl) async {
-    final res = await ApiService.post('guru/materi', {
+  Future<bool> createMateri(int userId, String judul, String deskripsi, int mapelId, dynamic kelasIdOrIds, String jenisFile, String youtubeUrl) async {
+    final Map<String, dynamic> body = {
       'user_id': userId,
       'judul': judul,
       'deskripsi': deskripsi,
       'mapel_id': mapelId,
-      'kelas_id': kelasId,
       'jenis_file': jenisFile,
       'youtube_url': youtubeUrl,
-    });
+    };
+
+    if (kelasIdOrIds is List) {
+      body['kelas_ids'] = kelasIdOrIds;
+      body['kelas_id'] = kelasIdOrIds.isNotEmpty ? kelasIdOrIds[0] : 0;
+    } else {
+      body['kelas_id'] = kelasIdOrIds;
+      body['kelas_ids'] = [kelasIdOrIds];
+    }
+
+    final res = await ApiService.post('guru/materi', body);
     if (res['success'] == true) {
       await fetchMateri(userId);
       return true;

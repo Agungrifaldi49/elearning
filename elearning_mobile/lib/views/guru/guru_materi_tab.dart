@@ -331,7 +331,7 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
     final mediaController = TextEditingController();
 
     int selectedMapel = mapelOptions.keys.first;
-    int selectedKelas = kelasOptions.keys.first;
+    Set<int> selectedKelasIds = kelasOptions.keys.toSet();
     String jenisFile = 'pdf';
 
     showModalBottomSheet(
@@ -394,70 +394,117 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                   TextField(
                     controller: judulController,
                     decoration: InputDecoration(
-                      labelText: 'Judul Modul / Materi',
+                      labelText: 'Judul Modul / Materi *',
                       prefixIcon: const Icon(Icons.title_rounded),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
                   const SizedBox(height: 12),
 
-                  // Dropdown Mapel & Kelas
-                  Row(
-                    children: [
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: mapelOptions.containsKey(selectedMapel) ? selectedMapel : mapelOptions.keys.first,
-                          decoration: InputDecoration(
-                            labelText: 'Mata Pelajaran',
-                            prefixIcon: const Icon(Icons.book_rounded, size: 20),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                          ),
-                          isExpanded: true,
-                          items: mapelOptions.entries.map<DropdownMenuItem<int>>((entry) {
-                            return DropdownMenuItem<int>(
-                              value: entry.key,
-                              child: Text(
-                                entry.value,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) setModalState(() => selectedMapel = val);
-                          },
+                  // Dropdown Mapel
+                  DropdownButtonFormField<int>(
+                    initialValue: mapelOptions.containsKey(selectedMapel) ? selectedMapel : mapelOptions.keys.first,
+                    decoration: InputDecoration(
+                      labelText: 'Mata Pelajaran *',
+                      prefixIcon: const Icon(Icons.book_rounded, size: 20),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                    isExpanded: true,
+                    items: mapelOptions.entries.map<DropdownMenuItem<int>>((entry) {
+                      return DropdownMenuItem<int>(
+                        value: entry.key,
+                        child: Text(
+                          entry.value,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                         ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedMapel = val);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Multi-Select Target Kelas Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.class_rounded, size: 16, color: AppTheme.primaryColor),
+                          SizedBox(width: 6),
+                          Text('Target Kelas (Bisa Pilih > 1 Kelas) *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        ],
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: DropdownButtonFormField<int>(
-                          initialValue: kelasOptions.containsKey(selectedKelas) ? selectedKelas : kelasOptions.keys.first,
-                          decoration: InputDecoration(
-                            labelText: 'Target Kelas',
-                            prefixIcon: const Icon(Icons.class_rounded, size: 20),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                          ),
-                          isExpanded: true,
-                          items: kelasOptions.entries.map<DropdownMenuItem<int>>((entry) {
-                            return DropdownMenuItem<int>(
-                              value: entry.key,
-                              child: Text(
-                                entry.value,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) setModalState(() => selectedKelas = val);
-                          },
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withAlpha(20),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${selectedKelasIds.length} Kelas Dipilih',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      FilterChip(
+                        label: const Text('Pilih Semua Kelas'),
+                        selected: selectedKelasIds.length == kelasOptions.length,
+                        selectedColor: Colors.blue.shade100,
+                        checkmarkColor: Colors.blue.shade900,
+                        labelStyle: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: selectedKelasIds.length == kelasOptions.length ? Colors.blue.shade900 : Colors.black87,
+                        ),
+                        onSelected: (bool sel) {
+                          setModalState(() {
+                            if (sel) {
+                              selectedKelasIds = kelasOptions.keys.toSet();
+                            } else {
+                              selectedKelasIds = {kelasOptions.keys.first};
+                            }
+                          });
+                        },
+                      ),
+                      ...kelasOptions.entries.map((entry) {
+                        final isSelected = selectedKelasIds.contains(entry.key);
+                        return FilterChip(
+                          label: Text(entry.value),
+                          selected: isSelected,
+                          selectedColor: AppTheme.primaryColor.withAlpha(35),
+                          checkmarkColor: AppTheme.primaryColor,
+                          labelStyle: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? AppTheme.primaryColor : Colors.black87,
+                          ),
+                          onSelected: (bool sel) {
+                            setModalState(() {
+                              if (sel) {
+                                selectedKelasIds.add(entry.key);
+                              } else {
+                                if (selectedKelasIds.length > 1) {
+                                  selectedKelasIds.remove(entry.key);
+                                }
+                              }
+                            });
+                          },
+                        );
+                      }),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
 
                   // Segmented Type Selector
                   Row(
@@ -540,23 +587,30 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                     height: 50,
                     child: ElevatedButton.icon(
                       onPressed: () async {
+                        if (judulController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Judul modul wajib diisi!'), backgroundColor: Colors.red),
+                          );
+                          return;
+                        }
+
                         final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
                         final messenger = ScaffoldMessenger.of(context);
                         final nav = Navigator.of(context);
                         if (user != null) {
                           final ok = await Provider.of<GuruProvider>(context, listen: false).createMateri(
                             user.id,
-                            judulController.text,
-                            deskripsiController.text,
+                            judulController.text.trim(),
+                            deskripsiController.text.trim(),
                             selectedMapel,
-                            selectedKelas,
+                            selectedKelasIds.toList(),
                             jenisFile,
-                            mediaController.text,
+                            mediaController.text.trim(),
                           );
                           nav.pop();
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text(ok ? 'Materi berhasil diterbitkan!' : 'Gagal publish materi'),
+                              content: Text(ok ? 'Materi berhasil diterbitkan untuk kelas yang dipilih!' : 'Gagal publish materi'),
                               backgroundColor: ok ? AppTheme.secondaryColor : Colors.red,
                             ),
                           );
