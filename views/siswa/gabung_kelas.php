@@ -45,8 +45,8 @@
         <div class="row align-items-center g-4">
             <div class="col-12 col-lg-7">
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <span class="badge bg-white bg-opacity-20 text-white px-3 py-1.5 rounded-pill fw-bold text-uppercase" style="font-size: 0.75rem;">
-                        <i class="bi bi-shield-lock me-1"></i> Passcode Key Protection
+                    <span class="badge bg-white text-dark px-3.5 py-2 rounded-pill fw-bold text-uppercase shadow-sm" style="font-size: 0.78rem;">
+                        <i class="bi bi-shield-lock-fill text-warning me-1.5 fs-6"></i> Passcode Key Protection
                     </span>
                 </div>
                 <h3 class="fw-bold mb-2 text-white">Gabung Rombel & Pendaftaran Mapel Digital</h3>
