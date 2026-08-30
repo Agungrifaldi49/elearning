@@ -183,9 +183,26 @@
 }
 </style>
 
-<main class="main-content px-3 px-md-4 task-page-wrapper pt-3 mt-3 mt-md-4 pb-5">
-<div class="container-fluid max-width-1400">
+<!-- Top Padding Adjustments to clear Fixed Navbar -->
+<main class="main-content px-3 px-md-4 task-page-wrapper pt-4 mt-4 mt-md-5 pb-5">
+<div class="container-fluid max-width-1400 pt-2">
     
+    <!-- 📌 PAGE TITLE STRIP -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 bg-white p-3 rounded-3 border shadow-xs">
+        <div>
+            <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2" style="letter-spacing: -0.3px;">
+                <i class="bi bi-journal-check text-primary fs-5"></i> Daftar Tugas & Penugasan Siswa
+            </h5>
+            <small class="text-muted">Kelola instruksi tugas dari Guru, unduh berkas soal, dan unggah jawaban Anda secara tepat waktu.</small>
+        </div>
+        <div>
+            <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-3 py-1.5 d-inline-flex align-items-center gap-1.5 shadow-xs" style="font-size:0.8rem;">
+                <i class="bi bi-key-fill"></i>
+                <span>Daftar Mapel Baru (Key)</span>
+            </a>
+        </div>
+    </div>
+
     <!-- 📊 COMPACT KPI SUMMARY CARDS -->
     <?php
     $totalTasks = count($tugasList);
