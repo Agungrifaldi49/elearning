@@ -769,9 +769,33 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                 </thead>
                                 <tbody>
                                     <?php foreach ($submissions as $sub): 
-                                        $subFile = $sub['file_path'] ?? '';
-                                        $fileExt = !empty($subFile) ? strtolower(pathinfo($subFile, PATHINFO_EXTENSION)) : '';
-                                        $fileUrl = !empty($subFile) ? BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($subFile) : '';
+                                        $subFile = trim($sub['file_path'] ?? '');
+                                        $catatanText = trim($sub['catatan_siswa'] ?? '');
+
+                                        // Extract URL from catatan_siswa if present
+                                        $extractedUrlFromCatatan = null;
+                                        if (preg_match('/(https?:\/\/[^\s]+)/i', $catatanText, $matches)) {
+                                            $extractedUrlFromCatatan = $matches[1];
+                                        }
+
+                                        $isUrlFile = (!empty($subFile) && (str_starts_with($subFile, 'http://') || str_starts_with($subFile, 'https://')));
+                                        $isUrlCatatan = (!empty($extractedUrlFromCatatan));
+
+                                        if ($isUrlFile) {
+                                            $fileUrl = $subFile;
+                                            $isDrive = (strpos($subFile, 'drive.google.com') !== false || strpos($subFile, 'docs.google.com') !== false);
+                                        } elseif ($isUrlCatatan && empty($subFile)) {
+                                            $fileUrl = $extractedUrlFromCatatan;
+                                            $isDrive = (strpos($extractedUrlFromCatatan, 'drive.google.com') !== false || strpos($extractedUrlFromCatatan, 'docs.google.com') !== false);
+                                        } elseif (!empty($subFile)) {
+                                            $fileUrl = BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($subFile);
+                                            $isDrive = false;
+                                        } else {
+                                            $fileUrl = null;
+                                            $isDrive = false;
+                                        }
+
+                                        $fileExt = (!empty($subFile) && !$isUrlFile) ? strtolower(pathinfo($subFile, PATHINFO_EXTENSION)) : ($isDrive ? 'DRIVE' : ($isUrlFile || $isUrlCatatan ? 'LINK' : ''));
                                     ?>
                                         <tr>
                                             <td class="ps-3">
@@ -790,23 +814,40 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                                 <small class="text-muted" style="font-size:0.72rem;"><?= date('H:i', strtotime($sub['submitted_at'])) ?> WIB</small>
                                             </td>
                                             <td>
-                                                <?php if ($subFile): ?>
+                                                <?php if ($fileUrl): ?>
                                                     <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                                        <!-- Preview Button (View without download) -->
-                                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs hover-scale" style="font-size:0.75rem;"
-                                                                onclick="previewSubmissionFile('<?= $fileUrl ?>', '<?= htmlspecialchars($subFile) ?>', '<?= htmlspecialchars($sub['nama_lengkap']) ?>')">
-                                                            <i class="bi bi-eye-fill me-1"></i> Lihat Berkas
+                                                        <!-- Preview / View Link Button -->
+                                                        <button type="button" class="btn btn-sm <?= $isDrive ? 'btn-success' : 'btn-primary' ?> rounded-pill px-3 py-1 fw-bold shadow-xs hover-scale" style="font-size:0.75rem;"
+                                                                onclick="previewSubmissionFile('<?= htmlspecialchars($fileUrl) ?>', '<?= htmlspecialchars($isDrive ? 'Google Drive: ' . $sub['nama_lengkap'] : ($subFile ? $subFile : 'Link Jawaban Siswa')) ?>', '<?= htmlspecialchars($sub['nama_lengkap']) ?>')">
+                                                            <i class="bi <?= $isDrive ? 'bi-google' : 'bi-eye-fill' ?> me-1"></i> <?= $isDrive ? 'Pratinjau Drive' : 'Lihat Berkas' ?>
                                                         </button>
 
-                                                        <!-- Download Button -->
-                                                        <a href="<?= $fileUrl ?>" download class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.75rem;" title="Unduh File Berkas">
-                                                            <i class="bi bi-download me-1"></i> Unduh
-                                                        </a>
+                                                        <!-- Open Direct / Download Button -->
+                                                        <?php if ($isUrlFile || $isUrlCatatan): ?>
+                                                            <a href="<?= htmlspecialchars($fileUrl) ?>" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.75rem;" title="Buka Link di Tab Baru">
+                                                                <i class="bi bi-box-arrow-up-right me-1"></i> Buka Link
+                                                            </a>
+                                                        <?php else: ?>
+                                                            <a href="<?= htmlspecialchars($fileUrl) ?>" download class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.75rem;" title="Unduh File Berkas">
+                                                                <i class="bi bi-download me-1"></i> Unduh
+                                                            </a>
+                                                        <?php endif; ?>
 
-                                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2 py-0.5" style="font-size:0.68rem;"><?= strtoupper($fileExt) ?></span>
+                                                        <span class="badge bg-<?= $isDrive ? 'success' : 'secondary' ?>-subtle text-<?= $isDrive ? 'success' : 'secondary' ?> rounded-pill px-2 py-0.5" style="font-size:0.68rem;"><?= strtoupper($fileExt) ?></span>
                                                     </div>
+                                                    <?php if (!empty($catatanText)): ?>
+                                                        <div class="small text-muted mt-1" style="font-size:0.75rem;">
+                                                            <i class="bi bi-chat-left-text me-1 text-primary"></i><?= htmlspecialchars($catatanText) ?>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 <?php else: ?>
-                                                    <span class="badge bg-light text-muted border rounded-pill px-2.5 py-1" style="font-size:0.72rem;"><i class="bi bi-x-circle me-1"></i>Tanpa File</span>
+                                                    <?php if (!empty($catatanText)): ?>
+                                                        <div class="small text-dark bg-light p-2 rounded border" style="font-size:0.78rem;">
+                                                            <i class="bi bi-chat-left-text me-1 text-primary"></i><?= htmlspecialchars($catatanText) ?>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-light text-muted border rounded-pill px-2.5 py-1" style="font-size:0.72rem;"><i class="bi bi-x-circle me-1"></i>Tanpa File / Link</span>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
@@ -903,34 +944,103 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
 </div>
 
 <script>
+function getGoogleDriveEmbedUrl(url) {
+    if (!url) return url;
+
+    // File view: drive.google.com/file/d/FILE_ID/view...
+    let matchFile = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (matchFile && matchFile[1]) {
+        return `https://drive.google.com/file/d/${matchFile[1]}/preview`;
+    }
+
+    // Docs/Sheets/Slides: docs.google.com/document/d/DOC_ID/edit...
+    let matchDoc = url.match(/docs\.google\.com\/(document|spreadsheets|presentation|forms)\/d\/([a-zA-Z0-9_-]+)/);
+    if (matchDoc && matchDoc[1] && matchDoc[2]) {
+        return `https://docs.google.com/${matchDoc[1]}/d/${matchDoc[2]}/preview`;
+    }
+
+    // Folders: drive.google.com/drive/folders/FOLDER_ID
+    let matchFolder = url.match(/drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\/([a-zA-Z0-9_-]+)/);
+    if (matchFolder && matchFolder[1]) {
+        return `https://drive.google.com/embeddedfolderview?id=${matchFolder[1]}#list`;
+    }
+
+    // Open drive URL: drive.google.com/open?id=FILE_ID
+    let matchOpen = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+    if (matchOpen && matchOpen[1]) {
+        return `https://drive.google.com/file/d/${matchOpen[1]}/preview`;
+    }
+
+    return url;
+}
+
 function previewSubmissionFile(fileUrl, fileName, studentName) {
     document.getElementById('viewerFileName').textContent = fileName;
     document.getElementById('viewerStudentInfo').textContent = 'Berkas Kiriman: ' + studentName;
     document.getElementById('viewerDownloadBtn').href = fileUrl;
 
-    const ext = fileName.split('.').pop().toLowerCase();
+    const isDrive = fileUrl.includes('drive.google.com') || fileUrl.includes('docs.google.com');
+    const isExternalUrl = fileUrl.startsWith('http://') || fileUrl.startsWith('https://');
+
     const container = document.getElementById('viewerContentBody');
     container.innerHTML = '';
 
-    if (ext === 'pdf') {
-        container.innerHTML = `<iframe src="${fileUrl}" style="width:100%; height:660px; border:none;" allowfullscreen></iframe>`;
-    } else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
-        container.innerHTML = `<div class="p-4 text-center w-100"><img src="${fileUrl}" alt="Preview" class="img-fluid rounded-4 shadow-lg" style="max-height: 600px; object-fit: contain;"></div>`;
-    } else if (['mp4', 'mkv', 'webm', 'avi'].includes(ext)) {
-        container.innerHTML = `<div class="p-4 w-100 text-center"><video src="${fileUrl}" controls class="w-100 rounded-4 shadow-lg" style="max-height: 580px;"></video></div>`;
-    } else {
+    if (isDrive) {
+        const embedUrl = getGoogleDriveEmbedUrl(fileUrl);
         container.innerHTML = `
-            <div class="p-5 text-center my-auto bg-white w-100" style="min-height: 580px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:80px; height:80px;">
-                    <i class="bi bi-file-earmark-arrow-down-fill fs-1"></i>
+            <div class="w-100 h-100 d-flex flex-column bg-white">
+                <div class="p-3 bg-warning-subtle text-dark border-bottom d-flex align-items-center justify-content-between gap-3 flex-wrap">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle-fill text-warning fs-5 flex-shrink-0"></i>
+                        <small class="fw-medium lh-sm">
+                            <strong>Catatan Akses Google Drive:</strong> Tautan ini harus disetting dengan izin <strong>"Siapa saja yang memiliki link (Anyone with link)"</strong> di Google Drive agar dapat langsung terbaca dan tampil di bawah ini.
+                        </small>
+                    </div>
+                    <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold text-nowrap shadow-xs" style="font-size:0.78rem;">
+                        <i class="bi bi-box-arrow-up-right me-1.5"></i> Buka di Tab Baru
+                    </a>
                 </div>
-                <h5 class="fw-bold text-dark mb-1">Pratinjau Dokumen Format ${ext.toUpperCase()}</h5>
-                <p class="text-muted small mb-4 mx-auto" style="max-width: 440px;">Dokumen ini berformat Microsoft Office / Berkas Terkompresi (${ext.toUpperCase()}). Silakan unduh berkas untuk membukanya di komputer atau HP Anda.</p>
-                <a href="${fileUrl}" download class="btn btn-primary fw-bold rounded-pill px-4 py-2.5 shadow-sm text-white">
-                    <i class="bi bi-download me-1.5"></i> Unduh Berkas ${ext.toUpperCase()} Sekarang
-                </a>
+                <div class="flex-grow-1 position-relative" style="min-height: 540px;">
+                    <iframe src="${embedUrl}" style="width:100%; height:600px; border:none;" allowfullscreen></iframe>
+                </div>
             </div>
         `;
+    } else if (isExternalUrl) {
+        container.innerHTML = `
+            <div class="w-100 h-100 d-flex flex-column bg-white">
+                <div class="p-3 bg-info-subtle text-dark border-bottom d-flex align-items-center justify-content-between gap-3">
+                    <small class="fw-medium text-truncate">
+                        <i class="bi bi-link-45deg me-1 text-primary fs-5"></i> Menampilkan Tautan Eksternal: <strong>${fileUrl}</strong>
+                    </small>
+                    <a href="${fileUrl}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold text-nowrap">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Buka di Tab Baru
+                    </a>
+                </div>
+                <iframe src="${fileUrl}" style="width:100%; height:600px; border:none;" allowfullscreen></iframe>
+            </div>
+        `;
+    } else {
+        const ext = fileName.split('.').pop().toLowerCase();
+        if (ext === 'pdf') {
+            container.innerHTML = `<iframe src="${fileUrl}" style="width:100%; height:660px; border:none;" allowfullscreen></iframe>`;
+        } else if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+            container.innerHTML = `<div class="p-4 text-center w-100"><img src="${fileUrl}" alt="Preview" class="img-fluid rounded-4 shadow-lg" style="max-height: 600px; object-fit: contain;"></div>`;
+        } else if (['mp4', 'mkv', 'webm', 'avi'].includes(ext)) {
+            container.innerHTML = `<div class="p-4 w-100 text-center"><video src="${fileUrl}" controls class="w-100 rounded-4 shadow-lg" style="max-height: 580px;"></video></div>`;
+        } else {
+            container.innerHTML = `
+                <div class="p-5 text-center my-auto bg-white w-100" style="min-height: 580px; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                    <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:80px; height:80px;">
+                        <i class="bi bi-file-earmark-arrow-down-fill fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">Pratinjau Dokumen Format ${ext.toUpperCase()}</h5>
+                    <p class="text-muted small mb-4 mx-auto" style="max-width: 440px;">Dokumen ini berformat Microsoft Office / Berkas Terkompresi (${ext.toUpperCase()}). Silakan unduh berkas untuk membukanya di komputer atau HP Anda.</p>
+                    <a href="${fileUrl}" download class="btn btn-primary fw-bold rounded-pill px-4 py-2.5 shadow-sm text-white">
+                        <i class="bi bi-download me-1.5"></i> Unduh Berkas ${ext.toUpperCase()} Sekarang
+                    </a>
+                </div>
+            `;
+        }
     }
 
     const viewerModal = new bootstrap.Modal(document.getElementById('modalSubmissionFileViewer'));
