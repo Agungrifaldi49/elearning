@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/quiz_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
-import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import 'guru_bank_soal_screen.dart';
 
 class GuruCbtTab extends StatefulWidget {
   const GuruCbtTab({super.key});
@@ -279,201 +278,7 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
     );
   }
 
-  void _showBankSoalModal(QuizModel q) async {
-    final res = await ApiService.get('guru/bank_soal', params: {'quiz_id': '${q.id}'});
-    List<dynamic> soalList = [];
-    if (res['success'] == true && res['data'] is List) {
-      soalList = res['data'];
-    }
 
-    if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.82,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Bank Soal: ${q.judul}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        Text("Mapel: ${q.namaMapel} • Kelas: ${q.namaKelas ?? 'Semua'} • Durasi: ${q.durasiMenit} Mnt", style: TextStyle(color: Colors.grey.shade600, fontSize: 11)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showAddSoalModal(q.id);
-                    },
-                    icon: const Icon(Icons.add_rounded, size: 16),
-                    label: const Text('Tambah Soal'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              Expanded(
-                child: soalList.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.quiz_outlined, size: 54, color: Colors.grey.shade400),
-                            const SizedBox(height: 12),
-                            const Text('Belum Ada Pertanyaan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                            const SizedBox(height: 4),
-                            Text('Klik "+ Tambah Soal" untuk menginput pertanyaan kuis ini.', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: soalList.length,
-                        itemBuilder: (context, idx) {
-                          final s = soalList[idx];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text("Soal #${idx + 1}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.primaryColor)),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(12)),
-                                      child: Text("Bobot: ${s['bobot'] ?? 10} Poin", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple.shade800)),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(s['pertanyaan'] ?? '', style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4)),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showAddSoalModal(int quizId) {
-    final soalController = TextEditingController();
-    final bobotController = TextEditingController(text: '10');
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.add_task_rounded, color: AppTheme.primaryColor, size: 22),
-            SizedBox(width: 8),
-            Text('Tambah Soal Pertanyaan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Pertanyaan Soal *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            TextField(
-              controller: soalController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: 'Tuliskan instruksi atau pertanyaan soal kuis...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text('Bobot Skor Nilai *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 6),
-            TextField(
-              controller: bobotController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.score_rounded),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          ElevatedButton.icon(
-            onPressed: () async {
-              final pert = soalController.text.trim();
-              final bobot = int.tryParse(bobotController.text) ?? 10;
-              if (pert.isNotEmpty) {
-                final nav = Navigator.of(context);
-                final messenger = ScaffoldMessenger.of(context);
-                final res = await ApiService.post('guru/bank_soal', {
-                  'quiz_id': quizId,
-                  'pertanyaan': pert,
-                  'bobot': bobot,
-                });
-                nav.pop();
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(res['message'] ?? 'Soal berhasil ditambahkan!'),
-                    backgroundColor: res['success'] == true ? Colors.green : Colors.red,
-                  ),
-                );
-              }
-            },
-            icon: const Icon(Icons.save_rounded, size: 16),
-            label: const Text('Simpan Soal'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showAddQuizModal() {
     final guruProvider = Provider.of<GuruProvider>(context, listen: false);
@@ -1165,7 +970,12 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                   children: [
                                     Expanded(
                                       child: ElevatedButton.icon(
-                                        onPressed: () => _showBankSoalModal(q),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (_) => GuruBankSoalScreen(quiz: q)),
+                                          );
+                                        },
                                         icon: const Icon(Icons.format_list_bulleted_rounded, size: 16),
                                         label: const Text('Kelola Bank Soal'),
                                         style: ElevatedButton.styleFrom(

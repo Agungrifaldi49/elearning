@@ -2407,25 +2407,87 @@ class ApiController {
             case 'bank_soal':
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $input = $this->getPostInput();
+                    $action = trim($input['action'] ?? '');
+                    if ($action === 'delete') {
+                        $soalId = intval($input['soal_id'] ?? 0);
+                        if ($soalId > 0) {
+                            $this->db->prepare("DELETE FROM pilihan_jawaban WHERE soal_id = ?")->execute([$soalId]);
+                            $this->db->prepare("DELETE FROM soal WHERE id = ?")->execute([$soalId]);
+                            $this->jsonResponse(true, 'Soal berhasil dihapus!');
+                        }
+                    }
+
                     $quizId = intval($input['quiz_id'] ?? 0);
                     $pertanyaan = trim($input['pertanyaan'] ?? '');
+                    $jenisSoal = trim($input['jenis_soal'] ?? 'pg');
                     $bobot = intval($input['bobot'] ?? 10);
+                    $pilihans = $input['pilihan'] ?? [];
+
                     if ($quizId <= 0 || empty($pertanyaan)) {
                         $this->jsonResponse(false, 'Quiz dan pertanyaan wajib diisi', null, 400);
                     }
                     try {
-                        $stmtIns = $this->db->prepare("INSERT INTO soal (quiz_id, pertanyaan, bobot) VALUES (:qid, :pt, :bb)");
-                        $stmtIns->execute(['qid' => $quizId, 'pt' => $pertanyaan, 'bb' => $bobot]);
+                        $stmtIns = $this->db->prepare("INSERT INTO soal (quiz_id, jenis_soal, pertanyaan, bobot) VALUES (:qid, :js, :pt, :bb)");
+                        $stmtIns->execute(['qid' => $quizId, 'js' => $jenisSoal, 'pt' => $pertanyaan, 'bb' => $bobot]);
+                        $newSoalId = $this->db->lastInsertId();
+
+                        if (!empty($pilihans) && is_array($pilihans)) {
+                            $stmtP = $this->db->prepare("INSERT INTO pilihan_jawaban (soal_id, teks_pilihan, is_benar) VALUES (:sid, :tp, :ib)");
+                            foreach ($pilihans as $p) {
+                                $teks = trim(is_array($p) ? ($p['teks'] ?? $p['teks_pilihan'] ?? '') : $p);
+                                $isBenar = is_array($p) ? (!empty($p['is_benar']) ? 1 : 0) : 0;
+                                if (!empty($teks)) {
+                                    $stmtP->execute(['sid' => $newSoalId, 'tp' => $teks, 'ib' => $isBenar]);
+                                }
+                            }
+                        }
                         $this->jsonResponse(true, 'Soal berhasil ditambahkan ke bank soal!');
                     } catch (\Throwable $eBs) {
                         $this->jsonResponse(false, 'Gagal menambahkan soal: ' . $eBs->getMessage(), null, 500);
                     }
                 }
+
                 $quizId = intval($_GET['quiz_id'] ?? 0);
                 try {
-                    $stmtS = $this->db->prepare("SELECT * FROM soal WHERE quiz_id = :qid ORDER BY id ASC");
-                    $stmtS->execute(['qid' => $quizId]);
-                    $soals = $stmtS->fetchAll();
+                    if ($quizId > 0) {
+                        $stmtS = $this->db->prepare("SELECT s.*, q.judul as judul_quiz, mp.nama_mapel, k.nama_kelas 
+                            FROM soal s 
+                            JOIN quiz q ON s.quiz_id = q.id 
+                            LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
+                            LEFT JOIN kelas k ON q.kelas_id = k.id 
+                            WHERE s.quiz_id = :qid ORDER BY s.id ASC");
+                        $stmtS->execute(['qid' => $quizId]);
+                        $soals = $stmtS->fetchAll();
+                    } else {
+                        $gid = intval($guru['id'] ?? 0);
+                        $uid = intval($userId ?? 0);
+                        $stmtS = $this->db->prepare("SELECT s.*, q.judul as judul_quiz, mp.nama_mapel, k.nama_kelas 
+                            FROM soal s 
+                            JOIN quiz q ON s.quiz_id = q.id 
+                            LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
+                            LEFT JOIN kelas k ON q.kelas_id = k.id 
+                            WHERE (q.guru_id = :gid OR q.guru_id = :uid) ORDER BY s.id DESC");
+                        $stmtS->execute(['gid' => $gid, 'uid' => $uid]);
+                        $soals = $stmtS->fetchAll();
+
+                        if (empty($soals)) {
+                            $stmtAll = $this->db->query("SELECT s.*, q.judul as judul_quiz, mp.nama_mapel, k.nama_kelas 
+                                FROM soal s 
+                                JOIN quiz q ON s.quiz_id = q.id 
+                                LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
+                                LEFT JOIN kelas k ON q.kelas_id = k.id 
+                                ORDER BY s.id DESC");
+                            $soals = $stmtAll->fetchAll();
+                        }
+                    }
+
+                    $stmtP = $this->db->prepare("SELECT * FROM pilihan_jawaban WHERE soal_id = :sid ORDER BY id ASC");
+                    foreach ($soals as &$s) {
+                        $stmtP->execute(['sid' => $s['id']]);
+                        $s['pilihan'] = $stmtP->fetchAll();
+                    }
+                    unset($s);
+
                     $this->jsonResponse(true, 'Daftar Bank Soal Quiz', $soals);
                 } catch (\Throwable $eBs2) {
                     $this->jsonResponse(true, 'Daftar Bank Soal Quiz', []);
