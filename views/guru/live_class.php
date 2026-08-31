@@ -351,7 +351,7 @@ $kelasList = is_array($kelasList ?? null) ? $kelasList : [];
                                         <small class="text-secondary font-monospace" style="font-size:0.72rem;">ID Room: <?= htmlspecialchars($room['room_code']) ?></small>
                                     </td>
                                     <td>
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold text-truncate d-inline-block" style="max-width: 160px;" title="<?= htmlspecialchars($room['nama_mapel']) ?>">
                                             <i class="bi bi-book-fill me-1"></i><?= htmlspecialchars($room['nama_mapel']) ?>
                                         </span>
                                     </td>

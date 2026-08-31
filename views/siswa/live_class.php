@@ -224,17 +224,19 @@ $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
                 <div class="col-12 col-md-6 col-xl-4">
                     <div class="live-card-siswa h-100 d-flex flex-column">
                         <!-- Card Header -->
-                        <div class="p-3 px-4 bg-white d-flex justify-content-between align-items-center border-bottom">
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.75rem;">
+                        <div class="p-3 px-4 bg-white d-flex justify-content-between align-items-center gap-2 border-bottom overflow-hidden">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold text-truncate d-inline-block" style="max-width: 62%; font-size:0.75rem;" title="<?= htmlspecialchars($room['nama_mapel']) ?>">
                                 <i class="bi bi-book-fill me-1.5"></i><?= htmlspecialchars($room['nama_mapel']) ?>
                             </span>
-                            <?php if ($isLiveNow): ?>
-                                <span class="pulse-badge-live"><i class="bi bi-broadcast"></i> LIVE BERLANGSUNG</span>
-                            <?php elseif ($isToday): ?>
-                                <span class="badge bg-danger animate-pulse rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.72rem;">HARI INI</span>
-                            <?php else: ?>
-                                <span class="badge bg-secondary-subtle text-dark border rounded-pill px-3 py-1.5 fw-semibold" style="font-size:0.72rem;"><?= date('d M Y', strtotime($room['tgl_pertemuan'])) ?></span>
-                            <?php endif; ?>
+                            <div class="text-end flex-shrink-0">
+                                <?php if ($isLiveNow): ?>
+                                    <span class="pulse-badge-live"><i class="bi bi-broadcast"></i> LIVE BERLANGSUNG</span>
+                                <?php elseif ($isToday): ?>
+                                    <span class="badge bg-danger animate-pulse rounded-pill px-2.5 py-1.5 fw-bold" style="font-size:0.72rem;">HARI INI</span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary-subtle text-dark border rounded-pill px-2.5 py-1.5 fw-semibold" style="font-size:0.72rem;"><?= date('d M Y', strtotime($room['tgl_pertemuan'])) ?></span>
+                                <?php endif; ?>
+                            </div>
                         </div>
 
                         <!-- Card Body -->
