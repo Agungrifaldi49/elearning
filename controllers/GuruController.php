@@ -1050,18 +1050,29 @@ class GuruController {
                         'jam_selesai' => '15:00'
                     ];
                 }
-                if (empty($jadwalList)) {
-                    $jadwalList = $academicModel->getJadwal();
-                }
             }
         }
 
-        $selectedJadwal = (int)($_GET['jadwal_id'] ?? ($jadwalList[0]['id'] ?? 1));
+        $selectedJadwal = (int)($_GET['jadwal_id'] ?? ($jadwalList[0]['id'] ?? 0));
         $tanggal = $_GET['tanggal'] ?? date('Y-m-d');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
                 FlashHelper::setError('CSRF Token Invalid');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/absensi');
+                exit();
+            }
+
+            $isJadwalValid = false;
+            foreach ($jadwalList as $jItem) {
+                if ((int)($jItem['id'] ?? 0) === $selectedJadwal) {
+                    $isJadwalValid = true;
+                    break;
+                }
+            }
+
+            if (!$isAdmin && !$isJadwalValid && !empty($jadwalList)) {
+                FlashHelper::setError('Anda tidak memiliki hak akses untuk mengelola presensi jadwal ini.');
                 header('Location: ' . BASE_URL . 'index.php?url=guru/absensi');
                 exit();
             }
@@ -1077,33 +1088,62 @@ class GuruController {
             exit();
         }
 
-        $recap = $absensiModel->getRecap($selectedJadwal, $tanggal);
+        $recap = $selectedJadwal > 0 ? $absensiModel->getRecap($selectedJadwal, $tanggal) : [];
         $recapGuru = $absensiModel->getRecapGuru($tanggal);
         require_once ROOT_PATH . 'views/guru/absensi.php';
     }
 
     public function recapBulanan() {
+        $guru = $this->getGuruInfo();
+        $guruId = $guru['id'] ?? 0;
+
         $absensiModel = new AbsensiModel();
         $academicModel = new AcademicModel();
         
+        $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+
         $bulan = sprintf('%02d', (int)($_GET['bulan'] ?? date('m')));
         $tahun = (int)($_GET['tahun'] ?? date('Y'));
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
         $type = 'siswa';
         
-        $kelasList = $academicModel->getKelas();
+        if ($isAdmin) {
+            $kelasList = $academicModel->getKelas();
+        } else {
+            $kelasList = $academicModel->getKelasByGuru($guruId);
+            if (empty($kelasList)) $kelasList = $academicModel->getKelas();
+        }
+
         $monthlyRecap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId);
         
         require_once ROOT_PATH . 'views/guru/recap_bulanan.php';
     }
 
     public function exportRecapBulananCsv() {
+        $guru = $this->getGuruInfo();
+        $guruId = $guru['id'] ?? 0;
+
         $absensiModel = new AbsensiModel();
-        
+        $academicModel = new AcademicModel();
+
+        $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+
         $bulan = sprintf('%02d', (int)($_GET['bulan'] ?? date('m')));
         $tahun = (int)($_GET['tahun'] ?? date('Y'));
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
         $type = 'siswa';
+
+        if (!$isAdmin && $kelasId > 0) {
+            $myKelas = $academicModel->getKelasByGuru($guruId);
+            $myKelasIds = array_column($myKelas, 'id');
+            if (!empty($myKelasIds) && !in_array($kelasId, $myKelasIds)) {
+                FlashHelper::setError('Anda tidak memiliki hak akses untuk mengunduh rekap presensi kelas ini.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/recapBulanan');
+                exit();
+            }
+        }
         
         $namaBulan = [
             '01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April',

@@ -75,7 +75,31 @@ class AbsensiModel extends BaseModel {
     }
 
     public function getPresensiHariIniByGuru($guruId = null) {
-        return $this->getPresensiHariIniAll();
+        if (!$guruId) {
+            return $this->getPresensiHariIniAll();
+        }
+        try {
+            $today = date('Y-m-d');
+            $gId = (int)$guruId;
+            $stmtS = $this->db->prepare("
+                SELECT DISTINCT a.id, 'Siswa' as role_label, a.tanggal, a.waktu_masuk, a.waktu_pulang, a.waktu_hadir, a.status, a.keterangan,
+                       s.nama_lengkap, s.nis, s.nisn, k.nama_kelas
+                FROM absensi a
+                JOIN siswa s ON a.siswa_id = s.id
+                LEFT JOIN kelas k ON s.kelas_id = k.id
+                WHERE a.tanggal = ? AND (
+                    a.guru_id = ? 
+                    OR s.kelas_id IN (SELECT kelas_id FROM jadwal WHERE guru_id = ?)
+                    OR s.kelas_id IN (SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id = ?)
+                    OR s.id IN (SELECT siswa_id FROM siswa_mapel_enrollment WHERE guru_id = ?)
+                )
+                ORDER BY a.waktu_hadir DESC, a.id DESC
+            ");
+            $stmtS->execute([$today, $gId, $gId, $gId, $gId]);
+            return $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            return [];
+        }
     }
 
     public function verifySchoolScheduleToday($siswaId = null, $todayDate = null, $nowTime = null) {
@@ -673,17 +697,7 @@ class AbsensiModel extends BaseModel {
             $stmt->execute([$mapelId, $guruId, $tanggal]);
             return $stmt->fetchAll();
         } else {
-            $stmt = $this->db->prepare("
-                SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, 
-                       a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
-                FROM siswa s
-                LEFT JOIN absensi a ON s.id = a.siswa_id AND a.tanggal = ?
-                WHERE s.kelas_id IS NOT NULL
-                GROUP BY s.id
-                ORDER BY s.nama_lengkap ASC
-            ");
-            $stmt->execute([$tanggal]);
-            return $stmt->fetchAll();
+            return [];
         }
     }
 
