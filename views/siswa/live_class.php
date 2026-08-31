@@ -225,24 +225,52 @@ $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
     </div>
 </div>
 
+<script src="https://meet.jit.si/external_api.js"></script>
 <script>
+let studentJitsiApi = null;
+
 function openStudentVicon(roomCode, title) {
     document.getElementById('studentViconTitle').innerText = title || 'Interactive Virtual Classroom';
     const container = document.getElementById('studentViconContainer');
+    container.innerHTML = '';
     
-    // Clean roomCode for Jitsi URL
     const cleanRoom = roomCode.replace(/[^a-zA-Z0-9_-]/g, '');
-    const jitsiUrl = `https://meet.jit.si/${cleanRoom}#userInfo.displayName="Siswa E-Learning"`;
-    
-    container.innerHTML = `<iframe id="jitsiStudentFrame" src="${jitsiUrl}" allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen"></iframe>`;
+    const studentName = "<?= htmlspecialchars(addslashes($siswa['nama_lengkap'] ?? AuthHelper::user()['full_name'] ?? 'Siswa E-Learning')) ?>";
+
+    if (typeof JitsiMeetExternalAPI !== 'undefined') {
+        if (studentJitsiApi) {
+            try { studentJitsiApi.dispose(); } catch(e){}
+        }
+        studentJitsiApi = new JitsiMeetExternalAPI("meet.jit.si", {
+            roomName: cleanRoom,
+            width: '100%',
+            height: 620,
+            parentNode: container,
+            userInfo: {
+                displayName: studentName
+            },
+            configOverwrite: {
+                startWithAudioMuted: false,
+                startWithVideoMuted: false,
+                disableDeepLinking: true
+            }
+        });
+    } else {
+        const jitsiUrl = `https://meet.jit.si/${cleanRoom}#userInfo.displayName="${encodeURIComponent(studentName)}"`;
+        container.innerHTML = `<iframe id="jitsiStudentFrame" src="${jitsiUrl}" style="width:100%; height:620px; border:none; border-radius:12px;" allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen"></iframe>`;
+    }
     
     const viconModal = new bootstrap.Modal(document.getElementById('modalStudentVicon'));
     viconModal.show();
 }
 
 function closeStudentVicon() {
+    if (studentJitsiApi) {
+        try { studentJitsiApi.dispose(); } catch(e){}
+        studentJitsiApi = null;
+    }
     const container = document.getElementById('studentViconContainer');
-    container.innerHTML = '';
+    if (container) container.innerHTML = '';
 }
 </script>
 

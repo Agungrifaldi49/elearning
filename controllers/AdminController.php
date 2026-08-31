@@ -517,6 +517,12 @@ class AdminController {
         require_once ROOT_PATH . 'views/admin/kelas_virtual.php';
     }
 
+    public function liveClass() {
+        require_once ROOT_PATH . 'controllers/GuruController.php';
+        $guruCtrl = new GuruController();
+        $guruCtrl->liveClass();
+    }
+
     public function panduan() {
         require_once ROOT_PATH . 'views/admin/panduan.php';
     }

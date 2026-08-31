@@ -616,24 +616,52 @@ $kelasList = is_array($kelasList ?? null) ? $kelasList : [];
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://meet.jit.si/external_api.js"></script>
 <script>
+let guruJitsiApi = null;
+
 function openEmbeddedVicon(roomCode, title) {
     document.getElementById('viconRoomTitle').innerText = title || 'Interactive Virtual Classroom';
     const container = document.getElementById('viconContainer');
+    container.innerHTML = '';
     
-    // Clean roomCode for Jitsi URL
     const cleanRoom = roomCode.replace(/[^a-zA-Z0-9_-]/g, '');
-    const jitsiUrl = `https://meet.jit.si/${cleanRoom}#userInfo.displayName="Guru Pengampu"`;
-    
-    container.innerHTML = `<iframe id="jitsiMeetingFrame" src="${jitsiUrl}" allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen"></iframe>`;
+    const teacherName = "<?= htmlspecialchars(addslashes($guru['nama_lengkap'] ?? AuthHelper::user()['full_name'] ?? 'Guru Pengampu')) ?>";
+
+    if (typeof JitsiMeetExternalAPI !== 'undefined') {
+        if (guruJitsiApi) {
+            try { guruJitsiApi.dispose(); } catch(e){}
+        }
+        guruJitsiApi = new JitsiMeetExternalAPI("meet.jit.si", {
+            roomName: cleanRoom,
+            width: '100%',
+            height: 620,
+            parentNode: container,
+            userInfo: {
+                displayName: teacherName
+            },
+            configOverwrite: {
+                startWithAudioMuted: false,
+                startWithVideoMuted: false,
+                disableDeepLinking: true
+            }
+        });
+    } else {
+        const jitsiUrl = `https://meet.jit.si/${cleanRoom}#userInfo.displayName="${encodeURIComponent(teacherName)}"`;
+        container.innerHTML = `<iframe id="jitsiMeetingFrame" src="${jitsiUrl}" style="width:100%; height:620px; border:none; border-radius:12px;" allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen"></iframe>`;
+    }
     
     const viconModal = new bootstrap.Modal(document.getElementById('modalViconPlayer'));
     viconModal.show();
 }
 
 function closeEmbeddedVicon() {
+    if (guruJitsiApi) {
+        try { guruJitsiApi.dispose(); } catch(e){}
+        guruJitsiApi = null;
+    }
     const container = document.getElementById('viconContainer');
-    container.innerHTML = '';
+    if (container) container.innerHTML = '';
 }
 
 function copyMeetingLink(link) {
