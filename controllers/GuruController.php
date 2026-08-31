@@ -1111,18 +1111,18 @@ class GuruController {
         $queryGuruId = $isAdmin ? null : $guruId;
         if ($isAdmin) {
             $kelasList = $academicModel->getKelas();
+            $targetKelas = $kelasId;
         } else {
             $kelasList = $academicModel->getKelasByGuru($guruId);
-        }
-
-        if (!$isAdmin && $kelasId > 0 && !empty($kelasList)) {
             $myKelasIds = array_column($kelasList, 'id');
-            if (!in_array($kelasId, $myKelasIds)) {
-                $kelasId = 0;
+            if ($kelasId > 0 && in_array($kelasId, $myKelasIds)) {
+                $targetKelas = $kelasId;
+            } else {
+                $targetKelas = !empty($myKelasIds) ? $myKelasIds : 0;
             }
         }
 
-        $monthlyRecap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId, $queryGuruId);
+        $monthlyRecap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $targetKelas, $queryGuruId);
         
         require_once ROOT_PATH . 'views/guru/recap_bulanan.php';
     }
@@ -1143,14 +1143,21 @@ class GuruController {
         $type = 'siswa';
 
         $queryGuruId = $isAdmin ? null : $guruId;
-        if (!$isAdmin && $kelasId > 0) {
+        if (!$isAdmin) {
             $myKelas = $academicModel->getKelasByGuru($guruId);
             $myKelasIds = array_column($myKelas, 'id');
-            if (!empty($myKelasIds) && !in_array($kelasId, $myKelasIds)) {
-                FlashHelper::setError('Anda tidak memiliki hak akses untuk mengunduh rekap presensi kelas ini.');
-                header('Location: ' . BASE_URL . 'index.php?url=guru/recapBulanan');
-                exit();
+            if ($kelasId > 0) {
+                if (!empty($myKelasIds) && !in_array($kelasId, $myKelasIds)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mengunduh rekap presensi kelas ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/recapBulanan');
+                    exit();
+                }
+                $targetKelas = $kelasId;
+            } else {
+                $targetKelas = !empty($myKelasIds) ? $myKelasIds : 0;
             }
+        } else {
+            $targetKelas = $kelasId;
         }
         
         $namaBulan = [
@@ -1159,7 +1166,7 @@ class GuruController {
             '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
         ][$bulan] ?? $bulan;
 
-        $recap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId, $queryGuruId);
+        $recap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $targetKelas, $queryGuruId);
         $filename = "Rekap_Absensi_Siswa_{$namaBulan}_{$tahun}.csv";
 
         header('Content-Type: text/csv; charset=utf-8');
@@ -1221,17 +1228,24 @@ class GuruController {
         $type = 'siswa';
         
         $queryGuruId = $isAdmin ? null : $guruId;
-        if (!$isAdmin && $kelasId > 0) {
+        if (!$isAdmin) {
             $myKelas = $academicModel->getKelasByGuru($guruId);
             $myKelasIds = array_column($myKelas, 'id');
-            if (!empty($myKelasIds) && !in_array($kelasId, $myKelasIds)) {
-                FlashHelper::setError('Anda tidak memiliki hak akses untuk mencetak rekap presensi kelas ini.');
-                header('Location: ' . BASE_URL . 'index.php?url=guru/recapBulanan');
-                exit();
+            if ($kelasId > 0) {
+                if (!empty($myKelasIds) && !in_array($kelasId, $myKelasIds)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mencetak rekap presensi kelas ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/recapBulanan');
+                    exit();
+                }
+                $targetKelas = $kelasId;
+            } else {
+                $targetKelas = !empty($myKelasIds) ? $myKelasIds : 0;
             }
+        } else {
+            $targetKelas = $kelasId;
         }
 
-        $recap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId, $queryGuruId);
+        $recap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $targetKelas, $queryGuruId);
         
         require_once ROOT_PATH . 'views/guru/recap_bulanan_pdf.php';
     }
