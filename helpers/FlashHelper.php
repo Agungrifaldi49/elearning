@@ -18,6 +18,24 @@ class FlashHelper {
         $_SESSION['flash_info'] = $message;
     }
 
+    public static function getSuccess() {
+        if (!empty($_SESSION['flash_success'])) {
+            $msg = $_SESSION['flash_success'];
+            unset($_SESSION['flash_success']);
+            return $msg;
+        }
+        return null;
+    }
+
+    public static function getError() {
+        if (!empty($_SESSION['flash_error'])) {
+            $msg = $_SESSION['flash_error'];
+            unset($_SESSION['flash_error']);
+            return $msg;
+        }
+        return null;
+    }
+
     public static function render() {
         $html = '';
 

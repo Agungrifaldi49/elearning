@@ -18,7 +18,7 @@ require_once ROOT_PATH . 'models/CommunicationModel.php';
 class GuruController {
 
     public function __construct() {
-        AuthHelper::requireRole(['Guru']);
+        AuthHelper::requireRole(['Guru', 'Administrator', 'Admin', 'Kepala Sekolah', 'Kepsek']);
     }
 
     private function getGuruInfo() {
@@ -1424,19 +1424,21 @@ class GuruController {
 
     public function liveClass() {
         $guru = $this->getGuruInfo();
-        $guruId = $guru['id'] ?? 0;
+        $guruId = (int)($guru['id'] ?? 0);
 
         $roleName = strtolower(AuthHelper::user()['role_name'] ?? '');
         $isAdmin = in_array($roleName, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
         $queryGuruId = $isAdmin ? null : $guruId;
+        $redirectRoute = $isAdmin ? 'admin/liveClass' : 'guru/liveClass';
 
         $learningModel = new LearningModel();
         $academicModel = new AcademicModel();
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $requestMethod = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        if ($requestMethod === 'POST') {
             if (!Security::verifyCsrfToken()) {
                 FlashHelper::setError('CSRF Token Invalid');
-                header('Location: ' . BASE_URL . 'index.php?url=guru/liveClass');
+                header('Location: ' . BASE_URL . 'index.php?url=' . $redirectRoute);
                 exit();
             }
 
@@ -1456,7 +1458,7 @@ class GuruController {
 
                     if (empty($topik) || $mapelId <= 0) {
                         FlashHelper::setError('Topik pertemuan dan mata pelajaran wajib diisi.');
-                        header('Location: ' . BASE_URL . 'index.php?url=guru/liveClass');
+                        header('Location: ' . BASE_URL . 'index.php?url=' . $redirectRoute);
                         exit();
                     }
 
@@ -1492,7 +1494,7 @@ class GuruController {
                     $existing = $learningModel->getLiveClassById($id);
                     if (!$existing || (!$isAdmin && (int)$existing['guru_id'] !== (int)$guruId)) {
                         FlashHelper::setError('Anda tidak memiliki hak akses untuk mengedit ruang meeting ini.');
-                        header('Location: ' . BASE_URL . 'index.php?url=guru/liveClass');
+                        header('Location: ' . BASE_URL . 'index.php?url=' . $redirectRoute);
                         exit();
                     }
 
@@ -1512,7 +1514,7 @@ class GuruController {
                 FlashHelper::setError('Terjadi kesalahan: ' . $ePost->getMessage());
             }
 
-            header('Location: ' . BASE_URL . 'index.php?url=guru/liveClass');
+            header('Location: ' . BASE_URL . 'index.php?url=' . $redirectRoute);
             exit();
         }
 

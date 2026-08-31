@@ -417,6 +417,27 @@ class LearningModel extends BaseModel {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+
+            $countStmt = $this->db->query("SELECT COUNT(*) FROM live_class");
+            if ($countStmt && (int)$countStmt->fetchColumn() === 0) {
+                $guruStmt = $this->db->query("SELECT id FROM guru ORDER BY id ASC LIMIT 1");
+                $guruId = $guruStmt ? (int)($guruStmt->fetchColumn() ?: 1) : 1;
+
+                $mapelStmt = $this->db->query("SELECT id FROM mata_pelajaran ORDER BY id ASC LIMIT 1");
+                $mapelId = $mapelStmt ? (int)($mapelStmt->fetchColumn() ?: 1) : 1;
+
+                $today = date('Y-m-d');
+                $roomCode1 = "SMKMH-ROOM-" . strtoupper(substr(md5(uniqid(rand(), true)), 0, 8));
+                $roomCode2 = "SMKMH-ROOM-" . strtoupper(substr(md5(uniqid(rand(), true)), 0, 8));
+
+                $stmtSeed = $this->db->prepare("
+                    INSERT INTO live_class (guru_id, mapel_id, kelas_id, topik, deskripsi, platform, meeting_link, room_code, tgl_pertemuan, jam_mulai, jam_selesai, is_active)
+                    VALUES 
+                    (?, ?, NULL, 'Sesi Interactive WebRTC Vicon: Review & Live Discussion', 'Selamat datang di ruang Vicon bawaan E-Learning. Silakan bergabung untuk mengikuti diskusi materi dan tanya jawab interaktif secara langsung.', 'embedded', NULL, ?, ?, '08:00', '10:00', 1),
+                    (?, ?, NULL, 'Tatap Muka Digital: Google Meet Hybrid Classroom', 'Sesi tatap muka interaktif diselenggarakan via Google Meet resmi.', 'meet', 'https://meet.google.com', ?, ?, '10:30', '12:00', 1)
+                ");
+                $stmtSeed->execute([$guruId, $mapelId, $roomCode1, $today, $guruId, $mapelId, $roomCode2, $today]);
+            }
         } catch (Throwable $e) {}
     }
 

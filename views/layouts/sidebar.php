@@ -129,6 +129,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'chat') ?>" href="<?= BASE_URL ?>index.php?url=chat">
                 <i class="bi bi-chat-dots-fill"></i> Chat Realtime
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'admin/liveClass') ?>" href="<?= BASE_URL ?>index.php?url=admin/liveClass">
+                <i class="bi bi-camera-reels-fill text-danger"></i> Live Virtual Meeting Room
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'library') ?>" href="<?= BASE_URL ?>index.php?url=library">
                 <i class="bi bi-bookshelf"></i> Perpustakaan Digital
             </a></li>

@@ -122,9 +122,18 @@ $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
     </div>
 
     <!-- Active Sesi Virtual Meeting Grid -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-camera-reels-fill text-danger me-2"></i>Jadwal Live Virtual Meeting Kelas Anda</h5>
-        <span class="badge bg-primary rounded-pill px-3 py-1.5 fw-bold"><?= count($liveClasses ?? []) ?> Sesi Terdaftar</span>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+        <div>
+            <h5 class="fw-bold text-dark mb-0"><i class="bi bi-camera-reels-fill text-danger me-2"></i>Jadwal Live Virtual Meeting Kelas Anda</h5>
+            <small class="text-muted">Bergabung langsung ke kelas digital interaktif bersama guru pengampu.</small>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <div class="input-group input-group-sm" style="max-width: 240px;">
+                <span class="input-group-text bg-white border-end-0 rounded-start-pill"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="searchLiveSiswa" class="form-control bg-white border-start-0 rounded-end-pill" placeholder="Cari topik / mapel...">
+            </div>
+            <span class="badge bg-primary rounded-pill px-3 py-2 fw-bold"><?= count($liveClasses ?? []) ?> Sesi Terdaftar</span>
+        </div>
     </div>
 
     <?php if (empty($liveClasses)): ?>
@@ -141,6 +150,11 @@ $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
                 $isToday = ($room['tgl_pertemuan'] === date('Y-m-d'));
                 $pType = strtolower($room['platform'] ?? 'embedded');
                 $avatarPath = !empty($room['avatar_guru']) ? BASE_URL . 'assets/uploads/avatars/' . $room['avatar_guru'] : BASE_URL . 'assets/img/default-avatar.png';
+                
+                $nowTime = date('H:i:s');
+                $startTime = date('H:i:s', strtotime($room['jam_mulai']));
+                $endTime = !empty($room['jam_selesai']) ? date('H:i:s', strtotime($room['jam_selesai'])) : date('H:i:s', strtotime($room['jam_mulai'] . ' + 2 hours'));
+                $isLiveNow = ($isToday && $nowTime >= $startTime && $nowTime <= $endTime);
             ?>
                 <div class="col-12 col-md-6 col-lg-4">
                     <div class="live-card-siswa h-100 d-flex flex-column">
@@ -148,7 +162,9 @@ $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-bold">
                                 <i class="bi bi-book-fill me-1"></i><?= htmlspecialchars($room['nama_mapel']) ?>
                             </span>
-                            <?php if ($isToday): ?>
+                            <?php if ($isLiveNow): ?>
+                                <span class="badge bg-success animate-pulse rounded-pill px-2.5 py-1" style="font-size:0.7rem;"><i class="bi bi-broadcast me-1"></i>LIVE BERLANGSUNG</span>
+                            <?php elseif ($isToday): ?>
                                 <span class="badge bg-danger animate-pulse rounded-pill px-2.5 py-1" style="font-size:0.7rem;">HARI INI</span>
                             <?php else: ?>
                                 <span class="badge bg-secondary-subtle text-dark border rounded-pill px-2.5 py-1" style="font-size:0.7rem;"><?= date('d M Y', strtotime($room['tgl_pertemuan'])) ?></span>
@@ -187,7 +203,7 @@ $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
 
                         <div class="live-card-footer bg-light">
                             <?php if ($pType === 'embedded'): ?>
-                                <button class="btn btn-danger w-100 rounded-pill fw-bold shadow-xs py-2" onclick="openStudentVicon('<?= htmlspecialchars($room['room_code']) ?>', '<?= htmlspecialchars(addslashes($room['topik'])) ?>')">
+                                <button class="btn btn-danger w-100 rounded-pill fw-bold shadow-xs py-2 btn-student-vicon" data-room-code="<?= htmlspecialchars($room['room_code']) ?>" data-topik="<?= htmlspecialchars($room['topik']) ?>">
                                     <i class="bi bi-play-circle-fill me-1"></i> Masuk Room Vicon (Built-in)
                                 </button>
                             <?php else: ?>
@@ -209,12 +225,17 @@ $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
 <div class="modal fade" id="modalStudentVicon" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content vicon-modal-container text-white">
-            <div class="modal-header border-0 pb-0 px-4 pt-3 d-flex justify-content-between align-items-center">
+            <div class="modal-header border-0 pb-0 px-4 pt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
                     <div class="badge bg-danger rounded-pill px-3 py-1 fw-bold mb-1"><i class="bi bi-broadcast me-1"></i> SISWA LIVE VICON ROOM</div>
                     <h5 class="fw-bold mb-0 text-white" id="studentViconTitle">Interactive Virtual Classroom</h5>
                 </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="closeStudentVicon()"></button>
+                <div class="d-flex align-items-center gap-2">
+                    <a id="studentViconPopoutBtn" href="#" target="_blank" class="btn btn-sm btn-outline-light rounded-pill px-3 fw-semibold">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Buka di Tab Baru
+                    </a>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="closeStudentVicon()"></button>
+                </div>
             </div>
             <div class="modal-body p-3">
                 <div id="studentViconContainer" class="w-100 rounded-4 overflow-hidden" style="min-height:600px; background: #000;">
@@ -230,38 +251,53 @@ $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
 let studentJitsiApi = null;
 
 function openStudentVicon(roomCode, title) {
-    document.getElementById('studentViconTitle').innerText = title || 'Interactive Virtual Classroom';
+    const titleEl = document.getElementById('studentViconTitle');
+    if (titleEl) titleEl.innerText = title || 'Interactive Virtual Classroom';
+
+    const cleanRoom = (roomCode || 'ROOM').replace(/[^a-zA-Z0-9_-]/g, '');
+    const popoutBtn = document.getElementById('studentViconPopoutBtn');
+    if (popoutBtn) {
+        popoutBtn.href = `https://meet.jit.si/${cleanRoom}`;
+    }
+
     const container = document.getElementById('studentViconContainer');
+    if (!container) return;
     container.innerHTML = '';
-    
-    const cleanRoom = roomCode.replace(/[^a-zA-Z0-9_-]/g, '');
-    const studentName = "<?= htmlspecialchars(addslashes($siswa['nama_lengkap'] ?? AuthHelper::user()['full_name'] ?? 'Siswa E-Learning')) ?>";
+
+    const studentName = <?= json_encode($siswa['nama_lengkap'] ?? AuthHelper::user()['full_name'] ?? 'Siswa E-Learning') ?>;
+    const jitsiUrl = `https://meet.jit.si/${cleanRoom}#userInfo.displayName="${encodeURIComponent(studentName)}"`;
 
     if (typeof JitsiMeetExternalAPI !== 'undefined') {
         if (studentJitsiApi) {
             try { studentJitsiApi.dispose(); } catch(e){}
         }
-        studentJitsiApi = new JitsiMeetExternalAPI("meet.jit.si", {
-            roomName: cleanRoom,
-            width: '100%',
-            height: 620,
-            parentNode: container,
-            userInfo: {
-                displayName: studentName
-            },
-            configOverwrite: {
-                startWithAudioMuted: false,
-                startWithVideoMuted: false,
-                disableDeepLinking: true
-            }
-        });
+        try {
+            studentJitsiApi = new JitsiMeetExternalAPI("meet.jit.si", {
+                roomName: cleanRoom,
+                width: '100%',
+                height: 620,
+                parentNode: container,
+                userInfo: {
+                    displayName: studentName
+                },
+                configOverwrite: {
+                    startWithAudioMuted: false,
+                    startWithVideoMuted: false,
+                    disableDeepLinking: true
+                }
+            });
+        } catch(err) {
+            container.innerHTML = `<iframe id="jitsiStudentFrame" src="${jitsiUrl}" style="width:100%; height:620px; border:none; border-radius:12px;" allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen; speaker"></iframe>`;
+        }
     } else {
-        const jitsiUrl = `https://meet.jit.si/${cleanRoom}#userInfo.displayName="${encodeURIComponent(studentName)}"`;
-        container.innerHTML = `<iframe id="jitsiStudentFrame" src="${jitsiUrl}" style="width:100%; height:620px; border:none; border-radius:12px;" allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen"></iframe>`;
+        container.innerHTML = `<iframe id="jitsiStudentFrame" src="${jitsiUrl}" style="width:100%; height:620px; border:none; border-radius:12px;" allow="camera; microphone; display-capture; autoplay; clipboard-write; fullscreen; speaker"></iframe>`;
     }
-    
-    const viconModal = new bootstrap.Modal(document.getElementById('modalStudentVicon'));
-    viconModal.show();
+
+    const viconModalEl = document.getElementById('modalStudentVicon');
+    if (viconModalEl) {
+        const viconModal = bootstrap.Modal.getOrCreateInstance(viconModalEl);
+        viconModal.show();
+    }
 }
 
 function closeStudentVicon() {
@@ -272,6 +308,33 @@ function closeStudentVicon() {
     const container = document.getElementById('studentViconContainer');
     if (container) container.innerHTML = '';
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-student-vicon');
+        if (btn) {
+            e.preventDefault();
+            const roomCode = btn.getAttribute('data-room-code');
+            const topik = btn.getAttribute('data-topik');
+            openStudentVicon(roomCode, topik);
+        }
+    });
+
+    const searchInput = document.getElementById('searchLiveSiswa');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const cards = document.querySelectorAll('.live-card-siswa');
+            cards.forEach(card => {
+                const parent = card.closest('.col-12');
+                const text = card.innerText.toLowerCase();
+                if (parent) {
+                    parent.style.display = text.includes(query) ? '' : 'none';
+                }
+            });
+        });
+    }
+});
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
