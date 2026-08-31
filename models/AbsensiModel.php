@@ -719,7 +719,7 @@ class AbsensiModel extends BaseModel {
         }
     }
 
-    public function getMonthlyRecapSiswa($bulan, $tahun, $kelasId = null) {
+    public function getMonthlyRecapSiswa($bulan, $tahun, $kelasId = null, $guruId = null) {
         $bulan = sprintf('%02d', (int)$bulan);
         $tahun = (int)$tahun;
         $numDays = (int)date('t', strtotime("$tahun-$bulan-01"));
@@ -731,6 +731,19 @@ class AbsensiModel extends BaseModel {
         if ($kelasId && (int)$kelasId > 0) {
             $whereSql = " WHERE s.kelas_id = ? ";
             $params[] = (int)$kelasId;
+            if ($guruId && (int)$guruId > 0) {
+                $gId = (int)$guruId;
+                $whereSql .= " AND s.kelas_id IN (
+                    SELECT kelas_id FROM jadwal WHERE guru_id = {$gId} 
+                    UNION SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id = {$gId}
+                )";
+            }
+        } elseif ($guruId && (int)$guruId > 0) {
+            $gId = (int)$guruId;
+            $whereSql = " WHERE s.kelas_id IN (
+                SELECT kelas_id FROM jadwal WHERE guru_id = {$gId} 
+                UNION SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id = {$gId}
+            ) ";
         }
 
         $stmtS = $this->db->prepare("

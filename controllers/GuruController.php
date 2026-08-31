@@ -1108,14 +1108,23 @@ class GuruController {
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
         $type = 'siswa';
         
+        $queryGuruId = $isAdmin ? null : $guruId;
         if ($isAdmin) {
             $kelasList = $academicModel->getKelas();
         } else {
             $kelasList = $academicModel->getKelasByGuru($guruId);
-            if (empty($kelasList)) $kelasList = $academicModel->getKelas();
         }
 
-        $monthlyRecap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId);
+        if (!$isAdmin && $kelasId > 0 && !empty($kelasList)) {
+            $myKelasIds = array_column($kelasList, 'id');
+            if (!in_array($kelasId, $myKelasIds)) {
+                $kelasId = $kelasList[0]['id'] ?? 0;
+            }
+        } elseif (!$isAdmin && $kelasId === 0 && !empty($kelasList)) {
+            $kelasId = $kelasList[0]['id'] ?? 0;
+        }
+
+        $monthlyRecap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId, $queryGuruId);
         
         require_once ROOT_PATH . 'views/guru/recap_bulanan.php';
     }
@@ -1135,6 +1144,7 @@ class GuruController {
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
         $type = 'siswa';
 
+        $queryGuruId = $isAdmin ? null : $guruId;
         if (!$isAdmin && $kelasId > 0) {
             $myKelas = $academicModel->getKelasByGuru($guruId);
             $myKelasIds = array_column($myKelas, 'id');
@@ -1151,7 +1161,7 @@ class GuruController {
             '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
         ][$bulan] ?? $bulan;
 
-        $recap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId);
+        $recap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId, $queryGuruId);
         $filename = "Rekap_Absensi_Siswa_{$namaBulan}_{$tahun}.csv";
 
         header('Content-Type: text/csv; charset=utf-8');
@@ -1198,15 +1208,32 @@ class GuruController {
     }
 
     public function exportRecapBulananPdf() {
+        $guru = $this->getGuruInfo();
+        $guruId = $guru['id'] ?? 0;
+
         $absensiModel = new AbsensiModel();
         $academicModel = new AcademicModel();
         
+        $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+
         $bulan = sprintf('%02d', (int)($_GET['bulan'] ?? date('m')));
         $tahun = (int)($_GET['tahun'] ?? date('Y'));
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
         $type = 'siswa';
         
-        $recap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId);
+        $queryGuruId = $isAdmin ? null : $guruId;
+        if (!$isAdmin && $kelasId > 0) {
+            $myKelas = $academicModel->getKelasByGuru($guruId);
+            $myKelasIds = array_column($myKelas, 'id');
+            if (!empty($myKelasIds) && !in_array($kelasId, $myKelasIds)) {
+                FlashHelper::setError('Anda tidak memiliki hak akses untuk mencetak rekap presensi kelas ini.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/recapBulanan');
+                exit();
+            }
+        }
+
+        $recap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId, $queryGuruId);
         
         require_once ROOT_PATH . 'views/guru/recap_bulanan_pdf.php';
     }
@@ -1226,14 +1253,7 @@ class GuruController {
             $mapelList = $academicModel->getMapel();
         } else {
             $kelasList = $academicModel->getKelasByGuru($guruId);
-            if (empty($kelasList)) {
-                $kelasList = $academicModel->getKelas();
-            }
-
             $mapelList = $academicModel->getMapelByGuru($guruId);
-            if (empty($mapelList)) {
-                $mapelList = $academicModel->getMapel();
-            }
         }
 
         $selectedKelasId = isset($_GET['kelas_id']) && $_GET['kelas_id'] !== '' ? (int)$_GET['kelas_id'] : ($kelasList[0]['id'] ?? 0);
