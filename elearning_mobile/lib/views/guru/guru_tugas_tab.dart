@@ -979,21 +979,26 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
     final guruProvider = Provider.of<GuruProvider>(context);
     final allTugas = guruProvider.tugasList;
 
-    // Filter tasks by search query and mapel
-    final filteredTugas = allTugas.where((t) {
-      final matchesSearch = _searchQuery.isEmpty ||
-          t.judul.toLowerCase().contains(_searchQuery) ||
-          t.namaMapel.toLowerCase().contains(_searchQuery) ||
-          (t.namaKelas ?? '').toLowerCase().contains(_searchQuery);
-      final matchesMapel = _selectedMapel == 'Semua' || t.namaMapel == _selectedMapel;
-      return matchesSearch && matchesMapel;
-    }).toList();
-
     // Extract list of mapels for filter chips
     final mapelSet = <String>{'Semua'};
     for (var t in allTugas) {
-      if (t.namaMapel.isNotEmpty) mapelSet.add(t.namaMapel);
+      if (t.namaMapel.trim().isNotEmpty) mapelSet.add(t.namaMapel.trim());
     }
+
+    if (!mapelSet.contains(_selectedMapel)) {
+      _selectedMapel = 'Semua';
+    }
+
+    // Filter tasks by search query and mapel
+    final filteredTugas = allTugas.where((t) {
+      final query = _searchQuery.trim().toLowerCase();
+      final matchesSearch = query.isEmpty ||
+          t.judul.toLowerCase().contains(query) ||
+          t.namaMapel.toLowerCase().contains(query) ||
+          (t.namaKelas ?? '').toLowerCase().contains(query);
+      final matchesMapel = _selectedMapel == 'Semua' || t.namaMapel.trim().toLowerCase() == _selectedMapel.trim().toLowerCase();
+      return matchesSearch && matchesMapel;
+    }).toList();
 
     // Stats calculations
     final totalTugasCount = allTugas.length;

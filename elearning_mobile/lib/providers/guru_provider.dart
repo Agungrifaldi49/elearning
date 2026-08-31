@@ -127,17 +127,21 @@ class GuruProvider with ChangeNotifier {
     final res = await ApiService.get('guru/tugas', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] != null) {
       if (res['data'] is List) {
-        _tugasList = (res['data'] as List).map((e) => TugasModel.fromJson(e)).toList();
+        _tugasList = (res['data'] as List).map((e) => TugasModel.fromJson(Map<String, dynamic>.from(e))).toList();
       } else if (res['data'] is Map) {
-        final dataMap = res['data'] as Map<String, dynamic>;
+        final dataMap = Map<String, dynamic>.from(res['data']);
         if (dataMap['tugas'] is List) {
-          _tugasList = (dataMap['tugas'] as List).map((e) => TugasModel.fromJson(e)).toList();
+          _tugasList = (dataMap['tugas'] as List).map((e) => TugasModel.fromJson(Map<String, dynamic>.from(e))).toList();
         }
         if (dataMap['mapel_list'] is List) {
-          _mapelList = List<Map<String, dynamic>>.from(dataMap['mapel_list']);
+          _mapelList = List<Map<String, dynamic>>.from(
+            (dataMap['mapel_list'] as List).map((e) => Map<String, dynamic>.from(e)),
+          );
         }
         if (dataMap['kelas_list'] is List) {
-          _kelasList = List<Map<String, dynamic>>.from(dataMap['kelas_list']);
+          _kelasList = List<Map<String, dynamic>>.from(
+            (dataMap['kelas_list'] as List).map((e) => Map<String, dynamic>.from(e)),
+          );
         }
       }
     }
@@ -461,12 +465,29 @@ class GuruProvider with ChangeNotifier {
 
   Future<void> fetchTugasSilent(int userId) async {
     final res = await ApiService.get('guru/tugas', params: {'user_id': userId.toString()});
-    if (res['success'] == true && res['data'] is List) {
-      final list = (res['data'] as List).map((e) => TugasModel.fromJson(e)).toList();
-      if (list.length != _tugasList.length) {
-        _tugasList = list;
-        notifyListeners();
+    if (res['success'] == true && res['data'] != null) {
+      List rawList = [];
+      if (res['data'] is List) {
+        rawList = res['data'] as List;
+      } else if (res['data'] is Map) {
+        final dataMap = Map<String, dynamic>.from(res['data']);
+        if (dataMap['tugas'] is List) {
+          rawList = dataMap['tugas'] as List;
+        }
+        if (dataMap['mapel_list'] is List) {
+          _mapelList = List<Map<String, dynamic>>.from(
+            (dataMap['mapel_list'] as List).map((e) => Map<String, dynamic>.from(e)),
+          );
+        }
+        if (dataMap['kelas_list'] is List) {
+          _kelasList = List<Map<String, dynamic>>.from(
+            (dataMap['kelas_list'] as List).map((e) => Map<String, dynamic>.from(e)),
+          );
+        }
       }
+      final list = rawList.map((e) => TugasModel.fromJson(Map<String, dynamic>.from(e))).toList();
+      _tugasList = list;
+      notifyListeners();
     }
   }
 

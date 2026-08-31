@@ -1890,10 +1890,10 @@ class ApiController {
                     FROM tugas t 
                     LEFT JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
                     LEFT JOIN kelas k ON t.kelas_id = k.id 
-                    WHERE t.guru_id = :gid 
+                    WHERE (t.guru_id = :gid OR t.guru_id = :uid) 
                     ORDER BY t.created_at DESC
                 ");
-                $stmtT->execute(['gid' => $guru['id']]);
+                $stmtT->execute(['gid' => $guru['id'], 'uid' => $guru['user_id']]);
                 $tugas = $stmtT->fetchAll();
 
                 $academicModel = new AcademicModel();
