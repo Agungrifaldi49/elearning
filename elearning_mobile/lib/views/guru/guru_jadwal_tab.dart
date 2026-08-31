@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../models/jadwal_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 import '../../theme/app_theme.dart';
@@ -185,8 +184,8 @@ class _GuruJadwalTabState extends State<GuruJadwalTab> {
                     title: 'Mapel Diampu',
                     value: '$mapelSet Mapel',
                     icon: Icons.book_outlined,
-                    iconColor: Colors.emerald.shade700,
-                    bgColor: Colors.emerald.shade50,
+                    iconColor: const Color(0xFF047857),
+                    bgColor: const Color(0xFFECFDF5),
                   ),
                 ),
               ],
@@ -358,10 +357,10 @@ class _GuruJadwalTabState extends State<GuruJadwalTab> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                       decoration: BoxDecoration(
-                                        color: isTodaySession ? Colors.emerald.shade50 : Colors.indigo.shade50,
+                                        color: isTodaySession ? const Color(0xFFECFDF5) : Colors.indigo.shade50,
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: isTodaySession ? Colors.emerald.shade200 : Colors.indigo.shade200,
+                                          color: isTodaySession ? const Color(0xFFA7F3D0) : Colors.indigo.shade200,
                                         ),
                                       ),
                                       child: Row(
@@ -369,7 +368,7 @@ class _GuruJadwalTabState extends State<GuruJadwalTab> {
                                           Icon(
                                             Icons.access_time_filled_rounded,
                                             size: 13,
-                                            color: isTodaySession ? Colors.emerald.shade800 : Colors.indigo.shade800,
+                                            color: isTodaySession ? const Color(0xFF065F46) : Colors.indigo.shade800,
                                           ),
                                           const SizedBox(width: 5),
                                           Text(
@@ -377,7 +376,7 @@ class _GuruJadwalTabState extends State<GuruJadwalTab> {
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
-                                              color: isTodaySession ? Colors.emerald.shade900 : Colors.indigo.shade900,
+                                              color: isTodaySession ? const Color(0xFF064E3B) : Colors.indigo.shade900,
                                             ),
                                           ),
                                         ],

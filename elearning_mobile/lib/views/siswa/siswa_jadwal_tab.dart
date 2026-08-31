@@ -343,7 +343,7 @@ class _SiswaJadwalTabState extends State<SiswaJadwalTab> {
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: isTodaySession
-                                    ? [AppTheme.secondaryColor, Colors.emerald]
+                                    ? [AppTheme.secondaryColor, const Color(0xFF10B981)]
                                     : [Colors.blue.shade400, Colors.teal.shade600],
                               ),
                             ),
@@ -361,10 +361,10 @@ class _SiswaJadwalTabState extends State<SiswaJadwalTab> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                       decoration: BoxDecoration(
-                                        color: isTodaySession ? Colors.emerald.shade50 : Colors.blue.shade50,
+                                        color: isTodaySession ? const Color(0xFFECFDF5) : Colors.blue.shade50,
                                         borderRadius: BorderRadius.circular(20),
                                         border: Border.all(
-                                          color: isTodaySession ? Colors.emerald.shade200 : Colors.blue.shade200,
+                                          color: isTodaySession ? const Color(0xFFA7F3D0) : Colors.blue.shade200,
                                         ),
                                       ),
                                       child: Row(
@@ -372,7 +372,7 @@ class _SiswaJadwalTabState extends State<SiswaJadwalTab> {
                                           Icon(
                                             Icons.access_time_filled_rounded,
                                             size: 13,
-                                            color: isTodaySession ? Colors.emerald.shade800 : Colors.blue.shade800,
+                                            color: isTodaySession ? const Color(0xFF065F46) : Colors.blue.shade800,
                                           ),
                                           const SizedBox(width: 5),
                                           Text(
@@ -380,7 +380,7 @@ class _SiswaJadwalTabState extends State<SiswaJadwalTab> {
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
-                                              color: isTodaySession ? Colors.emerald.shade900 : Colors.blue.shade900,
+                                              color: isTodaySession ? const Color(0xFF064E3B) : Colors.blue.shade900,
                                             ),
                                           ),
                                         ],
