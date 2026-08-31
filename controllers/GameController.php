@@ -400,12 +400,21 @@ class GameController {
 
     public function exportSoal() {
         AuthHelper::requireLogin();
+        $user = AuthHelper::user();
+        $roleName = strtolower(trim($user['role_name'] ?? ''));
         $id = (int)($_GET['id'] ?? 0);
         $gameModel = new GameModel();
         $game = $gameModel->getGameDetail($id);
 
         if (!$game) {
             FlashHelper::setError('Game Edukasi tidak ditemukan.');
+            header('Location: ' . BASE_URL . 'index.php?url=game');
+            exit();
+        }
+
+        $guruId = $this->getGuruId($user['id']);
+        if ($roleName !== 'administrator' && (int)($game['guru_id'] ?? 0) !== (int)$guruId) {
+            FlashHelper::setError('Anda hanya dapat mengunduh soal Game Edukasi buatan Anda sendiri.');
             header('Location: ' . BASE_URL . 'index.php?url=game');
             exit();
         }
@@ -457,8 +466,17 @@ class GameController {
             }
 
             $gameId = (int)($_POST['game_id'] ?? 0);
+            $gameModel = new GameModel();
+            $game = $gameModel->getGameDetail($gameId);
+            $guruId = $this->getGuruId($user['id']);
+
+            if (!$game || ($roleName !== 'administrator' && (int)($game['guru_id'] ?? 0) !== (int)$guruId)) {
+                FlashHelper::setError('Anda tidak memiliki hak akses untuk mengimport soal ke Game Edukasi ini.');
+                header('Location: ' . BASE_URL . 'index.php?url=game');
+                exit();
+            }
+
             if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] === UPLOAD_ERR_OK) {
-                $gameModel = new GameModel();
                 $res = $gameModel->importGameSoalFromExcel($gameId, $_FILES['file_excel']['tmp_name']);
                 if ($res['status']) {
                     FlashHelper::setSuccess($res['message']);

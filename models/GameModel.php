@@ -318,7 +318,7 @@ class GameModel extends BaseModel {
         $params = [];
 
         if ($guruId) {
-            $sql .= " AND (g.guru_id = ? OR g.kelas_id IS NULL OR g.kelas_id = 0 OR g.guru_id = 0)";
+            $sql .= " AND g.guru_id = ?";
             $params[] = (int)$guruId;
         }
 
@@ -330,26 +330,7 @@ class GameModel extends BaseModel {
         $sql .= " ORDER BY g.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        $games = $stmt->fetchAll();
-
-        if (empty($games)) {
-            $stmtFallback = $this->db->query("
-                SELECT g.*, 
-                       COALESCE(m.nama_mapel, 'Pengetahuan & Kejuruan') as nama_mapel, 
-                       COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, 
-                       COALESCE(gr.nama_lengkap, 'Tim Kurikulum SMK') as nama_guru,
-                       (SELECT COUNT(*) FROM game_soal WHERE game_id = g.id) as total_soal,
-                       (SELECT COUNT(*) FROM game_skor WHERE game_id = g.id) as total_pemain
-                FROM game_edukasi g
-                LEFT JOIN mata_pelajaran m ON g.mapel_id = m.id
-                LEFT JOIN kelas k ON g.kelas_id = k.id
-                LEFT JOIN guru gr ON g.guru_id = gr.id
-                ORDER BY g.id DESC
-            ");
-            $games = $stmtFallback->fetchAll();
-        }
-
-        return $games;
+        return $stmt->fetchAll();
     }
 
     public function importGameSoalFromExcel($gameId, $filePath) {
