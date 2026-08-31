@@ -60,6 +60,16 @@ class SiswaModel extends BaseModel {
         $siswa = $this->getByUserId($userId);
         if ($siswa) return $siswa;
 
+        // Check if user is actually a Siswa (role_id = 3) before creating profile
+        $stmtRole = $this->db->prepare("SELECT role_id FROM users WHERE id = ?");
+        $stmtRole->execute([$userId]);
+        $uRow = $stmtRole->fetch();
+        $roleId = (int)($uRow['role_id'] ?? 0);
+
+        if ($roleId !== 3) {
+            return null; // Do not auto-create student profile for teacher/admin accounts
+        }
+
         try {
             $kStmt = $this->db->query("SELECT id, jurusan_id FROM kelas ORDER BY id ASC LIMIT 1");
             $kRow = $kStmt ? $kStmt->fetch() : null;

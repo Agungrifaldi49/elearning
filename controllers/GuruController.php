@@ -1108,17 +1108,25 @@ class GuruController {
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
         $type = 'siswa';
         
-        $queryGuruId = $isAdmin ? null : $guruId;
         if ($isAdmin) {
             $kelasList = $academicModel->getKelas();
             $targetKelas = $kelasId;
+            $queryGuruId = null;
         } else {
-            $kelasList = $academicModel->getKelasByGuru($guruId);
-            $myKelasIds = array_column($kelasList, 'id');
-            if ($kelasId > 0 && in_array($kelasId, $myKelasIds)) {
-                $targetKelas = $kelasId;
+            $myKelas = $academicModel->getKelasByGuru($guruId);
+            if (!empty($myKelas)) {
+                $kelasList = $myKelas;
+                $myKelasIds = array_column($myKelas, 'id');
+                if ($kelasId > 0 && in_array($kelasId, $myKelasIds)) {
+                    $targetKelas = $kelasId;
+                } else {
+                    $targetKelas = $myKelasIds;
+                }
+                $queryGuruId = null;
             } else {
-                $targetKelas = !empty($myKelasIds) ? $myKelasIds : 0;
+                $kelasList = $academicModel->getKelas();
+                $targetKelas = $kelasId;
+                $queryGuruId = null;
             }
         }
 
@@ -1142,19 +1150,18 @@ class GuruController {
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
         $type = 'siswa';
 
-        $queryGuruId = $isAdmin ? null : $guruId;
+        $queryGuruId = null;
         if (!$isAdmin) {
             $myKelas = $academicModel->getKelasByGuru($guruId);
-            $myKelasIds = array_column($myKelas, 'id');
-            if ($kelasId > 0) {
-                if (!empty($myKelasIds) && !in_array($kelasId, $myKelasIds)) {
-                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mengunduh rekap presensi kelas ini.');
-                    header('Location: ' . BASE_URL . 'index.php?url=guru/recapBulanan');
-                    exit();
+            if (!empty($myKelas)) {
+                $myKelasIds = array_column($myKelas, 'id');
+                if ($kelasId > 0 && in_array($kelasId, $myKelasIds)) {
+                    $targetKelas = $kelasId;
+                } else {
+                    $targetKelas = $myKelasIds;
                 }
-                $targetKelas = $kelasId;
             } else {
-                $targetKelas = !empty($myKelasIds) ? $myKelasIds : 0;
+                $targetKelas = $kelasId;
             }
         } else {
             $targetKelas = $kelasId;
@@ -1227,19 +1234,18 @@ class GuruController {
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
         $type = 'siswa';
         
-        $queryGuruId = $isAdmin ? null : $guruId;
+        $queryGuruId = null;
         if (!$isAdmin) {
             $myKelas = $academicModel->getKelasByGuru($guruId);
-            $myKelasIds = array_column($myKelas, 'id');
-            if ($kelasId > 0) {
-                if (!empty($myKelasIds) && !in_array($kelasId, $myKelasIds)) {
-                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mencetak rekap presensi kelas ini.');
-                    header('Location: ' . BASE_URL . 'index.php?url=guru/recapBulanan');
-                    exit();
+            if (!empty($myKelas)) {
+                $myKelasIds = array_column($myKelas, 'id');
+                if ($kelasId > 0 && in_array($kelasId, $myKelasIds)) {
+                    $targetKelas = $kelasId;
+                } else {
+                    $targetKelas = $myKelasIds;
                 }
-                $targetKelas = $kelasId;
             } else {
-                $targetKelas = !empty($myKelasIds) ? $myKelasIds : 0;
+                $targetKelas = $kelasId;
             }
         } else {
             $targetKelas = $kelasId;

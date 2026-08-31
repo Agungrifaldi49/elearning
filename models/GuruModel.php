@@ -34,6 +34,16 @@ class GuruModel extends BaseModel {
         $guru = $this->getByUserId($userId);
         if ($guru) return $guru;
 
+        // Check if user is actually a Guru before creating profile
+        $stmtRole = $this->db->prepare("SELECT role_id FROM users WHERE id = ?");
+        $stmtRole->execute([$userId]);
+        $uRow = $stmtRole->fetch();
+        $roleId = (int)($uRow['role_id'] ?? 0);
+
+        if ($roleId === 3) {
+            return null; // Do not auto-create guru profile for student accounts
+        }
+
         try {
             $nip = 'G' . date('Ym') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
             $stmt = $this->db->prepare("INSERT INTO guru (user_id, nip, nama_lengkap, jenis_kelamin, status) VALUES (?, ?, ?, 'L', 'aktif')");
