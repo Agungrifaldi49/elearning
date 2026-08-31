@@ -15,7 +15,7 @@ $kelasList = is_array($kelasList ?? null) ? $kelasList : [];
     border-radius: 24px;
     color: #ffffff;
     padding: 40px;
-    margin-top: 20px;
+    margin-top: 0;
     position: relative;
     overflow: hidden;
     box-shadow: 0 15px 35px rgba(15, 23, 42, 0.25);

@@ -8,7 +8,6 @@
 
 .guru-virtual-wrapper {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
-    padding-top: 28px !important;
 }
 
 /* Glassmorphic Hero Banner */

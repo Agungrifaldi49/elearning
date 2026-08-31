@@ -165,7 +165,7 @@ $nisnNisVal = !empty($siswa['nisn']) ? $siswa['nisn'] : (!empty($siswa['nis']) ?
 </style>
 
 <!-- Main Container with Explicit 90px Top Padding to Clear Fixed Navbar -->
-<main class="main-content px-3 px-md-4 pb-4" style="padding-top: 90px !important;">
+<main class="main-content px-3 px-md-4 pb-4">
     <div class="container-fluid">
 
         <!-- Top Action Title Bar with Clear Top Spacing -->

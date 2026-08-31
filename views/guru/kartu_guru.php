@@ -225,7 +225,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
 }
 </style>
 
-<main class="main-content px-3 px-md-4 kartu-wrapper-container" style="padding-top: 95px !important;">
+<main class="main-content px-3 px-md-4 kartu-wrapper-container">
     <div class="container-fluid">
         
         <!-- Header & Action Bar -->

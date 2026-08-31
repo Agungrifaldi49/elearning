@@ -13,7 +13,7 @@ $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
     border-radius: 24px;
     color: #ffffff;
     padding: 40px;
-    margin-top: 20px;
+    margin-top: 0;
     position: relative;
     overflow: hidden;
     box-shadow: 0 20px 40px rgba(2, 132, 199, 0.2);

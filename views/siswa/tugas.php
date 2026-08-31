@@ -230,7 +230,7 @@
 </style>
 
 <!-- Top Padding Clearance for Fixed Navbar -->
-<main class="main-content px-3 px-md-4 task-page-wrapper pt-4 mt-4 mt-md-5 pb-5">
+<main class="main-content px-3 px-md-4 task-page-wrapper pb-5">
 <div class="container-fluid max-width-1400 pt-2">
     
     <!-- 🚀 EXECUTIVE HERO BANNER -->

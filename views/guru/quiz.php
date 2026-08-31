@@ -5,7 +5,6 @@
 <style>
 /* Modern Quiz Guru Portal Styling */
 .quiz-guru-page-wrapper {
-    padding-top: 28px !important;
 }
 
 /* Glassmorphic Hero Banner */
@@ -114,7 +113,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
 }
 ?>
 
-<main class="main-content px-3 px-md-4 quiz-guru-page-wrapper pt-4 mt-4 mt-md-5">
+<main class="main-content px-3 px-md-4 quiz-guru-page-wrapper">
     <div class="container-fluid">
         <?php if ($isAdminMonitoring): ?>
             <div class="alert alert-info border-0 rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left: 5px solid #0284c7 !important;">

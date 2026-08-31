@@ -96,7 +96,7 @@ if (!empty($quizList)) {
 }
 </style>
 
-<main class="main-content px-3 px-md-4 pb-4" style="padding-top: 90px !important;">
+<main class="main-content px-3 px-md-4 pb-4">
     <div class="container-fluid">
 
         <!-- Top Title Bar -->

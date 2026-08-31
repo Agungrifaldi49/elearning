@@ -114,7 +114,7 @@
 $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'administrator');
 ?>
 
-<main class="main-content px-3 px-md-4 tugas-guru-page-wrapper pt-4 mt-4 mt-md-5 pb-5">
+<main class="main-content px-3 px-md-4 tugas-guru-page-wrapper pb-5">
     <div class="container-fluid max-width-1400 pt-2">
         <?php if ($isAdminMonitoring): ?>
             <div class="alert alert-info border-0 rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left: 5px solid #0284c7 !important;">

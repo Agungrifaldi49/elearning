@@ -21,7 +21,6 @@ if (!function_exists('getYouTubeEmbedUrl')) {
 <style>
 /* Modern Siswa Materi & Video Learning Styling */
 .materi-siswa-page-wrapper {
-    padding-top: 28px !important;
 }
 
 /* Glassmorphic Hero Banner */
@@ -108,7 +107,7 @@ if (!function_exists('getYouTubeEmbedUrl')) {
 }
 </style>
 
-<main class="main-content px-3 px-md-4 materi-siswa-page-wrapper pt-4 mt-4 mt-md-5">
+<main class="main-content px-3 px-md-4 materi-siswa-page-wrapper">
     <div class="container-fluid">
 
         <!-- 🚀 HERO BANNER SISWA MATERI -->

@@ -5,7 +5,6 @@
 <style>
 /* Modern Admin E-Rapor Portal Styling */
 .admin-nilai-page-wrapper {
-    padding-top: 28px !important;
 }
 
 /* Glassmorphic Hero Banner */
@@ -46,7 +45,7 @@
 }
 </style>
 
-<main class="main-content px-3 px-md-4 admin-nilai-page-wrapper pt-4 mt-4 mt-md-5">
+<main class="main-content px-3 px-md-4 admin-nilai-page-wrapper">
     <div class="container-fluid">
 
         <!-- 🚀 HERO BANNER ADMIN E-RAPOR -->

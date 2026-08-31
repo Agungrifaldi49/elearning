@@ -23,7 +23,6 @@ if (!empty($avFile) && $avFile !== 'default_avatar.png') {
 
 <style>
 .profil-page-wrapper {
-    padding-top: 28px !important;
 }
 
 .profil-hero-banner {
@@ -81,7 +80,7 @@ if (!empty($avFile) && $avFile !== 'default_avatar.png') {
 }
 </style>
 
-<main class="main-content px-3 px-md-4 profil-page-wrapper pt-4 mt-4 mt-md-5">
+<main class="main-content px-3 px-md-4 profil-page-wrapper">
 <div class="container-fluid">
 
     <!-- 🚀 HERO BANNER GURU PROFIL -->
