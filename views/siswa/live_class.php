@@ -202,16 +202,24 @@ $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
                             </div>
                         </div>
 
-                        <div class="live-card-footer bg-light">
-                            <?php if ($pType === 'embedded'): ?>
-                                <button class="btn btn-danger w-100 rounded-pill fw-bold shadow-xs py-2 btn-student-vicon" data-room-code="<?= htmlspecialchars($room['room_code']) ?>" data-topik="<?= htmlspecialchars($room['topik']) ?>">
-                                    <i class="bi bi-play-circle-fill me-1"></i> Masuk Room Vicon (Built-in)
+                        <div class="live-card-footer bg-light p-3 border-top">
+                            <div class="d-flex align-items-center gap-2">
+                                <?php if ($pType === 'embedded'): ?>
+                                    <button class="btn btn-danger flex-grow-1 rounded-pill fw-bold shadow-xs py-2.5 d-flex align-items-center justify-content-center gap-2 btn-student-vicon" data-room-code="<?= htmlspecialchars($room['room_code']) ?>" data-topik="<?= htmlspecialchars($room['topik']) ?>">
+                                        <i class="bi bi-camera-video-fill fs-6"></i>
+                                        <span>Masuk Room Vicon</span>
+                                    </button>
+                                <?php else: ?>
+                                    <a href="<?= htmlspecialchars($room['meeting_link'] ?: 'https://meet.google.com') ?>" target="_blank" class="btn btn-success flex-grow-1 rounded-pill fw-bold shadow-xs py-2.5 d-flex align-items-center justify-content-center gap-2">
+                                        <i class="bi bi-box-arrow-up-right fs-6"></i>
+                                        <span>Bergabung via <?= ucfirst($pType) ?></span>
+                                    </a>
+                                <?php endif; ?>
+
+                                <button type="button" class="btn btn-white border rounded-circle p-2 px-2.5 text-primary shadow-xs" title="Salin Link Room" onclick="copyMeetingLink('<?= htmlspecialchars($room['platform'] === 'embedded' ? BASE_URL . 'index.php?url=siswa/liveClass' : ($room['meeting_link'] ?: 'https://meet.google.com')) ?>')">
+                                    <i class="bi bi-link-45deg fs-5"></i>
                                 </button>
-                            <?php else: ?>
-                                <a href="<?= htmlspecialchars($room['meeting_link'] ?: 'https://meet.google.com') ?>" target="_blank" class="btn btn-success w-100 rounded-pill fw-bold shadow-xs py-2">
-                                    <i class="bi bi-box-arrow-up-right me-1"></i> Bergabung via <?= ucfirst($pType) ?>
-                                </a>
-                            <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -308,6 +316,22 @@ function closeStudentVicon() {
     }
     const container = document.getElementById('studentViconContainer');
     if (container) container.innerHTML = '';
+}
+
+function copyMeetingLink(link) {
+    navigator.clipboard.writeText(link).then(() => {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Link Disalin!',
+                text: 'Link ruang pertemuan virtual telah disalin ke clipboard.',
+                timer: 1800,
+                showConfirmButton: false
+            });
+        } else {
+            alert('Link disalin ke clipboard!');
+        }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', function() {

@@ -400,45 +400,35 @@ $kelasList = is_array($kelasList ?? null) ? $kelasList : [];
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center">
-                                        <div class="d-inline-flex gap-1.5 align-items-center">
+                                        <div class="d-inline-flex align-items-center gap-1.5 p-1 bg-light border rounded-pill shadow-xs">
                                             <?php if ($pType === 'embedded'): ?>
-                                                <button class="btn btn-sm btn-danger rounded-pill px-3 shadow-xs fw-bold text-nowrap btn-launch-vicon" style="font-size:0.78rem;" data-room-code="<?= htmlspecialchars($room['room_code']) ?>" data-topik="<?= htmlspecialchars($room['topik']) ?>">
-                                                    <i class="bi bi-play-fill me-1"></i> Masuk Vicon
+                                                <button class="btn btn-sm btn-danger rounded-pill px-3 py-1.5 fw-bold text-nowrap btn-launch-vicon d-inline-flex align-items-center gap-1.5 shadow-xs" style="font-size:0.78rem;" data-room-code="<?= htmlspecialchars($room['room_code']) ?>" data-topik="<?= htmlspecialchars($room['topik']) ?>">
+                                                    <i class="bi bi-camera-video-fill"></i>
+                                                    <span>Masuk Vicon</span>
                                                 </button>
                                             <?php else: ?>
-                                                <a href="<?= htmlspecialchars($room['meeting_link'] ?: 'https://meet.google.com') ?>" target="_blank" class="btn btn-sm btn-success rounded-pill px-3 shadow-xs fw-bold text-nowrap" style="font-size:0.78rem;">
-                                                    <i class="bi bi-box-arrow-up-right me-1"></i> Buka Link
+                                                <a href="<?= htmlspecialchars($room['meeting_link'] ?: 'https://meet.google.com') ?>" target="_blank" class="btn btn-sm btn-success rounded-pill px-3 py-1.5 fw-bold text-nowrap d-inline-flex align-items-center gap-1.5 shadow-xs" style="font-size:0.78rem;">
+                                                    <i class="bi bi-box-arrow-up-right"></i>
+                                                    <span>Buka Link</span>
                                                 </a>
                                             <?php endif; ?>
 
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-outline-secondary rounded-circle px-2 py-1" data-bs-toggle="dropdown">
-                                                    <i class="bi bi-three-dots-vertical"></i>
+                                            <button type="button" class="btn btn-sm btn-white border-0 text-primary rounded-circle p-1 px-2" title="Salin Link Room" onclick="copyMeetingLink('<?= htmlspecialchars($room['platform'] === 'embedded' ? BASE_URL . 'index.php?url=siswa/liveClass' : ($room['meeting_link'] ?: 'https://meet.google.com')) ?>')">
+                                                <i class="bi bi-link-45deg fs-6"></i>
+                                            </button>
+
+                                            <button type="button" class="btn btn-sm btn-white border-0 text-warning-emphasis rounded-circle p-1 px-2" title="Edit Sesi" data-bs-toggle="modal" data-bs-target="#modalEditRoom<?= $room['id'] ?>">
+                                                <i class="bi bi-pencil-fill fs-6"></i>
+                                            </button>
+
+                                            <form action="<?= BASE_URL ?>index.php?url=guru/liveClass" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus ruang Live Virtual Meeting ini?');">
+                                                <?= Security::csrfField() ?>
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="id" value="<?= $room['id'] ?>">
+                                                <button type="submit" class="btn btn-sm btn-white border-0 text-danger rounded-circle p-1 px-2" title="Hapus Sesi">
+                                                    <i class="bi bi-trash-fill fs-6"></i>
                                                 </button>
-                                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 180px; font-size:0.85rem;">
-                                                    <li>
-                                                        <button class="dropdown-item rounded-2 py-1.5 fw-semibold" onclick="copyMeetingLink('<?= htmlspecialchars($room['platform'] === 'embedded' ? BASE_URL . 'index.php?url=siswa/liveClass' : ($room['meeting_link'] ?: 'https://meet.google.com')) ?>')">
-                                                            <i class="bi bi-share-fill text-primary me-2"></i> Salin Link Room
-                                                        </button>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item rounded-2 py-1.5 fw-semibold" href="#" data-bs-toggle="modal" data-bs-target="#modalEditRoom<?= $room['id'] ?>">
-                                                            <i class="bi bi-pencil-square text-warning me-2"></i> Edit Sesi
-                                                        </a>
-                                                    </li>
-                                                    <li><hr class="dropdown-divider my-1"></li>
-                                                    <li>
-                                                        <form action="<?= BASE_URL ?>index.php?url=guru/liveClass" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus ruang Live Virtual Meeting ini?');">
-                                                            <?= Security::csrfField() ?>
-                                                            <input type="hidden" name="action" value="delete">
-                                                            <input type="hidden" name="id" value="<?= $room['id'] ?>">
-                                                            <button type="submit" class="dropdown-item rounded-2 py-1.5 text-danger fw-semibold w-100 text-start">
-                                                                <i class="bi bi-trash-fill me-2"></i> Hapus Sesi
-                                                            </button>
-                                                        </form>
-                                                    </li>
-                                                </ul>
-                                            </div>
+                                            </form>
                                         </div>
                                     </td>
                                 </tr>
