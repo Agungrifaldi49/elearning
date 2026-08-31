@@ -57,7 +57,7 @@ body {
 
 .main-content {
     margin-left: var(--sidebar-width);
-    padding-top: calc(var(--navbar-height) + 20px);
+    padding-top: calc(var(--navbar-height) + 28px);
     padding-bottom: 40px;
     transition: margin-left 0.3s ease;
 }
