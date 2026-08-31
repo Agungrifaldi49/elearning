@@ -734,15 +734,33 @@ class AbsensiModel extends BaseModel {
             if ($guruId && (int)$guruId > 0) {
                 $gId = (int)$guruId;
                 $whereSql .= " AND s.kelas_id IN (
-                    SELECT kelas_id FROM jadwal WHERE guru_id = {$gId} 
-                    UNION SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id = {$gId}
+                    SELECT id FROM kelas WHERE wali_kelas_id = {$gId}
+                    UNION
+                    SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                    UNION
+                    SELECT kelas_id FROM jadwal WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                    UNION
+                    SELECT kelas_id FROM materi WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                    UNION
+                    SELECT kelas_id FROM tugas WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                    UNION
+                    SELECT s.kelas_id FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.guru_id = {$gId} AND s.kelas_id IS NOT NULL
                 )";
             }
         } elseif ($guruId && (int)$guruId > 0) {
             $gId = (int)$guruId;
             $whereSql = " WHERE s.kelas_id IN (
-                SELECT kelas_id FROM jadwal WHERE guru_id = {$gId} 
-                UNION SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id = {$gId}
+                SELECT id FROM kelas WHERE wali_kelas_id = {$gId}
+                UNION
+                SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                UNION
+                SELECT kelas_id FROM jadwal WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                UNION
+                SELECT kelas_id FROM materi WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                UNION
+                SELECT kelas_id FROM tugas WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                UNION
+                SELECT s.kelas_id FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.guru_id = {$gId} AND s.kelas_id IS NOT NULL
             ) ";
         }
 

@@ -1118,10 +1118,8 @@ class GuruController {
         if (!$isAdmin && $kelasId > 0 && !empty($kelasList)) {
             $myKelasIds = array_column($kelasList, 'id');
             if (!in_array($kelasId, $myKelasIds)) {
-                $kelasId = $kelasList[0]['id'] ?? 0;
+                $kelasId = 0;
             }
-        } elseif (!$isAdmin && $kelasId === 0 && !empty($kelasList)) {
-            $kelasId = $kelasList[0]['id'] ?? 0;
         }
 
         $monthlyRecap = $absensiModel->getMonthlyRecapSiswa($bulan, $tahun, $kelasId, $queryGuruId);

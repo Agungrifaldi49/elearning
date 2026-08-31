@@ -109,9 +109,9 @@ $avgPersentase = ($totalSubjek > 0) ? round($persentaseSum / $totalSubjek, 1) : 
                 <div class="col-12 col-md-4">
                     <label class="form-label small fw-semibold text-dark mb-1">Filter Kelas</label>
                     <select name="kelas_id" class="form-select rounded-3">
-                        <option value="0">-- Seluruh Kelas --</option>
+                        <option value="0" <?= (isset($_GET['kelas_id']) && (string)$_GET['kelas_id'] === '0') || !isset($_GET['kelas_id']) ? 'selected' : '' ?>>-- Seluruh Kelas --</option>
                         <?php foreach ($kelasList as $k): ?>
-                            <option value="<?= $k['id'] ?>" <?= ($_GET['kelas_id'] ?? 0) == $k['id'] ? 'selected' : '' ?>>
+                            <option value="<?= $k['id'] ?>" <?= (isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] === (int)$k['id']) ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($k['nama_kelas']) ?> (<?= htmlspecialchars($k['jurusan'] ?? '') ?>)
                             </option>
                         <?php endforeach; ?>
