@@ -65,9 +65,9 @@ document.addEventListener('DOMContentLoaded', function () {
                                             <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px; height:36px;">
                                                 <i class="bi ${escapeHtml(item.icon)} fs-6"></i>
                                             </div>
-                                            <div class="flex-grow-1 overflow-hidden" style="line-height: 1.25;">
-                                                <div class="fw-bold small text-dark text-truncate">${escapeHtml(item.title)}</div>
-                                                <div class="text-muted small text-truncate mt-1" style="font-size: 0.78rem;">${escapeHtml(item.desc)}</div>
+                                            <div class="flex-grow-1 overflow-hidden">
+                                                <div class="fw-bold small text-dark text-truncate mb-0.5">${escapeHtml(item.title)}</div>
+                                                <div class="text-muted notif-item-desc">${escapeHtml(item.desc)}</div>
                                                 <div class="text-muted opacity-75" style="font-size: 0.68rem; margin-top: 3px;">
                                                     <i class="bi bi-clock me-1"></i>${dateFormatted}
                                                 </div>

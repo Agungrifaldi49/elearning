@@ -43,8 +43,28 @@ body {
 .notif-dropdown-menu {
     width: 360px;
     max-width: calc(100vw - 32px);
-    max-height: 80vh;
+    max-height: 82vh;
     overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+.notif-dropdown-menu::-webkit-scrollbar {
+    width: 5px;
+}
+
+.notif-dropdown-menu::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 999px;
+}
+
+.notif-item-desc {
+    font-size: 0.78rem;
+    line-height: 1.35;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 @media (max-width: 575.98px) {
@@ -53,8 +73,14 @@ body {
         padding-right: 0.75rem !important;
     }
     .notif-dropdown-menu {
-        width: calc(100vw - 24px) !important;
-        max-width: calc(100vw - 24px) !important;
+        position: fixed !important;
+        top: calc(var(--navbar-height) + 6px) !important;
+        left: 12px !important;
+        right: 12px !important;
+        width: auto !important;
+        max-width: none !important;
+        transform: none !important;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25) !important;
     }
 }
 

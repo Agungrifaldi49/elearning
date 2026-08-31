@@ -63,9 +63,9 @@ $unreadBadgeCount = (int)($headerNotifs['unread_total'] ?? 0);
                                             <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px; height:36px;">
                                                 <i class="bi <?= $item['icon'] ?> fs-6"></i>
                                             </div>
-                                            <div class="flex-grow-1 overflow-hidden" style="line-height: 1.25;">
-                                                <div class="fw-bold small text-dark text-truncate"><?= htmlspecialchars($item['title']) ?></div>
-                                                <div class="text-muted small text-truncate mt-1" style="font-size: 0.78rem;"><?= htmlspecialchars($item['desc']) ?></div>
+                                            <div class="flex-grow-1 overflow-hidden">
+                                                <div class="fw-bold small text-dark text-truncate mb-0.5"><?= htmlspecialchars($item['title']) ?></div>
+                                                <div class="text-muted notif-item-desc"><?= htmlspecialchars($item['desc']) ?></div>
                                                 <div class="text-muted opacity-75" style="font-size: 0.68rem; margin-top: 3px;">
                                                     <i class="bi bi-clock me-1"></i><?= date('d M H:i', strtotime($item['time'])) ?>
                                                 </div>
