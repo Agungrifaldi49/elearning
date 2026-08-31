@@ -1424,6 +1424,99 @@ class GuruController {
 
     public function liveClass() {
         $guru = $this->getGuruInfo();
+        $guruId = $guru['id'] ?? 0;
+
+        $roleName = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdmin = in_array($roleName, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+        $queryGuruId = $isAdmin ? null : $guruId;
+
+        $learningModel = new LearningModel();
+        $academicModel = new AcademicModel();
+        $commModel = new CommunicationModel();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('CSRF Token Invalid');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/liveClass');
+                exit();
+            }
+
+            $action = $_POST['action'] ?? 'create';
+
+            if ($action === 'create') {
+                $mapelId = (int)($_POST['mapel_id'] ?? 0);
+                $kelasId = !empty($_POST['kelas_id']) ? (int)$_POST['kelas_id'] : null;
+                $topik = Security::sanitize($_POST['topik'] ?? '');
+                $deskripsi = Security::sanitize($_POST['deskripsi'] ?? '');
+                $platform = Security::sanitize($_POST['platform'] ?? 'embedded');
+                $meetingLink = Security::sanitize($_POST['meeting_link'] ?? '');
+                $tglPertemuan = $_POST['tgl_pertemuan'] ?? date('Y-m-d');
+                $jamMulai = $_POST['jam_mulai'] ?? date('H:i');
+                $jamSelesai = !empty($_POST['jam_selesai']) ? $_POST['jam_selesai'] : null;
+
+                if (empty($topik) || $mapelId <= 0) {
+                    FlashHelper::setError('Topik pertemuan dan mata pelajaran wajib diisi.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/liveClass');
+                    exit();
+                }
+
+                $roomId = $learningModel->createLiveClass($guruId, $mapelId, $kelasId, $topik, $deskripsi, $platform, $meetingLink, $tglPertemuan, $jamMulai, $jamSelesai);
+
+                if ($kelasId && $kelasId > 0) {
+                    $commModel->sendNotificationToClass(
+                        $kelasId,
+                        '📹 Sesi Live Class / Virtual Meeting Baru',
+                        "Guru telah mempublikasikan Sesi Meeting Baru: {$topik} pada tanggal {$tglPertemuan} pukul {$jamMulai} WIB.",
+                        'index.php?url=siswa/liveClass'
+                    );
+                }
+
+                FlashHelper::setSuccess('Ruang Live Virtual Meeting baru berhasil dibuat dan dipublikasikan.');
+
+            } elseif ($action === 'update') {
+                $id = (int)($_POST['id'] ?? 0);
+                $mapelId = (int)($_POST['mapel_id'] ?? 0);
+                $kelasId = !empty($_POST['kelas_id']) ? (int)$_POST['kelas_id'] : null;
+                $topik = Security::sanitize($_POST['topik'] ?? '');
+                $deskripsi = Security::sanitize($_POST['deskripsi'] ?? '');
+                $platform = Security::sanitize($_POST['platform'] ?? 'embedded');
+                $meetingLink = Security::sanitize($_POST['meeting_link'] ?? '');
+                $tglPertemuan = $_POST['tgl_pertemuan'] ?? date('Y-m-d');
+                $jamMulai = $_POST['jam_mulai'] ?? date('H:i');
+                $jamSelesai = !empty($_POST['jam_selesai']) ? $_POST['jam_selesai'] : null;
+                $isActive = isset($_POST['is_active']) ? (int)$_POST['is_active'] : 1;
+
+                $existing = $learningModel->getLiveClassById($id);
+                if (!$existing || (!$isAdmin && (int)$existing['guru_id'] !== (int)$guruId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mengedit ruang meeting ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/liveClass');
+                    exit();
+                }
+
+                $learningModel->updateLiveClass($id, $mapelId, $kelasId, $topik, $deskripsi, $platform, $meetingLink, $tglPertemuan, $jamMulai, $jamSelesai, $isActive);
+                FlashHelper::setSuccess('Data Sesi Live Virtual Meeting berhasil diperbarui.');
+
+            } elseif ($action === 'delete') {
+                $id = (int)($_POST['id'] ?? 0);
+                $res = $learningModel->deleteLiveClass($id, $guruId, $isAdmin);
+                if ($res) {
+                    FlashHelper::setSuccess('Ruang Live Virtual Meeting berhasil dihapus.');
+                } else {
+                    FlashHelper::setError('Gagal menghapus ruang meeting.');
+                }
+            }
+
+            header('Location: ' . BASE_URL . 'index.php?url=guru/liveClass');
+            exit();
+        }
+
+        $liveClasses = $learningModel->getLiveClasses($queryGuruId);
+        $mapelList = $academicModel->getMapelByGuru($guruId);
+        if (empty($mapelList)) $mapelList = $academicModel->getMapel();
+
+        $kelasList = $academicModel->getKelasByGuru($guruId);
+        if (empty($kelasList)) $kelasList = $academicModel->getKelas();
+
         require_once ROOT_PATH . 'views/guru/live_class.php';
     }
 

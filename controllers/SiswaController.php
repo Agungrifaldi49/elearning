@@ -770,4 +770,14 @@ class SiswaController {
         $siswa = $this->getSiswaInfo();
         require_once ROOT_PATH . 'views/siswa/panduan.php';
     }
+
+    public function liveClass() {
+        $siswa = $this->getSiswaInfo();
+        $kelasId = $siswa['kelas_id'] ?? null;
+
+        $learningModel = new LearningModel();
+        $liveClasses = $learningModel->getLiveClasses(null, $kelasId);
+
+        require_once ROOT_PATH . 'views/siswa/live_class.php';
+    }
 }

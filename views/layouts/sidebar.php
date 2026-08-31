@@ -286,8 +286,8 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'chat') ?>" href="<?= BASE_URL ?>index.php?url=chat">
                 <i class="bi bi-chat-dots-fill"></i> Pesan Guru
             </a></li>
-            <li><a class="nav-link" href="https://meet.google.com" target="_blank">
-                <i class="bi bi-camera-reels-fill text-danger"></i> Join Live Meeting
+            <li><a class="nav-link <?= isActive($currentUrl,'siswa/liveClass') ?>" href="<?= BASE_URL ?>index.php?url=siswa/liveClass">
+                <i class="bi bi-camera-reels-fill text-danger"></i> Live Virtual Meeting Room
             </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'siswa/profil') ?>" href="<?= BASE_URL ?>index.php?url=siswa/profil">
                 <i class="bi bi-person-circle"></i> Profil Saya
