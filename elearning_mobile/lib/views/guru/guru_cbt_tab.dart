@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 import '../../theme/app_theme.dart';
 import 'guru_bank_soal_screen.dart';
+import 'guru_koreksi_quiz_screen.dart';
 
 class GuruCbtTab extends StatefulWidget {
   const GuruCbtTab({super.key});
@@ -43,6 +44,7 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
       guruProvider.fetchQuiz(user.id);
       guruProvider.fetchSusulanRequests(user.id);
       guruProvider.fetchJadwal(user.id);
+      guruProvider.fetchKoreksiList(user.id);
     }
   }
 
@@ -544,6 +546,8 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
     final quizList = guruProvider.quizList;
     final susulanList = guruProvider.susulanList;
     final pendingCount = susulanList.where((e) => (e['status'] ?? '').toString().toLowerCase() == 'pending').length;
+    final koreksiList = guruProvider.koreksiList;
+    final perluKoreksiCount = koreksiList.where((e) => (int.tryParse(e['ungraded_essay_count'].toString()) ?? 0) > 0).length;
 
     final filteredQuiz = quizList.where((q) {
       final matchesStatus = _selectedStatus == 'Semua' || q.status.toLowerCase() == _selectedStatus.toLowerCase();
@@ -726,6 +730,79 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: pendingCount > 0 ? Colors.amber.shade800 : Colors.blue.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // 📝 BANNER KOREKSI JAWABAN ESSAY SISWA CARD
+            Container(
+              decoration: BoxDecoration(
+                color: perluKoreksiCount > 0 ? const Color(0xFFECFDF5) : Colors.teal.shade50,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: perluKoreksiCount > 0 ? const Color(0xFF10B981) : Colors.teal.shade200,
+                  width: perluKoreksiCount > 0 ? 1.5 : 1.0,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const GuruKoreksiQuizScreen()),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: perluKoreksiCount > 0 ? const Color(0xFF047857) : Colors.teal,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.edit_note_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                perluKoreksiCount > 0
+                                    ? "📝 Ada $perluKoreksiCount Pengerjaan Perlu Koreksi!"
+                                    : "Koreksi Hasil Quiz & Jawaban Essay",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: perluKoreksiCount > 0 ? const Color(0xFF064E3B) : Colors.teal.shade900,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                perluKoreksiCount > 0
+                                    ? "Jawaban essay siswa telah dikirim. Klik untuk mengoreksi & memberi nilai."
+                                    : "Periksa lembar pengerjaan kuis siswa dan finalisasi nilai akhir.",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: perluKoreksiCount > 0 ? const Color(0xFF047857) : Colors.teal.shade800,
                                 ),
                               ),
                             ],

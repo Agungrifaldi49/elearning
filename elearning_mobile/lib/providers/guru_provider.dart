@@ -17,6 +17,7 @@ class GuruProvider with ChangeNotifier {
   List<Map<String, dynamic>> _mapelList = [];
   List<Map<String, dynamic>> _kelasList = [];
   List<QuizModel> _quizList = [];
+  List<Map<String, dynamic>> _koreksiList = [];
   List<ForumModel> _forumTopicList = [];
   List<ChatContactModel> _chatContacts = [];
   final StreamController<List<ChatContactModel>> _chatContactsController = StreamController<List<ChatContactModel>>.broadcast();
@@ -32,6 +33,7 @@ class GuruProvider with ChangeNotifier {
   List<Map<String, dynamic>> get mapelList => _mapelList;
   List<Map<String, dynamic>> get kelasList => _kelasList;
   List<QuizModel> get quizList => _quizList;
+  List<Map<String, dynamic>> get koreksiList => _koreksiList;
   List<ForumModel> get forumTopicList => _forumTopicList;
   List<ChatContactModel> get chatContacts => _chatContacts;
   Stream<List<ChatContactModel>> get chatContactsStream => _chatContactsController.stream;
@@ -229,6 +231,41 @@ class GuruProvider with ChangeNotifier {
     });
     if (res['success'] == true) {
       await fetchQuiz(userId);
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> fetchKoreksiList(int userId) async {
+    final res = await ApiService.get('guru/koreksi_quiz', params: {'user_id': userId.toString()});
+    if (res['success'] == true && res['data'] is List) {
+      _koreksiList = List<Map<String, dynamic>>.from(res['data']);
+      notifyListeners();
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchDetailJawabanSiswa(int userId, int quizId, int siswaId) async {
+    final res = await ApiService.get('guru/koreksi_quiz', params: {
+      'user_id': userId.toString(),
+      'quiz_id': quizId.toString(),
+      'siswa_id': siswaId.toString(),
+    });
+    if (res['success'] == true && res['data'] is List) {
+      return List<Map<String, dynamic>>.from(res['data']);
+    }
+    return [];
+  }
+
+  Future<bool> submitKoreksiEssay(int userId, int quizId, int siswaId, Map<int, double> nilaiEssay) async {
+    final Map<String, dynamic> body = {
+      'user_id': userId,
+      'quiz_id': quizId,
+      'siswa_id': siswaId,
+      'nilai_essay': nilaiEssay.map((key, value) => MapEntry(key.toString(), value)),
+    };
+    final res = await ApiService.post('guru/koreksi_quiz', body);
+    if (res['success'] == true) {
+      await fetchKoreksiList(userId);
       return true;
     }
     return false;

@@ -2494,6 +2494,97 @@ class ApiController {
                 }
                 break;
 
+            case 'koreksi_quiz':
+            case 'koreksi':
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                $examModel = new ExamModel();
+
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    $input = $this->getPostInput();
+                    $quizId = intval($input['quiz_id'] ?? 0);
+                    $siswaId = intval($input['siswa_id'] ?? 0);
+                    $nilaiEssay = $input['nilai_essay'] ?? [];
+
+                    if ($quizId <= 0 || $siswaId <= 0) {
+                        $this->jsonResponse(false, 'Quiz dan Siswa wajib ditentukan!', null, 400);
+                    }
+
+                    try {
+                        $stmtGetSoal = $this->db->prepare("SELECT bobot FROM soal WHERE id = ?");
+                        $stmtCheckExist = $this->db->prepare("SELECT id FROM jawaban_siswa WHERE siswa_id = ? AND quiz_id = ? AND soal_id = ?");
+                        $stmtUpdate = $this->db->prepare("UPDATE jawaban_siswa SET nilai = ?, is_benar = IF(? > 0, 1, 0) WHERE id = ?");
+                        $stmtInsert = $this->db->prepare("INSERT INTO jawaban_siswa (siswa_id, quiz_id, soal_id, is_benar, nilai) VALUES (?, ?, ?, IF(? > 0, 1, 0), ?)");
+
+                        if (is_array($nilaiEssay)) {
+                            foreach ($nilaiEssay as $keyId => $scoreVal) {
+                                $keyId = intval($keyId);
+                                if ($keyId <= 0) continue;
+                                $scoreNum = floatval($scoreVal);
+
+                                $stmtCheckExist->execute([$siswaId, $quizId, $keyId]);
+                                $existId = $stmtCheckExist->fetchColumn();
+
+                                if ($existId) {
+                                    $stmtGetSoal->execute([$keyId]);
+                                    $soalRow = $stmtGetSoal->fetch();
+                                    $maxBobot = floatval($soalRow['bobot'] ?? 10);
+
+                                    if ($scoreNum > $maxBobot && $maxBobot > 0) {
+                                        $scoreNum = $maxBobot;
+                                    }
+                                    if ($scoreNum < 0) $scoreNum = 0;
+
+                                    $stmtUpdate->execute([$scoreNum, $scoreNum, intval($existId)]);
+                                } else {
+                                    $stmtDirectUpdate = $this->db->prepare("UPDATE jawaban_siswa SET nilai = ?, is_benar = IF(? > 0, 1, 0) WHERE id = ?");
+                                    $stmtDirectUpdate->execute([$scoreNum, $scoreNum, $keyId]);
+
+                                    if ($stmtDirectUpdate->rowCount() == 0) {
+                                        $stmtInsert->execute([$siswaId, $quizId, $keyId, $scoreNum, $scoreNum]);
+                                    }
+                                }
+                            }
+                        }
+
+                        $examModel->recalculateQuizScore($siswaId, $quizId);
+                        $this->jsonResponse(true, 'Nilai essay siswa berhasil dikoreksi dan total nilai kuis telah diperbarui!');
+                    } catch (\Throwable $eK) {
+                        $this->jsonResponse(false, 'Gagal menyimpan koreksi essay: ' . $eK->getMessage(), null, 500);
+                    }
+                }
+
+                $quizId = intval($_GET['quiz_id'] ?? $_POST['quiz_id'] ?? 0);
+                $siswaId = intval($_GET['siswa_id'] ?? $_POST['siswa_id'] ?? 0);
+
+                if ($quizId > 0 && $siswaId > 0) {
+                    try {
+                        $stmtDetail = $this->db->prepare("
+                            SELECT s.id as soal_id, s.pertanyaan, s.jenis_soal, s.bobot as max_bobot,
+                                   js.id as jawaban_id, js.teks_jawaban_essay, js.pilihan_id, js.is_benar, js.nilai as nilai_diberikan,
+                                   pj.teks_pilihan as jawaban_pg_dipilih
+                            FROM soal s
+                            LEFT JOIN jawaban_siswa js ON js.soal_id = s.id AND js.siswa_id = :sid AND js.quiz_id = :qid
+                            LEFT JOIN pilihan_jawaban pj ON js.pilihan_id = pj.id
+                            WHERE s.quiz_id = :qid2
+                            ORDER BY s.id ASC
+                        ");
+                        $stmtDetail->execute(['sid' => $siswaId, 'qid' => $quizId, 'qid2' => $quizId]);
+                        $details = $stmtDetail->fetchAll();
+                        $this->jsonResponse(true, 'Detail Jawaban Siswa', $details);
+                    } catch (\Throwable $eD) {
+                        $this->jsonResponse(false, 'Gagal mengambil detail jawaban: ' . $eD->getMessage(), null, 500);
+                    }
+                } else {
+                    try {
+                        $guruId = intval($guru['id'] ?? 0);
+                        $list = $examModel->getHasilQuizListByGuru($guruId);
+                        $this->jsonResponse(true, 'Daftar Hasil Quiz Siswa untuk Koreksi', $list);
+                    } catch (\Throwable $eL) {
+                        $this->jsonResponse(true, 'Daftar Hasil Quiz Siswa untuk Koreksi', []);
+                    }
+                }
+                break;
+
             case 'scan_qr':
             case 'scan-qr':
             case 'scan':
