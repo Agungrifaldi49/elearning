@@ -2,6 +2,10 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+$liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
+?>
+
 <style>
 /* Modern Cyber-Glassmorphic Student Live Class Tokens */
 .student-live-hero {

@@ -2,6 +2,12 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+$liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
+$mapelList = is_array($mapelList ?? null) ? $mapelList : [];
+$kelasList = is_array($kelasList ?? null) ? $kelasList : [];
+?>
+
 <style>
 /* Modern Cyber-Glassmorphic Live Class Design Tokens */
 .live-hero-banner {

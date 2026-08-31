@@ -414,114 +414,139 @@ class LearningModel extends BaseModel {
                     jam_mulai TIME NOT NULL,
                     jam_selesai TIME NULL,
                     is_active TINYINT(1) DEFAULT 1,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    INDEX (guru_id),
-                    INDEX (kelas_id),
-                    INDEX (tgl_pertemuan)
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
-        } catch (Exception $e) {}
+        } catch (Throwable $e) {}
     }
 
     public function getLiveClasses($guruId = null, $kelasId = null) {
         $this->ensureLiveClassTableExist();
-        $sql = "
-            SELECT lc.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, g.nama_lengkap as nama_guru, u.avatar as avatar_guru
-            FROM live_class lc
-            JOIN mata_pelajaran map ON lc.mapel_id = map.id
-            LEFT JOIN kelas k ON lc.kelas_id = k.id
-            JOIN guru g ON lc.guru_id = g.id
-            LEFT JOIN users u ON g.user_id = u.id
-            WHERE 1=1
-        ";
-        $params = [];
+        try {
+            $sql = "
+                SELECT lc.*, 
+                       COALESCE(map.nama_mapel, 'Mata Pelajaran') as nama_mapel, 
+                       COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, 
+                       COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru, 
+                       u.avatar as avatar_guru
+                FROM live_class lc
+                LEFT JOIN mata_pelajaran map ON lc.mapel_id = map.id
+                LEFT JOIN kelas k ON lc.kelas_id = k.id
+                LEFT JOIN guru g ON lc.guru_id = g.id
+                LEFT JOIN users u ON g.user_id = u.id
+                WHERE 1=1
+            ";
+            $params = [];
 
-        if ($guruId !== null && (int)$guruId > 0) {
-            $sql .= " AND lc.guru_id = ? ";
-            $params[] = (int)$guruId;
+            if ($guruId !== null && (int)$guruId > 0) {
+                $sql .= " AND lc.guru_id = ? ";
+                $params[] = (int)$guruId;
+            }
+
+            if ($kelasId !== null && (int)$kelasId > 0) {
+                $sql .= " AND (lc.kelas_id IS NULL OR lc.kelas_id = 0 OR lc.kelas_id = ?) ";
+                $params[] = (int)$kelasId;
+            }
+
+            $sql .= " ORDER BY lc.tgl_pertemuan DESC, lc.jam_mulai DESC, lc.id DESC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            return [];
         }
-
-        if ($kelasId !== null && (int)$kelasId > 0) {
-            $sql .= " AND (lc.kelas_id IS NULL OR lc.kelas_id = 0 OR lc.kelas_id = ?) ";
-            $params[] = (int)$kelasId;
-        }
-
-        $sql .= " ORDER BY lc.tgl_pertemuan DESC, lc.jam_mulai DESC, lc.id DESC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
     }
 
     public function getLiveClassById($id) {
         $this->ensureLiveClassTableExist();
-        $stmt = $this->db->prepare("
-            SELECT lc.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, g.nama_lengkap as nama_guru, u.avatar as avatar_guru
-            FROM live_class lc
-            JOIN mata_pelajaran map ON lc.mapel_id = map.id
-            LEFT JOIN kelas k ON lc.kelas_id = k.id
-            JOIN guru g ON lc.guru_id = g.id
-            LEFT JOIN users u ON g.user_id = u.id
-            WHERE lc.id = ?
-        ");
-        $stmt->execute([(int)$id]);
-        return $stmt->fetch();
+        try {
+            $stmt = $this->db->prepare("
+                SELECT lc.*, 
+                       COALESCE(map.nama_mapel, 'Mata Pelajaran') as nama_mapel, 
+                       COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, 
+                       COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru, 
+                       u.avatar as avatar_guru
+                FROM live_class lc
+                LEFT JOIN mata_pelajaran map ON lc.mapel_id = map.id
+                LEFT JOIN kelas k ON lc.kelas_id = k.id
+                LEFT JOIN guru g ON lc.guru_id = g.id
+                LEFT JOIN users u ON g.user_id = u.id
+                WHERE lc.id = ?
+            ");
+            $stmt->execute([(int)$id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (Throwable $e) {
+            return null;
+        }
     }
 
     public function createLiveClass($guruId, $mapelId, $kelasId, $topik, $deskripsi, $platform, $meetingLink, $tglPertemuan, $jamMulai, $jamSelesai = null) {
         $this->ensureLiveClassTableExist();
-        $roomCode = "SMKMH-ROOM-" . strtoupper(substr(md5(uniqid(rand(), true)), 0, 8));
-        $stmt = $this->db->prepare("
-            INSERT INTO live_class (guru_id, mapel_id, kelas_id, topik, deskripsi, platform, meeting_link, room_code, tgl_pertemuan, jam_mulai, jam_selesai, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-        ");
-        $stmt->execute([
-            (int)$guruId,
-            (int)$mapelId,
-            !empty($kelasId) ? (int)$kelasId : null,
-            $topik,
-            $deskripsi,
-            $platform ?: 'embedded',
-            $meetingLink ?: null,
-            $roomCode,
-            $tglPertemuan,
-            $jamMulai,
-            $jamSelesai ?: null
-        ]);
-        return $this->db->lastInsertId();
+        try {
+            $roomCode = "SMKMH-ROOM-" . strtoupper(substr(md5(uniqid(rand(), true)), 0, 8));
+            $stmt = $this->db->prepare("
+                INSERT INTO live_class (guru_id, mapel_id, kelas_id, topik, deskripsi, platform, meeting_link, room_code, tgl_pertemuan, jam_mulai, jam_selesai, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+            ");
+            $stmt->execute([
+                (int)$guruId,
+                (int)$mapelId,
+                !empty($kelasId) ? (int)$kelasId : null,
+                $topik,
+                $deskripsi,
+                $platform ?: 'embedded',
+                $meetingLink ?: null,
+                $roomCode,
+                $tglPertemuan,
+                $jamMulai,
+                $jamSelesai ?: null
+            ]);
+            return $this->db->lastInsertId();
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 
     public function updateLiveClass($id, $mapelId, $kelasId, $topik, $deskripsi, $platform, $meetingLink, $tglPertemuan, $jamMulai, $jamSelesai = null, $isActive = 1) {
         $this->ensureLiveClassTableExist();
-        $stmt = $this->db->prepare("
-            UPDATE live_class 
-            SET mapel_id = ?, kelas_id = ?, topik = ?, deskripsi = ?, platform = ?, meeting_link = ?, tgl_pertemuan = ?, jam_mulai = ?, jam_selesai = ?, is_active = ?
-            WHERE id = ?
-        ");
-        return $stmt->execute([
-            (int)$mapelId,
-            !empty($kelasId) ? (int)$kelasId : null,
-            $topik,
-            $deskripsi,
-            $platform ?: 'embedded',
-            $meetingLink ?: null,
-            $tglPertemuan,
-            $jamMulai,
-            $jamSelesai ?: null,
-            (int)$isActive,
-            (int)$id
-        ]);
+        try {
+            $stmt = $this->db->prepare("
+                UPDATE live_class 
+                SET mapel_id = ?, kelas_id = ?, topik = ?, deskripsi = ?, platform = ?, meeting_link = ?, tgl_pertemuan = ?, jam_mulai = ?, jam_selesai = ?, is_active = ?
+                WHERE id = ?
+            ");
+            return $stmt->execute([
+                (int)$mapelId,
+                !empty($kelasId) ? (int)$kelasId : null,
+                $topik,
+                $deskripsi,
+                $platform ?: 'embedded',
+                $meetingLink ?: null,
+                $tglPertemuan,
+                $jamMulai,
+                $jamSelesai ?: null,
+                (int)$isActive,
+                (int)$id
+            ]);
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 
     public function deleteLiveClass($id, $guruId = null, $isAdmin = false) {
         $this->ensureLiveClassTableExist();
-        $room = $this->getLiveClassById($id);
-        if (!$room) return false;
+        try {
+            $room = $this->getLiveClassById($id);
+            if (!$room) return false;
 
-        if (!$isAdmin && (int)($room['guru_id'] ?? 0) !== (int)$guruId) {
+            if (!$isAdmin && (int)($room['guru_id'] ?? 0) !== (int)$guruId) {
+                return false;
+            }
+
+            $stmt = $this->db->prepare("DELETE FROM live_class WHERE id = ?");
+            return $stmt->execute([(int)$id]);
+        } catch (Throwable $e) {
             return false;
         }
-
-        $stmt = $this->db->prepare("DELETE FROM live_class WHERE id = ?");
-        return $stmt->execute([(int)$id]);
     }
 }
