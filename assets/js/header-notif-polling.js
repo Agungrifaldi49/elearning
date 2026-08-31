@@ -41,9 +41,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Real-Time Update Header Right Action
                     if (headerRight) {
                         if (unreadTotal > 0) {
-                            headerRight.innerHTML = `<a href="${BASE_URL}index.php?url=chat/markRead" class="btn btn-link btn-sm p-0 text-decoration-none text-primary" style="font-size: 0.75rem;"><i class="bi bi-check2-all me-1"></i>Tandai Dibaca</a>`;
+                            headerRight.innerHTML = `<a href="${BASE_URL}index.php?url=chat/markRead" class="btn btn-link btn-sm p-0 text-decoration-none text-primary fw-semibold" style="font-size: 0.75rem;"><i class="bi bi-check2-all me-1"></i>Tandai Dibaca</a>`;
                         } else {
-                            headerRight.innerHTML = `<span class="badge bg-secondary rounded-pill">0 Belum Dibaca</span>`;
+                            headerRight.innerHTML = `<span class="badge bg-secondary-subtle text-muted rounded-pill px-2.5 py-1" style="font-size: 0.7rem;">0 Belum Dibaca</span>`;
                         }
                     }
 
@@ -60,15 +60,15 @@ document.addEventListener('DOMContentLoaded', function () {
                             res.items.forEach(item => {
                                 const dateFormatted = new Date(item.time).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
                                 html += `
-                                    <a href="${item.link}" class="list-group-item list-group-item-action border-0 rounded-3 p-2 mb-1">
-                                        <div class="d-flex align-items-start gap-2">
-                                            <div class="fs-5 mt-1">
-                                                <i class="bi ${escapeHtml(item.icon)}"></i>
+                                    <a href="${item.link}" class="list-group-item list-group-item-action border-0 rounded-3 p-2.5 mb-1.5 bg-light-hover">
+                                        <div class="d-flex align-items-start gap-2.5">
+                                            <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px; height:36px;">
+                                                <i class="bi ${escapeHtml(item.icon)} fs-6"></i>
                                             </div>
                                             <div class="flex-grow-1 overflow-hidden" style="line-height: 1.25;">
                                                 <div class="fw-bold small text-dark text-truncate">${escapeHtml(item.title)}</div>
                                                 <div class="text-muted small text-truncate mt-1" style="font-size: 0.78rem;">${escapeHtml(item.desc)}</div>
-                                                <div class="text-muted" style="font-size: 0.68rem; margin-top: 2px;">
+                                                <div class="text-muted opacity-75" style="font-size: 0.68rem; margin-top: 3px;">
                                                     <i class="bi bi-clock me-1"></i>${dateFormatted}
                                                 </div>
                                             </div>

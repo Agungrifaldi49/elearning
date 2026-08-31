@@ -21,30 +21,30 @@ $unreadBadgeCount = (int)($headerNotifs['unread_total'] ?? 0);
             <span class="d-none d-sm-inline"><?= APP_SHORT_NAME ?></span>
         </a>
 
-        <div class="ms-auto d-flex align-items-center gap-3">
+        <div class="ms-auto d-flex align-items-center gap-2 gap-sm-3">
             <!-- Theme Toggle -->
-            <button class="btn btn-sm btn-outline-secondary rounded-circle" id="themeToggle" title="Ganti Tema">
+            <button class="btn btn-sm btn-light rounded-circle" id="themeToggle" title="Ganti Tema">
                 <i class="bi bi-moon-stars-fill"></i>
             </button>
 
             <!-- Notifications & Realtime Chat Dropdown (Realtime AJAX Polling Enabled) -->
             <div class="dropdown">
-                <button class="btn btn-sm btn-light rounded-circle position-relative" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Pemberitahuan & Notifikasi">
+                <button class="btn btn-sm btn-light rounded-circle position-relative p-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Pemberitahuan & Notifikasi">
                     <i class="bi bi-bell fs-5"></i>
                     <span id="navNotifBadgeSpan" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem; <?= $unreadBadgeCount > 0 ? '' : 'display:none;' ?>">
                         <?= $unreadBadgeCount ?>
                     </span>
                 </button>
-                <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-3" style="width: 360px; max-height: 480px; overflow-y: auto;">
+                <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-3 notif-dropdown-menu">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="fw-bold mb-0"><i class="bi bi-bell-fill text-primary me-1"></i>Notifikasi & Chat</h6>
+                        <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-bell-fill text-primary me-1.5"></i>Notifikasi & Chat</h6>
                         <span id="navNotifHeaderRight">
                             <?php if ($unreadBadgeCount > 0): ?>
-                                <a href="<?= BASE_URL ?>index.php?url=chat/markRead" class="btn btn-link btn-sm p-0 text-decoration-none text-primary" style="font-size: 0.75rem;">
+                                <a href="<?= BASE_URL ?>index.php?url=chat/markRead" class="btn btn-link btn-sm p-0 text-decoration-none text-primary fw-semibold" style="font-size: 0.75rem;">
                                     <i class="bi bi-check2-all me-1"></i>Tandai Dibaca
                                 </a>
                             <?php else: ?>
-                                <span class="badge bg-secondary rounded-pill">0 Belum Dibaca</span>
+                                <span class="badge bg-secondary-subtle text-muted rounded-pill px-2.5 py-1" style="font-size: 0.7rem;">0 Belum Dibaca</span>
                             <?php endif; ?>
                         </span>
                     </div>
@@ -58,15 +58,15 @@ $unreadBadgeCount = (int)($headerNotifs['unread_total'] ?? 0);
                         <?php else: ?>
                             <div class="list-group list-group-flush">
                                 <?php foreach ($headerNotifs['items'] as $item): ?>
-                                    <a href="<?= $item['link'] ?>" class="list-group-item list-group-item-action border-0 rounded-3 p-2 mb-1">
-                                        <div class="d-flex align-items-start gap-2">
-                                            <div class="fs-5 mt-1">
-                                                <i class="bi <?= $item['icon'] ?>"></i>
+                                    <a href="<?= $item['link'] ?>" class="list-group-item list-group-item-action border-0 rounded-3 p-2.5 mb-1.5 bg-light-hover">
+                                        <div class="d-flex align-items-start gap-2.5">
+                                            <div class="rounded-circle bg-primary-subtle text-primary p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px; height:36px;">
+                                                <i class="bi <?= $item['icon'] ?> fs-6"></i>
                                             </div>
                                             <div class="flex-grow-1 overflow-hidden" style="line-height: 1.25;">
                                                 <div class="fw-bold small text-dark text-truncate"><?= htmlspecialchars($item['title']) ?></div>
                                                 <div class="text-muted small text-truncate mt-1" style="font-size: 0.78rem;"><?= htmlspecialchars($item['desc']) ?></div>
-                                                <div class="text-muted" style="font-size: 0.68rem; margin-top: 2px;">
+                                                <div class="text-muted opacity-75" style="font-size: 0.68rem; margin-top: 3px;">
                                                     <i class="bi bi-clock me-1"></i><?= date('d M H:i', strtotime($item['time'])) ?>
                                                 </div>
                                             </div>

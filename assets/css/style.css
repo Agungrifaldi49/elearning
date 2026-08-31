@@ -39,6 +39,25 @@ body {
     border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
+/* Responsive Navbar Dropdowns */
+.notif-dropdown-menu {
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+@media (max-width: 575.98px) {
+    .app-navbar {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+    .notif-dropdown-menu {
+        width: calc(100vw - 24px) !important;
+        max-width: calc(100vw - 24px) !important;
+    }
+}
+
 /* Sidebar Layout */
 .app-sidebar {
     width: var(--sidebar-width);
