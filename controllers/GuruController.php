@@ -402,6 +402,16 @@ class GuruController {
         $academicModel = new AcademicModel();
         $commModel = new CommunicationModel();
 
+        $roleName = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdminMonitoring = ($roleName === 'administrator');
+        $queryGuruId = $isAdminMonitoring ? null : $guruId;
+
+        $checkQuizPermission = function($targetQuizId) use ($examModel, $isAdminMonitoring, $guruId) {
+            if ($isAdminMonitoring) return true;
+            $qz = $examModel->getQuizById((int)$targetQuizId);
+            return ($qz && (int)($qz['guru_id'] ?? 0) === (int)$guruId);
+        };
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
                 FlashHelper::setError('CSRF Token Invalid');
@@ -413,6 +423,11 @@ class GuruController {
 
             if ($action === 'import_soal_excel') {
                 $quizId = (int)$_POST['quiz_id'];
+                if (!$checkQuizPermission($quizId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mengelola kuis ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
                 if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] === UPLOAD_ERR_OK) {
                     $uploadedImages = $_FILES['gambar_soal_files'] ?? [];
                     $resImport = $examModel->importSoalFromExcel($quizId, $_FILES['file_excel']['tmp_name'], $uploadedImages);
@@ -474,6 +489,14 @@ class GuruController {
                 exit();
             } elseif ($action === 'update_gambar_soal') {
                 $soalId = (int)$_POST['soal_id'];
+                $stmtSoalCheck = Database::getConnection()->prepare("SELECT quiz_id FROM soal WHERE id = ?");
+                $stmtSoalCheck->execute([$soalId]);
+                $targetQId = $stmtSoalCheck->fetchColumn();
+                if (!$checkQuizPermission($targetQId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mengelola soal ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
                 if (isset($_FILES['gambar_soal']) && $_FILES['gambar_soal']['error'] === UPLOAD_ERR_OK) {
                     $ext = strtolower(pathinfo($_FILES['gambar_soal']['name'], PATHINFO_EXTENSION));
                     if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
@@ -492,6 +515,14 @@ class GuruController {
 
             } elseif ($action === 'delete_gambar_soal') {
                 $soalId = (int)$_POST['soal_id'];
+                $stmtSoalCheck = Database::getConnection()->prepare("SELECT quiz_id FROM soal WHERE id = ?");
+                $stmtSoalCheck->execute([$soalId]);
+                $targetQId = $stmtSoalCheck->fetchColumn();
+                if (!$checkQuizPermission($targetQId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mengelola soal ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
                 $db = Database::getConnection();
                 $stmtImg = $db->prepare("SELECT gambar FROM soal WHERE id = ?");
                 $stmtImg->execute([$soalId]);
@@ -508,6 +539,11 @@ class GuruController {
 
             } elseif ($action === 'batch_upload_gambar_soal') {
                 $quizId = (int)$_POST['quiz_id'];
+                if (!$checkQuizPermission($quizId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mengelola kuis ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
                 $db = Database::getConnection();
                 $examModel = new ExamModel();
                 $soalList = $examModel->getSoalByQuiz($quizId);
@@ -697,6 +733,11 @@ class GuruController {
 
             } elseif ($action === 'add_soal') {
                 $quizId = (int)$_POST['quiz_id'];
+                if (!$checkQuizPermission($quizId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mengelola kuis ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
                 $jSoal = $_POST['jenis_soal'] ?? 'pg';
                 $pertanyaan = Security::sanitize($_POST['pertanyaan']);
                 
@@ -742,6 +783,11 @@ class GuruController {
 
             } elseif ($action === 'update') {
                 $id = (int)$_POST['id'];
+                if (!$checkQuizPermission($id)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk memperbarui kuis ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
                 $deadline = !empty($_POST['deadline']) ? $_POST['deadline'] : null;
                 $maxAttempts = isset($_POST['max_attempts']) ? (int)$_POST['max_attempts'] : 1;
                 $kategori = $_POST['kategori'] ?? 'kuis';
@@ -778,6 +824,14 @@ class GuruController {
 
             } elseif ($action === 'approve_susulan') {
                 $reqId = (int)$_POST['request_id'];
+                $stmtReqCheck = Database::getConnection()->prepare("SELECT quiz_id FROM quiz_susulan WHERE id = ?");
+                $stmtReqCheck->execute([$reqId]);
+                $targetQId = $stmtReqCheck->fetchColumn();
+                if (!$checkQuizPermission($targetQId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk memproses permohonan susulan kuis ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz&tab=susulan');
+                    exit();
+                }
                 $stmtReq = Database::getConnection()->prepare("
                     SELECT qs.quiz_id, qs.siswa_id, q.judul 
                     FROM quiz_susulan qs 
@@ -802,6 +856,14 @@ class GuruController {
 
             } elseif ($action === 'reject_susulan') {
                 $reqId = (int)$_POST['request_id'];
+                $stmtReqCheck = Database::getConnection()->prepare("SELECT quiz_id FROM quiz_susulan WHERE id = ?");
+                $stmtReqCheck->execute([$reqId]);
+                $targetQId = $stmtReqCheck->fetchColumn();
+                if (!$checkQuizPermission($targetQId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk memproses permohonan susulan kuis ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz&tab=susulan');
+                    exit();
+                }
                 $examModel->updateSusulanStatus($reqId, 'ditolak');
 
                 $stmtReq = Database::getConnection()->prepare("
@@ -825,22 +887,45 @@ class GuruController {
 
             } elseif ($action === 'delete') {
                 $id = (int)$_POST['id'];
+                if (!$checkQuizPermission($id)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk menghapus paket kuis ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
                 $examModel->deleteQuiz($id);
                 FlashHelper::setSuccess('Paket Quiz beserta seluruh soal berhasil dihapus.');
 
             } elseif ($action === 'delete_soal') {
                 $soalId = (int)$_POST['soal_id'];
+                $stmtSoalCheck = Database::getConnection()->prepare("SELECT quiz_id FROM soal WHERE id = ?");
+                $stmtSoalCheck->execute([$soalId]);
+                $targetQId = $stmtSoalCheck->fetchColumn();
+                if (!$checkQuizPermission($targetQId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk menghapus soal ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                    exit();
+                }
                 $examModel->deleteSoal($soalId);
                 FlashHelper::setSuccess('Soal berhasil dihapus.');
 
             } elseif ($action === 'delete_hasil_quiz') {
                 $quizId = (int)$_POST['quiz_id'];
+                if (!$checkQuizPermission($quizId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk menghapus pengerjaan kuis ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz&tab=koreksi');
+                    exit();
+                }
                 $siswaId = (int)$_POST['siswa_id'];
                 $examModel->deleteHasilQuiz($quizId, $siswaId);
                 FlashHelper::setSuccess('Data pengerjaan kuis siswa berhasil dihapus.');
 
             } elseif ($action === 'grade_quiz_essay') {
                 $quizId = (int)$_POST['quiz_id'];
+                if (!$checkQuizPermission($quizId)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses untuk mengoreksi kuis ini.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/quiz&tab=koreksi');
+                    exit();
+                }
                 $siswaId = (int)$_POST['siswa_id'];
                 $essayScores = $_POST['nilai_essay'] ?? [];
 
@@ -909,14 +994,7 @@ class GuruController {
             exit();
         }
 
-        $roleName = strtolower(AuthHelper::user()['role_name'] ?? '');
-        $isAdminMonitoring = ($roleName === 'administrator');
-        $queryGuruId = $isAdminMonitoring ? null : $guruId;
-
         $quizList = $examModel->getQuizList(null, $queryGuruId);
-        if (empty($quizList)) {
-            $quizList = $examModel->getQuizList(null, null);
-        }
 
         $susulanRequests = $examModel->getSusulanRequestsByGuru($queryGuruId);
         $hasilQuizSubmissions = $examModel->getHasilQuizListByGuru($queryGuruId);
@@ -928,6 +1006,9 @@ class GuruController {
         $quizReportDetail = null;
         if ($reportQuizId !== 'all' && (int)$reportQuizId > 0) {
             $quizReportDetail = $examModel->getDetailedReportByQuiz((int)$reportQuizId);
+            if ($queryGuruId !== null && $quizReportDetail && (int)($quizReportDetail['quiz']['guru_id'] ?? 0) !== (int)$queryGuruId) {
+                $quizReportDetail = null;
+            }
         }
         $rekapCbtMatrix = $examModel->getRekapNilaiCbtMatrixByGuru($queryGuruId, $reportKelasId);
 
@@ -1228,10 +1309,6 @@ class GuruController {
             $quizList = $examModel->getQuizList();
         } else {
             $quizList = $examModel->getQuizList(null, $guruId);
-            if (empty($quizList)) {
-                // Fallback to all quizzes so teacher can view shared bank soal repositories
-                $quizList = $examModel->getQuizList();
-            }
         }
 
         require_once ROOT_PATH . 'views/guru/bank_soal.php';
@@ -1566,6 +1643,9 @@ class GuruController {
         $quizReportDetail = null;
         if ($reportQuizId !== 'all' && (int)$reportQuizId > 0) {
             $quizReportDetail = $examModel->getDetailedReportByQuiz((int)$reportQuizId);
+            if ($queryGuruId !== null && $quizReportDetail && (int)($quizReportDetail['quiz']['guru_id'] ?? 0) !== (int)$queryGuruId) {
+                $quizReportDetail = null;
+            }
         }
         $rekapCbtMatrix = $examModel->getRekapNilaiCbtMatrixByGuru($queryGuruId, $reportKelasId);
 
@@ -1589,6 +1669,11 @@ class GuruController {
 
         if ($reportQuizId !== 'all' && (int)$reportQuizId > 0) {
             $quizReport = $examModel->getDetailedReportByQuiz((int)$reportQuizId);
+            if ($queryGuruId !== null && $quizReport && (int)($quizReport['quiz']['guru_id'] ?? 0) !== (int)$queryGuruId) {
+                FlashHelper::setError('Anda tidak memiliki hak akses untuk mengunduh rekap kuis ini.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/quiz');
+                exit();
+            }
             $qInfo = $quizReport['quiz'] ?? [];
             $quizTitle = preg_replace('/[^A-Za-z0-9_-]/', '_', $qInfo['judul'] ?? 'Quiz');
             $fileName = "Rekap_Nilai_CBT_{$quizTitle}_" . date('Ymd_His') . ".csv";

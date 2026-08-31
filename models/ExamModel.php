@@ -1054,16 +1054,6 @@ class ExamModel extends BaseModel {
         $stmtQ->execute($params);
         $quizzes = $stmtQ->fetchAll();
 
-        // Fallback: If no quizzes match the guru filter, fetch all available quizzes
-        if (empty($quizzes)) {
-            $sqlFallback = "SELECT q.id, q.judul, q.kategori, q.kelas_id, map.nama_mapel, k.nama_kelas
-                            FROM quiz q
-                            LEFT JOIN mata_pelajaran map ON q.mapel_id = map.id
-                            LEFT JOIN kelas k ON q.kelas_id = k.id
-                            ORDER BY q.id ASC";
-            $quizzes = $this->db->query($sqlFallback)->fetchAll();
-        }
-
         if (empty($quizzes)) {
             return ['quizzes' => [], 'matrix' => []];
         }
