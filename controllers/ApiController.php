@@ -1658,8 +1658,16 @@ class ApiController {
 
     public function guru($endpoint = 'dashboard') {
         $endpoint = strtolower(explode('?', $endpoint)[0]);
-        $input = $this->getPostInput();
-        $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? 0);
+        $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? $_GET['guru_id'] ?? $_POST['guru_id'] ?? $input['guru_id'] ?? 0);
+        if ($userId === 0) {
+            $rawQuery = $_SERVER['QUERY_STRING'] ?? '';
+            if (preg_match('/user_id=(\d+)/i', $rawQuery, $mUid)) {
+                $userId = intval($mUid[1]);
+            } elseif (preg_match('/guru_id=(\d+)/i', $rawQuery, $mGid)) {
+                $userId = intval($mGid[1]);
+            }
+        }
+
         $stmtG = $this->db->prepare("SELECT * FROM guru WHERE user_id = :uid OR id = :uid2 LIMIT 1");
         $stmtG->execute(['uid' => $userId, 'uid2' => $userId]);
         $guru = $stmtG->fetch();
@@ -1895,6 +1903,18 @@ class ApiController {
                 ");
                 $stmtT->execute(['gid' => $guru['id'], 'uid' => $guru['user_id']]);
                 $tugas = $stmtT->fetchAll();
+
+                if (empty($tugas)) {
+                    $stmtAll = $this->db->query("
+                        SELECT t.*, mp.nama_mapel, k.nama_kelas,
+                               (SELECT COUNT(*) FROM pengumpulan_tugas pt WHERE pt.tugas_id = t.id) as total_pengumpulan 
+                        FROM tugas t 
+                        LEFT JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
+                        LEFT JOIN kelas k ON t.kelas_id = k.id 
+                        ORDER BY t.created_at DESC
+                    ");
+                    $tugas = $stmtAll->fetchAll();
+                }
 
                 $academicModel = new AcademicModel();
                 $mapelListRaw = $academicModel->getMapelByGuru($guru['id']);
