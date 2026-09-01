@@ -30,20 +30,28 @@ class UserModel extends BaseModel {
     }
 
     public function logLoginAttempt($userId, $username, $status) {
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        $agent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
-        $stmt = $this->db->prepare("INSERT INTO log_login (user_id, username, status, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$userId, $username, $status, $ip, $agent]);
+        try {
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+            $stmt = $this->db->prepare("INSERT INTO log_login (user_id, username, status, ip_address, user_agent) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$userId, substr((string)$username, 0, 50), $status, $ip, substr((string)$agent, 0, 255)]);
+        } catch (\Throwable $e) {
+            // Fail-safe logging
+        }
     }
 
     public function countFailedLogins($username) {
-        $stmt = $this->db->prepare("
-            SELECT COUNT(*) FROM log_login 
-            WHERE username = ? AND status = 'failed' 
-            AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
-        ");
-        $stmt->execute([$username]);
-        return (int)$stmt->fetchColumn();
+        try {
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) FROM log_login 
+                WHERE username = ? AND status = 'failed' 
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+            ");
+            $stmt->execute([$username]);
+            return (int)$stmt->fetchColumn();
+        } catch (\Throwable $e) {
+            return 0;
+        }
     }
 
     public function getAllUsers() {

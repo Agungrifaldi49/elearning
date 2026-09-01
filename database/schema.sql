@@ -491,3 +491,19 @@ CREATE TABLE IF NOT EXISTS nilai_rapor (
     FOREIGN KEY (siswa_id) REFERENCES siswa(id) ON DELETE CASCADE,
     FOREIGN KEY (mapel_id) REFERENCES mata_pelajaran(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Performance Indexes
+CREATE INDEX idx_log_login_username_status_created ON log_login (username, status, created_at);
+CREATE INDEX idx_log_login_created_at ON log_login (created_at);
+CREATE INDEX idx_users_role_status ON users (role_id, status);
+CREATE INDEX idx_siswa_user ON siswa (user_id);
+CREATE INDEX idx_guru_user ON guru (user_id);
+CREATE INDEX idx_aktivitas_user_created ON aktivitas (user_id, created_at);
+CREATE INDEX idx_absensi_jadwal_tanggal ON absensi (jadwal_id, tanggal);
+CREATE INDEX idx_absensi_siswa_tanggal ON absensi (siswa_id, tanggal);
+CREATE INDEX idx_jawaban_siswa_siswa_quiz ON jawaban_siswa (siswa_id, quiz_id);
+CREATE INDEX idx_hasil_ujian_siswa_ujian ON hasil_ujian (siswa_id, ujian_id);
+CREATE INDEX idx_hasil_quiz_siswa_quiz ON hasil_quiz (siswa_id, quiz_id);
+CREATE INDEX idx_notifikasi_user_read ON notifikasi (user_id, is_read);
+CREATE INDEX idx_chat_sender_receiver ON chat (sender_id, receiver_id, is_read);
+

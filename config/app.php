@@ -7,6 +7,15 @@
 // Set Default Timezone
 date_default_timezone_set('Asia/Jakarta');
 
+// Error Reporting Config (Prevent raw warnings from breaking headers / HTTP 500)
+error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_WARNING);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
+// Session Security & Configuration
+ini_set('session.cookie_httponly', '1');
+ini_set('session.use_only_cookies', '1');
+
 // Start session if not started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

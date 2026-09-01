@@ -23,38 +23,58 @@ class Database {
                         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                         PDO::ATTR_EMULATE_PREPARES => false,
+                        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
                     ]
                 );
+                
+                // Ensure performance indexes exist
+                self::ensurePerformanceIndexes();
+
             } catch (PDOException $e) {
-                // If database doesn't exist, try connecting to MySQL root to auto-create
-                try {
-                    $pdo = new PDO("mysql:host=" . self::$host . ";charset=utf8mb4", self::$username, self::$password);
-                    $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . self::$db_name . "` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
-                    
-                    self::$conn = new PDO(
-                        "mysql:host=" . self::$host . ";dbname=" . self::$db_name . ";charset=utf8mb4",
-                        self::$username,
-                        self::$password,
-                        [
-                            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                            PDO::ATTR_EMULATE_PREPARES => false,
-                        ]
-                    );
+                // Check if database doesn't exist (Error 1049) vs connection failure
+                $isUnknownDb = strpos($e->getMessage(), 'Unknown database') !== false || $e->getCode() == 1049;
 
-                    // Import schema & seeders automatically
-                    self::autoImport();
+                if ($isUnknownDb) {
+                    try {
+                        $pdo = new PDO("mysql:host=" . self::$host . ";charset=utf8mb4", self::$username, self::$password);
+                        $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . self::$db_name . "` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+                        
+                        self::$conn = new PDO(
+                            "mysql:host=" . self::$host . ";dbname=" . self::$db_name . ";charset=utf8mb4",
+                            self::$username,
+                            self::$password,
+                            [
+                                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                                PDO::ATTR_EMULATE_PREPARES => false,
+                            ]
+                        );
 
-                } catch (PDOException $ex) {
-                    die("<div style='font-family:sans-serif; padding:20px; background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; border-radius:8px;'>
-                        <h3>Database Connection Error</h3>
-                        <p>" . htmlspecialchars($ex->getMessage()) . "</p>
-                        <p>Pastikan MySQL server di XAMPP telah dinyalakan dan database <code>" . self::$db_name . "</code> sudah disiapkannya.</p>
-                    </div>");
+                        // Import schema & seeders automatically
+                        self::autoImport();
+                        self::ensurePerformanceIndexes();
+
+                    } catch (PDOException $ex) {
+                        self::showConnectionError($ex);
+                    }
+                } else {
+                    self::showConnectionError($e);
                 }
             }
         }
         return self::$conn;
+    }
+
+    private static function showConnectionError(PDOException $ex) {
+        if (headers_sent() === false) {
+            http_response_code(503);
+        }
+        die("<div style='font-family:sans-serif; padding:20px; max-width:600px; margin:40px auto; background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; border-radius:8px;'>
+            <h3>Kendala Server / Koneksi Database</h3>
+            <p>Sistem sedang menerima lonjakan trafik yang tinggi atau layanan MySQL terhenti.</p>
+            <p><strong>Detail:</strong> " . htmlspecialchars($ex->getMessage()) . "</p>
+            <p>Silakan segarkan (refresh) halaman beberapa saat lagi. Pastikan service MySQL di server/XAMPP sudah berjalan.</p>
+        </div>");
     }
 
     private static function autoImport() {
@@ -69,6 +89,37 @@ class Database {
         if (file_exists($seedersPath)) {
             $seedSql = file_get_contents($seedersPath);
             self::$conn->exec($seedSql);
+        }
+    }
+
+    public static function ensurePerformanceIndexes() {
+        if (self::$conn === null) return;
+        static $indexesEnsured = false;
+        if ($indexesEnsured) return;
+        $indexesEnsured = true;
+
+        $indexes = [
+            "idx_log_login_username_status_created" => "ALTER TABLE log_login ADD INDEX idx_log_login_username_status_created (username, status, created_at)",
+            "idx_log_login_created_at" => "ALTER TABLE log_login ADD INDEX idx_log_login_created_at (created_at)",
+            "idx_users_role_status" => "ALTER TABLE users ADD INDEX idx_users_role_status (role_id, status)",
+            "idx_siswa_user" => "ALTER TABLE siswa ADD INDEX idx_siswa_user (user_id)",
+            "idx_guru_user" => "ALTER TABLE guru ADD INDEX idx_guru_user (user_id)",
+            "idx_aktivitas_user_created" => "ALTER TABLE aktivitas ADD INDEX idx_aktivitas_user_created (user_id, created_at)",
+            "idx_absensi_jadwal_tanggal" => "ALTER TABLE absensi ADD INDEX idx_absensi_jadwal_tanggal (jadwal_id, tanggal)",
+            "idx_absensi_siswa_tanggal" => "ALTER TABLE absensi ADD INDEX idx_absensi_siswa_tanggal (siswa_id, tanggal)",
+            "idx_jawaban_siswa_siswa_quiz" => "ALTER TABLE jawaban_siswa ADD INDEX idx_jawaban_siswa_siswa_quiz (siswa_id, quiz_id)",
+            "idx_hasil_ujian_siswa_ujian" => "ALTER TABLE hasil_ujian ADD INDEX idx_hasil_ujian_siswa_ujian (siswa_id, ujian_id)",
+            "idx_hasil_quiz_siswa_quiz" => "ALTER TABLE hasil_quiz ADD INDEX idx_hasil_quiz_siswa_quiz (siswa_id, quiz_id)",
+            "idx_notifikasi_user_read" => "ALTER TABLE notifikasi ADD INDEX idx_notifikasi_user_read (user_id, is_read)",
+            "idx_chat_sender_receiver" => "ALTER TABLE chat ADD INDEX idx_chat_sender_receiver (sender_id, receiver_id, is_read)"
+        ];
+
+        foreach ($indexes as $name => $sql) {
+            try {
+                self::$conn->exec($sql);
+            } catch (\Throwable $e) {
+                // Index may already exist or table missing, ignore safely
+            }
         }
     }
 }

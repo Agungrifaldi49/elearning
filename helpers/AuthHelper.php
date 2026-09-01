@@ -8,6 +8,8 @@ require_once ROOT_PATH . 'config/database.php';
 
 class AuthHelper {
 
+    private static $cachedUser = null;
+
     /**
      * Check if user is logged in
      */
@@ -28,35 +30,44 @@ class AuthHelper {
     }
 
     /**
-     * Get Current Logged In User
+     * Get Current Logged In User with static memory caching
      */
     public static function user() {
+        if (self::$cachedUser !== null) {
+            return self::$cachedUser;
+        }
+
         if (!self::check()) {
             return null;
         }
 
         if (isset($_SESSION['user_id'])) {
-            try {
-                $db = Database::getConnection();
-                $stmtSync = $db->prepare("
-                    SELECT u.full_name, u.email, u.avatar, u.role_id, r.name as role_name 
-                    FROM users u 
-                    LEFT JOIN roles r ON u.role_id = r.id 
-                    WHERE u.id = ?
-                ");
-                $stmtSync->execute([$_SESSION['user_id']]);
-                $uRow = $stmtSync->fetch();
-                if ($uRow) {
-                    $_SESSION['full_name'] = $uRow['full_name'];
-                    $_SESSION['email'] = $uRow['email'];
-                    $_SESSION['avatar'] = $uRow['avatar'] ?? 'default_avatar.png';
-                    $_SESSION['role_id'] = $uRow['role_id'];
-                    $_SESSION['role_name'] = $uRow['role_name'];
-                }
-            } catch (Exception $e) {}
+            // Periodic sync every 5 minutes or if session missing role_name
+            $needSync = !isset($_SESSION['role_name']) || !isset($_SESSION['last_sync']) || (time() - $_SESSION['last_sync'] > 300);
+            if ($needSync) {
+                try {
+                    $db = Database::getConnection();
+                    $stmtSync = $db->prepare("
+                        SELECT u.full_name, u.email, u.avatar, u.role_id, r.name as role_name 
+                        FROM users u 
+                        LEFT JOIN roles r ON u.role_id = r.id 
+                        WHERE u.id = ?
+                    ");
+                    $stmtSync->execute([$_SESSION['user_id']]);
+                    $uRow = $stmtSync->fetch();
+                    if ($uRow) {
+                        $_SESSION['full_name'] = $uRow['full_name'];
+                        $_SESSION['email'] = $uRow['email'];
+                        $_SESSION['avatar'] = $uRow['avatar'] ?? 'default_avatar.png';
+                        $_SESSION['role_id'] = $uRow['role_id'];
+                        $_SESSION['role_name'] = $uRow['role_name'];
+                        $_SESSION['last_sync'] = time();
+                    }
+                } catch (Exception $e) {}
+            }
         }
 
-        return [
+        self::$cachedUser = [
             'id' => $_SESSION['user_id'] ?? null,
             'username' => $_SESSION['username'] ?? '',
             'full_name' => $_SESSION['full_name'] ?? '',
@@ -68,13 +79,19 @@ class AuthHelper {
             'kelas_id' => $_SESSION['kelas_id'] ?? null,
             'jurusan_id' => $_SESSION['jurusan_id'] ?? null
         ];
+
+        return self::$cachedUser;
     }
 
     /**
      * Set User Session after successful login
      */
     public static function login($user) {
-        session_regenerate_id(true);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+
+        self::$cachedUser = null; // Reset static cache
 
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
@@ -84,22 +101,25 @@ class AuthHelper {
         $_SESSION['role_name'] = $user['role_name'];
         $_SESSION['avatar'] = $user['avatar'] ?? 'default_avatar.png';
         $_SESSION['last_activity'] = time();
+        $_SESSION['last_sync'] = time();
 
         // Fetch student or teacher specific IDs if applicable
-        $db = Database::getConnection();
-        if ($user['role_id'] == 2) { // Guru
-            $stmt = $db->prepare("SELECT id FROM guru WHERE user_id = ?");
-            $stmt->execute([$user['id']]);
-            $guru = $stmt->fetch();
-            $_SESSION['member_id'] = $guru['id'] ?? null;
-        } elseif ($user['role_id'] == 3) { // Siswa
-            $stmt = $db->prepare("SELECT id, kelas_id, jurusan_id FROM siswa WHERE user_id = ?");
-            $stmt->execute([$user['id']]);
-            $siswa = $stmt->fetch();
-            $_SESSION['member_id'] = $siswa['id'] ?? null;
-            $_SESSION['kelas_id'] = $siswa['kelas_id'] ?? null;
-            $_SESSION['jurusan_id'] = $siswa['jurusan_id'] ?? null;
-        }
+        try {
+            $db = Database::getConnection();
+            if ($user['role_id'] == 2 || strtolower($user['role_name']) === 'guru') { // Guru
+                $stmt = $db->prepare("SELECT id FROM guru WHERE user_id = ?");
+                $stmt->execute([$user['id']]);
+                $guru = $stmt->fetch();
+                $_SESSION['member_id'] = $guru['id'] ?? null;
+            } elseif ($user['role_id'] == 3 || strtolower($user['role_name']) === 'siswa') { // Siswa
+                $stmt = $db->prepare("SELECT id, kelas_id, jurusan_id FROM siswa WHERE user_id = ?");
+                $stmt->execute([$user['id']]);
+                $siswa = $stmt->fetch();
+                $_SESSION['member_id'] = $siswa['id'] ?? null;
+                $_SESSION['kelas_id'] = $siswa['kelas_id'] ?? null;
+                $_SESSION['jurusan_id'] = $siswa['jurusan_id'] ?? null;
+            }
+        } catch (Exception $e) {}
     }
 
     /**
@@ -107,7 +127,11 @@ class AuthHelper {
      */
     public static function requireLogin() {
         if (!self::check()) {
-            header('Location: ' . BASE_URL . 'login.php');
+            if (headers_sent() === false) {
+                header('Location: ' . BASE_URL . 'login.php');
+            } else {
+                echo "<script>window.location.href='" . BASE_URL . "login.php';</script>";
+            }
             exit();
         }
     }
@@ -119,19 +143,42 @@ class AuthHelper {
         self::requireLogin();
         $user = self::user();
 
-        $allowedLower = array_map('strtolower', (array)$allowedRoles);
         $userRoleLower = strtolower($user['role_name'] ?? '');
 
-        if (!in_array($userRoleLower, $allowedLower)) {
-            $redirectUrl = match($userRoleLower) {
+        // Alias normalization
+        $normalizedUserRole = match($userRoleLower) {
+            'admin', 'administrator' => 'administrator',
+            'kepsek', 'kepala sekolah' => 'kepala sekolah',
+            default => $userRoleLower
+        };
+
+        $allowedLower = array_map(function($r) {
+            $r = strtolower($r);
+            return match($r) {
+                'admin', 'administrator' => 'administrator',
+                'kepsek', 'kepala sekolah' => 'kepala sekolah',
+                default => $r
+            };
+        }, (array)$allowedRoles);
+
+        if (!in_array($normalizedUserRole, $allowedLower)) {
+            $redirectUrl = match($normalizedUserRole) {
                 'administrator' => BASE_URL . 'index.php?url=admin/dashboard',
                 'guru' => BASE_URL . 'index.php?url=guru/dashboard',
                 'siswa' => BASE_URL . 'index.php?url=siswa/dashboard',
-                'kepala sekolah', 'kepsek' => BASE_URL . 'index.php?url=kepsek/dashboard',
+                'kepala sekolah' => BASE_URL . 'index.php?url=kepsek/dashboard',
                 default => BASE_URL . 'index.php?url=landing'
             };
-            header('Location: ' . $redirectUrl);
-            exit();
+            
+            $currentUrl = $_GET['url'] ?? '';
+            if (strpos($redirectUrl, $currentUrl) === false || empty($currentUrl)) {
+                if (headers_sent() === false) {
+                    header('Location: ' . $redirectUrl);
+                } else {
+                    echo "<script>window.location.href='" . $redirectUrl . "';</script>";
+                }
+                exit();
+            }
         }
     }
 
@@ -139,12 +186,13 @@ class AuthHelper {
      * Destroy Session & Logout
      */
     public static function logout() {
+        self::$cachedUser = null;
         if (isset($_COOKIE['remember_token'])) {
             setcookie('remember_token', '', time() - 3600, '/');
         }
         $_SESSION = [];
         if (session_id() != '' || headers_sent() === false) {
-            session_destroy();
+            @session_destroy();
         }
     }
 }

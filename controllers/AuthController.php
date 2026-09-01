@@ -219,22 +219,18 @@ class AuthController {
     }
 
     private function redirectByRole($roleName) {
-        switch (strtolower($roleName)) {
-            case 'administrator':
-                header('Location: ' . BASE_URL . 'index.php?url=admin/dashboard');
-                break;
-            case 'guru':
-                header('Location: ' . BASE_URL . 'index.php?url=guru/dashboard');
-                break;
-            case 'siswa':
-                header('Location: ' . BASE_URL . 'index.php?url=siswa/dashboard');
-                break;
-            case 'kepala sekolah':
-                header('Location: ' . BASE_URL . 'index.php?url=kepsek/dashboard');
-                break;
-            default:
-                header('Location: ' . BASE_URL . 'index.php');
-                break;
+        $roleLower = strtolower($roleName ?? '');
+        $redirectUrl = match($roleLower) {
+            'administrator', 'admin' => BASE_URL . 'index.php?url=admin/dashboard',
+            'guru' => BASE_URL . 'index.php?url=guru/dashboard',
+            'siswa' => BASE_URL . 'index.php?url=siswa/dashboard',
+            'kepala sekolah', 'kepsek' => BASE_URL . 'index.php?url=kepsek/dashboard',
+            default => BASE_URL . 'index.php'
+        };
+        if (headers_sent() === false) {
+            header('Location: ' . $redirectUrl);
+        } else {
+            echo "<script>window.location.href='" . $redirectUrl . "';</script>";
         }
         exit();
     }
