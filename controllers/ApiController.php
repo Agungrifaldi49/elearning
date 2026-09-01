@@ -1733,9 +1733,9 @@ class ApiController {
                 // Active Academic Year & Semester matching Admin setting
                 $academicModel = new AcademicModel();
                 $activeTa = $academicModel->getActiveTahunAjaran();
-                $taTahun = trim($activeTa['tahun_ajaran'] ?? '2025/2026');
+                $taTahun = trim($activeTa['tahun_ajaran'] ?? ($activeTa['tahun'] ?? '2025/2026'));
                 $taSem = trim($activeTa['semester'] ?? 'Ganjil');
-                $tahunAjaranStr = "$taTahun — Semester $taSem";
+                $tahunAjaranStr = "T.A. $taTahun — Semester $taSem";
 
                 $this->jsonResponse(true, 'Dashboard Guru Overview', [
                     'guru' => $guru,

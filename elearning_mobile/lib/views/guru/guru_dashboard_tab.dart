@@ -50,7 +50,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
     final activeTa = (guruProvider.dashboardData?['active_ta'] as Map?) ?? {};
     final taTahun = (activeTa['tahun_ajaran'] ?? activeTa['tahun'] ?? '').toString();
     final taSem = (activeTa['semester'] ?? '').toString();
-    final tahunAjaranStr = (guruProvider.dashboardData?['tahun_ajaran'] ?? (taTahun.isNotEmpty ? "$taTahun — Semester $taSem" : '2025/2026 — Semester Ganjil')).toString();
+    final tahunAjaranStr = (guruProvider.dashboardData?['tahun_ajaran'] ?? (taTahun.isNotEmpty ? "T.A. $taTahun — Semester $taSem" : 'T.A. 2025/2026 — Semester Ganjil')).toString();
 
     // Complete Features List for Guru
     final allFeatures = [
@@ -201,7 +201,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                         const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 16),
                         const SizedBox(width: 8),
                         Text(
-                          'Tahun Ajaran Aktif: $tahunAjaranStr',
+                          tahunAjaranStr,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,

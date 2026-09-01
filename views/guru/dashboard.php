@@ -17,7 +17,7 @@
                         <div class="d-flex align-items-center gap-2 flex-wrap small opacity-90">
                             <span><i class="bi bi-card-text me-1"></i>NIP: <code><?= htmlspecialchars($guru['nip'] ?? '-') ?></code></span>
                             <span>•</span>
-                            <span><i class="bi bi-calendar-check me-1"></i>Periode: <strong><?= htmlspecialchars($activeTa['tahun_ajaran'] ?? '2025/2026') ?> (<?= htmlspecialchars($activeTa['semester'] ?? 'Ganjil') ?>)</strong></span>
+                            <span><i class="bi bi-calendar-check me-1"></i>Periode: <strong>T.A. <?= htmlspecialchars($activeTa['tahun_ajaran'] ?? ($activeTa['tahun'] ?? '2025/2026')) ?> — Semester <?= htmlspecialchars($activeTa['semester'] ?? 'Ganjil') ?></strong></span>
                         </div>
                     </div>
                 </div>
