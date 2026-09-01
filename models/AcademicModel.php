@@ -629,14 +629,28 @@ class AcademicModel extends BaseModel {
                 $this->db->exec("ALTER TABLE siswa_mapel_enrollment ADD COLUMN kelas_id INT NULL AFTER guru_id");
             } catch (\Throwable $eCol) {}
 
-            try {
-                $this->db->exec("ALTER TABLE siswa_mapel_enrollment DROP INDEX u_siswa_mapel_guru");
-            } catch (\Throwable $eDropS) {}
+        } catch (\Throwable $e) {}
+    }
+
+    public function deduplicateKeys() {
+        $this->ensureEnrollmentTables();
+        try {
+            // Delete duplicate mapel_enrollment_keys rows keeping only the smallest ID per (mapel_id, guru_id, COALESCE(kelas_id, 0))
+            $sql = "
+                DELETE k1 FROM mapel_enrollment_keys k1
+                INNER JOIN mapel_enrollment_keys k2 
+                ON k1.mapel_id = k2.mapel_id 
+               AND k1.guru_id = k2.guru_id 
+               AND (k1.kelas_id = k2.kelas_id OR (k1.kelas_id IS NULL AND k2.kelas_id IS NULL))
+               AND k1.id > k2.id
+            ";
+            $this->db->exec($sql);
         } catch (\Throwable $e) {}
     }
 
     public function syncKeysWithSchedule() {
         $this->ensureEnrollmentTables();
+        $this->deduplicateKeys();
         try {
             $sql = "
                 SELECT DISTINCT j.mapel_id, j.kelas_id, j.guru_id, m.nama_mapel, k.nama_kelas
@@ -654,16 +668,11 @@ class AcademicModel extends BaseModel {
 
                 if ($mId <= 0 || $kId <= 0 || $gId <= 0) continue;
 
-                $stmtChk = $this->db->prepare("SELECT id, guru_id FROM mapel_enrollment_keys WHERE mapel_id = ? AND kelas_id = ?");
-                $stmtChk->execute([$mId, $kId]);
+                $stmtChk = $this->db->prepare("SELECT id, guru_id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND (kelas_id = ? OR (kelas_id IS NULL AND ? IS NULL))");
+                $stmtChk->execute([$mId, $gId, $kId, $kId]);
                 $existingKey = $stmtChk->fetch();
 
-                if ($existingKey) {
-                    if ((int)$existingKey['guru_id'] !== $gId) {
-                        $upd = $this->db->prepare("UPDATE mapel_enrollment_keys SET guru_id = ? WHERE id = ?");
-                        $upd->execute([$gId, $existingKey['id']]);
-                    }
-                } else {
+                if (!$existingKey) {
                     $mText = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $jp['nama_mapel']), 0, 5));
                     $kText = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $jp['nama_kelas']), 0, 6));
                     $rand = rand(100, 999);
@@ -672,6 +681,7 @@ class AcademicModel extends BaseModel {
                     $this->setMapelEnrollmentKey($mId, $gId, $smartKey, $kId);
                 }
             }
+            $this->deduplicateKeys();
         } catch (\Throwable $e) {}
     }
 
@@ -699,8 +709,8 @@ class AcademicModel extends BaseModel {
 
                 if ($mId <= 0 || $kId <= 0) continue;
 
-                $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND kelas_id = ?");
-                $chk->execute([$mId, $gId, $kId]);
+                $chk = $this->db->prepare("SELECT id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? AND (kelas_id = ? OR (kelas_id IS NULL AND ? IS NULL))");
+                $chk->execute([$mId, $gId, $kId, $kId]);
                 if (!$chk->fetch()) {
                     $mText = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $pair['nama_mapel']), 0, 5));
                     $kText = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $pair['nama_kelas']), 0, 6));
@@ -710,14 +720,16 @@ class AcademicModel extends BaseModel {
                     $this->setMapelEnrollmentKey($mId, $gId, $smartKey, $kId);
                 }
             }
+            $this->deduplicateKeys();
         } catch (\Throwable $e) {}
     }
 
     public function getMapelEnrollmentKeys($guru_id = null) {
         $this->syncKeysWithSchedule();
+        $this->deduplicateKeys();
         $sql = "
             SELECT mek.*, m.nama_mapel, m.kode_mapel, g.nama_lengkap as nama_guru, g.nip, k.nama_kelas, k.tingkat, j.nama_jurusan,
-            (SELECT COUNT(*) FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.mapel_id = mek.mapel_id AND sme.guru_id = mek.guru_id AND (mek.kelas_id IS NULL OR s.kelas_id = mek.kelas_id)) as total_siswa
+            (SELECT COUNT(DISTINCT sme.siswa_id) FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.mapel_id = mek.mapel_id AND sme.guru_id = mek.guru_id AND (mek.kelas_id IS NULL OR s.kelas_id = mek.kelas_id)) as total_siswa
             FROM mapel_enrollment_keys mek
             JOIN mata_pelajaran m ON mek.mapel_id = m.id
             JOIN guru g ON mek.guru_id = g.id
@@ -740,7 +752,7 @@ class AcademicModel extends BaseModel {
                 )
             )";
         }
-        $sql .= " ORDER BY m.nama_mapel ASC, k.tingkat ASC, k.nama_kelas ASC, g.nama_lengkap ASC";
+        $sql .= " GROUP BY mek.id ORDER BY m.nama_mapel ASC, k.tingkat ASC, k.nama_kelas ASC, g.nama_lengkap ASC";
         return $this->db->query($sql)->fetchAll();
     }
 
@@ -766,19 +778,18 @@ class AcademicModel extends BaseModel {
             $row = $chk->fetch();
         }
 
-        // Fallback search if exact kelas_id match wasn't found
+        // Fallback search if exact match wasn't found
         if (!$row) {
             $chk = $this->db->prepare("SELECT id, enrollment_key, kelas_id FROM mapel_enrollment_keys WHERE mapel_id = ? AND guru_id = ? ORDER BY id DESC LIMIT 1");
             $chk->execute([$mId, $gId]);
             $row = $chk->fetch();
         }
 
+        $res = false;
         if ($row) {
-            $oldKey = strtoupper(trim($row['enrollment_key'] ?? ''));
             $stmt = $this->db->prepare("UPDATE mapel_enrollment_keys SET enrollment_key = ?, passcode = ?, kelas_id = ? WHERE id = ?");
             $res = $stmt->execute([$cleanKey, $cleanKey, $kelasIdVal ?: $row['kelas_id'], $row['id']]);
 
-            // ALWAYS reset student enrollments for this mapel & guru whenever key is updated or changed
             if ($res) {
                 if ($kelasIdVal) {
                     $delClass = $this->db->prepare("
@@ -792,11 +803,13 @@ class AcademicModel extends BaseModel {
                 $delGlobal = $this->db->prepare("DELETE FROM siswa_mapel_enrollment WHERE mapel_id = ? AND guru_id = ?");
                 $delGlobal->execute([$mId, $gId]);
             }
-            return $res;
         } else {
             $stmt = $this->db->prepare("INSERT INTO mapel_enrollment_keys (mapel_id, guru_id, kelas_id, enrollment_key, passcode) VALUES (?, ?, ?, ?, ?)");
-            return $stmt->execute([$mId, $gId, $kelasIdVal, $cleanKey, $cleanKey]);
+            $res = $stmt->execute([$mId, $gId, $kelasIdVal, $cleanKey, $cleanKey]);
         }
+
+        $this->deduplicateKeys();
+        return $res;
     }
 
     public function enrollSiswaByMapelKey($siswa_id, $key_input) {

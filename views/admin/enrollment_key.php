@@ -196,19 +196,7 @@ function generateSmartKey() {
     
     document.getElementById('key_enrollment_key').value = resultKey;
 }
-</script>    <small class="text-muted mt-1 d-block">Key ini akan diminta kepada siswa saat pendaftaran mapel pertama kali.</small>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-0 justify-content-between">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary px-4 fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Simpan Key Mapel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
-<script>
 document.addEventListener('DOMContentLoaded', function() {
     const modalSetKey = document.getElementById('modalSetKey');
     if (modalSetKey) {
