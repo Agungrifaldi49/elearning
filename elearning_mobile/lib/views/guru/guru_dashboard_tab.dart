@@ -9,6 +9,7 @@ import '../shared/kartu_digital_screen.dart';
 import '../shared/library_screen.dart';
 import '../shared/live_class_screen.dart';
 import '../shared/panduan_screen.dart';
+import '../shared/pengumuman_auto_slider.dart';
 import 'guru_bank_soal_screen.dart';
 import 'guru_input_absensi_screen.dart';
 import 'guru_input_nilai_screen.dart';
@@ -47,6 +48,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
     final guruProvider = Provider.of<GuruProvider>(context);
     final stats = (guruProvider.dashboardData?['stats'] as Map?) ?? {'materi': 0, 'tugas': 0, 'quiz': 0};
     final jadwalToday = (guruProvider.dashboardData?['jadwal_hari_ini'] as List?) ?? [];
+    final pengumuman = (guruProvider.dashboardData?['pengumuman'] as List?) ?? [];
     final activeTa = (guruProvider.dashboardData?['active_ta'] as Map?) ?? {};
     final taTahun = (activeTa['tahun_ajaran'] ?? activeTa['tahun'] ?? '').toString();
     final taSem = (activeTa['semester'] ?? '').toString();
@@ -496,6 +498,33 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                   );
                 },
               ),
+
+            const SizedBox(height: 24),
+
+            // Announcements Section (Auto Slider Carousel)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '📢 Pengumuman Sekolah',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                if (pengumuman.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${pengumuman.length} Informasi',
+                      style: const TextStyle(color: AppTheme.primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            PengumumanAutoSlider(pengumumanList: pengumuman),
           ],
         ),
       ),

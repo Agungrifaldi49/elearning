@@ -321,15 +321,16 @@ class ApiController {
                 $chartData = $stmtChart->fetchAll();
 
                 // 6. Announcements (Siswa + All Target)
-                $stmtP = $this->db->query("SELECT p.*, u.full_name as author FROM pengumuman p LEFT JOIN users u ON p.user_id = u.id WHERE (p.target_role = 'siswa' OR p.target_role = 'semua' OR p.target_role = 'all' OR p.target_role IS NULL) ORDER BY p.id DESC LIMIT 10");
-                $pengumumanRaw = $stmtP ? $stmtP->fetchAll() : [];
+                $stmtP = $this->db->query("SELECT p.*, u.full_name as author FROM pengumuman p LEFT JOIN users u ON p.user_id = u.id WHERE (p.target_role = 'all' OR p.target_role = 'siswa' OR p.target_role = 'semua' OR p.target_role IS NULL OR p.target_role = '') ORDER BY p.id DESC LIMIT 10");
+                $pengumumanRaw = $stmtP ? $stmtP->fetchAll(PDO::FETCH_ASSOC) : [];
                 $pengumuman = [];
                 foreach ($pengumumanRaw as $p) {
+                    $bUrl = null;
                     if (!empty($p['banner'])) {
-                        $p['banner_url'] = (strpos($p['banner'], 'http') === 0) ? $p['banner'] : BASE_URL . $p['banner'];
-                    } else {
-                        $p['banner_url'] = null;
+                        $bUrl = (strpos($p['banner'], 'http') === 0) ? $p['banner'] : BASE_URL . ltrim($p['banner'], '/');
                     }
+                    $p['banner_url'] = $bUrl;
+                    $p['banner'] = $bUrl ?: $p['banner'];
                     $pengumuman[] = $p;
                 }
 
@@ -1746,6 +1747,20 @@ class ApiController {
                 $taSem = trim($activeTa['semester'] ?? 'Ganjil');
                 $tahunAjaranStr = "T.A. $taTahun — Semester $taSem";
 
+                // Announcements (Guru + All Target)
+                $stmtPGuru = $this->db->query("SELECT p.*, u.full_name as author FROM pengumuman p LEFT JOIN users u ON p.user_id = u.id WHERE (p.target_role = 'all' OR p.target_role = 'guru' OR p.target_role = 'semua' OR p.target_role IS NULL OR p.target_role = '') ORDER BY p.id DESC LIMIT 10");
+                $pengumumanRawGuru = $stmtPGuru ? $stmtPGuru->fetchAll(PDO::FETCH_ASSOC) : [];
+                $pengumumanGuru = [];
+                foreach ($pengumumanRawGuru as $p) {
+                    $bUrl = null;
+                    if (!empty($p['banner'])) {
+                        $bUrl = (strpos($p['banner'], 'http') === 0) ? $p['banner'] : BASE_URL . ltrim($p['banner'], '/');
+                    }
+                    $p['banner_url'] = $bUrl;
+                    $p['banner'] = $bUrl ?: $p['banner'];
+                    $pengumumanGuru[] = $p;
+                }
+
                 $this->jsonResponse(true, 'Dashboard Guru Overview', [
                     'guru' => $guru,
                     'tahun_ajaran' => $tahunAjaranStr,
@@ -1755,6 +1770,7 @@ class ApiController {
                         'tugas' => $totalTugas,
                         'quiz' => $totalQuiz
                     ],
+                    'pengumuman' => $pengumumanGuru,
                     'jadwal_hari_ini' => $jadwalToday,
                     'absensi_today' => [
                         'has_clocked_in' => $hasClockedIn,
