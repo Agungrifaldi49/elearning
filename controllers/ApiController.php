@@ -1730,12 +1730,12 @@ class ApiController {
                 $hasClockedOut = !empty($absGuru['waktu_pulang']);
                 $absGuruStatus = $absGuru['status'] ?? 'Belum Absen';
 
-                // Active Academic Year (Tahun Ajaran Aktif)
+                // Active Academic Year & Semester matching Admin setting
                 $academicModel = new AcademicModel();
                 $activeTa = $academicModel->getActiveTahunAjaran();
-                $tahunAjaranStr = !empty($activeTa) 
-                    ? ($activeTa['tahun_ajaran'] . ' (' . ucfirst($activeTa['semester'] ?? 'Ganjil') . ')')
-                    : '2025/2026 (Ganjil)';
+                $taTahun = trim($activeTa['tahun_ajaran'] ?? '2025/2026');
+                $taSem = trim($activeTa['semester'] ?? 'Ganjil');
+                $tahunAjaranStr = "$taTahun — Semester $taSem";
 
                 $this->jsonResponse(true, 'Dashboard Guru Overview', [
                     'guru' => $guru,

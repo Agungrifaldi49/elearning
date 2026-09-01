@@ -46,8 +46,10 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final guruProvider = Provider.of<GuruProvider>(context);
     final stats = (guruProvider.dashboardData?['stats'] as Map?) ?? {'materi': 0, 'tugas': 0, 'quiz': 0};
-    final jadwalToday = (guruProvider.dashboardData?['jadwal_hari_ini'] as List?) ?? [];
-    final tahunAjaranStr = (guruProvider.dashboardData?['tahun_ajaran'] ?? '2025/2026 (Ganjil)').toString();
+    final activeTa = (guruProvider.dashboardData?['active_ta'] as Map?) ?? {};
+    final taTahun = (activeTa['tahun_ajaran'] ?? activeTa['tahun'] ?? '').toString();
+    final taSem = (activeTa['semester'] ?? '').toString();
+    final tahunAjaranStr = (guruProvider.dashboardData?['tahun_ajaran'] ?? (taTahun.isNotEmpty ? "$taTahun — Semester $taSem" : '2025/2026 — Semester Ganjil')).toString();
 
     // Complete Features List for Guru
     final allFeatures = [
