@@ -708,14 +708,15 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
   }
 
   Widget _buildStepRoadmapItem(dynamic s, {required bool isLast}) {
-    final String judul = (s['judul'] ?? 'Tahap').toString();
-    final String sub = (s['sub'] ?? '-').toString();
+    final String judul = (s['judul'] ?? s['title'] ?? 'Tahap').toString();
+    final String sub = (s['sub'] ?? s['desc'] ?? '-').toString();
     final bool isCompleted = s['is_completed'] == true;
-    final bool isActive = s['is_active'] == true;
-    final bool isLocked = s['is_locked'] == true;
-    final String actionLabel = (s['action_label'] ?? 'Pelajari').toString();
+    final bool isActive = (s['is_active'] == true || s['is_current'] == true);
+    final bool isUnlocked = (s['is_unlocked'] == true || isCompleted || isActive);
+    final bool isLocked = s['is_locked'] == true || (!isUnlocked && !isCompleted && !isActive);
+    final String actionLabel = (s['action_label'] ?? (isCompleted ? 'Tinjau' : 'Pelajari')).toString();
     final String actionType = (s['action_type'] ?? 'materi').toString();
-    final int completedCount = int.tryParse((s['completed_count'] ?? 0).toString()) ?? 0;
+    final int completedCount = int.tryParse((s['completed_count'] ?? (isCompleted ? 1 : 0)).toString()) ?? 0;
     final int totalCount = int.tryParse((s['total_count'] ?? 1).toString()) ?? 1;
 
     Color nodeColor = Colors.grey.shade400;

@@ -707,42 +707,82 @@ class ApiController {
                         [
                             'step_no' => 1,
                             'title' => 'Tahap 1: Modul Teori & Materi Digital',
+                            'judul' => 'Tahap 1: Modul Teori & Materi Digital',
                             'desc' => 'Pelajari konsep dasar & modul KBM.',
+                            'sub' => 'Pelajari konsep dasar & modul KBM.',
                             'is_completed' => ($progressPct >= 20 || $completedItems >= 1),
                             'is_unlocked' => true,
-                            'is_current' => ($currentStep === 1)
+                            'is_active' => ($currentStep === 1),
+                            'is_current' => ($currentStep === 1),
+                            'is_locked' => false,
+                            'completed_count' => ($completedItems >= 1 ? 1 : 0),
+                            'total_count' => count($materiRows) ?: 1,
+                            'action_label' => 'Buka Materi',
+                            'action_type' => 'materi'
                         ],
                         [
                             'step_no' => 2,
                             'title' => 'Tahap 2: Diskusi KBM & Praktikum',
+                            'judul' => 'Tahap 2: Diskusi KBM & Praktikum',
                             'desc' => 'Praktik langsung & pendalaman materi.',
+                            'sub' => 'Praktik langsung & pendalaman materi.',
                             'is_completed' => ($progressPct >= 40),
                             'is_unlocked' => ($progressPct >= 20 || $completedItems >= 1),
-                            'is_current' => ($currentStep === 2)
+                            'is_active' => ($currentStep === 2),
+                            'is_current' => ($currentStep === 2),
+                            'is_locked' => !($progressPct >= 20 || $completedItems >= 1),
+                            'completed_count' => ($progressPct >= 40 ? 1 : 0),
+                            'total_count' => 1,
+                            'action_label' => 'Buka Diskusi',
+                            'action_type' => 'materi'
                         ],
                         [
                             'step_no' => 3,
                             'title' => 'Tahap 3: Penugasan KBM Terstruktur',
+                            'judul' => 'Tahap 3: Penugasan KBM Terstruktur',
                             'desc' => 'Kirim laporan & tugas praktik.',
+                            'sub' => 'Kirim laporan & tugas praktik.',
                             'is_completed' => ($progressPct >= 60),
                             'is_unlocked' => ($progressPct >= 40),
-                            'is_current' => ($currentStep === 3)
+                            'is_active' => ($currentStep === 3),
+                            'is_current' => ($currentStep === 3),
+                            'is_locked' => !($progressPct >= 40),
+                            'completed_count' => ($progressPct >= 60 ? count($tugasRows) : 0),
+                            'total_count' => count($tugasRows) ?: 1,
+                            'action_label' => 'Kirim Tugas',
+                            'action_type' => 'tugas'
                         ],
                         [
                             'step_no' => 4,
                             'title' => 'Tahap 4: Uji Evaluasi & Kuis CBT',
+                            'judul' => 'Tahap 4: Uji Evaluasi & Kuis CBT',
                             'desc' => 'Evaluasi kompetensi berbasis CBT.',
+                            'sub' => 'Evaluasi kompetensi berbasis CBT.',
                             'is_completed' => ($progressPct >= 80),
                             'is_unlocked' => ($progressPct >= 60),
-                            'is_current' => ($currentStep === 4)
+                            'is_active' => ($currentStep === 4),
+                            'is_current' => ($currentStep === 4),
+                            'is_locked' => !($progressPct >= 60),
+                            'completed_count' => ($progressPct >= 80 ? count($quizRows) : 0),
+                            'total_count' => count($quizRows) ?: 1,
+                            'action_label' => 'Ikuti Kuis',
+                            'action_type' => 'quiz'
                         ],
                         [
                             'step_no' => 5,
                             'title' => 'Tahap 5: Tuntas Semester & Sertifikasi',
+                            'judul' => 'Tahap 5: Tuntas Semester & Sertifikasi',
                             'desc' => 'Kelulusan modul & sertifikat KBM.',
+                            'sub' => 'Kelulusan modul & sertifikat KBM.',
                             'is_completed' => ($progressPct >= 100),
                             'is_unlocked' => ($progressPct >= 80),
-                            'is_current' => ($currentStep === 5)
+                            'is_active' => ($currentStep === 5),
+                            'is_current' => ($currentStep === 5),
+                            'is_locked' => !($progressPct >= 80),
+                            'completed_count' => ($progressPct >= 100 ? 1 : 0),
+                            'total_count' => 1,
+                            'action_label' => 'Sertifikat',
+                            'action_type' => 'cbt'
                         ]
                     ];
 
