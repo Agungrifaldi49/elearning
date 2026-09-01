@@ -421,6 +421,69 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
 
 <!-- Kontak & Google Maps -->
 <section id="kontak" class="py-5 bg-light overflow-hidden">
+    <style>
+    /* Ultra-Responsive Modern Contact Cards & Icons */
+    .contact-info-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 22px !important;
+        padding: 20px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03) !important;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .contact-info-card:hover {
+        transform: translateY(-4px) !important;
+        box-shadow: 0 12px 28px rgba(13, 110, 253, 0.12) !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    .contact-icon-box {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+        transition: all 0.3s ease;
+    }
+
+    .contact-icon-box.icon-danger {
+        background: linear-gradient(135deg, rgba(220, 53, 69, 0.12) 0%, rgba(239, 68, 68, 0.22) 100%);
+        color: #dc3545;
+        box-shadow: 0 6px 14px rgba(220, 53, 69, 0.15);
+    }
+
+    .contact-icon-box.icon-success {
+        background: linear-gradient(135deg, rgba(25, 135, 84, 0.12) 0%, rgba(16, 185, 129, 0.22) 100%);
+        color: #198754;
+        box-shadow: 0 6px 14px rgba(25, 135, 84, 0.15);
+    }
+
+    .contact-icon-box.icon-primary {
+        background: linear-gradient(135deg, rgba(13, 110, 253, 0.12) 0%, rgba(59, 130, 246, 0.22) 100%);
+        color: #0d6efd;
+        box-shadow: 0 6px 14px rgba(13, 110, 253, 0.15);
+    }
+
+    @media (max-width: 575.98px) {
+        .contact-info-card {
+            padding: 16px !important;
+            border-radius: 18px !important;
+        }
+        .contact-icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            font-size: 1.2rem;
+        }
+    }
+    </style>
+
     <div class="container py-4">
         <div class="row gy-4 align-items-stretch">
             
@@ -435,13 +498,13 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
                 
                 <div class="d-flex flex-column gap-3 mb-2">
                     <!-- Alamat Card -->
-                    <div class="card-hover-effect p-3.5 bg-white rounded-4 border shadow-sm w-100 overflow-hidden" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="contact-info-card">
                         <div class="d-flex align-items-start gap-3">
-                            <div class="bg-danger bg-opacity-10 text-danger rounded-3 p-3 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
-                                <i class="bi bi-geo-alt-fill fs-3"></i>
+                            <div class="contact-icon-box icon-danger">
+                                <i class="bi bi-geo-alt-fill"></i>
                             </div>
                             <div class="flex-grow-1 min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-                                <h6 class="fw-bold mb-1 font-heading text-dark">Alamat Lengkap</h6>
+                                <h6 class="fw-bold mb-1 font-heading text-dark fs-6">Alamat Lengkap</h6>
                                 <p class="small text-secondary mb-0" style="text-align: justify; text-justify: inter-word; line-height: 1.55;">
                                     <?= Security::safeText($settings['alamat'] ?? 'Jl. Raya Cicalengka, Kab. Bandung, Jawa Barat 40395') ?>
                                 </p>
@@ -450,13 +513,13 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
                     </div>
 
                     <!-- Telepon / WhatsApp Card -->
-                    <div class="card-hover-effect p-3.5 bg-white rounded-4 border shadow-sm w-100 overflow-hidden" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="contact-info-card">
                         <div class="d-flex align-items-start gap-3">
-                            <div class="bg-success bg-opacity-10 text-success rounded-3 p-3 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
-                                <i class="bi bi-telephone-fill fs-3"></i>
+                            <div class="contact-icon-box icon-success">
+                                <i class="bi bi-telephone-fill"></i>
                             </div>
                             <div class="flex-grow-1 min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-                                <h6 class="fw-bold mb-1 font-heading text-dark">Telepon / WhatsApp</h6>
+                                <h6 class="fw-bold mb-1 font-heading text-dark fs-6">Telepon / WhatsApp</h6>
                                 <p class="small text-secondary mb-0 fw-semibold">
                                     <?= Security::safeText($settings['telepon'] ?? '+62 812-3456-7890') ?>
                                 </p>
@@ -465,13 +528,13 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
                     </div>
 
                     <!-- Email Resmi Card -->
-                    <div class="card-hover-effect p-3.5 bg-white rounded-4 border shadow-sm w-100 overflow-hidden" style="border: 1px solid #e2e8f0 !important;">
+                    <div class="contact-info-card">
                         <div class="d-flex align-items-start gap-3">
-                            <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
-                                <i class="bi bi-envelope-fill fs-3"></i>
+                            <div class="contact-icon-box icon-primary">
+                                <i class="bi bi-envelope-fill"></i>
                             </div>
                             <div class="flex-grow-1 min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
-                                <h6 class="fw-bold mb-1 font-heading text-dark">Email Resmi</h6>
+                                <h6 class="fw-bold mb-1 font-heading text-dark fs-6">Email Resmi</h6>
                                 <p class="small text-secondary mb-0 fw-semibold">
                                     <?= Security::safeText($settings['landing_email'] ?? $settings['smtp_user'] ?? 'info@smkmh-cicalengka.sch.id') ?>
                                 </p>
@@ -483,7 +546,7 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
             
             <!-- Right Side: Google Maps Embed Card -->
             <div class="col-lg-7">
-                <div class="p-2.5 bg-white rounded-4 border shadow-sm h-100 d-flex flex-column" style="border: 1px solid #e2e8f0 !important; min-height: 380px;">
+                <div class="p-2.5 bg-white rounded-4 border shadow-sm h-100 d-flex flex-column" style="border: 1px solid #e2e8f0 !important; min-height: 380px; border-radius: 22px !important;">
                     <div class="flex-grow-1 rounded-3 overflow-hidden position-relative w-100" style="min-height: 320px;">
                         <iframe src="<?= htmlspecialchars($mapsUrl) ?>" title="Lokasi Google Maps" class="w-100 h-100 position-absolute top-0 start-0 border-0 rounded-3" allowfullscreen loading="lazy"></iframe>
                     </div>
