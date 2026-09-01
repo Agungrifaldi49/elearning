@@ -447,12 +447,20 @@ class ApiController {
                 $siswaId = intval($siswa['id'] ?? 0);
                 $kelasId = intval($siswa['kelas_id'] ?? 0);
 
-                // Get enrolled mapels, fallback and merge all class mapels
-                $enrolledList = [];
+                // Get enrolled mapels
+                $enrolledListRaw = [];
                 try {
-                    $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
+                    $enrolledListRaw = $academicModel->getSiswaEnrolledMapels($siswaId);
                 } catch (\Throwable $eEnr) {
-                    $enrolledList = [];
+                    $enrolledListRaw = [];
+                }
+
+                $enrolledMapelMap = [];
+                foreach ($enrolledListRaw as $em) {
+                    $mId = intval($em['mapel_id'] ?? $em['id'] ?? 0);
+                    if ($mId > 0) {
+                        $enrolledMapelMap[$mId] = true;
+                    }
                 }
 
                 $classMapels = [];
@@ -466,10 +474,11 @@ class ApiController {
                 $seenMapelIds = [];
                 $mergedList = [];
 
-                foreach ($enrolledList as $em) {
+                foreach ($enrolledListRaw as $em) {
                     $mId = intval($em['mapel_id'] ?? $em['id'] ?? 0);
                     if ($mId > 0 && !isset($seenMapelIds[$mId])) {
                         $seenMapelIds[$mId] = true;
+                        $em['is_enrolled'] = true;
                         $mergedList[] = $em;
                     }
                 }
@@ -478,6 +487,7 @@ class ApiController {
                     $mId = intval($cm['mapel_id'] ?? $cm['id'] ?? 0);
                     if ($mId > 0 && !isset($seenMapelIds[$mId])) {
                         $seenMapelIds[$mId] = true;
+                        $cm['is_enrolled'] = isset($enrolledMapelMap[$mId]);
                         $mergedList[] = $cm;
                     }
                 }
@@ -791,6 +801,7 @@ class ApiController {
                         'nama_mapel' => $namaMapel,
                         'kode_mapel' => $kodeMapel,
                         'nama_guru' => $namaGuru,
+                        'is_enrolled' => !empty($em['is_enrolled']),
                         'status_category' => $statusCat,
                         'status_label' => $statusLabel,
                         'progress_percent' => $progressPct,

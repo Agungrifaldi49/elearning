@@ -16,6 +16,7 @@ class LearningPathScreen extends StatefulWidget {
 
 class _LearningPathScreenState extends State<LearningPathScreen> {
   bool _isLoading = true;
+  int _selectedMapelId = 0; // 0 for all mapels
   String _selectedTab = 'semua'; // 'semua', 'dalam_proses', 'selesai', 'belum_dimulai'
   Map<String, dynamic> _data = {};
   final Set<int> _expandedMapelIds = {};
@@ -109,9 +110,13 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     final List mapelListRaw = (_data['mapel_list'] is List) ? _data['mapel_list'] : [];
 
     final filteredMapel = mapelListRaw.where((m) {
+      final int mId = int.tryParse((m['mapel_id'] ?? m['id'] ?? 0).toString()) ?? 0;
       final cat = (m['status_category'] ?? 'dalam_proses').toString();
-      if (_selectedTab == 'semua') return true;
-      return cat == _selectedTab;
+      
+      bool matchesSubject = (_selectedMapelId == 0 || mId == _selectedMapelId);
+      bool matchesTab = (_selectedTab == 'semua' || cat == _selectedTab);
+      
+      return matchesSubject && matchesTab;
     }).toList();
 
     return Scaffold(
@@ -217,9 +222,87 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       ),
                     ),
 
+                    // Mapel Selection Card (Matching Web learning_path.php)
+                    if (mapelListRaw.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: Colors.deepPurple.shade100),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.book_rounded, color: Colors.deepPurple.shade700, size: 18),
+                                  const SizedBox(width: 6),
+                                  const Text('Pilih Mata Pelajaran:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF0F172A) : Colors.grey.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<int>(
+                                    value: _selectedMapelId,
+                                    isExpanded: true,
+                                    icon: const Icon(Icons.arrow_drop_down_rounded, color: Colors.deepPurple),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: isDark ? Colors.white : Colors.deepPurple.shade900,
+                                    ),
+                                    items: [
+                                      const DropdownMenuItem<int>(
+                                        value: 0,
+                                        child: Text('📋 Semua Mata Pelajaran'),
+                                      ),
+                                      ...mapelListRaw.map((m) {
+                                        final mId = int.tryParse((m['mapel_id'] ?? m['id'] ?? 0).toString()) ?? 0;
+                                        final mNama = (m['nama_mapel'] ?? 'Mata Pelajaran').toString();
+                                        final isEnr = m['is_enrolled'] == true;
+                                        return DropdownMenuItem<int>(
+                                          value: mId,
+                                          child: Text(
+                                            '$mNama${isEnr ? ' (Terdaftar)' : ' 🔒'}',
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() => _selectedMapelId = val);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
                     // Filter Tabs Segmented Bar
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -393,15 +476,22 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     final List sequenceItems = (m['sequence_items'] is List) ? m['sequence_items'] : [];
     final bool isExpanded = _expandedMapelIds.contains(mapelId);
 
+    final bool isEnrolled = m['is_enrolled'] == true;
+
     Color badgeBg = Colors.amber.shade50;
     Color badgeFg = Colors.amber.shade900;
-    if (statusCat == 'selesai') {
+    if (!isEnrolled) {
+      badgeBg = Colors.red.shade50;
+      badgeFg = Colors.red.shade900;
+    } else if (statusCat == 'selesai') {
       badgeBg = Colors.green.shade50;
       badgeFg = Colors.green.shade900;
     } else if (statusCat == 'belum_dimulai') {
       badgeBg = Colors.grey.shade100;
       badgeFg = Colors.grey.shade700;
     }
+
+    final String displayStatusLabel = isEnrolled ? statusLabel : '🔑 Terkunci (Key Mapel)';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -449,7 +539,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          statusLabel,
+                          displayStatusLabel,
                           style: TextStyle(color: badgeFg, fontWeight: FontWeight.bold, fontSize: 11),
                         ),
                       ),
@@ -543,6 +633,34 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                     const SizedBox(height: 16),
                     const Divider(height: 1),
                     const SizedBox(height: 12),
+                  ] else ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.shade200),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.info_outline_rounded, color: Colors.amber.shade900, size: 28),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Belum Ada Modul Materi atau Evaluasi pada Mapel Ini',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Guru pengampu belum mengunggah modul materi atau tugas pada mata pelajaran ini.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11, color: Colors.amber.shade800),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
 
                   const Padding(
