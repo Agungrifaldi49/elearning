@@ -46,6 +46,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final guruProvider = Provider.of<GuruProvider>(context);
     final stats = (guruProvider.dashboardData?['stats'] as Map?) ?? {'materi': 0, 'tugas': 0, 'quiz': 0};
+    final jadwalToday = (guruProvider.dashboardData?['jadwal_hari_ini'] as List?) ?? [];
     final activeTa = (guruProvider.dashboardData?['active_ta'] as Map?) ?? {};
     final taTahun = (activeTa['tahun_ajaran'] ?? activeTa['tahun'] ?? '').toString();
     final taSem = (activeTa['semester'] ?? '').toString();
