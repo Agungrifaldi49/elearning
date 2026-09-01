@@ -24,27 +24,89 @@ $misiContent = Security::safeHtml($settings['landing_misi_desc'] ?? 'Mengembangk
 $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK Unggulan berstandar Nasional berbasis Teknologi & Imtaq.');
 ?>
 
+<style>
+/* Header Navbar Responsive Custom Styling */
+.landing-navbar-title {
+    max-width: 580px;
+    display: inline-block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+@media (max-width: 991.98px) {
+    .landing-navbar-title {
+        max-width: calc(100vw - 140px);
+        font-size: 1.05rem !important;
+    }
+    #mainNavbar .navbar-collapse {
+        background: linear-gradient(135deg, #0a58ca 0%, #073896 100%);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-radius: 20px;
+        padding: 20px;
+        margin-top: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    }
+    #mainNavbar .nav-link {
+        padding: 10px 16px !important;
+        border-radius: 12px;
+        transition: background 0.2s ease;
+    }
+    #mainNavbar .nav-link:hover,
+    #mainNavbar .nav-link:focus {
+        background: rgba(255, 255, 255, 0.15);
+    }
+    #mainNavbar .btn-warning {
+        width: 100%;
+        margin-top: 10px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        text-align: center;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .landing-navbar-title {
+        max-width: calc(100vw - 110px);
+        font-size: 0.95rem !important;
+    }
+}
+
+/* Profil Sekolah, Visi Utama & Misi Presisi Text Justify Alignment */
+.landing-profil-desc,
+.landing-misi-content,
+.landing-misi-content p,
+.landing-misi-content li {
+    text-align: justify !important;
+    text-justify: inter-word !important;
+    line-height: 1.75 !important;
+}
+</style>
+
 <!-- Navbar Landing Page -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top shadow-sm py-3" id="mainNavbar">
     <div class="container">
         <a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#">
             <?php if ($logoUrl): ?>
-                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" class="rounded-3 bg-white p-1 shadow-sm" style="height:36px; object-fit:contain;">
+                <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo" class="rounded-3 bg-white p-1 shadow-sm flex-shrink-0" style="height:36px; object-fit:contain;">
             <?php else: ?>
-                <i class="bi bi-mortarboard-fill fs-3 text-warning"></i>
+                <i class="bi bi-mortarboard-fill fs-3 text-warning flex-shrink-0"></i>
             <?php endif; ?>
-            <span class="fs-5 tracking-tight font-heading text-white"><?= $schoolName ?></span>
+            <span class="fs-5 tracking-tight font-heading text-white landing-navbar-title"><?= $schoolName ?></span>
         </a>
-        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic" aria-controls="navPublic" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler border-0 shadow-none p-2 rounded-3" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic" aria-controls="navPublic" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navPublic">
-            <ul class="navbar-nav ms-auto me-3 gap-2 py-2 py-lg-0">
-                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#profil">Profil</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#fitur">Fitur LMS</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#jurusan">Jurusan</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#guru">Tenaga Pengajar</a></li>
-                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#kontak">Kontak</a></li>
+            <ul class="navbar-nav ms-auto me-lg-3 gap-1 gap-lg-2 py-2 py-lg-0">
+                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#profil"><i class="bi bi-building d-lg-none me-2"></i>Profil</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#fitur"><i class="bi bi-stars d-lg-none me-2"></i>Fitur LMS</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#jurusan"><i class="bi bi-award d-lg-none me-2"></i>Jurusan</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#guru"><i class="bi bi-people d-lg-none me-2"></i>Tenaga Pengajar</a></li>
+                <li class="nav-item"><a class="nav-link text-white fw-medium" href="#kontak"><i class="bi bi-envelope d-lg-none me-2"></i>Kontak</a></li>
             </ul>
             <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 rounded-pill shadow-sm">
                 <i class="bi bi-box-arrow-in-right me-1"></i> Masuk E-Learning
@@ -167,7 +229,7 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
                 <h2 class="display-6 fw-bold text-dark mb-3 font-heading">
                     <?= Security::safeText($settings['landing_profil_title'] ?? 'Mencetak Lulusan Berkarakter & Competent') ?>
                 </h2>
-                <p class="text-secondary lead fs-6 mb-4">
+                <p class="text-secondary lead fs-6 mb-4 landing-profil-desc">
                     <?= Security::safeText($settings['landing_profil_desc'] ?? 'SMK Muthia Harapan Cicalengka berkomitmen memberikan pendidikan kejuruan berkualitas tinggi berbasis teknologi informasi dan industri modern di Jawa Barat.') ?>
                 </p>
                 
