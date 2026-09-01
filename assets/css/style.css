@@ -669,17 +669,22 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 }
 
 .guru-card-img {
-    width: 84px;
-    height: 84px;
-    object-fit: cover;
-    border-radius: 50%;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-    border: 3px solid #ffffff;
-    transition: transform 0.3s ease;
+    width: 84px !important;
+    height: 84px !important;
+    max-width: 84px !important;
+    max-height: 84px !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+    border: 3px solid #ffffff !important;
+    transition: transform 0.3s ease !important;
+    display: block !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
 }
 
 .guru-card-img:hover {
-    transform: scale(1.08);
+    transform: scale(1.08) !important;
 }
 
 .border-dashed {

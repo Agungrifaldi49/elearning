@@ -397,9 +397,9 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
                         <div class="card card-hover-effect h-100 text-center overflow-hidden border-0 bg-light rounded-4">
                             <div class="pt-4 px-4">
                                 <?php if ($guruPhotoUrl): ?>
-                                    <img src="<?= $guruPhotoUrl ?>" alt="<?= Security::safeText($g['nama_lengkap']) ?>" class="guru-card-img mx-auto mb-3">
+                                    <img src="<?= $guruPhotoUrl ?>" alt="<?= Security::safeText($g['nama_lengkap']) ?>" class="guru-card-img mx-auto mb-3" style="width: 84px !important; height: 84px !important; max-width: 84px !important; max-height: 84px !important; object-fit: cover !important; border-radius: 50% !important; border: 3px solid #ffffff !important; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important; display: block !important;">
                                 <?php else: ?>
-                                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold fs-2 mx-auto mb-3 shadow-sm" style="width:84px; height:84px; background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%); border: 3px solid #fff;">
+                                    <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-bold fs-2 mx-auto mb-3 shadow-sm" style="width:84px !important; height:84px !important; background: linear-gradient(135deg, #0d6efd 0%, #0056d3 100%); border: 3px solid #fff;">
                                         <?= strtoupper(substr(Security::safeText($g['nama_lengkap']), 0, 1)) ?>
                                     </div>
                                 <?php endif; ?>
