@@ -1913,15 +1913,7 @@ class ApiController {
                 $tugas = $stmtT->fetchAll();
 
                 if (empty($tugas)) {
-                    $stmtAll = $this->db->query("
-                        SELECT t.*, mp.nama_mapel, k.nama_kelas,
-                               (SELECT COUNT(*) FROM pengumpulan_tugas pt WHERE pt.tugas_id = t.id) as total_pengumpulan 
-                        FROM tugas t 
-                        LEFT JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
-                        LEFT JOIN kelas k ON t.kelas_id = k.id 
-                        ORDER BY t.created_at DESC
-                    ");
-                    $tugas = $stmtAll->fetchAll();
+                    $tugas = [];
                 }
 
                 $academicModel = new AcademicModel();
@@ -2479,13 +2471,7 @@ class ApiController {
                         $soals = $stmtS->fetchAll();
 
                         if (empty($soals)) {
-                            $stmtAll = $this->db->query("SELECT s.*, q.judul as judul_quiz, mp.nama_mapel, k.nama_kelas 
-                                FROM soal s 
-                                JOIN quiz q ON s.quiz_id = q.id 
-                                LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
-                                LEFT JOIN kelas k ON q.kelas_id = k.id 
-                                ORDER BY s.id DESC");
-                            $soals = $stmtAll->fetchAll();
+                            $soals = [];
                         }
                     }
 

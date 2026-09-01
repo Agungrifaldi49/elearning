@@ -117,8 +117,20 @@ class ExamModel extends BaseModel {
             $kid = (int)$kelas_id;
             $sql .= " AND (FIND_IN_SET({$kid}, q.kelas_ids) OR q.kelas_id = {$kid} OR q.kelas_id = 0 OR q.kelas_id IS NULL OR q.kelas_ids IS NULL OR TRIM(q.kelas_ids) = '')";
         }
-        if ($guru_id) {
-            $sql .= " AND q.guru_id = " . (int)$guru_id;
+        if ($guru_id !== null && $guru_id !== '') {
+            $gid = (int)$guru_id;
+            if ($gid > 0) {
+                $stmtUid = $this->db->prepare("SELECT user_id FROM guru WHERE id = ? LIMIT 1");
+                $stmtUid->execute([$gid]);
+                $uId = (int)$stmtUid->fetchColumn();
+                if ($uId > 0) {
+                    $sql .= " AND (q.guru_id = {$gid} OR q.guru_id = {$uId})";
+                } else {
+                    $sql .= " AND q.guru_id = {$gid}";
+                }
+            } else {
+                $sql .= " AND q.guru_id = -1";
+            }
         }
         $sql .= " ORDER BY q.id DESC";
         return $this->db->query($sql)->fetchAll();
