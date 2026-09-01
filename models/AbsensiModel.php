@@ -719,6 +719,29 @@ class AbsensiModel extends BaseModel {
         }
     }
 
+    public function recordAttendanceGuru($guruId, $tanggal, $status, $keterangan = '') {
+        $gId = (int)$guruId;
+        if ($gId <= 0) return false;
+        if (!$tanggal) $tanggal = date('Y-m-d');
+        
+        try {
+            $stmt = $this->db->prepare("SELECT id FROM absensi_guru WHERE guru_id = ? AND tanggal = ? LIMIT 1");
+            $stmt->execute([$gId, $tanggal]);
+            $existing = $stmt->fetch();
+
+            if ($existing) {
+                $upd = $this->db->prepare("UPDATE absensi_guru SET status = ?, keterangan = ? WHERE id = ?");
+                return $upd->execute([$status, $keterangan, $existing['id']]);
+            } else {
+                $now = date('H:i:s');
+                $ins = $this->db->prepare("INSERT INTO absensi_guru (guru_id, tanggal, waktu_masuk, waktu_hadir, status, keterangan) VALUES (?, ?, ?, ?, ?, ?)");
+                return $ins->execute([$gId, $tanggal, $now, $now, $status, $keterangan]);
+            }
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     public function getMonthlyRecapSiswa($bulan, $tahun, $kelasId = null, $guruId = null) {
         $bulan = sprintf('%02d', (int)$bulan);
         $tahun = (int)$tahun;

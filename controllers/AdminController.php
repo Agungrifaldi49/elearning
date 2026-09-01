@@ -620,7 +620,40 @@ class AdminController {
         $jadwalList = $academicModel->getJadwal();
         $selectedJadwal = (int)($_GET['jadwal_id'] ?? ($jadwalList[0]['id'] ?? 1));
         $tanggal = $_GET['tanggal'] ?? date('Y-m-d');
-        $recap = $absensiModel->getRecap($selectedJadwal, $tanggal);
+        $tab = $_GET['tab'] ?? ($_POST['tab'] ?? 'siswa');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('CSRF Token Invalid');
+                header('Location: ' . BASE_URL . "index.php?url=admin/absensi&jadwal_id={$selectedJadwal}&tanggal={$tanggal}&tab={$tab}");
+                exit();
+            }
+
+            // Save Presensi Siswa
+            if (isset($_POST['absensi']) && is_array($_POST['absensi'])) {
+                $presensi = $_POST['absensi'];
+                foreach ($presensi as $siswaId => $status) {
+                    $keterangan = Security::sanitize($_POST['keterangan'][$siswaId] ?? '');
+                    $absensiModel->recordAttendance($selectedJadwal, (int)$siswaId, $tanggal, $status, $keterangan);
+                }
+                FlashHelper::setSuccess('Rekap presensi siswa berhasil disimpan.');
+            }
+
+            // Save Presensi Guru & GTK
+            if (isset($_POST['absensi_guru']) && is_array($_POST['absensi_guru'])) {
+                $presensiGuru = $_POST['absensi_guru'];
+                foreach ($presensiGuru as $guruId => $status) {
+                    $keteranganGuru = Security::sanitize($_POST['keterangan_guru'][$guruId] ?? '');
+                    $absensiModel->recordAttendanceGuru((int)$guruId, $tanggal, $status, $keteranganGuru);
+                }
+                FlashHelper::setSuccess('Rekap presensi guru & GTK berhasil disimpan.');
+            }
+
+            header('Location: ' . BASE_URL . "index.php?url=admin/absensi&jadwal_id={$selectedJadwal}&tanggal={$tanggal}&tab={$tab}");
+            exit();
+        }
+
+        $recap = $selectedJadwal > 0 ? $absensiModel->getRecap($selectedJadwal, $tanggal) : [];
         $recapGuru = $absensiModel->getRecapGuru($tanggal);
 
         require_once ROOT_PATH . 'views/guru/absensi.php';

@@ -89,7 +89,7 @@ $avgPersentase = ($totalSubjek > 0) ? round($persentaseSum / $totalSubjek, 1) : 
 
                 <div class="col-6 col-md-3">
                     <label class="form-label small fw-semibold text-dark mb-1">Pilih Bulan</label>
-                    <select name="bulan" class="form-select rounded-3">
+                    <select name="bulan" class="form-select rounded-3" onchange="this.form.submit()">
                         <?php foreach ($namaBulanList as $mKey => $mName): ?>
                             <option value="<?= $mKey ?>" <?= $bulan === $mKey ? 'selected' : '' ?>><?= $mName ?></option>
                         <?php endforeach; ?>
@@ -98,7 +98,7 @@ $avgPersentase = ($totalSubjek > 0) ? round($persentaseSum / $totalSubjek, 1) : 
 
                 <div class="col-6 col-md-3">
                     <label class="form-label small fw-semibold text-dark mb-1">Pilih Tahun</label>
-                    <select name="tahun" class="form-select rounded-3">
+                    <select name="tahun" class="form-select rounded-3" onchange="this.form.submit()">
                         <?php for ($y = date('Y') + 1; $y >= 2024; $y--): ?>
                             <option value="<?= $y ?>" <?= $tahun == $y ? 'selected' : '' ?>><?= $y ?></option>
                         <?php endfor; ?>
@@ -108,7 +108,7 @@ $avgPersentase = ($totalSubjek > 0) ? round($persentaseSum / $totalSubjek, 1) : 
                 <?php if ($type === 'siswa'): ?>
                 <div class="col-12 col-md-4">
                     <label class="form-label small fw-semibold text-dark mb-1">Filter Kelas</label>
-                    <select name="kelas_id" class="form-select rounded-3">
+                    <select name="kelas_id" class="form-select rounded-3" onchange="this.form.submit()">
                         <option value="0" <?= (isset($_GET['kelas_id']) && (string)$_GET['kelas_id'] === '0') || !isset($_GET['kelas_id']) ? 'selected' : '' ?>>-- Seluruh Kelas --</option>
                         <?php foreach ($kelasList as $k): ?>
                             <option value="<?= $k['id'] ?>" <?= (isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] === (int)$k['id']) ? 'selected' : '' ?>>
@@ -119,9 +119,9 @@ $avgPersentase = ($totalSubjek > 0) ? round($persentaseSum / $totalSubjek, 1) : 
                 </div>
                 <?php endif; ?>
 
-                <div class="col-12 col-md-2">
+                <div class="col-12 col-md-2 d-none d-md-block">
                     <button type="submit" class="btn btn-primary w-100 rounded-3 fw-semibold">
-                        <i class="bi bi-filter me-1"></i> Tampilkan
+                        <i class="bi bi-filter me-1"></i> Filter
                     </button>
                 </div>
             </form>
