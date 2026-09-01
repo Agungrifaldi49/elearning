@@ -348,6 +348,11 @@ if (!empty($jadwalList)) {
                         <div class="d-flex flex-column gap-2.5">
                             <?php foreach ($pengumumanList as $p): ?>
                                 <div class="p-3 bg-light rounded-3 border-start border-3 border-danger shadow-xs">
+                                    <?php if (!empty($p['banner'])): ?>
+                                        <div class="mb-2.5 overflow-hidden rounded-3 border">
+                                            <img src="<?= BASE_URL . htmlspecialchars($p['banner']) ?>" class="w-100" style="max-height: 160px; object-fit: cover;" alt="Banner">
+                                        </div>
+                                    <?php endif; ?>
                                     <h6 class="fw-bold text-primary mb-1 fs-6"><?= htmlspecialchars($p['judul']) ?></h6>
                                     <p class="small text-secondary mb-0 lh-base" style="font-size:0.82rem;"><?= htmlspecialchars($p['isi']) ?></p>
                                 </div>

@@ -172,6 +172,11 @@
                                 <div class="col-12 col-md-6">
                                     <div class="p-3 bg-light rounded-4 border h-100 d-flex flex-column justify-content-between shadow-xs">
                                         <div>
+                                            <?php if (!empty($p['banner'])): ?>
+                                                <div class="mb-2.5 overflow-hidden rounded-3 border">
+                                                    <img src="<?= BASE_URL . htmlspecialchars($p['banner']) ?>" class="w-100" style="height: 120px; object-fit: cover;" alt="Banner">
+                                                </div>
+                                            <?php endif; ?>
                                             <div class="d-flex justify-content-between align-items-center mb-2">
                                                 <span class="badge bg-danger text-white fw-bold"><i class="bi bi-shield-check me-1"></i>ADMIN SEKOLAH</span>
                                                 <small class="text-muted"><i class="bi bi-clock me-1"></i><?= date('d M Y, H:i', strtotime($p['created_at'])) ?></small>

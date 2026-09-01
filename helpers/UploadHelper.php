@@ -14,7 +14,8 @@ class UploadHelper {
         'sertifikat' => ['pdf', 'jpg', 'png'],
         'logo' => ['jpg', 'jpeg', 'png', 'webp', 'svg', 'ico'],
         'soal' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-        'forum' => ['jpg', 'jpeg', 'png', 'gif', 'webp']
+        'forum' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        'pengumuman' => ['jpg', 'jpeg', 'png', 'gif', 'webp']
     ];
 
     private static $max_sizes = [
@@ -25,7 +26,8 @@ class UploadHelper {
         'sertifikat' => 10 * 1024 * 1024, // 10 MB
         'logo' => 5 * 1024 * 1024,       // 5 MB
         'soal' => 10 * 1024 * 1024,      // 10 MB
-        'forum' => 10 * 1024 * 1024      // 10 MB
+        'forum' => 10 * 1024 * 1024,      // 10 MB
+        'pengumuman' => 10 * 1024 * 1024  // 10 MB
     ];
 
     /**

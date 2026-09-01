@@ -257,7 +257,7 @@
                 <h5 class="fw-bold modal-title"><i class="bi bi-megaphone-fill text-warning me-2"></i>Terbitkan Informasi / Pengumuman Baru</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="<?= BASE_URL ?>index.php?url=admin/dashboard" method="POST">
+            <form action="<?= BASE_URL ?>index.php?url=admin/dashboard" method="POST" enctype="multipart/form-data">
                 <div class="modal-body">
                     <?= Security::csrfField() ?>
                     <input type="hidden" name="action" value="create_pengumuman">
@@ -274,6 +274,15 @@
                             <option value="siswa">Khusus Siswa</option>
                             <option value="guru">Khusus Guru / Tenaga Pengajar</option>
                         </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold d-flex justify-content-between align-items-center">
+                            <span>Gambar Banner Pengumuman</span>
+                            <span class="badge bg-secondary-subtle text-secondary border">Opsional</span>
+                        </label>
+                        <input type="file" name="banner" class="form-control" accept="image/*">
+                        <small class="text-muted d-block mt-1">Unggah header banner opsional (JPG, PNG, WEBP, GIF. Maks 10 MB).</small>
                     </div>
 
                     <div class="mb-3">

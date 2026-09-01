@@ -13,6 +13,13 @@ class CommunicationModel extends BaseModel {
         $this->ensureLastSeenColumn();
         $this->ensureForumColumnsExist();
         $this->ensureForumReactionsTable();
+        $this->ensurePengumumanColumnsExist();
+    }
+
+    private function ensurePengumumanColumnsExist() {
+        try {
+            $this->db->exec("ALTER TABLE pengumuman ADD COLUMN IF NOT EXISTS banner VARCHAR(255) NULL");
+        } catch (Exception $e) {}
     }
 
     private function ensureForumReactionsTable() {
@@ -105,21 +112,43 @@ class CommunicationModel extends BaseModel {
         ")->fetchAll();
     }
 
-    public function createPengumuman($userId, $judul, $isi, $target_role, $is_popup) {
+    public function createPengumuman($userId, $judul, $isi, $target_role, $is_popup, $banner = null) {
         $stmt = $this->db->prepare("
-            INSERT INTO pengumuman (user_id, judul, isi, target_role, is_popup)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO pengumuman (user_id, judul, isi, target_role, is_popup, banner)
+            VALUES (?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([$userId, $judul, $isi, $target_role, $is_popup ? 1 : 0]);
+        return $stmt->execute([$userId, $judul, $isi, $target_role, $is_popup ? 1 : 0, $banner]);
     }
 
-    public function updatePengumuman($id, $judul, $isi, $target_role, $is_popup) {
-        $stmt = $this->db->prepare("
-            UPDATE pengumuman 
-            SET judul = ?, isi = ?, target_role = ?, is_popup = ?
-            WHERE id = ?
-        ");
-        return $stmt->execute([$judul, $isi, $target_role, $is_popup ? 1 : 0, $id]);
+    public function addPengumuman($judul, $isi, $target_role = 'all', $is_popup = 0, $banner = null) {
+        $user = AuthHelper::user();
+        $userId = $user['id'] ?? 1;
+        return $this->createPengumuman($userId, $judul, $isi, $target_role, $is_popup, $banner);
+    }
+
+    public function updatePengumuman($id, $judul, $isi, $target_role, $is_popup, $banner = null, $removeBanner = false) {
+        if ($removeBanner) {
+            $stmt = $this->db->prepare("
+                UPDATE pengumuman 
+                SET judul = ?, isi = ?, target_role = ?, is_popup = ?, banner = NULL
+                WHERE id = ?
+            ");
+            return $stmt->execute([$judul, $isi, $target_role, $is_popup ? 1 : 0, $id]);
+        } elseif (!empty($banner)) {
+            $stmt = $this->db->prepare("
+                UPDATE pengumuman 
+                SET judul = ?, isi = ?, target_role = ?, is_popup = ?, banner = ?
+                WHERE id = ?
+            ");
+            return $stmt->execute([$judul, $isi, $target_role, $is_popup ? 1 : 0, $banner, $id]);
+        } else {
+            $stmt = $this->db->prepare("
+                UPDATE pengumuman 
+                SET judul = ?, isi = ?, target_role = ?, is_popup = ?
+                WHERE id = ?
+            ");
+            return $stmt->execute([$judul, $isi, $target_role, $is_popup ? 1 : 0, $id]);
+        }
     }
 
     public function deletePengumuman($id) {

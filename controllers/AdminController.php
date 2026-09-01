@@ -60,7 +60,15 @@ class AdminController {
                 $targetRole = $_POST['target_role'] ?? 'all';
                 $isPopup = isset($_POST['is_popup']) ? 1 : 0;
 
-                $commModel->addPengumuman($judul, $isi, $targetRole, $isPopup);
+                $bannerPath = null;
+                if (isset($_FILES['banner']) && $_FILES['banner']['error'] === UPLOAD_ERR_OK) {
+                    $uploaded = UploadHelper::upload($_FILES['banner'], 'pengumuman');
+                    if ($uploaded) {
+                        $bannerPath = 'assets/uploads/pengumuman/' . $uploaded;
+                    }
+                }
+
+                $commModel->addPengumuman($judul, $isi, $targetRole, $isPopup, $bannerPath);
                 FlashHelper::setSuccess('Informasi / Pengumuman sekolah baru berhasil diterbitkan!');
             }
 
@@ -1223,7 +1231,15 @@ class AdminController {
                 $targetRole = $_POST['target_role'] ?? 'all';
                 $isPopup = isset($_POST['is_popup']) ? 1 : 0;
 
-                $commModel->createPengumuman($user['id'], $judul, $isi, $targetRole, $isPopup);
+                $bannerPath = null;
+                if (isset($_FILES['banner']) && $_FILES['banner']['error'] === UPLOAD_ERR_OK) {
+                    $uploaded = UploadHelper::upload($_FILES['banner'], 'pengumuman');
+                    if ($uploaded) {
+                        $bannerPath = 'assets/uploads/pengumuman/' . $uploaded;
+                    }
+                }
+
+                $commModel->createPengumuman($user['id'], $judul, $isi, $targetRole, $isPopup, $bannerPath);
                 FlashHelper::setSuccess('Pengumuman / Informasi baru berhasil diterbitkan!');
 
             } elseif ($action === 'update') {
@@ -1232,8 +1248,17 @@ class AdminController {
                 $isi = Security::sanitize($_POST['isi']);
                 $targetRole = $_POST['target_role'] ?? 'all';
                 $isPopup = isset($_POST['is_popup']) ? 1 : 0;
+                $removeBanner = isset($_POST['remove_banner']) && $_POST['remove_banner'] == '1';
 
-                $commModel->updatePengumuman($id, $judul, $isi, $targetRole, $isPopup);
+                $bannerPath = null;
+                if (isset($_FILES['banner']) && $_FILES['banner']['error'] === UPLOAD_ERR_OK) {
+                    $uploaded = UploadHelper::upload($_FILES['banner'], 'pengumuman');
+                    if ($uploaded) {
+                        $bannerPath = 'assets/uploads/pengumuman/' . $uploaded;
+                    }
+                }
+
+                $commModel->updatePengumuman($id, $judul, $isi, $targetRole, $isPopup, $bannerPath, $removeBanner);
                 FlashHelper::setSuccess('Data Pengumuman / Informasi berhasil diperbarui.');
 
             } elseif ($action === 'delete') {
