@@ -45,10 +45,18 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = Provider.of<AuthProvider>(context).currentUser;
     final guruProvider = Provider.of<GuruProvider>(context);
-    final stats = (guruProvider.dashboardData?['stats'] as Map?) ?? {'materi': 0, 'tugas': 0, 'quiz': 0};
+    
+    final guruData = (guruProvider.dashboardData?['guru'] as Map?) ?? {};
+    final namaGuru = (guruData['nama_lengkap'] ?? user?.fullName ?? 'Guru').toString();
+    final nipGuru = (guruData['nip'] ?? '-').toString();
+    
+    final stats = (guruProvider.dashboardData?['stats'] as Map?) ?? {'materi': 0, 'tugas': 0, 'quiz': 0, 'siswa_terdaftar': 0};
     final jadwalToday = (guruProvider.dashboardData?['jadwal_hari_ini'] as List?) ?? [];
     final pengumuman = (guruProvider.dashboardData?['pengumuman'] as List?) ?? [];
+    final materiTerbaru = (guruProvider.dashboardData?['materi_terbaru'] as List?) ?? [];
+    
     final activeTa = (guruProvider.dashboardData?['active_ta'] as Map?) ?? {};
     final taTahun = (activeTa['tahun_ajaran'] ?? activeTa['tahun'] ?? '').toString();
     final taSem = (activeTa['semester'] ?? '').toString();
@@ -161,23 +169,32 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Portal Tenaga Pendidik',
-                            style: TextStyle(color: Colors.white70, fontSize: 13),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Selamat Bertugas, Guru! 👨‍🏫',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Portal Tenaga Pendidik',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            Text(
+                              'Selamat Datang, $namaGuru',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'NIP: $nipGuru',
+                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
                       ),
                       Container(
                         padding: const EdgeInsets.all(10),
@@ -212,11 +229,6 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Kelola Materi, Tugas, Quiz, & Data Pembelajaran secara Praktis',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -352,29 +364,40 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
 
             const SizedBox(height: 20),
 
-            // Quick Stats Row
-            Row(
+            // 4 KPI Stat Cards Grid (Matching Web Dashboard)
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 2.2,
               children: [
                 _buildStatCard(
                   title: 'Materi Upload',
                   count: stats['materi'].toString(),
-                  icon: Icons.upload_file,
+                  icon: Icons.upload_file_rounded,
                   color: Colors.blue,
                   isDark: isDark,
                 ),
-                const SizedBox(width: 12),
                 _buildStatCard(
-                  title: 'Tugas Dibuat',
+                  title: 'Tugas Active',
                   count: stats['tugas'].toString(),
-                  icon: Icons.task,
-                  color: Colors.amber,
+                  icon: Icons.task_alt_rounded,
+                  color: Colors.green,
                   isDark: isDark,
                 ),
-                const SizedBox(width: 12),
                 _buildStatCard(
                   title: 'Quiz / CBT',
                   count: stats['quiz'].toString(),
-                  icon: Icons.quiz,
+                  icon: Icons.quiz_rounded,
+                  color: Colors.amber.shade800,
+                  isDark: isDark,
+                ),
+                _buildStatCard(
+                  title: 'Siswa Terdaftar',
+                  count: (stats['siswa_terdaftar'] ?? 0).toString(),
+                  icon: Icons.people_alt_rounded,
                   color: Colors.purple,
                   isDark: isDark,
                 ),
@@ -450,12 +473,19 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
 
             if (jadwalToday.isEmpty)
               Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Center(
-                    child: Text(
-                      'Tidak ada jadwal mengajar hari ini.',
-                      style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                    child: Column(
+                      children: [
+                        Icon(Icons.check_circle_outline_rounded, color: Colors.green.shade400, size: 36),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tidak ada jadwal mengajar hari ini.',
+                          style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontWeight: FontWeight.w500),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -467,8 +497,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                 itemCount: jadwalToday.length,
                 itemBuilder: (context, index) {
                   final j = jadwalToday[index];
+                  final jamMulai = j['jam_mulai']?.toString().substring(0, 5) ?? '';
+                  final jamSelesai = j['jam_selesai']?.toString().substring(0, 5) ?? '';
+
                   return Card(
                     margin: const EdgeInsets.only(bottom: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     child: ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(10),
@@ -482,7 +516,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                         j['nama_mapel'] ?? '',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      subtitle: Text("Kelas: ${j['nama_kelas']} • Waktu: ${j['jam_mulai']} - ${j['jam_selesai']}"),
+                      subtitle: Text("Kelas: ${j['nama_kelas']} • Waktu: $jamMulai - $jamSelesai WIB"),
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -498,6 +532,64 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                   );
                 },
               ),
+
+            // Recent Materi Section (Preview)
+            if (materiTerbaru.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '📚 Materi Terbaru Saya',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${materiTerbaru.length} Modul',
+                      style: const TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: materiTerbaru.length > 3 ? 3 : materiTerbaru.length,
+                itemBuilder: (context, index) {
+                  final m = materiTerbaru[index] as Map;
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.menu_book_rounded, color: Colors.blue, size: 20),
+                      ),
+                      title: Text(
+                        m['judul']?.toString() ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        "${m['nama_mapel'] ?? 'Mapel'} • ${m['nama_kelas'] ?? 'Kelas Target'}",
+                        style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
 
             const SizedBox(height: 24),
 
@@ -538,36 +630,50 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
     required Color color,
     required bool isDark,
   }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkSurface : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              count,
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  count,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+              ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1668,6 +1668,7 @@ class ApiController {
 
     public function guru($endpoint = 'dashboard') {
         $endpoint = strtolower(explode('?', $endpoint)[0]);
+        $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? $_GET['guru_id'] ?? $_POST['guru_id'] ?? $input['guru_id'] ?? 0);
         if ($userId === 0) {
             $rawQuery = $_SERVER['QUERY_STRING'] ?? '';
@@ -1678,62 +1679,71 @@ class ApiController {
             }
         }
 
-        $stmtG = $this->db->prepare("SELECT * FROM guru WHERE user_id = :uid OR id = :uid2 LIMIT 1");
-        $stmtG->execute(['uid' => $userId, 'uid2' => $userId]);
-        $guru = $stmtG->fetch();
+        require_once ROOT_PATH . 'models/GuruModel.php';
+        require_once ROOT_PATH . 'models/LearningModel.php';
+        require_once ROOT_PATH . 'models/ExamModel.php';
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        require_once ROOT_PATH . 'models/CommunicationModel.php';
+
+        $guruModel = new GuruModel();
+        $learningModel = new LearningModel();
+        $examModel = new ExamModel();
+        $academicModel = new AcademicModel();
+        $commModel = new CommunicationModel();
+
+        // Get logged in user details if available
+        $userObj = null;
+        if ($userId > 0) {
+            $stmtU = $this->db->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
+            $stmtU->execute([$userId]);
+            $userObj = $stmtU->fetch(PDO::FETCH_ASSOC);
+        }
+
+        $guru = null;
+        if ($userId > 0) {
+            $guru = $guruModel->ensureGuruProfile($userId, $userObj['full_name'] ?? '');
+        }
 
         if (!$guru) {
-            $stmtFB = $this->db->query("SELECT * FROM guru ORDER BY id ASC LIMIT 1");
-            $guru = $stmtFB->fetch();
+            $stmtG = $this->db->query("SELECT * FROM guru ORDER BY id ASC LIMIT 1");
+            $guru = $stmtG->fetch(PDO::FETCH_ASSOC);
         }
 
         if (!$guru) {
             $this->jsonResponse(false, 'Data guru tidak ditemukan', null, 404);
         }
 
+        $guruId = (int)$guru['id'];
+
         switch ($endpoint) {
             case 'dashboard':
-                // Total Materi Guru
-                $stmtMat = $this->db->prepare("SELECT COUNT(*) as count FROM materi WHERE guru_id = :gid");
-                $stmtMat->execute(['gid' => $guru['id']]);
-                $totalMateri = $stmtMat->fetch()['count'];
+                // Data models matching Web GuruController dashboard
+                $materiList = $learningModel->getMateri(null, $guruId);
+                $tugasList = $learningModel->getTugas(null, $guruId);
+                $quizList = $examModel->getQuizList(null, $guruId);
+                $myKeys = $academicModel->getMapelEnrollmentKeys($guruId);
+                $enrolledStudents = $academicModel->getEnrolledStudentsForGuru($guruId);
 
-                // Total Tugas Guru
-                $stmtTug = $this->db->prepare("SELECT COUNT(*) as count FROM tugas WHERE guru_id = :gid");
-                $stmtTug->execute(['gid' => $guru['id']]);
-                $totalTugas = $stmtTug->fetch()['count'];
+                $totalMateri = count($materiList);
+                $totalTugas = count($tugasList);
+                $totalQuiz = count($quizList);
+                $totalKeys = count($myKeys);
+                $totalSiswaTerdaftar = count($enrolledStudents);
 
-                // Total Quiz Guru
-                $stmtQ = $this->db->prepare("SELECT COUNT(*) as count FROM quiz WHERE guru_id = :gid");
-                $stmtQ->execute(['gid' => $guru['id']]);
-                $totalQuiz = $stmtQ->fetch()['count'];
-
-                // Jadwal Mengajar Hari Ini (Strictly Filtered by Logged-in Teacher)
-                $days = [1=>'Senin', 2=>'Selasa', 3=>'Rabu', 4=>'Kamis', 5=>'Jumat', 6=>'Sabtu', 7=>'Minggu'];
-                $today = $days[date('N')] ?? 'Senin';
-                $stmtJ = $this->db->prepare("
-                    SELECT j.*, m.nama_mapel, k.nama_kelas 
-                    FROM jadwal j 
-                    JOIN mata_pelajaran m ON j.mapel_id = m.id 
-                    JOIN kelas k ON j.kelas_id = k.id 
-                    WHERE j.guru_id = :gid AND (TRIM(LOWER(j.hari)) = LOWER(:hari) OR j.hari = :hariRaw)
-                    ORDER BY j.jam_mulai ASC
-                ");
-                $stmtJ->execute(['gid' => $guru['id'], 'hari' => strtolower($today), 'hariRaw' => $today]);
-                $jadwalToday = $stmtJ->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-                if (empty($jadwalToday)) {
-                    $academicModel = new AcademicModel();
-                    $allGuruJadwal = $academicModel->getJadwal(null, (int)$guru['id']);
-                    $jadwalToday = array_values(array_filter($allGuruJadwal, function($item) use ($today) {
-                        return strcasecmp(trim($item['hari'] ?? ''), $today) === 0;
-                    }));
+                // Schedule Today (Strictly matching AcademicModel getJadwal and current day)
+                $jadwalList = $academicModel->getJadwal(null, $guruId);
+                $todayName = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][date('w')];
+                $jadwalHariIni = [];
+                foreach ($jadwalList as $j) {
+                    if (strcasecmp(trim($j['hari'] ?? ''), $todayName) === 0) {
+                        $jadwalHariIni[] = $j;
+                    }
                 }
 
                 // Check Guru Today Attendance
                 $todayDate = date('Y-m-d');
                 $stmtAbsG = $this->db->prepare("SELECT * FROM absensi_guru WHERE guru_id = ? AND tanggal = ? LIMIT 1");
-                $stmtAbsG->execute([$guru['id'], $todayDate]);
+                $stmtAbsG->execute([$guruId, $todayDate]);
                 $absGuru = $stmtAbsG->fetch(PDO::FETCH_ASSOC) ?: [];
 
                 $hasClockedIn = !empty($absGuru['waktu_masuk']) || !empty($absGuru['waktu_hadir']);
@@ -1741,17 +1751,15 @@ class ApiController {
                 $absGuruStatus = $absGuru['status'] ?? 'Belum Absen';
 
                 // Active Academic Year & Semester matching Admin setting
-                $academicModel = new AcademicModel();
                 $activeTa = $academicModel->getActiveTahunAjaran();
                 $taTahun = trim($activeTa['tahun_ajaran'] ?? ($activeTa['tahun'] ?? '2025/2026'));
                 $taSem = trim($activeTa['semester'] ?? 'Ganjil');
                 $tahunAjaranStr = "T.A. $taTahun — Semester $taSem";
 
                 // Announcements (Guru + All Target)
-                $stmtPGuru = $this->db->query("SELECT p.*, u.full_name as author FROM pengumuman p LEFT JOIN users u ON p.user_id = u.id WHERE (p.target_role = 'all' OR p.target_role = 'guru' OR p.target_role = 'semua' OR p.target_role IS NULL OR p.target_role = '') ORDER BY p.id DESC LIMIT 10");
-                $pengumumanRawGuru = $stmtPGuru ? $stmtPGuru->fetchAll(PDO::FETCH_ASSOC) : [];
+                $pengumumanList = $commModel->getPengumuman('guru');
                 $pengumumanGuru = [];
-                foreach ($pengumumanRawGuru as $p) {
+                foreach ($pengumumanList as $p) {
                     $bUrl = null;
                     if (!empty($p['banner'])) {
                         $bUrl = (strpos($p['banner'], 'http') === 0) ? $p['banner'] : BASE_URL . ltrim($p['banner'], '/');
@@ -1761,17 +1769,27 @@ class ApiController {
                     $pengumumanGuru[] = $p;
                 }
 
+                // Recent materi & tugas for preview cards
+                $materiTerbaru = array_slice($materiList, 0, 5);
+                $tugasTerbaru = array_slice($tugasList, 0, 5);
+
                 $this->jsonResponse(true, 'Dashboard Guru Overview', [
                     'guru' => $guru,
+                    'user' => $userObj ?: ['full_name' => $guru['nama_lengkap']],
                     'tahun_ajaran' => $tahunAjaranStr,
                     'active_ta' => $activeTa,
                     'stats' => [
                         'materi' => $totalMateri,
                         'tugas' => $totalTugas,
-                        'quiz' => $totalQuiz
+                        'quiz' => $totalQuiz,
+                        'keys' => $totalKeys,
+                        'siswa_terdaftar' => $totalSiswaTerdaftar,
                     ],
                     'pengumuman' => $pengumumanGuru,
-                    'jadwal_hari_ini' => $jadwalToday,
+                    'jadwal_hari_ini' => $jadwalHariIni,
+                    'jadwal_list' => $jadwalList,
+                    'materi_terbaru' => $materiTerbaru,
+                    'tugas_terbaru' => $tugasTerbaru,
                     'absensi_today' => [
                         'has_clocked_in' => $hasClockedIn,
                         'has_clocked_out' => $hasClockedOut,
