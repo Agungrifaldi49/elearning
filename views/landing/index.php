@@ -420,53 +420,79 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
 </section>
 
 <!-- Kontak & Google Maps -->
-<section id="kontak" class="py-5 bg-light">
+<section id="kontak" class="py-5 bg-light overflow-hidden">
     <div class="container py-4">
-        <div class="row gy-4">
-            <div class="col-lg-5">
-                <span class="badge bg-danger bg-opacity-10 text-danger fw-bold text-uppercase px-3 py-2 rounded-pill mb-2">
-                    <?= Security::safeText($settings['landing_kontak_tag'] ?? 'Hubungi Kami') ?>
-                </span>
-                <h2 class="fw-bold display-6 mb-4 font-heading"><?= Security::safeText($settings['landing_kontak_title'] ?? 'Lokasi & Kontak Sekolah') ?></h2>
+        <div class="row gy-4 align-items-stretch">
+            
+            <!-- Left Side: Kontak Information Cards -->
+            <div class="col-lg-5 d-flex flex-column justify-content-between">
+                <div>
+                    <span class="badge bg-danger bg-opacity-10 text-danger fw-bold text-uppercase px-3 py-2 rounded-pill mb-2">
+                        <i class="bi bi-chat-right-dots-fill me-1"></i> <?= Security::safeText($settings['landing_kontak_tag'] ?? 'Hubungi Kami') ?>
+                    </span>
+                    <h2 class="fw-bold display-6 mb-4 font-heading text-dark"><?= Security::safeText($settings['landing_kontak_title'] ?? 'Lokasi & Kontak Sekolah') ?></h2>
+                </div>
                 
-                <div class="card-hover-effect p-3 mb-3 d-flex align-items-center gap-3 bg-white rounded-4">
-                    <div class="bg-danger bg-opacity-10 text-danger rounded-3 p-3 flex-shrink-0">
-                        <i class="bi bi-geo-alt-fill fs-3"></i>
+                <div class="d-flex flex-column gap-3 mb-2">
+                    <!-- Alamat Card -->
+                    <div class="card-hover-effect p-3.5 bg-white rounded-4 border shadow-sm w-100 overflow-hidden" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="bg-danger bg-opacity-10 text-danger rounded-3 p-3 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                                <i class="bi bi-geo-alt-fill fs-3"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
+                                <h6 class="fw-bold mb-1 font-heading text-dark">Alamat Lengkap</h6>
+                                <p class="small text-secondary mb-0" style="text-align: justify; text-justify: inter-word; line-height: 1.55;">
+                                    <?= Security::safeText($settings['alamat'] ?? 'Jl. Raya Cicalengka, Kab. Bandung, Jawa Barat 40395') ?>
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <h6 class="fw-bold mb-1 font-heading">Alamat Lengkap</h6>
-                        <p class="small text-muted mb-0"><?= Security::safeText($settings['alamat'] ?? 'Jl. Raya Cicalengka, Kab. Bandung, Jawa Barat 40395') ?></p>
-                    </div>
-                </div>
 
-                <div class="card-hover-effect p-3 mb-3 d-flex align-items-center gap-3 bg-white rounded-4">
-                    <div class="bg-success bg-opacity-10 text-success rounded-3 p-3 flex-shrink-0">
-                        <i class="bi bi-telephone-fill fs-3"></i>
+                    <!-- Telepon / WhatsApp Card -->
+                    <div class="card-hover-effect p-3.5 bg-white rounded-4 border shadow-sm w-100 overflow-hidden" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="bg-success bg-opacity-10 text-success rounded-3 p-3 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                                <i class="bi bi-telephone-fill fs-3"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
+                                <h6 class="fw-bold mb-1 font-heading text-dark">Telepon / WhatsApp</h6>
+                                <p class="small text-secondary mb-0 fw-semibold">
+                                    <?= Security::safeText($settings['telepon'] ?? '+62 812-3456-7890') ?>
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <h6 class="fw-bold mb-1 font-heading">Telepon / WhatsApp</h6>
-                        <p class="small text-muted mb-0"><?= Security::safeText($settings['telepon'] ?? '+62 812-3456-7890') ?></p>
-                    </div>
-                </div>
 
-                <div class="card-hover-effect p-3 d-flex align-items-center gap-3 bg-white rounded-4">
-                    <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3 flex-shrink-0">
-                        <i class="bi bi-envelope-fill fs-3"></i>
-                    </div>
-                    <div>
-                        <h6 class="fw-bold mb-1 font-heading">Email Resmi</h6>
-                        <p class="small text-muted mb-0"><?= Security::safeText($settings['landing_email'] ?? $settings['smtp_user'] ?? 'info@smkmh-cicalengka.sch.id') ?></p>
+                    <!-- Email Resmi Card -->
+                    <div class="card-hover-effect p-3.5 bg-white rounded-4 border shadow-sm w-100 overflow-hidden" style="border: 1px solid #e2e8f0 !important;">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-3 p-3 flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                                <i class="bi bi-envelope-fill fs-3"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0" style="overflow-wrap: anywhere; word-break: break-word;">
+                                <h6 class="fw-bold mb-1 font-heading text-dark">Email Resmi</h6>
+                                <p class="small text-secondary mb-0 fw-semibold">
+                                    <?= Security::safeText($settings['landing_email'] ?? $settings['smtp_user'] ?? 'info@smkmh-cicalengka.sch.id') ?>
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             
+            <!-- Right Side: Google Maps Embed Card -->
             <div class="col-lg-7">
-                <div class="card-hover-effect p-2 bg-white rounded-4 h-100">
-                    <div class="ratio ratio-16x9 rounded-3 overflow-hidden shadow-sm h-100">
-                        <iframe src="<?= htmlspecialchars($mapsUrl) ?>" title="Lokasi Google Maps" allowfullscreen loading="lazy"></iframe>
+                <div class="p-2.5 bg-white rounded-4 border shadow-sm h-100 d-flex flex-column" style="border: 1px solid #e2e8f0 !important; min-height: 380px;">
+                    <div class="flex-grow-1 rounded-3 overflow-hidden position-relative w-100" style="min-height: 320px;">
+                        <iframe src="<?= htmlspecialchars($mapsUrl) ?>" title="Lokasi Google Maps" class="w-100 h-100 position-absolute top-0 start-0 border-0 rounded-3" allowfullscreen loading="lazy"></iframe>
+                    </div>
+                    <div class="p-2.5 text-center bg-light rounded-bottom-3 mt-2 border-top">
+                        <small class="fw-bold text-muted"><i class="bi bi-map-fill text-danger me-1"></i> Peta Lokasi Google Maps SMK Muthia Harapan Cicalengka</small>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
 </section>
