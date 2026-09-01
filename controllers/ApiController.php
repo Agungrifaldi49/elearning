@@ -180,40 +180,69 @@ class ApiController {
             $sessionUser = AuthHelper::user();
             $userId = intval($sessionUser['id'] ?? 0);
         }
-        
+
+        require_once ROOT_PATH . 'models/SiswaModel.php';
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        require_once ROOT_PATH . 'models/LearningModel.php';
+        require_once ROOT_PATH . 'models/ExamModel.php';
+        require_once ROOT_PATH . 'models/CommunicationModel.php';
+
+        $siswaModel = new SiswaModel();
+        $academicModel = new AcademicModel();
+        $learningModel = new LearningModel();
+        $examModel = new ExamModel();
+        $commModel = new CommunicationModel();
+
+        // Get logged in user details if available
+        $userObj = null;
+        if ($userId > 0) {
+            $stmtU = $this->db->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
+            $stmtU->execute([$userId]);
+            $userObj = $stmtU->fetch(PDO::FETCH_ASSOC);
+        }
+
         $siswa = null;
         if ($userId > 0) {
-            $stmtS = $this->db->prepare("
+            $siswa = $siswaModel->ensureSiswaProfile($userId, $userObj['full_name'] ?? '');
+        }
+
+        if (!$siswa && $userId > 0) {
+            $stmtS2 = $this->db->prepare("
                 SELECT s.*, k.nama_kelas, j.nama_jurusan 
                 FROM siswa s 
                 LEFT JOIN kelas k ON s.kelas_id = k.id 
                 LEFT JOIN jurusan j ON s.jurusan_id = j.id 
-                WHERE s.user_id = :uid LIMIT 1
+                WHERE s.id = :sid LIMIT 1
             ");
-            $stmtS->execute(['uid' => $userId]);
-            $siswa = $stmtS->fetch();
+            $stmtS2->execute(['sid' => $userId]);
+            $siswa = $stmtS2->fetch(PDO::FETCH_ASSOC);
+        }
 
-            if (!$siswa) {
-                $stmtS2 = $this->db->prepare("
+        if (!$siswa) {
+            $stmtS = $this->db->query("
+                SELECT s.*, k.nama_kelas, j.nama_jurusan 
+                FROM siswa s 
+                LEFT JOIN kelas k ON s.kelas_id = k.id 
+                LEFT JOIN jurusan j ON s.jurusan_id = j.id 
+                ORDER BY s.id ASC LIMIT 1
+            ");
+            $siswa = $stmtS->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if ($siswa) {
+            if (empty($siswa['nama_kelas']) || empty($siswa['nama_jurusan'])) {
+                $stmtDetails = $this->db->prepare("
                     SELECT s.*, k.nama_kelas, j.nama_jurusan 
                     FROM siswa s 
                     LEFT JOIN kelas k ON s.kelas_id = k.id 
                     LEFT JOIN jurusan j ON s.jurusan_id = j.id 
                     WHERE s.id = :sid LIMIT 1
                 ");
-                $stmtS2->execute(['sid' => $userId]);
-                $siswa = $stmtS2->fetch();
-            }
-        }
-
-        if (!$siswa && $userId > 0) {
-            $stmtU = $this->db->prepare("SELECT id, full_name, role_id FROM users WHERE id = ? LIMIT 1");
-            $stmtU->execute([$userId]);
-            $uObj = $stmtU->fetch();
-            if ($uObj) {
-                require_once ROOT_PATH . 'models/SiswaModel.php';
-                $sm = new SiswaModel();
-                $siswa = $sm->ensureSiswaProfile($uObj['id'], $uObj['full_name']);
+                $stmtDetails->execute(['sid' => $siswa['id']]);
+                $fullDetails = $stmtDetails->fetch(PDO::FETCH_ASSOC);
+                if ($fullDetails) {
+                    $siswa = array_merge($siswa, $fullDetails);
+                }
             }
         }
 
@@ -221,8 +250,6 @@ class ApiController {
             $this->jsonResponse(false, 'Data siswa tidak ditemukan', null, 404);
         }
 
-        require_once ROOT_PATH . 'models/AcademicModel.php';
-        $academicModel = new AcademicModel();
         $siswaId = intval($siswa['id'] ?? 0);
         $kelasId = intval($siswa['kelas_id'] ?? 0);
 
@@ -243,19 +270,6 @@ class ApiController {
 
         switch ($endpoint) {
             case 'dashboard':
-                require_once ROOT_PATH . 'models/SiswaModel.php';
-                require_once ROOT_PATH . 'models/AcademicModel.php';
-                require_once ROOT_PATH . 'models/LearningModel.php';
-                require_once ROOT_PATH . 'models/ExamModel.php';
-
-                $siswaModel = new SiswaModel();
-                $academicModel = new AcademicModel();
-                $learningModel = new LearningModel();
-                $examModel = new ExamModel();
-
-                $siswaId = intval($siswa['id'] ?? 0);
-                $kelasId = intval($siswa['kelas_id'] ?? 0);
-
                 // 1. Active Academic Year & Semester
                 $activeTa = $academicModel->getActiveTahunAjaran();
 
@@ -271,25 +285,16 @@ class ApiController {
                     if (empty($enrolledMapels)) return true;
                     return isset($enrolledMapels[$m['mapel_id'] . '_' . ($m['guru_id'] ?? 0)]) || isset($enrolledMapels[$m['mapel_id']]);
                 }));
-                if (empty($materiList) && !empty($allMateri)) {
-                    $materiList = $allMateri;
-                }
 
                 $tugasList = array_values(array_filter($allTugas, function($t) use ($enrolledMapels) {
                     if (empty($enrolledMapels)) return true;
                     return isset($enrolledMapels[$t['mapel_id'] . '_' . ($t['guru_id'] ?? 0)]) || isset($enrolledMapels[$t['mapel_id']]);
                 }));
-                if (empty($tugasList) && !empty($allTugas)) {
-                    $tugasList = $allTugas;
-                }
 
                 $quizList = array_values(array_filter($allQuiz, function($q) use ($enrolledMapels) {
                     if (empty($enrolledMapels)) return true;
                     return isset($enrolledMapels[$q['mapel_id'] . '_' . ($q['guru_id'] ?? 0)]) || isset($enrolledMapels[$q['mapel_id']]);
                 }));
-                if (empty($quizList) && !empty($allQuiz)) {
-                    $quizList = $allQuiz;
-                }
 
                 $totalMateri = count($materiList);
                 $totalTugas = count($tugasList);
@@ -307,47 +312,51 @@ class ApiController {
                     ];
                 }
 
-                // 5. Chart Data (Average grade per subject)
+                // 5. Chart Data (Average grade per subject for student)
                 $stmtChart = $this->db->prepare("
-                    SELECT m.nama_mapel, ROUND(AVG(pt.nilai), 1) as avg_nilai
-                    FROM pengumpulan_tugas pt
-                    JOIN tugas t ON pt.tugas_id = t.id
-                    JOIN mata_pelajaran m ON t.mapel_id = m.id
-                    WHERE pt.siswa_id = ? AND pt.nilai IS NOT NULL
+                    SELECT m.nama_mapel, ROUND(AVG(COALESCE(pt.nilai, hq.total_nilai)), 1) as avg_nilai
+                    FROM mata_pelajaran m
+                    LEFT JOIN tugas t ON t.mapel_id = m.id
+                    LEFT JOIN pengumpulan_tugas pt ON pt.tugas_id = t.id AND pt.siswa_id = ? AND pt.nilai IS NOT NULL
+                    LEFT JOIN quiz q ON q.mapel_id = m.id
+                    LEFT JOIN hasil_quiz hq ON hq.quiz_id = q.id AND hq.siswa_id = ? AND hq.total_nilai IS NOT NULL
+                    WHERE pt.nilai IS NOT NULL OR hq.total_nilai IS NOT NULL
                     GROUP BY m.id, m.nama_mapel
                     LIMIT 6
                 ");
-                $stmtChart->execute([$siswaId]);
+                $stmtChart->execute([$siswaId, $siswaId]);
                 $chartData = $stmtChart->fetchAll();
 
                 // 6. Announcements (Siswa + All Target)
-                $stmtP = $this->db->query("SELECT p.*, u.full_name as author FROM pengumuman p LEFT JOIN users u ON p.user_id = u.id WHERE (p.target_role = 'all' OR p.target_role = 'siswa' OR p.target_role = 'semua' OR p.target_role IS NULL OR p.target_role = '') ORDER BY p.id DESC LIMIT 10");
-                $pengumumanRaw = $stmtP ? $stmtP->fetchAll(PDO::FETCH_ASSOC) : [];
+                $pengumumanList = $commModel->getPengumuman('siswa');
                 $pengumuman = [];
-                foreach ($pengumumanRaw as $p) {
+                foreach ($pengumumanList as $p) {
                     $bUrl = null;
                     if (!empty($p['banner'])) {
                         $bUrl = (strpos($p['banner'], 'http') === 0) ? $p['banner'] : BASE_URL . ltrim($p['banner'], '/');
                     }
                     $p['banner_url'] = $bUrl;
-                    $p['banner'] = $bUrl ?: $p['banner'];
+                    $p['banner'] = $bUrl ?: ($p['banner'] ?? null);
                     $pengumuman[] = $p;
                 }
 
                 // 7. Jadwal Pelajaran (Hari ini & Full Rombel)
+                $jadwalList = $academicModel->getJadwal($kelasId);
+                if (empty($jadwalList)) {
+                    $stmtJAll = $this->db->prepare("
+                        SELECT j.*, m.nama_mapel, g.nama_lengkap as nama_guru 
+                        FROM jadwal j 
+                        LEFT JOIN mata_pelajaran m ON j.mapel_id = m.id 
+                        LEFT JOIN guru g ON j.guru_id = g.id 
+                        WHERE (j.kelas_id = :kid OR FIND_IN_SET(:kid, j.kelas_ids) OR j.kelas_id IS NULL OR j.kelas_id = 0) 
+                        ORDER BY FIELD(j.hari, 'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'), j.jam_mulai ASC
+                    ");
+                    $stmtJAll->execute(['kid' => $kelasId]);
+                    $jadwalList = $stmtJAll->fetchAll();
+                }
+
                 $days = [1=>'Senin', 2=>'Selasa', 3=>'Rabu', 4=>'Kamis', 5=>'Jumat', 6=>'Sabtu', 7=>'Minggu'];
                 $today = $days[date('N')] ?? 'Senin';
-                
-                $stmtJAll = $this->db->prepare("
-                    SELECT j.*, m.nama_mapel, g.nama_lengkap as nama_guru 
-                    FROM jadwal j 
-                    LEFT JOIN mata_pelajaran m ON j.mapel_id = m.id 
-                    LEFT JOIN guru g ON j.guru_id = g.id 
-                    WHERE (j.kelas_id = :kid OR FIND_IN_SET(:kid, j.kelas_ids) OR j.kelas_id IS NULL OR j.kelas_id = 0) 
-                    ORDER BY FIELD(j.hari, 'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'), j.jam_mulai ASC
-                ");
-                $stmtJAll->execute(['kid' => $kelasId]);
-                $jadwalList = $stmtJAll->fetchAll();
 
                 $jadwalToday = array_values(array_filter($jadwalList, function($j) use ($today) {
                     return strcasecmp($j['hari'] ?? '', $today) === 0;

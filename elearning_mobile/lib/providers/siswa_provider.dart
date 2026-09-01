@@ -248,6 +248,16 @@ class SiswaProvider with ChangeNotifier {
         _isAbsentToday = absToday['is_absent'] == true;
       }
     }
+
+    try {
+      await Future.wait([
+        fetchMateri(userId),
+        fetchTugas(userId),
+        fetchQuiz(userId),
+        fetchJadwal(userId),
+      ]);
+    } catch (_) {}
+
     _isLoading = false;
     notifyListeners();
   }
