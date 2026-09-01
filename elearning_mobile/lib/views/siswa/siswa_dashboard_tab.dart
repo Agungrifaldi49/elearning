@@ -188,77 +188,81 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Portal Pembelajaran Siswa',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Selamat Datang, $namaSiswa 👋',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'NIS: $nisSiswa  •  NISN: $nisnSiswa',
+                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.verified_user_rounded, color: Colors.white, size: 13),
-                            SizedBox(width: 4),
-                            Text(
-                              'Portal Pembelajaran Siswa',
-                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.greenAccent.shade700,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.shield_rounded, color: Colors.white, size: 13),
-                            const SizedBox(width: 4),
-                            Text(
-                              "Hak Akses: $statusHakAkses",
-                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.amber,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          "T.A. ${activeTa['tahun_ajaran']} — ${activeTa['semester']}",
-                          style: const TextStyle(color: Colors.black87, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
+                        child: const Icon(Icons.school_rounded, color: Colors.white, size: 28),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Selamat Datang, $namaSiswa! 👋',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.shield_rounded, color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          "Hak Akses: $statusHakAkses",
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 10),
+                        const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          "T.A. ${activeTa['tahun_ajaran']} — ${activeTa['semester']}",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 10),
                   Text(
-                    "Kelas: $kelasSiswa  |  Jurusan: $jurusanSiswa",
-                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    "NIS: $nisSiswa  |  NISN: $nisnSiswa",
-                    style: const TextStyle(color: Colors.white70, fontSize: 11),
+                    "Kelas: $kelasSiswa  •  Jurusan: $jurusanSiswa",
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -266,7 +270,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
 
             // Clock-In / Clock-Out Reminder Bar
             if (!siswaProvider.hasClockedInToday) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               InkWell(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
                 borderRadius: BorderRadius.circular(16),
@@ -301,7 +305,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '🔔 Belum Presensi Masuk',
+                              '🔔 Belum Presensi Masuk Siswa',
                               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                             ),
                             SizedBox(height: 2),
@@ -318,7 +322,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                 ),
               ),
             ] else if (siswaProvider.hasClockedInToday && !siswaProvider.hasClockedOutToday) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               InkWell(
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
                 borderRadius: BorderRadius.circular(16),
@@ -353,7 +357,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '🏠 Pengingat Presensi Pulang',
+                              '🏠 Pengingat Presensi Pulang Siswa',
                               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                             ),
                             SizedBox(height: 2),
@@ -367,6 +371,28 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                       const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
                     ],
                   ),
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.green.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded, color: Colors.green.shade700, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        '🎉 Presensi Masuk & Pulang Anda hari ini telah LENGKAP',
+                        style: TextStyle(color: Colors.green.shade900, fontWeight: FontWeight.bold, fontSize: 12.5),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -398,8 +424,8 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   title: 'Tugas Aktif',
                   count: displayTugas,
                   subtitle: 'Perlu Dikumpulkan',
-                  icon: Icons.assignment_rounded,
-                  color: Colors.orange,
+                  icon: Icons.task_alt_rounded,
+                  color: Colors.green,
                   isDark: isDark,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
                     appBar: AppBar(title: const Text('Tugas & Penugasan'), backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
@@ -411,7 +437,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   count: displayQuiz,
                   subtitle: 'Evaluasi Sekolah',
                   icon: Icons.quiz_rounded,
-                  color: Colors.purple,
+                  color: Colors.amber.shade800,
                   isDark: isDark,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
                     appBar: AppBar(title: const Text('Kuis & CBT Ujian'), backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
@@ -423,7 +449,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   count: displayPresensiLog,
                   subtitle: 'Kehadiran Real',
                   icon: Icons.event_available_rounded,
-                  color: Colors.teal,
+                  color: Colors.purple,
                   isDark: isDark,
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
                     appBar: AppBar(title: const Text('Presensi & Kehadiran'), backgroundColor: AppTheme.primaryColor, foregroundColor: Colors.white),
@@ -433,9 +459,137 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
               ],
             ),
 
+            const SizedBox(height: 20),
+
+            // Feature Shortcuts Grid Header & Toggle Button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '⚡ Fitur Utama Siswa',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isFeaturesExpanded = !_isFeaturesExpanded;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _isFeaturesExpanded ? 'Sembunyikan' : 'Selengkapnya',
+                          style: const TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Icon(
+                          _isFeaturesExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                          color: AppTheme.primaryColor,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Animated Grid Container
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: GridView.count(
+                crossAxisCount: 3,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1.05,
+                children: displayedFeatures,
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Today's Timetable Section
+            const Text(
+              '📅 Jadwal Pelajaran Hari Ini',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            if (displayedJadwal.isEmpty)
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.check_circle_outline_rounded, color: Colors.green.shade400, size: 36),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tidak ada jadwal pelajaran terdaftar.',
+                          style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: displayedJadwal.length,
+                itemBuilder: (context, index) {
+                  final j = displayedJadwal[index];
+                  final jamMulai = j['jam_mulai']?.toString().substring(0, 5) ?? '';
+                  final jamSelesai = j['jam_selesai']?.toString().substring(0, 5) ?? '';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    child: ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.secondaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.class_rounded, color: AppTheme.secondaryColor),
+                      ),
+                      title: Text(
+                        j['nama_mapel'] ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text("Guru: ${j['nama_guru'] ?? 'Guru Pengampu'} • Waktu: $jamMulai - $jamSelesai WIB"),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          j['ruangan'] ?? 'Ruang KBM',
+                          style: const TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
             // Nearest Assignment Deadline Widget
             if (tugasTerdekat != null && (tugasTerdekat['judul'] ?? '').isNotEmpty) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -610,170 +764,6 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                 ),
               ),
             ],
-
-            const SizedBox(height: 20),
-
-            // Feature Shortcuts Grid Header & Toggle Button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '⚡ Fitur Utama Siswa',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _isFeaturesExpanded = !_isFeaturesExpanded;
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _isFeaturesExpanded ? 'Sembunyikan' : 'Selengkapnya',
-                          style: const TextStyle(
-                            color: AppTheme.primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                        Icon(
-                          _isFeaturesExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                          color: AppTheme.primaryColor,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Animated Grid Container
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-              child: GridView.count(
-                crossAxisCount: 3,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.05,
-                children: displayedFeatures,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Today's & Weekly Timetable Section (Matches Web Dashboard)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  jadwalToday.isNotEmpty ? '📅 Jadwal Pelajaran Hari Ini' : '📅 Jadwal KBM Rombel Rujukan',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                if (jadwalToday.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Hari Ini',
-                      style: TextStyle(color: AppTheme.primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (displayedJadwal.isEmpty)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Center(
-                    child: Text(
-                      'Belum ada jadwal pelajaran terdaftar untuk rombel Anda 🎉',
-                      style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
-                    ),
-                  ),
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: displayedJadwal.length,
-                itemBuilder: (context, index) {
-                  final j = displayedJadwal[index];
-                  final hari = j['hari']?.toString() ?? 'Hari';
-                  final jamMulai = j['jam_mulai']?.toString() ?? '';
-                  final jamSelesai = j['jam_selesai']?.toString() ?? '';
-                  final jamStr = (jamMulai.isNotEmpty && jamSelesai.isNotEmpty)
-                      ? "${jamMulai.length > 5 ? jamMulai.substring(0, 5) : jamMulai} - ${jamSelesai.length > 5 ? jamSelesai.substring(0, 5) : jamSelesai} WIB"
-                      : "Jam KBM";
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.secondaryColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.access_time_filled, color: AppTheme.secondaryColor),
-                      ),
-                      title: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            margin: const EdgeInsets.only(right: 6),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryColor,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              hari,
-                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              j['nama_mapel'] ?? 'Mata Pelajaran',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                          ),
-                        ],
-                      ),
-                      subtitle: Text(
-                        "Guru: ${j['nama_guru'] ?? 'Guru Pengampu'} • $jamStr",
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          j['ruangan'] ?? 'Ruang KBM',
-                          style: const TextStyle(color: Colors.blue, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
 
             const SizedBox(height: 24),
 
