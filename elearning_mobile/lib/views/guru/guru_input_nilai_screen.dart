@@ -196,7 +196,7 @@ class _GuruInputNilaiScreenState extends State<GuruInputNilaiScreen> {
                     const SizedBox(height: 4),
                     const Text(
                       'Masukkan bobot nilai Tugas (30%), UTS (30%), dan UAS (40%) untuk menghitung estimasi nilai akhir rapor secara otomatis.',
-                      style: TextStyle(color: Colors.white80, fontSize: 12, height: 1.4),
+                      style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
                     ),
                   ],
                 ),
