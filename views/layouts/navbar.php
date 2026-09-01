@@ -85,6 +85,34 @@ $unreadBadgeCount = (int)($headerNotifs['unread_total'] ?? 0);
                 </div>
             </div>
 
+            <!-- Header 3-Dots Quick Action Menu -->
+            <div class="dropdown">
+                <button class="btn btn-sm btn-light rounded-circle p-2 shadow-2xs" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Menu Opsi Navigasi (Titik 3)">
+                    <i class="bi bi-three-dots-vertical fs-5 text-secondary"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-2 p-2" style="min-width: 230px;">
+                    <li><h6 class="dropdown-header text-uppercase fw-bold text-muted px-2 py-1 mb-1" style="font-size: 0.68rem;"><i class="bi bi-compass me-1"></i> Navigasi Pintas</h6></li>
+                    <li><a class="dropdown-item py-2 rounded-3 fw-semibold" href="<?= BASE_URL ?>"><i class="bi bi-house-door-fill me-2 text-primary"></i> Beranda Utama</a></li>
+                    <li><a class="dropdown-item py-2 rounded-3 fw-semibold" href="<?= BASE_URL ?>index.php?url=chat"><i class="bi bi-chat-dots-fill me-2 text-info"></i> Chat Pesan Realtime</a></li>
+                    <li><a class="dropdown-item py-2 rounded-3 fw-semibold" href="<?= BASE_URL ?>index.php?url=forum"><i class="bi bi-chat-square-text-fill me-2 text-success"></i> Forum Diskusi Pembelajaran</a></li>
+                    
+                    <?php if (AuthHelper::check()): 
+                        $userRoleName = strtolower(AuthHelper::user()['role_name'] ?? '');
+                        $profUrl = 'siswa/profil';
+                        if (in_array($userRoleName, ['admin', 'administrator', 'kepala sekolah'])) {
+                            $profUrl = 'admin/pengaturan';
+                        } elseif ($userRoleName === 'guru') {
+                            $profUrl = 'guru/profil';
+                        }
+                    ?>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li><h6 class="dropdown-header text-uppercase fw-bold text-muted px-2 py-1 mb-1" style="font-size: 0.68rem;"><i class="bi bi-person-gear me-1"></i> Pengaturan & Akun</h6></li>
+                        <li><a class="dropdown-item py-2 rounded-3 fw-semibold" href="<?= BASE_URL ?>index.php?url=<?= $profUrl ?>"><i class="bi bi-person-circle me-2 text-warning"></i> Pengaturan Profil Saya</a></li>
+                        <li><a class="dropdown-item py-2 rounded-3 text-danger fw-semibold" href="<?= BASE_URL ?>logout.php"><i class="bi bi-box-arrow-right me-2 text-danger"></i> Keluar / Logout</a></li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+
             <!-- Profile Dropdown -->
             <?php if (AuthHelper::check()): 
                 $currUser = AuthHelper::user();
@@ -99,6 +127,13 @@ $unreadBadgeCount = (int)($headerNotifs['unread_total'] ?? 0);
                         $hasNavAvatar = true;
                         $navAvatarUrl = BASE_URL . 'assets/uploads/avatar/' . htmlspecialchars($navAvFile);
                     }
+                }
+                $userRoleName = strtolower($currUser['role_name'] ?? '');
+                $profUrl = 'siswa/profil';
+                if (in_array($userRoleName, ['admin', 'administrator', 'kepala sekolah'])) {
+                    $profUrl = 'admin/pengaturan';
+                } elseif ($userRoleName === 'guru') {
+                    $profUrl = 'guru/profil';
                 }
             ?>
                 <div class="dropdown">
@@ -115,11 +150,19 @@ $unreadBadgeCount = (int)($headerNotifs['unread_total'] ?? 0);
                             <small class="text-muted" style="font-size: 0.75rem;"><?= htmlspecialchars($currUser['role_name']) ?></small>
                         </div>
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 mt-2">
-                        <li><a class="dropdown-item py-2" href="<?= BASE_URL ?>index.php?url=chat"><i class="bi bi-chat-dots me-2 text-primary"></i> Chat Pesan Realtime</a></li>
-                        <li><a class="dropdown-item py-2" href="<?= BASE_URL ?>index.php?url=forum"><i class="bi bi-chat-square-text me-2 text-success"></i> Forum Diskusi Pembelajaran</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item py-2 text-danger" href="<?= BASE_URL ?>logout.php"><i class="bi bi-box-arrow-right me-2"></i> Keluar / Logout</a></li>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 mt-2 p-2" style="min-width: 220px;">
+                        <li>
+                            <div class="px-3 py-2 bg-light rounded-3 mb-2">
+                                <div class="fw-bold small text-dark"><?= htmlspecialchars($currUser['full_name']) ?></div>
+                                <div class="text-muted opacity-75" style="font-size: 0.72rem;"><?= htmlspecialchars($currUser['role_name']) ?></div>
+                            </div>
+                        </li>
+                        <li><a class="dropdown-item py-2 rounded-3 fw-semibold" href="<?= BASE_URL ?>"><i class="bi bi-house-door-fill me-2 text-primary"></i> Beranda Utama</a></li>
+                        <li><a class="dropdown-item py-2 rounded-3 fw-semibold" href="<?= BASE_URL ?>index.php?url=<?= $profUrl ?>"><i class="bi bi-person-circle me-2 text-warning"></i> Profil Saya</a></li>
+                        <li><a class="dropdown-item py-2 rounded-3 fw-semibold" href="<?= BASE_URL ?>index.php?url=chat"><i class="bi bi-chat-dots-fill me-2 text-info"></i> Chat Pesan Realtime</a></li>
+                        <li><a class="dropdown-item py-2 rounded-3 fw-semibold" href="<?= BASE_URL ?>index.php?url=forum"><i class="bi bi-chat-square-text-fill me-2 text-success"></i> Forum Diskusi</a></li>
+                        <li><hr class="dropdown-divider my-1.5"></li>
+                        <li><a class="dropdown-item py-2 rounded-3 text-danger fw-semibold" href="<?= BASE_URL ?>logout.php"><i class="bi bi-box-arrow-right me-2 text-danger"></i> Keluar / Logout</a></li>
                     </ul>
                 </div>
             <?php endif; ?>
