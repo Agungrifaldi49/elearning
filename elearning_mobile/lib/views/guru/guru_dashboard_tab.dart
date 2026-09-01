@@ -47,6 +47,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
     final guruProvider = Provider.of<GuruProvider>(context);
     final stats = (guruProvider.dashboardData?['stats'] as Map?) ?? {'materi': 0, 'tugas': 0, 'quiz': 0};
     final jadwalToday = (guruProvider.dashboardData?['jadwal_hari_ini'] as List?) ?? [];
+    final tahunAjaranStr = (guruProvider.dashboardData?['tahun_ajaran'] ?? '2025/2026 (Ganjil)').toString();
 
     // Complete Features List for Guru
     final allFeatures = [
@@ -183,10 +184,34 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Tahun Ajaran Aktif: $tahunAjaranStr',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   const Text(
                     'Kelola Materi, Tugas, Quiz, & Data Pembelajaran secara Praktis',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
