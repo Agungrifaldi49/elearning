@@ -1698,7 +1698,7 @@ class ApiController {
                 $stmtQ->execute(['gid' => $guru['id']]);
                 $totalQuiz = $stmtQ->fetch()['count'];
 
-                // Jadwal Mengajar Hari Ini
+                // Jadwal Mengajar Hari Ini (Strictly Filtered by Logged-in Teacher)
                 $days = [1=>'Senin', 2=>'Selasa', 3=>'Rabu', 4=>'Kamis', 5=>'Jumat', 6=>'Sabtu', 7=>'Minggu'];
                 $today = $days[date('N')] ?? 'Senin';
                 $stmtJ = $this->db->prepare("
@@ -1706,11 +1706,19 @@ class ApiController {
                     FROM jadwal j 
                     JOIN mata_pelajaran m ON j.mapel_id = m.id 
                     JOIN kelas k ON j.kelas_id = k.id 
-                    WHERE j.guru_id = :gid AND j.hari = :hari 
+                    WHERE j.guru_id = :gid AND (TRIM(LOWER(j.hari)) = LOWER(:hari) OR j.hari = :hariRaw)
                     ORDER BY j.jam_mulai ASC
                 ");
-                $stmtJ->execute(['gid' => $guru['id'], 'hari' => $today]);
-                $jadwalToday = $stmtJ->fetchAll();
+                $stmtJ->execute(['gid' => $guru['id'], 'hari' => strtolower($today), 'hariRaw' => $today]);
+                $jadwalToday = $stmtJ->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                if (empty($jadwalToday)) {
+                    $academicModel = new AcademicModel();
+                    $allGuruJadwal = $academicModel->getJadwal(null, (int)$guru['id']);
+                    $jadwalToday = array_values(array_filter($allGuruJadwal, function($item) use ($today) {
+                        return strcasecmp(trim($item['hari'] ?? ''), $today) === 0;
+                    }));
+                }
 
                 // Check Guru Today Attendance
                 $todayDate = date('Y-m-d');
@@ -2129,7 +2137,7 @@ class ApiController {
                             ];
                         }
                         if (empty($jadwalList)) {
-                            $jadwalList = $academicModel->getJadwal();
+                            $jadwalList = [];
                         }
                     }
                 }
