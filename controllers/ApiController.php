@@ -512,25 +512,25 @@ class ApiController {
                         FROM materi m
                         LEFT JOIN guru g ON m.guru_id = g.id
                         LEFT JOIN users u ON g.user_id = u.id
-                        WHERE m.mapel_id = :mid
-                          AND (:kid = 0 OR m.kelas_id = :kid OR FIND_IN_SET(:kid, m.kelas_ids) OR m.kelas_id IS NULL OR m.kelas_id = 0)
+                        WHERE m.mapel_id = ?
+                          AND ({$kId} = 0 OR m.kelas_id = {$kId} OR (m.kelas_ids IS NOT NULL AND FIND_IN_SET({$kId}, REPLACE(m.kelas_ids, ' ', '')) > 0) OR m.kelas_id IS NULL OR m.kelas_id = 0)
                         ORDER BY m.id ASC
                     ");
-                    $stmtMat->execute(['mid' => $mId, 'kid' => $kId]);
+                    $stmtMat->execute([$mId]);
                     $materiRows = $stmtMat->fetchAll();
 
                     $stmtTug = $this->db->prepare("
                         SELECT t.*, COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
-                                pt.id as submission_id, pt.nilai, pt.submitted_at
+                                pt.id as submission_id, pt.nilai, pt.submitted_at, pt.catatan_guru
                         FROM tugas t
                         LEFT JOIN guru g ON t.guru_id = g.id
                         LEFT JOIN users u ON g.user_id = u.id
-                        LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = :sid)
-                        WHERE t.mapel_id = :mid
-                          AND (:kid = 0 OR t.kelas_id = :kid OR FIND_IN_SET(:kid, t.kelas_ids) OR t.kelas_id IS NULL OR t.kelas_id = 0)
+                        LEFT JOIN pengumpulan_tugas pt ON (pt.tugas_id = t.id AND pt.siswa_id = ?)
+                        WHERE t.mapel_id = ?
+                          AND ({$kId} = 0 OR t.kelas_id = {$kId} OR (t.kelas_ids IS NOT NULL AND FIND_IN_SET({$kId}, REPLACE(t.kelas_ids, ' ', '')) > 0) OR t.kelas_id IS NULL OR t.kelas_id = 0)
                         ORDER BY t.id ASC
                     ");
-                    $stmtTug->execute(['mid' => $mId, 'kid' => $kId, 'sid' => $siswaId]);
+                    $stmtTug->execute([$siswaId, $mId]);
                     $tugasRows = $stmtTug->fetchAll();
 
                     $stmtQz = $this->db->prepare("
@@ -538,16 +538,16 @@ class ApiController {
                                 hq.id as hasil_id, hq.total_nilai, hq.status_lulus, hq.finished_at
                         FROM quiz q
                         LEFT JOIN guru g ON q.guru_id = g.id
-                        LEFT JOIN users u ON g.user_id = u.id
+                        LEFT JOIN users u ON q.user_id = u.id
                         LEFT JOIN (
-                            SELECT * FROM hasil_quiz WHERE siswa_id = :sid
+                            SELECT * FROM hasil_quiz WHERE siswa_id = ?
                         ) hq ON hq.quiz_id = q.id
-                        WHERE q.mapel_id = :mid
-                          AND (:kid = 0 OR q.kelas_id = :kid OR FIND_IN_SET(:kid, q.kelas_ids) OR q.kelas_id IS NULL OR q.kelas_id = 0)
+                        WHERE q.mapel_id = ?
+                          AND ({$kId} = 0 OR q.kelas_id = {$kId} OR (q.kelas_ids IS NOT NULL AND FIND_IN_SET({$kId}, REPLACE(q.kelas_ids, ' ', '')) > 0) OR q.kelas_id IS NULL OR q.kelas_id = 0)
                           AND (q.status IS NULL OR q.status = 'published')
                         ORDER BY q.id ASC
                     ");
-                    $stmtQz->execute(['mid' => $mId, 'kid' => $kId, 'sid' => $siswaId]);
+                    $stmtQz->execute([$siswaId, $mId]);
                     $quizRows = $stmtQz->fetchAll();
 
                     $stmtUj = $this->db->prepare("
@@ -557,14 +557,14 @@ class ApiController {
                         LEFT JOIN guru g ON u.guru_id = g.id
                         LEFT JOIN users us ON g.user_id = us.id
                         LEFT JOIN (
-                            SELECT * FROM hasil_ujian WHERE siswa_id = :sid
+                            SELECT * FROM hasil_ujian WHERE siswa_id = ?
                         ) hu ON hu.ujian_id = u.id
-                        WHERE u.mapel_id = :mid
-                          AND (:kid = 0 OR u.kelas_id = :kid OR FIND_IN_SET(:kid, u.kelas_ids) OR u.kelas_id IS NULL OR u.kelas_id = 0)
+                        WHERE u.mapel_id = ?
+                          AND ({$kId} = 0 OR u.kelas_id = {$kId} OR (u.kelas_ids IS NOT NULL AND FIND_IN_SET({$kId}, REPLACE(u.kelas_ids, ' ', '')) > 0) OR u.kelas_id IS NULL OR u.kelas_id = 0)
                           AND u.is_active = 1
                         ORDER BY u.id ASC
                     ");
-                    $stmtUj->execute(['mid' => $mId, 'kid' => $kId, 'sid' => $siswaId]);
+                    $stmtUj->execute([$siswaId, $mId]);
                     $ujianRows = $stmtUj->fetchAll();
 
                     $sequenceItems = [];

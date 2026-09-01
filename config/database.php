@@ -13,25 +13,35 @@ class Database {
 
     public static function getConnection() {
         if (self::$conn === null) {
-            try {
-                // First try connecting to specific DB
-                self::$conn = new PDO(
-                    "mysql:host=" . self::$host . ";dbname=" . self::$db_name . ";charset=utf8mb4",
-                    self::$username,
-                    self::$password,
-                    [
-                        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                        PDO::ATTR_EMULATE_PREPARES => false,
-                        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
-                    ]
-                );
-                
-                // Ensure performance indexes exist
-                self::ensurePerformanceIndexes();
+            $hosts = ['127.0.0.1', 'localhost'];
+            $ports = [3306, 3307];
+            $lastException = null;
 
-            } catch (PDOException $e) {
-                // Check if database doesn't exist (Error 1049) vs connection failure
+            foreach ($hosts as $h) {
+                foreach ($ports as $p) {
+                    try {
+                        self::$conn = new PDO(
+                            "mysql:host={$h};port={$p};dbname=" . self::$db_name . ";charset=utf8mb4",
+                            self::$username,
+                            self::$password,
+                            [
+                                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                                PDO::ATTR_EMULATE_PREPARES => false,
+                                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
+                            ]
+                        );
+                        if (self::$conn) {
+                            break 2;
+                        }
+                    } catch (PDOException $e) {
+                        $lastException = $e;
+                    }
+                }
+            }
+
+            if (self::$conn === null && $lastException) {
+                $e = $lastException;
                 $isUnknownDb = strpos($e->getMessage(), 'Unknown database') !== false || $e->getCode() == 1049;
 
                 if ($isUnknownDb) {
@@ -50,16 +60,17 @@ class Database {
                             ]
                         );
 
-                        // Import schema & seeders automatically
                         self::autoImport();
-                        self::ensurePerformanceIndexes();
-
                     } catch (PDOException $ex) {
                         self::showConnectionError($ex);
                     }
                 } else {
                     self::showConnectionError($e);
                 }
+            }
+
+            if (self::$conn) {
+                self::ensurePerformanceIndexes();
             }
         }
         return self::$conn;

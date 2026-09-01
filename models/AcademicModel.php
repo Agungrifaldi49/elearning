@@ -893,10 +893,10 @@ class AcademicModel extends BaseModel {
     public function getSiswaEnrolledMapels($siswa_id) {
         $this->ensureEnrollmentTables();
         $stmt = $this->db->prepare("
-            SELECT sme.*, m.nama_mapel, m.kode_mapel, g.nama_lengkap as nama_guru, k.nama_kelas, k.tingkat
+            SELECT sme.*, m.nama_mapel, m.kode_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru, k.nama_kelas, k.tingkat
             FROM siswa_mapel_enrollment sme
             JOIN mata_pelajaran m ON sme.mapel_id = m.id
-            JOIN guru g ON sme.guru_id = g.id
+            LEFT JOIN guru g ON sme.guru_id = g.id
             LEFT JOIN kelas k ON sme.kelas_id = k.id
             WHERE sme.siswa_id = ?
             ORDER BY m.nama_mapel ASC
