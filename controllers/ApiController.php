@@ -320,9 +320,18 @@ class ApiController {
                 $stmtChart->execute([$siswaId]);
                 $chartData = $stmtChart->fetchAll();
 
-                // 6. Announcements
-                $stmtP = $this->db->query("SELECT * FROM pengumuman WHERE (target_role = 'siswa' OR target_role = 'semua' OR target_role IS NULL) ORDER BY created_at DESC LIMIT 5");
-                $pengumuman = $stmtP ? $stmtP->fetchAll() : [];
+                // 6. Announcements (Siswa + All Target)
+                $stmtP = $this->db->query("SELECT p.*, u.full_name as author FROM pengumuman p LEFT JOIN users u ON p.user_id = u.id WHERE (p.target_role = 'siswa' OR p.target_role = 'semua' OR p.target_role = 'all' OR p.target_role IS NULL) ORDER BY p.id DESC LIMIT 10");
+                $pengumumanRaw = $stmtP ? $stmtP->fetchAll() : [];
+                $pengumuman = [];
+                foreach ($pengumumanRaw as $p) {
+                    if (!empty($p['banner'])) {
+                        $p['banner_url'] = (strpos($p['banner'], 'http') === 0) ? $p['banner'] : BASE_URL . $p['banner'];
+                    } else {
+                        $p['banner_url'] = null;
+                    }
+                    $pengumuman[] = $p;
+                }
 
                 // 7. Jadwal Pelajaran (Hari ini & Full Rombel)
                 $days = [1=>'Senin', 2=>'Selasa', 3=>'Rabu', 4=>'Kamis', 5=>'Jumat', 6=>'Sabtu', 7=>'Minggu'];

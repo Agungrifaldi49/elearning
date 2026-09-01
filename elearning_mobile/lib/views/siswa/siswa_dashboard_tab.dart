@@ -9,6 +9,7 @@ import '../shared/kartu_digital_screen.dart';
 import '../shared/library_screen.dart';
 import '../shared/live_class_screen.dart';
 import '../shared/panduan_screen.dart';
+import '../shared/pengumuman_auto_slider.dart';
 import 'gabung_kelas_screen.dart';
 import 'learning_path_screen.dart';
 import 'sertifikat_screen.dart';
@@ -776,66 +777,30 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
 
             const SizedBox(height: 24),
 
-            // Announcements Section
-            const Text(
-              '📢 Pengumuman Sekolah',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            if (pengumuman.isEmpty)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Center(
+            // Announcements Section (Auto Slider Carousel)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '📢 Pengumuman Sekolah',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                if (pengumuman.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Text(
-                      'Belum ada pengumuman terbaru.',
-                      style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                      '${pengumuman.length} Informasi',
+                      style: const TextStyle(color: AppTheme.primaryColor, fontSize: 11, fontWeight: FontWeight.bold),
                     ),
                   ),
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: pengumuman.length,
-                itemBuilder: (context, index) {
-                  final p = pengumuman[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.campaign, color: Colors.orange, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  p['judul'] ?? '',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            p['isi_pengumuman'] ?? p['isi'] ?? p['konten'] ?? '',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "Diterbitkan: ${p['created_at'] ?? ''}",
-                            style: const TextStyle(fontSize: 11, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            PengumumanAutoSlider(pengumumanList: pengumuman),
           ],
         ),
       ),
