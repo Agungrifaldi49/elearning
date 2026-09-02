@@ -1984,4 +1984,20 @@ class GuruController {
             exit();
         }
     }
+
+    public function approve_tugas_susulan() {
+        $this->tugas();
+    }
+    public function reject_tugas_susulan() {
+        $this->tugas();
+    }
+    public function approve_susulan() {
+        $this->tugas();
+    }
+    public function reject_susulan() {
+        $this->tugas();
+    }
+    public function susulan_requests() {
+        $this->tugas();
+    }
 }

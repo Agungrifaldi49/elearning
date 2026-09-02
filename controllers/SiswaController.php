@@ -785,4 +785,20 @@ class SiswaController {
 
         require_once ROOT_PATH . 'views/siswa/live_class.php';
     }
+
+    public function request_tugas_susulan() {
+        $this->tugas();
+    }
+
+    public function request_susulan() {
+        $this->tugas();
+    }
+
+    public function ajukan_tugas_susulan() {
+        $this->tugas();
+    }
+
+    public function ajukan_susulan() {
+        $this->tugas();
+    }
 }
