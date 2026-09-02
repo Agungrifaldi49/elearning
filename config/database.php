@@ -16,38 +16,49 @@ class Database {
             return self::$conn;
         }
 
-        $host = defined('DB_HOST') ? DB_HOST : (getenv('DB_HOST') ?: self::$host);
-        $dbName = defined('DB_NAME') ? DB_NAME : (getenv('DB_NAME') ?: self::$db_name);
-        $user = defined('DB_USER') ? DB_USER : (getenv('DB_USER') ?: self::$username);
-        $pass = defined('DB_PASS') ? DB_PASS : (getenv('DB_PASS') ?: self::$password);
+        $credentials = [
+            [
+                'host' => defined('DB_HOST') ? DB_HOST : (getenv('DB_HOST') ?: self::$host),
+                'db' => defined('DB_NAME') ? DB_NAME : (getenv('DB_NAME') ?: self::$db_name),
+                'user' => defined('DB_USER') ? DB_USER : (getenv('DB_USER') ?: self::$username),
+                'pass' => defined('DB_PASS') ? DB_PASS : (getenv('DB_PASS') ?: self::$password),
+            ],
+            [
+                'host' => 'localhost',
+                'db' => 'smkmuth3_db_elearning_smkmh',
+                'user' => 'smkmuth3_admin',
+                'pass' => 'Smkmhc@2011',
+            ],
+            [
+                'host' => '127.0.0.1',
+                'db' => 'smkmuth3_db_elearning_smkmh',
+                'user' => 'smkmuth3_admin',
+                'pass' => 'Smkmhc@2011',
+            ]
+        ];
 
-        $hosts = [$host, 'localhost'];
-        $ports = [3306];
         $lastException = null;
-
         $pdoOptions = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
-            PDO::ATTR_TIMEOUT => 3,
+            PDO::ATTR_TIMEOUT => 2,
             PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
         ];
 
-        foreach ($hosts as $h) {
-            foreach ($ports as $p) {
-                try {
-                    self::$conn = new PDO(
-                        "mysql:host={$h};port={$p};dbname={$dbName};charset=utf8mb4",
-                        $user,
-                        $pass,
-                        $pdoOptions
-                    );
-                    if (self::$conn) {
-                        break 2;
-                    }
-                } catch (PDOException $e) {
-                    $lastException = $e;
+        foreach ($credentials as $cred) {
+            try {
+                self::$conn = new PDO(
+                    "mysql:host={$cred['host']};port=3306;dbname={$cred['db']};charset=utf8mb4",
+                    $cred['user'],
+                    $cred['pass'],
+                    $pdoOptions
+                );
+                if (self::$conn) {
+                    break;
                 }
+            } catch (PDOException $e) {
+                $lastException = $e;
             }
         }
 
