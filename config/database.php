@@ -16,7 +16,12 @@ class Database {
             return self::$conn;
         }
 
-        $hosts = [self::$host, 'localhost'];
+        $host = defined('DB_HOST') ? DB_HOST : (getenv('DB_HOST') ?: self::$host);
+        $dbName = defined('DB_NAME') ? DB_NAME : (getenv('DB_NAME') ?: self::$db_name);
+        $user = defined('DB_USER') ? DB_USER : (getenv('DB_USER') ?: self::$username);
+        $pass = defined('DB_PASS') ? DB_PASS : (getenv('DB_PASS') ?: self::$password);
+
+        $hosts = [$host, 'localhost'];
         $ports = [3306];
         $lastException = null;
 
@@ -32,9 +37,9 @@ class Database {
             foreach ($ports as $p) {
                 try {
                     self::$conn = new PDO(
-                        "mysql:host={$h};port={$p};dbname=" . self::$db_name . ";charset=utf8mb4",
-                        self::$username,
-                        self::$password,
+                        "mysql:host={$h};port={$p};dbname={$dbName};charset=utf8mb4",
+                        $user,
+                        $pass,
                         $pdoOptions
                     );
                     if (self::$conn) {

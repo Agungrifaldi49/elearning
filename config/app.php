@@ -23,14 +23,18 @@ set_exception_handler(function($exception) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'status' => false,
-            'message' => 'Terjadi kendala pada sistem. Silakan refresh atau muat ulang halaman.'
+            'message' => 'Terjadi kendala pada sistem: ' . $exception->getMessage()
         ]);
         exit();
     }
+    $detailMsg = htmlspecialchars($exception->getMessage());
     echo "<div style='font-family:sans-serif; padding:30px; max-width:640px; margin:50px auto; background:#fff3cd; color:#856404; border:1px solid #ffeeba; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.05); text-align:center;'>
         <h2 style='margin-top:0; color:#856404;'>Permintaan Sedang Diproses / Kendala Sementara</h2>
-        <p>Sistem sedang melayani lalu lintas yang padat. Silakan segarkan (refresh) halaman atau coba beberapa saat lagi.</p>
-        <button onclick='window.location.reload()' style='background:#4f46e5; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer; margin-top:15px;'>Muat Ulang Halaman</button>
+        <p>Sistem sedang melayani lalu lintas yang padat atau terdapat penyesuaian layanan.</p>
+        <div style='background:#fff; border:1px solid #f5c6cb; padding:10px; border-radius:6px; margin:15px 0; text-align:left; font-size:13px; color:#721c24; word-break:break-all;'>
+            <strong>Detail Pesan:</strong> {$detailMsg}
+        </div>
+        <button onclick='window.location.reload()' style='background:#4f46e5; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer; margin-top:10px;'>Muat Ulang Halaman</button>
     </div>";
     exit();
 });
