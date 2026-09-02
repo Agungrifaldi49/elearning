@@ -150,13 +150,13 @@ class AcademicModel extends BaseModel {
             FROM mata_pelajaran m
             LEFT JOIN jurusan j ON m.jurusan_id = j.id
             WHERE m.id IN (
-                SELECT mapel_id FROM jadwal WHERE (kelas_id = {$kid} OR FIND_IN_SET({$kid}, kelas_ids)) AND mapel_id IS NOT NULL
+                SELECT mapel_id FROM jadwal WHERE (kelas_id = {$kid} OR kelas_id IS NULL OR kelas_id = 0) AND mapel_id IS NOT NULL
                 UNION
-                SELECT mapel_id FROM materi WHERE (kelas_id = {$kid} OR FIND_IN_SET({$kid}, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0) AND mapel_id IS NOT NULL
+                SELECT mapel_id FROM materi WHERE (kelas_id = {$kid} OR kelas_id IS NULL OR kelas_id = 0) AND mapel_id IS NOT NULL
                 UNION
-                SELECT mapel_id FROM tugas WHERE (kelas_id = {$kid} OR FIND_IN_SET({$kid}, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0) AND mapel_id IS NOT NULL
+                SELECT mapel_id FROM tugas WHERE (kelas_id = {$kid} OR kelas_id IS NULL OR kelas_id = 0) AND mapel_id IS NOT NULL
                 UNION
-                SELECT mapel_id FROM quiz WHERE (kelas_id = {$kid} OR FIND_IN_SET({$kid}, kelas_ids) OR kelas_id IS NULL OR kelas_id = 0) AND mapel_id IS NOT NULL
+                SELECT mapel_id FROM quiz WHERE (kelas_id = {$kid} OR kelas_id IS NULL OR kelas_id = 0) AND mapel_id IS NOT NULL
             )
             OR (m.jurusan_id = {$jurusanId} OR m.jurusan_id IS NULL OR m.jurusan_id = 0)
             ORDER BY m.nama_mapel ASC
