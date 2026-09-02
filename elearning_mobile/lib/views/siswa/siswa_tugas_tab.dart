@@ -79,8 +79,37 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Batas waktu pengumpulan tugas ini telah terlewati. Silakan tuliskan alasan permohonan izin ke Guru Pengampu:',
+                      'Batas waktu pengumpulan tugas ini telah terlewati. Pilih alasan cepat atau ketik penjelasan ke Guru Pengampu:',
                       style: TextStyle(fontSize: 12, color: Colors.black87),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        'Sakit / Izin Medis',
+                        'Kendala Jaringan / Lampu Padam',
+                        'Kendala HP / Laptop',
+                        'Urusan Keluarga',
+                      ].map((reason) {
+                        return InkWell(
+                          onTap: () {
+                            catatanController.text = reason;
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Text(
+                              reason,
+                              style: TextStyle(fontSize: 11, color: Colors.red.shade900, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                     const SizedBox(height: 8),
                     TextField(

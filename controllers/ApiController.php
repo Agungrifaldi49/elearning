@@ -901,7 +901,8 @@ class ApiController {
                     $t['can_submit'] = $accessCheck['access'];
                     $t['is_expired'] = $accessCheck['is_expired'] ?? false;
                     $t['lock_status'] = $accessCheck['status'] ?? 'terbuka';
-                    $t['susulan_status'] = $accessCheck['susulan']['status'] ?? null;
+                    $susulanRec = (isset($accessCheck['susulan']) && is_array($accessCheck['susulan'])) ? $accessCheck['susulan'] : null;
+                    $t['susulan_status'] = $susulanRec ? ($susulanRec['status'] ?? null) : null;
 
                     if (isset($submittedMap[$tId])) {
                         $sub = $submittedMap[$tId];

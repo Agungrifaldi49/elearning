@@ -73,8 +73,18 @@ class TugasModel {
       }
     }
 
-    final bool parsedExpired = json['is_expired'] == true || json['is_expired'] == 1 || json['is_expired'] == '1' || calcExpired;
-    final bool parsedCanSubmit = json['can_submit'] == true || json['can_submit'] == 1 || (json['can_submit'] == null && !calcExpired);
+    final bool hasServerExpired = json.containsKey('is_expired') && json['is_expired'] != null;
+    final bool parsedExpired = hasServerExpired
+        ? (json['is_expired'] == true || json['is_expired'] == 1 || json['is_expired'] == '1')
+        : calcExpired;
+
+    final bool hasServerCanSubmit = json.containsKey('can_submit') && json['can_submit'] != null;
+    final bool parsedCanSubmit = hasServerCanSubmit
+        ? (json['can_submit'] == true || json['can_submit'] == 1 || json['can_submit'] == '1')
+        : !parsedExpired;
+
+    final String lockSt = json['lock_status']?.toString() ?? (parsedExpired && !parsedCanSubmit ? 'terkunci' : 'terbuka');
+    final String? susulanSt = json['susulan_status']?.toString();
 
     return TugasModel(
       id: _parseInt(json['id']),
@@ -95,15 +105,15 @@ class TugasModel {
       totalPengumpulan: json['total_pengumpulan'] != null ? _parseInt(json['total_pengumpulan']) : null,
       canSubmit: parsedCanSubmit,
       isExpired: parsedExpired,
-      lockStatus: json['lock_status'] ?? (parsedExpired && !parsedCanSubmit ? 'terkunci' : 'terbuka'),
-      susulanStatus: json['susulan_status'],
+      lockStatus: lockSt,
+      susulanStatus: susulanSt,
     );
   }
 
   bool get isSubmitted => submissionId != null;
   bool get isGraded => nilai != null;
-  bool get isSusulanPending => susulanStatus == 'pending';
-  bool get isSusulanDitolak => susulanStatus == 'ditolak';
+  bool get isSusulanPending => susulanStatus == 'pending' || lockStatus == 'pending';
+  bool get isSusulanDitolak => susulanStatus == 'ditolak' || lockStatus == 'ditolak';
   bool get isSusulanDisetujui => lockStatus == 'disetujui_susulan' || susulanStatus == 'disetujui';
-  bool get isLocked => !canSubmit && isExpired;
+  bool get isLocked => !canSubmit || (isExpired && !isSubmitted && !isSusulanDisetujui);
 }
