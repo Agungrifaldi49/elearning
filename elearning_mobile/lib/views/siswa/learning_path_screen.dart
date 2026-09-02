@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/siswa_provider.dart';
 import '../../services/api_service.dart';
+import '../../services/file_service.dart';
+import '../../theme/app_theme.dart';
 import 'gabung_kelas_screen.dart';
+import 'review_quiz_screen.dart';
+import 'siswa_cbt_tab.dart';
 import 'siswa_materi_tab.dart';
 import 'siswa_tugas_tab.dart';
-import 'siswa_cbt_tab.dart';
 
 class LearningPathScreen extends StatefulWidget {
   const LearningPathScreen({super.key});
@@ -40,8 +45,17 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     setState(() => _isLoading = true);
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     final userId = user?.id ?? 0;
+
+    // Refresh SiswaProvider store as well
+    if (userId > 0) {
+      final siswaProv = Provider.of<SiswaProvider>(context, listen: false);
+      siswaProv.fetchMateri(userId);
+      siswaProv.fetchTugas(userId);
+      siswaProv.fetchQuiz(userId);
+    }
+
     final res = await ApiService.get('siswa/learning_path', params: {'user_id': userId.toString()});
-    
+
     if (mounted) {
       final bool isSuccess = _isTrue(res['success']) || _isTrue(res['status']);
       final dynamic rawData = res['data'];
@@ -49,7 +63,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
       if (isSuccess && rawData is Map) {
         final dataMap = Map<String, dynamic>.from(rawData);
         final List mapelList = (dataMap['mapel_list'] is List) ? dataMap['mapel_list'] : [];
-        
+
         _expandedMapelIds.clear();
         for (var m in mapelList) {
           final mId = int.tryParse((m['mapel_id'] ?? m['id'] ?? 0).toString()) ?? 0;
@@ -94,46 +108,504 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
   void _handleStepAction(String actionType) {
     final type = actionType.toLowerCase();
     if (type == 'materi') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
-        appBar: AppBar(
-          title: Text('Materi Pembelajaran Digital', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          backgroundColor: const Color(0xFF0F172A),
-          foregroundColor: Colors.white,
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(
+              title: Text('Materi Pembelajaran Digital', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              backgroundColor: const Color(0xFF0F172A),
+              foregroundColor: Colors.white,
+            ),
+            body: const SiswaMateriTab(),
+          ),
         ),
-        body: const SiswaMateriTab(),
-      )));
+      ).then((_) => _fetchPath());
     } else if (type == 'tugas') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
-        appBar: AppBar(
-          title: Text('Tugas & Penugasan KBM', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          backgroundColor: const Color(0xFF0F172A),
-          foregroundColor: Colors.white,
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(
+              title: Text('Tugas & Penugasan KBM', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              backgroundColor: const Color(0xFF0F172A),
+              foregroundColor: Colors.white,
+            ),
+            body: const SiswaTugasTab(),
+          ),
         ),
-        body: const SiswaTugasTab(),
-      )));
+      ).then((_) => _fetchPath());
     } else if (type == 'quiz' || type == 'cbt' || type == 'ujian' || type == 'uts' || type == 'uas') {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
-        appBar: AppBar(
-          title: Text('Kuis & Ujian CBT Online', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-          backgroundColor: const Color(0xFF0F172A),
-          foregroundColor: Colors.white,
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(
+              title: Text('Kuis & Ujian CBT Online', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              backgroundColor: const Color(0xFF0F172A),
+              foregroundColor: Colors.white,
+            ),
+            body: const SiswaCbtTab(),
+          ),
         ),
-        body: const SiswaCbtTab(),
-      )));
+      ).then((_) => _fetchPath());
     } else {
       _fetchPath();
     }
+  }
+
+  void _handleItemClick(dynamic item, String namaMapel, bool isEnrolled) {
+    if (!isEnrolled) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const GabungKelasScreen()),
+      ).then((_) => _fetchPath());
+      return;
+    }
+
+    final type = (item['type'] ?? 'materi').toString().toLowerCase();
+    final int itemId = int.tryParse((item['id'] ?? 0).toString()) ?? 0;
+    final bool isCompleted = _isTrue(item['is_completed']);
+
+    if (type == 'quiz' || type == 'cbt' || type == 'uts' || type == 'uas') {
+      if (isCompleted || item['hasil_id'] != null) {
+        // Navigates directly to ReviewQuizScreen (review_quiz_screen.dart)
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ReviewQuizScreen(quizId: itemId)),
+        ).then((_) => _fetchPath());
+      } else {
+        // Navigates directly to SiswaCbtTab (siswa_cbt_tab.dart)
+        _handleStepAction('quiz');
+      }
+    } else if (type == 'tugas') {
+      _showTugasModal(item, namaMapel);
+    } else if (type == 'materi') {
+      _showMateriModal(item, namaMapel);
+    } else {
+      _handleStepAction(type);
+    }
+  }
+
+  void _showMateriModal(dynamic item, String namaMapel) {
+    final int materiId = int.tryParse((item['id'] ?? 0).toString()) ?? 0;
+    final String judul = (item['title'] ?? item['judul'] ?? 'Materi Pembelajaran').toString();
+    final String desc = (item['desc'] ?? item['deskripsi'] ?? 'Modul materi digital KBM').toString();
+    final String guru = (item['guru'] ?? item['nama_guru'] ?? 'Guru Pengampu').toString();
+    final String rawFilePath = (item['file_url'] ?? item['file_path'] ?? '').toString();
+    final String youtubeUrl = (item['youtube_url'] ?? '').toString();
+
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user != null && materiId > 0) {
+      Provider.of<SiswaProvider>(context, listen: false).markMateriAsSeen(materiId);
+    }
+
+    final String fileUrl = ApiService.getFileUrl(rawFilePath);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            top: 24,
+            left: 20,
+            right: 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: (youtubeUrl.isNotEmpty) ? Colors.red.shade50 : Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      (youtubeUrl.isNotEmpty) ? Icons.play_circle_fill_rounded : Icons.auto_stories_rounded,
+                      color: (youtubeUrl.isNotEmpty) ? Colors.red : const Color(0xFF10B981),
+                      size: 30,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          namaMapel,
+                          style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFF059669), fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          judul,
+                          style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Icon(Icons.person_outline_rounded, size: 16, color: Colors.grey.shade600),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Pengampu: $guru',
+                    style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text('Deskripsi & Petunjuk Materi:', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  desc.isNotEmpty ? desc : 'Tidak ada deskripsi tambahan.',
+                  style: GoogleFonts.inter(fontSize: 12.5, height: 1.4),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Download / View File
+              if (rawFilePath.isNotEmpty) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      FileService.showInAppPreview(context, fileUrl, judul, studentName: guru);
+                    },
+                    icon: const Icon(Icons.download_rounded, size: 18),
+                    label: Text('Unduh / Buka Dokumen Modul', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+
+              // YouTube Video Link
+              if (youtubeUrl.isNotEmpty) ...[
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final uri = Uri.parse(youtubeUrl);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    icon: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                    label: Text('Tonton Video Youtube', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade700,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+
+              SizedBox(
+                width: double.infinity,
+                height: 42,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _handleStepAction('materi');
+                  },
+                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                  label: Text('Buka Semua Daftar Materi', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showTugasModal(dynamic item, String namaMapel) {
+    final int tugasId = int.tryParse((item['id'] ?? 0).toString()) ?? 0;
+    final String judul = (item['title'] ?? item['judul'] ?? 'Penugasan KBM').toString();
+    final String desc = (item['desc'] ?? item['deskripsi'] ?? 'Petunjuk tugas praktik').toString();
+    final String guru = (item['guru'] ?? item['nama_guru'] ?? 'Guru Pengampu').toString();
+    final String deadline = (item['deadline'] ?? 'Sesuai Jadwal Guru').toString();
+    final bool isCompleted = _isTrue(item['is_completed']) || item['submission_id'] != null;
+    final dynamic nilai = item['nilai'];
+    final bool isGraded = nilai != null;
+    final String komentarGuru = (item['komentar_guru'] ?? item['catatan_guru'] ?? '').toString();
+    final String rawFilePath = (item['file_path'] ?? item['file_url'] ?? '').toString();
+
+    final catatanController = TextEditingController();
+    final fileController = TextEditingController();
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                top: 24,
+                left: 20,
+                right: 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            judul,
+                            style: GoogleFonts.outfit(fontSize: 17, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isGraded
+                                ? Colors.green.shade100
+                                : (isCompleted ? Colors.blue.shade100 : Colors.orange.shade100),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            isGraded
+                                ? '⭐ Nilai: $nilai'
+                                : (isCompleted ? '✅ Sudah Dikumpul' : '⏳ Belum Dikumpul'),
+                            style: GoogleFonts.outfit(
+                              color: isGraded
+                                  ? Colors.green.shade900
+                                  : (isCompleted ? Colors.blue.shade900 : Colors.orange.shade900),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text("Mapel: $namaMapel • Guru: $guru", style: GoogleFonts.inter(color: Colors.grey.shade700, fontSize: 12.5, fontWeight: FontWeight.w500)),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded, size: 14, color: Colors.redAccent),
+                        const SizedBox(width: 4),
+                        Text("Batas Waktu: $deadline", style: GoogleFonts.inter(color: Colors.redAccent, fontSize: 11.5, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    Text('Instruksi Soal / Tugas:', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(desc, style: GoogleFonts.inter(fontSize: 12.5, height: 1.4)),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Lampiran Soal Guru
+                    if (rawFilePath.isNotEmpty) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        height: 40,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            final fileUrl = ApiService.getFileUrl(rawFilePath);
+                            FileService.showInAppPreview(context, fileUrl, judul, studentName: guru);
+                          },
+                          icon: const Icon(Icons.attach_file_rounded, size: 16),
+                          label: Text('Unduh File Soal Guru', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+
+                    // Evaluasi Nilai & Catatan Guru
+                    if (isGraded && komentarGuru.isNotEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.green.shade300),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.comment_rounded, color: Colors.green.shade800, size: 16),
+                                const SizedBox(width: 6),
+                                Text('Komentar & Catatan Guru:', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.green.shade900, fontSize: 12)),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(komentarGuru, style: GoogleFonts.inter(color: Colors.green.shade900, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+
+                    // Submission Form (if not graded)
+                    if (!isGraded) ...[
+                      Text('Form Pengumpulan Tugas:', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: catatanController,
+                        decoration: InputDecoration(
+                          hintText: 'Tuliskan catatan / jawaban tugas Anda...',
+                          labelText: 'Catatan Siswa',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          isDense: true,
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: fileController,
+                        decoration: InputDecoration(
+                          hintText: 'Link file / Nama file lampiran...',
+                          labelText: 'File / Link Tugas (Opsional)',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          isDense: true,
+                          prefixIcon: const Icon(Icons.link_rounded),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton.icon(
+                          onPressed: isSubmitting
+                              ? null
+                              : () async {
+                                  final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+                                  if (user == null) return;
+
+                                  setModalState(() => isSubmitting = true);
+                                  final res = await ApiService.post('siswa/submit_tugas', {
+                                    'user_id': user.id,
+                                    'tugas_id': tugasId,
+                                    'catatan_siswa': catatanController.text,
+                                    'file_path': fileController.text,
+                                  });
+
+                                  if (context.mounted) {
+                                    setModalState(() => isSubmitting = false);
+                                    Navigator.pop(context);
+                                    if (res['success'] == true || res['status'] == true) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('🎉 Tugas berhasil dikirimkan!'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                      _fetchPath();
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(res['message'] ?? 'Gagal mengirimkan tugas'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                          icon: isSubmitting
+                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Icon(Icons.send_rounded, size: 18),
+                          label: Text(
+                            isSubmitting ? 'Mengirim...' : (isCompleted ? 'Update Pengumpulan Tugas' : 'Kirim Tugas Sekarang'),
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.secondaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 40,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _handleStepAction('tugas');
+                        },
+                        icon: const Icon(Icons.assignment_rounded, size: 16),
+                        label: Text('Buka Halaman Tugas KBM', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).currentUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     final int capaianPct = int.tryParse((_data['capaian_persen'] ?? 0).toString()) ?? 0;
     final List mapelListRaw = (_data['mapel_list'] is List) ? _data['mapel_list'] : [];
     final int totalMapel = mapelListRaw.isNotEmpty ? mapelListRaw.length : (int.tryParse((_data['total_mapel'] ?? 0).toString()) ?? 0);
-    
+
     int selesaiCount = 0;
     int prosesCount = 0;
     int belumCount = 0;
@@ -152,10 +624,10 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     final filteredMapel = mapelListRaw.where((m) {
       final int mId = int.tryParse((m['mapel_id'] ?? m['id'] ?? 0).toString()) ?? 0;
       final cat = (m['status_category'] ?? 'belum_dimulai').toString();
-      
+
       bool matchesSubject = (_selectedMapelId == 0 || mId == _selectedMapelId);
       bool matchesTab = (_selectedTab == 'semua' || cat == _selectedTab);
-      
+
       return matchesSubject && matchesTab;
     }).toList();
 
@@ -295,35 +767,47 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                           Row(
                             children: [
                               Expanded(
-                                child: _buildStepGuideCard(
-                                  stepNo: '1',
-                                  title: 'Materi Digital',
-                                  desc: 'Modul KBM',
-                                  icon: Icons.auto_stories_rounded,
-                                  accentColor: const Color(0xFF10B981),
-                                  isDark: isDark,
+                                child: InkWell(
+                                  onTap: () => _handleStepAction('materi'),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: _buildStepGuideCard(
+                                    stepNo: '1',
+                                    title: 'Materi Digital',
+                                    desc: 'Modul KBM',
+                                    icon: Icons.auto_stories_rounded,
+                                    accentColor: const Color(0xFF10B981),
+                                    isDark: isDark,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: _buildStepGuideCard(
-                                  stepNo: '2',
-                                  title: 'Penugasan KBM',
-                                  desc: 'Tugas Praktik',
-                                  icon: Icons.assignment_rounded,
-                                  accentColor: const Color(0xFF0EA5E9),
-                                  isDark: isDark,
+                                child: InkWell(
+                                  onTap: () => _handleStepAction('tugas'),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: _buildStepGuideCard(
+                                    stepNo: '2',
+                                    title: 'Penugasan KBM',
+                                    desc: 'Tugas Praktik',
+                                    icon: Icons.assignment_rounded,
+                                    accentColor: const Color(0xFF0EA5E9),
+                                    isDark: isDark,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: _buildStepGuideCard(
-                                  stepNo: '3',
-                                  title: 'Evaluasi CBT',
-                                  desc: 'Kuis Online',
-                                  icon: Icons.quiz_rounded,
-                                  accentColor: const Color(0xFFF59E0B),
-                                  isDark: isDark,
+                                child: InkWell(
+                                  onTap: () => _handleStepAction('quiz'),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: _buildStepGuideCard(
+                                    stepNo: '3',
+                                    title: 'Evaluasi CBT',
+                                    desc: 'Kuis Online',
+                                    icon: Icons.quiz_rounded,
+                                    accentColor: const Color(0xFFF59E0B),
+                                    isDark: isDark,
+                                  ),
                                 ),
                               ),
                             ],
@@ -828,7 +1312,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       itemCount: sequenceItems.length,
                       itemBuilder: (context, itemIdx) {
                         final item = sequenceItems[itemIdx];
-                        return _buildSequenceItemRow(item, itemIdx + 1, isEnrolled);
+                        return _buildSequenceItemRow(item, itemIdx + 1, isEnrolled, namaMapel);
                       },
                     ),
                     const SizedBox(height: 16),
@@ -890,14 +1374,13 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     );
   }
 
-  Widget _buildSequenceItemRow(dynamic item, int stepNo, bool isEnrolled) {
+  Widget _buildSequenceItemRow(dynamic item, int stepNo, bool isEnrolled, String namaMapel) {
     final String type = (item['type'] ?? 'materi').toString();
     final String title = (item['title'] ?? 'Item Pembelajaran').toString();
     final String desc = (item['desc'] ?? '').toString();
     final String guru = (item['guru'] ?? 'Guru Pengampu').toString();
     final bool isCompleted = _isTrue(item['is_completed']);
     final String actionLabel = (item['action_label'] ?? 'Akses').toString();
-    final String actionType = (item['action_type'] ?? type).toString();
 
     Color categoryBg = Colors.blue.shade50;
     Color categoryFg = Colors.blue.shade900;
@@ -1006,16 +1489,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                 SizedBox(
                   height: 30,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (!isEnrolled) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const GabungKelasScreen()),
-                        ).then((_) => _fetchPath());
-                      } else {
-                        _handleStepAction(actionType);
-                      }
-                    },
+                    onPressed: () => _handleItemClick(item, namaMapel, isEnrolled),
                     icon: Icon(
                       !isEnrolled
                           ? Icons.key_rounded
@@ -1066,7 +1540,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     } else if (isActive) {
       nodeColor = Colors.amber.shade700;
       nodeIcon = Icons.play_circle_fill_rounded;
-    } else if (!isLocked) {
+    } else if (!isUnlocked) {
       nodeColor = const Color(0xFF059669);
       nodeIcon = Icons.radio_button_checked_rounded;
     }
