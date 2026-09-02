@@ -17,8 +17,18 @@ require_once __DIR__ . '/controllers/ApiController.php';
 // Clear output buffer before controller execution
 if (ob_get_length()) ob_clean();
 
-// Parse endpoint action from query parameters, PATH_INFO, or REQUEST_URI
-$rawAction = $_GET['action'] ?? $_GET['url'] ?? $_GET['endpoint'] ?? '';
+// Get raw JSON post input if any
+$jsonInput = [];
+$rawBody = file_get_contents('php://input');
+if (!empty($rawBody)) {
+    $decoded = json_decode($rawBody, true);
+    if (is_array($decoded)) {
+        $jsonInput = $decoded;
+    }
+}
+
+// Parse endpoint action from query parameters, POST body, PATH_INFO, or REQUEST_URI
+$rawAction = $_GET['action'] ?? $_GET['url'] ?? $_GET['endpoint'] ?? $_POST['action'] ?? $_POST['endpoint'] ?? $jsonInput['action'] ?? $jsonInput['endpoint'] ?? '';
 if (strpos($rawAction, '?') !== false) {
     $partsAction = explode('?', $rawAction, 2);
     $action = $partsAction[0];

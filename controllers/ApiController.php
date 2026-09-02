@@ -166,7 +166,8 @@ class ApiController {
     }
 
     public function siswa($endpoint = 'dashboard') {
-        $endpoint = strtolower(explode('?', $endpoint)[0]);
+        $endpoint = strtolower(trim(explode('?', $endpoint)[0], '/'));
+        $endpoint = str_replace('-', '_', $endpoint);
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? $_GET['siswa_id'] ?? $_POST['siswa_id'] ?? $input['siswa_id'] ?? 0);
         if ($userId === 0) {
@@ -1152,15 +1153,34 @@ class ApiController {
 
             case 'request_susulan':
             case 'ajukan_susulan':
+                $input = $this->getPostInput();
+                $tugasId = intval($_POST['tugas_id'] ?? $input['tugas_id'] ?? 0);
+                $quizId = intval($_POST['quiz_id'] ?? $input['quiz_id'] ?? $_GET['quiz_id'] ?? 0);
+
+                if ($tugasId > 0 && $quizId <= 0) {
+                    $catatan = trim($_POST['catatan_susulan'] ?? $input['catatan_susulan'] ?? $_POST['catatan'] ?? $input['catatan'] ?? 'Permohonan izin pengumpulan tugas susulan via mobile app');
+                    $learningModel->requestTugasSusulan($tugasId, $siswa['id'], $catatan);
+                    try {
+                        $commModel = new CommunicationModel();
+                        $uName = $siswa['nama_lengkap'] ?? 'Siswa';
+                        $commModel->sendNotificationToTeacherByTugas(
+                            $tugasId,
+                            '📩 Permintaan Izin Susulan Tugas',
+                            "Siswa {$uName} mengajukan permohonan izin susulan pengumpulan Tugas via Mobile. Catatan: {$catatan}",
+                            'index.php?url=guru/tugas'
+                        );
+                    } catch (\Throwable $eN) {}
+                    $this->jsonResponse(true, 'Permohonan izin pengumpulan tugas susulan telah dikirimkan ke Guru Pengampu.');
+                    break;
+                }
+
                 require_once ROOT_PATH . 'models/ExamModel.php';
                 require_once ROOT_PATH . 'models/CommunicationModel.php';
                 $examModel = new ExamModel();
-                $input = $this->getPostInput();
-                $quizId = intval($input['quiz_id'] ?? $_GET['quiz_id'] ?? 0);
                 $catatan = trim($input['catatan'] ?? $input['alasan'] ?? 'Permohonan izin ujian susulan / buka suspend via mobile app');
 
                 if ($quizId <= 0) {
-                    $this->jsonResponse(false, 'Quiz ID tidak valid', null, 400);
+                    $this->jsonResponse(false, 'Quiz ID atau Tugas ID tidak valid', null, 400);
                 }
 
                 $res = $examModel->requestSusulan($quizId, $siswa['id'], $catatan);
