@@ -320,7 +320,7 @@ class SiswaProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> submitTugas(int userId, int tugasId, String catatan, String filePath) async {
+  Future<Map<String, dynamic>> submitTugasWithResponse(int userId, int tugasId, String catatan, String filePath) async {
     final res = await ApiService.post('siswa/submit_tugas', {
       'user_id': userId,
       'tugas_id': tugasId,
@@ -329,9 +329,25 @@ class SiswaProvider with ChangeNotifier {
     });
     if (res['success'] == true) {
       await fetchTugas(userId);
-      return true;
     }
-    return false;
+    return res;
+  }
+
+  Future<bool> submitTugas(int userId, int tugasId, String catatan, String filePath) async {
+    final res = await submitTugasWithResponse(userId, tugasId, catatan, filePath);
+    return res['success'] == true;
+  }
+
+  Future<Map<String, dynamic>> requestTugasSusulan(int userId, int tugasId, String catatan) async {
+    final res = await ApiService.post('siswa/request_tugas_susulan', {
+      'user_id': userId,
+      'tugas_id': tugasId,
+      'catatan_susulan': catatan,
+    });
+    if (res['success'] == true) {
+      await fetchTugas(userId);
+    }
+    return res;
   }
 
   Future<void> fetchQuiz(int userId) async {

@@ -15,6 +15,10 @@ class TugasModel {
   final String? komentarGuru;
   final String? submittedAt;
   final int? totalPengumpulan;
+  final bool canSubmit;
+  final bool isExpired;
+  final String lockStatus;
+  final String? susulanStatus;
 
   TugasModel({
     required this.id,
@@ -33,6 +37,10 @@ class TugasModel {
     this.komentarGuru,
     this.submittedAt,
     this.totalPengumpulan,
+    this.canSubmit = true,
+    this.isExpired = false,
+    this.lockStatus = 'terbuka',
+    this.susulanStatus,
   });
 
   static int _parseInt(dynamic val, [int defaultVal = 0]) {
@@ -56,6 +64,18 @@ class TugasModel {
   }
 
   factory TugasModel.fromJson(Map<String, dynamic> json) {
+    final String dlStr = json['deadline'] ?? '';
+    bool calcExpired = false;
+    if (dlStr.isNotEmpty) {
+      final parsed = DateTime.tryParse(dlStr);
+      if (parsed != null && DateTime.now().isAfter(parsed)) {
+        calcExpired = true;
+      }
+    }
+
+    final bool parsedExpired = json['is_expired'] == true || json['is_expired'] == 1 || json['is_expired'] == '1' || calcExpired;
+    final bool parsedCanSubmit = json['can_submit'] == true || json['can_submit'] == 1 || (json['can_submit'] == null && !calcExpired);
+
     return TugasModel(
       id: _parseInt(json['id']),
       guruId: _parseInt(json['guru_id']),
@@ -73,9 +93,17 @@ class TugasModel {
       komentarGuru: json['komentar_guru'],
       submittedAt: json['submitted_at'],
       totalPengumpulan: json['total_pengumpulan'] != null ? _parseInt(json['total_pengumpulan']) : null,
+      canSubmit: parsedCanSubmit,
+      isExpired: parsedExpired,
+      lockStatus: json['lock_status'] ?? (parsedExpired && !parsedCanSubmit ? 'terkunci' : 'terbuka'),
+      susulanStatus: json['susulan_status'],
     );
   }
 
   bool get isSubmitted => submissionId != null;
   bool get isGraded => nilai != null;
+  bool get isSusulanPending => susulanStatus == 'pending';
+  bool get isSusulanDitolak => susulanStatus == 'ditolak';
+  bool get isSusulanDisetujui => lockStatus == 'disetujui_susulan' || susulanStatus == 'disetujui';
+  bool get isLocked => !canSubmit && isExpired;
 }

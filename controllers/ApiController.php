@@ -931,13 +931,19 @@ class ApiController {
                 $catatan = trim($_POST['catatan_siswa'] ?? $input['catatan_siswa'] ?? '');
                 $filePath = trim($_POST['file_path'] ?? $input['file_path'] ?? '');
 
+                if ($tugasId <= 0) {
+                    $this->jsonResponse(false, 'ID Tugas tidak valid', null, 400);
+                }
+
+                // Strict Deadline & Susulan Check
+                $accessCheck = $learningModel->canSiswaSubmitTugas($tugasId, $siswa['id']);
+                if (!$accessCheck['access']) {
+                    $this->jsonResponse(false, 'Akses Pengumpulan Terkunci! Waktu pengumpulan tugas ini telah melewati deadline. Silakan ajukan izin Susulan ke Guru Pengampu.', null, 403);
+                }
+
                 if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
                     require_once ROOT_PATH . 'helpers/UploadHelper.php';
                     $filePath = UploadHelper::upload($_FILES['file'], 'tugas');
-                }
-
-                if ($tugasId <= 0) {
-                    $this->jsonResponse(false, 'ID Tugas tidak valid', null, 400);
                 }
 
                 // Check existing submission
@@ -961,6 +967,32 @@ class ApiController {
                 }
 
                 $this->jsonResponse(true, 'Tugas berhasil dikumpulkan!');
+                break;
+
+            case 'request_tugas_susulan':
+            case 'request_tugas_permission':
+                $input = $this->getPostInput();
+                $tugasId = intval($_POST['tugas_id'] ?? $input['tugas_id'] ?? 0);
+                $catatan = trim($_POST['catatan_susulan'] ?? $input['catatan_susulan'] ?? $_POST['catatan'] ?? $input['catatan'] ?? 'Permohonan izin pengumpulan tugas susulan via mobile app');
+
+                if ($tugasId <= 0) {
+                    $this->jsonResponse(false, 'ID Tugas tidak valid', null, 400);
+                }
+
+                $learningModel->requestTugasSusulan($tugasId, $siswa['id'], $catatan);
+
+                try {
+                    $commModel = new CommunicationModel();
+                    $uName = $siswa['nama_lengkap'] ?? 'Siswa';
+                    $commModel->sendNotificationToTeacherByTugas(
+                        $tugasId,
+                        '📩 Permintaan Izin Susulan Tugas',
+                        "Siswa {$uName} mengajukan permohonan izin susulan pengumpulan Tugas via Mobile. Catatan: {$catatan}",
+                        'index.php?url=guru/tugas'
+                    );
+                } catch (\Throwable $eN) {}
+
+                $this->jsonResponse(true, 'Permohonan izin pengumpulan tugas susulan telah dikirimkan ke Guru Pengampu.');
                 break;
 
             case 'quiz':
