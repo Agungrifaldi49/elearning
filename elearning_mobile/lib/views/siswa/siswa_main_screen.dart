@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
@@ -38,6 +39,190 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
     const SiswaTugasTab(),
     const SiswaCbtTab(),
   ];
+
+  void _showLogoutConfirmationDialog(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          elevation: 12,
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                    : [Colors.white, Colors.red.shade50.withValues(alpha: 0.4)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.redAccent.withValues(alpha: 0.35),
+                        blurRadius: 18,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.power_settings_new_rounded,
+                    color: Colors.white,
+                    size: 38,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Konfirmasi Keluar',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Apakah Anda yakin ingin keluar dari akun MHC E-Learning Mobile?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: isDark ? Colors.white70 : Colors.grey.shade700,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF334155) : Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? Colors.blue.shade700.withValues(alpha: 0.3) : Colors.blue.shade200,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.shield_outlined,
+                        size: 20,
+                        color: isDark ? Colors.blue.shade300 : Colors.blue.shade800,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Sesi Anda akan diakhiri. Data KBM & progres belajar Anda tetap tersimpan aman.',
+                          style: GoogleFonts.inter(
+                            fontSize: 11.5,
+                            height: 1.35,
+                            color: isDark ? Colors.blue.shade100 : Colors.blue.shade900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          side: BorderSide(
+                            color: isDark ? Colors.white24 : Colors.grey.shade400,
+                          ),
+                        ),
+                        child: Text(
+                          'Batal',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white70 : Colors.grey.shade800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          Navigator.pop(dialogContext);
+                          await Provider.of<AuthProvider>(context, listen: false).logout();
+                          if (!mounted) return;
+
+                          Navigator.of(context).pushAndRemoveUntil(
+                            PageRouteBuilder(
+                              transitionDuration: const Duration(milliseconds: 400),
+                              pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
+                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                final fadeIn = Tween<double>(begin: 0.0, end: 1.0).animate(
+                                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                                );
+                                final slideUp = Tween<Offset>(
+                                  begin: const Offset(0.0, 0.06),
+                                  end: Offset.zero,
+                                ).animate(
+                                  CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                                );
+
+                                return FadeTransition(
+                                  opacity: fadeIn,
+                                  child: SlideTransition(
+                                    position: slideUp,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                            ),
+                            (route) => false,
+                          );
+                        },
+                        icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.white),
+                        label: Text(
+                          'Ya, Keluar',
+                          style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          backgroundColor: const Color(0xFFEF4444),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -90,6 +275,7 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: InkWell(
           onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
@@ -164,11 +350,7 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
           PopupMenuButton<String>(
             onSelected: (value) async {
               if (value == 'logout') {
-                await Provider.of<AuthProvider>(context, listen: false).logout();
-                if (!mounted) return;
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
+                _showLogoutConfirmationDialog(context);
               } else if (value == 'profil') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
               } else if (value == 'kartu') {

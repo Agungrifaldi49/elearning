@@ -6,6 +6,17 @@ class AuthService {
   static const String _userKey = 'user_data';
   static const String _detailsKey = 'user_details';
   static const String _roleKey = 'user_role';
+  static const String _onboardingKey = 'has_seen_onboarding';
+
+  static Future<bool> hasSeenOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_onboardingKey) ?? false;
+  }
+
+  static Future<void> setHasSeenOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_onboardingKey, true);
+  }
 
   static Future<void> saveSession(Map<String, dynamic> user, Map<String, dynamic>? details, String role) async {
     final prefs = await SharedPreferences.getInstance();
@@ -33,6 +44,8 @@ class AuthService {
 
   static Future<void> clearSession() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await prefs.remove(_userKey);
+    await prefs.remove(_detailsKey);
+    await prefs.remove(_roleKey);
   }
 }

@@ -5,7 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../siswa/siswa_main_screen.dart';
 import '../guru/guru_main_screen.dart';
-import 'login_screen.dart';
+import 'onboarding_screen.dart';
 import 'widgets/splash_background_painter.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -16,21 +16,18 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _animController;
+  late AnimationController _pulseController;
 
-  // Micro-Animation Sequences (Total Duration: 1500ms / 1.5s)
-  // Phase 1: Focus & Smart Tech Pulse (0.0s - 0.6s)
-  late Animation<double> _focusPulseAnim;
+  // Micro-Animation Sequences
   late Animation<double> _gearRotationAnim;
-
-  // Phase 2: Friendly Identity & Logo Scale-up (0.2s - 0.8s)
   late Animation<double> _logoScaleAnim;
   late Animation<double> _logoOpacityAnim;
   late Animation<double> _greetingFadeAnim;
   late Animation<Offset> _greetingSlideAnim;
 
-  // Phase 3: Smooth Exit Slide & Fade (1.2s - 1.5s)
+  // Transition Exit Slide & Fade
   late Animation<Offset> _exitSlideAnim;
   late Animation<double> _exitFadeAnim;
 
@@ -40,106 +37,104 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // 1. Initialize 1.5-second Animation Controller
+    // 1. Entrance & Exit Animation Controller (2.2 seconds for rich presentation)
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2200),
     );
 
-    // Phase 1: Tech Data Pulse & Gear Spinning
-    _focusPulseAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
-      ),
-    );
+    // 2. Continuous Looping Animation Controller for Background Energy Pulse & Tech Gear
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
 
     _gearRotationAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.0, 1.0, curve: Curves.linear),
+        parent: _pulseController,
+        curve: Curves.linear,
       ),
     );
 
-    // Phase 2: Logo Scale-up + Adaptive Greeting Reveal
-    _logoScaleAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
+    // Immediate Logo Scale-up & Opacity Reveal from Frame 0
+    _logoScaleAnim = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(
         parent: _animController,
-        curve: const Interval(0.15, 0.65, curve: Curves.easeOutBack),
+        curve: const Interval(0.0, 0.45, curve: Curves.easeOutBack),
       ),
     );
 
-    _logoOpacityAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _logoOpacityAnim = Tween<double>(begin: 0.2, end: 1.0).animate(
       CurvedAnimation(
         parent: _animController,
-        curve: const Interval(0.15, 0.45, curve: Curves.easeIn),
+        curve: const Interval(0.0, 0.25, curve: Curves.easeIn),
       ),
     );
 
-    _greetingFadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+    // Immediate Greeting & Title Reveal
+    _greetingFadeAnim = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(
         parent: _animController,
-        curve: const Interval(0.4, 0.8, curve: Curves.easeIn),
+        curve: const Interval(0.0, 0.35, curve: Curves.easeIn),
       ),
     );
 
     _greetingSlideAnim = Tween<Offset>(
-      begin: const Offset(0, 0.35),
+      begin: const Offset(0, 0.15),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(
         parent: _animController,
-        curve: const Interval(0.4, 0.8, curve: Curves.easeOutCubic),
+        curve: const Interval(0.0, 0.40, curve: Curves.easeOutCubic),
       ),
     );
 
-    // Phase 3: Transition Exit Slide & Fade
+    // Exit Transition (towards the end of 2.2s)
     _exitSlideAnim = Tween<Offset>(
       begin: Offset.zero,
       end: const Offset(0, -0.15),
     ).animate(
       CurvedAnimation(
         parent: _animController,
-        curve: const Interval(0.8, 1.0, curve: Curves.easeInOutCubic),
+        curve: const Interval(0.85, 1.0, curve: Curves.easeInOutCubic),
       ),
     );
 
     _exitFadeAnim = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(
         parent: _animController,
-        curve: const Interval(0.85, 1.0, curve: Curves.easeOut),
+        curve: const Interval(0.88, 1.0, curve: Curves.easeOut),
       ),
     );
 
-    // 2. Start Animation & Add Completion Listener
+    // 3. Start Entrance Animation & Parallel Auth Check
     _animController.forward();
-
-    _animController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _checkAndNavigate();
-      }
-    });
-
-    // 3. Perform Auth Check in Parallel
-    _startAuthCheck();
+    _startAuthCheckAndNavigate();
   }
 
-  Future<void> _startAuthCheck() async {
-    await ApiService.initBaseUrl();
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.checkAutoLogin();
+  Future<void> _startAuthCheckAndNavigate() async {
+    final minDurationFuture = Future.delayed(const Duration(milliseconds: 2200));
 
-    if (mounted) {
-      // If animation is already completed, perform navigation
-      if (_animController.isCompleted) {
-        _checkAndNavigate();
-      }
+    final authCheckFuture = () async {
+      await ApiService.initBaseUrl();
+      if (!mounted) return;
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.checkAutoLogin();
+    }();
+
+    await Future.wait([minDurationFuture, authCheckFuture]);
+
+    if (mounted && !_hasNavigated) {
+      _checkAndNavigate();
     }
   }
 
-  void _checkAndNavigate() {
+  void _checkAndNavigate() async {
     if (!mounted || _hasNavigated) return;
     _hasNavigated = true;
+
+    _pulseController.stop();
+    _animController.stop();
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     Widget destination;
@@ -148,8 +143,10 @@ class _SplashScreenState extends State<SplashScreen>
       final user = authProvider.currentUser!;
       destination = user.isGuru ? const GuruMainScreen() : const SiswaMainScreen();
     } else {
-      destination = const LoginScreen();
+      destination = const OnboardingScreen();
     }
+
+    if (!mounted) return;
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
@@ -200,6 +197,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _animController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -208,16 +206,16 @@ class _SplashScreenState extends State<SplashScreen>
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF3730A3), // Solid brand fallback for 0ms frame
+      backgroundColor: const Color(0xFF3730A3),
       body: GestureDetector(
         onTap: _skipAnimation,
         behavior: HitTestBehavior.opaque,
         child: AnimatedBuilder(
-          animation: _animController,
+          animation: Listenable.merge([_animController, _pulseController]),
           builder: (context, child) {
             return Stack(
               children: [
-                // 1. Rich Brand Gradient Background & Data Energy Pulse Lines
+                // 1. Continuous Energy Pulse Gradient Background
                 Container(
                   width: double.infinity,
                   height: double.infinity,
@@ -226,7 +224,7 @@ class _SplashScreenState extends State<SplashScreen>
                       colors: [
                         Color(0xFF4F46E5), // Indigo primary
                         Color(0xFF3730A3), // Deep Indigo
-                        Color(0xFF1E1B4B), // Midnight Indigo accent
+                        Color(0xFF1E1B4B), // Midnight Indigo
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -234,13 +232,13 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   child: CustomPaint(
                     painter: SplashBackgroundPainter(
-                      pulseProgress: _focusPulseAnim.value,
+                      pulseProgress: _pulseController.value,
                       gridOpacity: _exitFadeAnim.value,
                     ),
                   ),
                 ),
 
-                // 2. Top Bar Skip Action
+                // 2. Top Bar "Lewati" Action
                 SafeArea(
                   child: Align(
                     alignment: Alignment.topRight,
@@ -321,7 +319,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                           const SizedBox(height: 24),
 
-                          // MHC School Identity Logo with Soft Scale-Up + Ease-Out
+                          // MHC School Identity Logo with Scale-Up & Ease-Out
                           ScaleTransition(
                             scale: _logoScaleAnim,
                             child: FadeTransition(
@@ -356,7 +354,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                           SizedBox(height: size.height * 0.03),
 
-                          // Adaptive Micro-Greeting & Modern Identity Typography
+                          // Adaptive Micro-Greeting & Identity Typography
                           FadeTransition(
                             opacity: _greetingFadeAnim,
                             child: SlideTransition(
@@ -420,7 +418,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ),
 
-                // 4. Subtle Bottom System Loading Indicator
+                // 4. Bottom System Loading Indicator
                 SafeArea(
                   child: Align(
                     alignment: Alignment.bottomCenter,

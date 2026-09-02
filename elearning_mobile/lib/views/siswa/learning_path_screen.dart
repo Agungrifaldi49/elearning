@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
@@ -79,17 +80,29 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     final type = actionType.toLowerCase();
     if (type == 'materi') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
-        appBar: AppBar(title: const Text('Materi Pembelajaran'), backgroundColor: Colors.indigo.shade900, foregroundColor: Colors.white),
+        appBar: AppBar(
+          title: Text('Materi Pembelajaran Digital', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          backgroundColor: const Color(0xFF0F172A),
+          foregroundColor: Colors.white,
+        ),
         body: const SiswaMateriTab(),
       )));
     } else if (type == 'tugas') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
-        appBar: AppBar(title: const Text('Tugas & Penugasan KBM'), backgroundColor: Colors.indigo.shade900, foregroundColor: Colors.white),
+        appBar: AppBar(
+          title: Text('Tugas & Penugasan KBM', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          backgroundColor: const Color(0xFF0F172A),
+          foregroundColor: Colors.white,
+        ),
         body: const SiswaTugasTab(),
       )));
-    } else if (type == 'quiz' || type == 'cbt' || type == 'ujian') {
+    } else if (type == 'quiz' || type == 'cbt' || type == 'ujian' || type == 'uts' || type == 'uas') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => Scaffold(
-        appBar: AppBar(title: const Text('Kuis & Ujian CBT Online'), backgroundColor: Colors.indigo.shade900, foregroundColor: Colors.white),
+        appBar: AppBar(
+          title: Text('Kuis & Ujian CBT Online', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          backgroundColor: const Color(0xFF0F172A),
+          foregroundColor: Colors.white,
+        ),
         body: const SiswaCbtTab(),
       )));
     } else {
@@ -120,15 +133,19 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     }).toList();
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Learning Path per Mapel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-        backgroundColor: Colors.deepPurple.shade900,
+        title: Text(
+          'Learning Path & Alur Kurikulum',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFF0F172A),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
-            tooltip: 'Input Key Mapel',
-            icon: const Icon(Icons.vpn_key_rounded, color: Colors.amberAccent),
+            tooltip: 'Input Key Mapel Baru',
+            icon: const Icon(Icons.key_rounded, color: Colors.amberAccent),
             onPressed: () {
               Navigator.push(
                 context,
@@ -139,21 +156,22 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.deepPurple))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
           : RefreshIndicator(
               onRefresh: _fetchPath,
+              color: const Color(0xFF10B981),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Hero Progress Banner
+                    // 1. Hero Banner Header (Matching Web learning_hero-banner)
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.deepPurple.shade900, Colors.indigo.shade900],
+                          colors: [Color(0xFF0F172A), Color(0xFF064E3B), Color(0xFF059669)],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -167,12 +185,16 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.amber.shade700,
+                                  color: const Color(0xFF34D399),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
                                   '🔥 Alur Belajar • Capaian $capaianPct%',
-                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.outfit(
+                                    color: const Color(0xFF064E3B),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               ElevatedButton.icon(
@@ -182,10 +204,13 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                                     MaterialPageRoute(builder: (_) => const GabungKelasScreen()),
                                   ).then((_) => _fetchPath());
                                 },
-                                icon: const Icon(Icons.add_rounded, size: 16, color: Colors.black87),
-                                label: const Text('Key Mapel', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.black87)),
+                                icon: const Icon(Icons.key_rounded, size: 14, color: Colors.black87),
+                                label: Text(
+                                  'Input Key Mapel',
+                                  style: GoogleFonts.outfit(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.black87),
+                                ),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.amber,
+                                  backgroundColor: Colors.amberAccent,
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   minimumSize: Size.zero,
                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -194,26 +219,26 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           Text(
                             (_data['nama_kelas'] ?? _data['kelas'] ?? _data['tingkat'] ?? user?.namaKelas ?? 'Kelas Siswa').toString(),
-                            style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                            style: GoogleFonts.outfit(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             (_data['nama_jurusan'] ?? _data['jurusan'] ?? user?.namaJurusan ?? 'Teknik & Kejuruan').toString(),
-                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            style: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
                           ),
                           const SizedBox(height: 16),
 
-                          // Stats Cards Row
+                          // Stats Row
                           Row(
                             children: [
                               Expanded(child: _buildBannerStat('Total Mapel', '$totalMapel', Icons.book_rounded, Colors.white)),
                               const SizedBox(width: 8),
-                              Expanded(child: _buildBannerStat('Dalam Proses', '$prosesCount', Icons.timelapse_rounded, Colors.amber)),
+                              Expanded(child: _buildBannerStat('Dalam Proses', '$prosesCount', Icons.timelapse_rounded, Colors.amberAccent)),
                               const SizedBox(width: 8),
-                              Expanded(child: _buildBannerStat('Selesai', '$selesaiCount', Icons.check_circle_rounded, Colors.greenAccent)),
+                              Expanded(child: _buildBannerStat('Selesai', '$selesaiCount', Icons.check_circle_rounded, const Color(0xFF34D399))),
                               const SizedBox(width: 8),
                               Expanded(child: _buildBannerStat('Belum', '$belumCount', Icons.lock_rounded, Colors.white70)),
                             ],
@@ -222,16 +247,73 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       ),
                     ),
 
-                    // Mapel Selection Card (Matching Web learning_path.php)
+                    // 2. Step Progression Guide Cards (Matching Web Step-Flow Cards 1, 2, 3)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Panduan 3 Langkah Utama Belajar:',
+                            style: GoogleFonts.outfit(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildStepGuideCard(
+                                  stepNo: '1',
+                                  title: 'Materi Digital',
+                                  desc: 'Modul KBM',
+                                  icon: Icons.auto_stories_rounded,
+                                  accentColor: const Color(0xFF10B981),
+                                  isDark: isDark,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildStepGuideCard(
+                                  stepNo: '2',
+                                  title: 'Penugasan KBM',
+                                  desc: 'Tugas Praktik',
+                                  icon: Icons.assignment_rounded,
+                                  accentColor: const Color(0xFF0EA5E9),
+                                  isDark: isDark,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildStepGuideCard(
+                                  stepNo: '3',
+                                  title: 'Evaluasi CBT',
+                                  desc: 'Kuis Online',
+                                  icon: Icons.quiz_rounded,
+                                  accentColor: const Color(0xFFF59E0B),
+                                  isDark: isDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // 3. Mapel Selection Card (Matching Web Dropdown)
                     if (mapelListRaw.isNotEmpty)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF1E293B) : Colors.white,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.deepPurple.shade100),
+                            border: Border.all(
+                              color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFA7F3D0),
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withValues(alpha: 0.03),
@@ -245,12 +327,15 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.book_rounded, color: Colors.deepPurple.shade700, size: 18),
-                                  const SizedBox(width: 6),
-                                  const Text('Pilih Mata Pelajaran:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                                  const Icon(Icons.collections_bookmark_rounded, color: Color(0xFF10B981), size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Pilih Mata Pelajaran:',
+                                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
                                 ],
                               ),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 8),
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -263,11 +348,11 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                                   child: DropdownButton<int>(
                                     value: _selectedMapelId,
                                     isExpanded: true,
-                                    icon: const Icon(Icons.arrow_drop_down_rounded, color: Colors.deepPurple),
-                                    style: TextStyle(
+                                    icon: const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF10B981)),
+                                    style: GoogleFonts.outfit(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
-                                      color: isDark ? Colors.white : Colors.deepPurple.shade900,
+                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
                                     ),
                                     items: [
                                       const DropdownMenuItem<int>(
@@ -300,9 +385,9 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         ),
                       ),
 
-                    // Filter Tabs Segmented Bar
+                    // 4. Filter Chips Bar
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -319,7 +404,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       ),
                     ),
 
-                    // Subject Cards List or Empty State
+                    // 5. Subject Cards List or Empty State
                     if (mapelListRaw.isEmpty)
                       _buildEmptyEnrolledState()
                     else if (filteredMapel.isEmpty)
@@ -330,7 +415,10 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                             children: [
                               Icon(Icons.folder_off_outlined, size: 54, color: Colors.grey.shade400),
                               const SizedBox(height: 10),
-                              const Text('Tidak ada mata pelajaran di kategori ini.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text(
+                                'Tidak ada mata pelajaran di kategori ini.',
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
                             ],
                           ),
                         ),
@@ -355,6 +443,80 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     );
   }
 
+  Widget _buildStepGuideCard({
+    required String stepNo,
+    required String title,
+    required String desc,
+    required IconData icon,
+    required Color accentColor,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: accentColor, size: 16),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Langkah $stepNo',
+                  style: GoogleFonts.outfit(
+                    color: accentColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
+          Text(
+            desc,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              color: isDark ? Colors.white60 : Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyEnrolledState() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -363,10 +525,10 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.indigo.shade100),
+          border: Border.all(color: const Color(0xFFA7F3D0)),
           boxShadow: [
             BoxShadow(
-              color: Colors.indigo.withValues(alpha: 0.06),
+              color: const Color(0xFF10B981).withValues(alpha: 0.06),
               blurRadius: 15,
               offset: const Offset(0, 5),
             ),
@@ -385,15 +547,15 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
               child: Icon(Icons.vpn_key_rounded, size: 36, color: Colors.amber.shade900),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Belum Ada Mapel Terdaftar',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
             Text(
               'Anda belum mendaftar di mata pelajaran apapun. Silakan masukkan Passcode Key resmi dari Guru Pengampu untuk mendaftar mapel dan melihat alur pembelajaran.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
+              style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -407,9 +569,9 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                   ).then((_) => _fetchPath());
                 },
                 icon: const Icon(Icons.key_rounded, color: Colors.white, size: 20),
-                label: const Text(
+                label: Text(
                   '🔑 Input Passcode Key Mapel Baru',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.amber.shade800,
@@ -437,8 +599,8 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
         children: [
           Icon(icon, size: 18, color: color),
           const SizedBox(height: 4),
-          Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 9.5)),
+          Text(value, style: GoogleFonts.outfit(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(label, style: GoogleFonts.inter(color: Colors.white70, fontSize: 9.5)),
         ],
       ),
     );
@@ -450,10 +612,10 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
       label: Text(label),
       selected: isSelected,
       onSelected: (_) => setState(() => _selectedTab = key),
-      selectedColor: Colors.deepPurple.shade900,
+      selectedColor: const Color(0xFF059669),
       backgroundColor: Colors.grey.shade200,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.deepPurple.shade900,
+      labelStyle: GoogleFonts.outfit(
+        color: isSelected ? Colors.white : const Color(0xFF0F172A),
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         fontSize: 12,
       ),
@@ -498,7 +660,10 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isExpanded ? Colors.deepPurple.shade300 : Colors.grey.shade200, width: isExpanded ? 1.5 : 1),
+        border: Border.all(
+          color: isExpanded ? const Color(0xFF10B981) : Colors.grey.shade200,
+          width: isExpanded ? 1.5 : 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -524,12 +689,16 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.deepPurple.shade50,
+                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           kodeMapel,
-                          style: TextStyle(color: Colors.deepPurple.shade900, fontWeight: FontWeight.bold, fontSize: 10),
+                          style: GoogleFonts.outfit(
+                            color: const Color(0xFF047857),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
                       Container(
@@ -540,7 +709,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         ),
                         child: Text(
                           displayStatusLabel,
-                          style: TextStyle(color: badgeFg, fontWeight: FontWeight.bold, fontSize: 11),
+                          style: GoogleFonts.outfit(color: badgeFg, fontWeight: FontWeight.bold, fontSize: 11),
                         ),
                       ),
                     ],
@@ -548,12 +717,12 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                   const SizedBox(height: 10),
                   Text(
                     namaMapel,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '✍️ $namaGuru',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 12),
 
@@ -567,7 +736,9 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                             value: (progressPct / 100).toDouble(),
                             backgroundColor: Colors.grey.shade200,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              statusCat == 'selesai' ? Colors.green.shade600 : (statusCat == 'belum_dimulai' ? Colors.grey.shade400 : Colors.amber.shade700),
+                              statusCat == 'selesai'
+                                  ? Colors.green.shade600
+                                  : (statusCat == 'belum_dimulai' ? Colors.grey.shade400 : Colors.amber.shade700),
                             ),
                             minHeight: 8,
                           ),
@@ -576,12 +747,12 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       const SizedBox(width: 12),
                       Text(
                         '$progressPct% (Tahap $currentStep/5)',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11.5),
                       ),
                       const SizedBox(width: 8),
                       Icon(
                         isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                        color: Colors.deepPurple.shade900,
+                        color: const Color(0xFF059669),
                       ),
                     ],
                   ),
@@ -595,7 +766,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
             const Divider(height: 1),
             Container(
               padding: const EdgeInsets.all(16),
-              color: isDark ? const Color(0xFF0F172A) : Colors.deepPurple.shade50.withValues(alpha: 0.3),
+              color: isDark ? const Color(0xFF0F172A) : Colors.green.shade50.withValues(alpha: 0.25),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -603,19 +774,19 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           '📋 Tahapan Modul & Evaluasi Pembelajaran:',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.deepPurple.shade100,
+                            color: const Color(0xFF10B981).withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             '${sequenceItems.length} Item',
-                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.deepPurple.shade900),
+                            style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.bold, color: const Color(0xFF047857)),
                           ),
                         ),
                       ],
@@ -627,7 +798,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       itemCount: sequenceItems.length,
                       itemBuilder: (context, itemIdx) {
                         final item = sequenceItems[itemIdx];
-                        return _buildSequenceItemRow(item, itemIdx + 1);
+                        return _buildSequenceItemRow(item, itemIdx + 1, isEnrolled);
                       },
                     ),
                     const SizedBox(height: 16),
@@ -650,24 +821,24 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                           Text(
                             'Belum Ada Modul Materi atau Evaluasi pada Mapel Ini',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                            style: GoogleFonts.outfit(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Guru pengampu belum mengunggah modul materi atau tugas pada mata pelajaran ini.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11, color: Colors.amber.shade800),
+                            style: GoogleFonts.inter(fontSize: 11, color: Colors.amber.shade800),
                           ),
                         ],
                       ),
                     ),
                   ],
 
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
                       '🗺️ Ringkasan Alur 5 Tahap Pembelajaran:',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ),
                   ListView.builder(
@@ -689,7 +860,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     );
   }
 
-  Widget _buildSequenceItemRow(dynamic item, int stepNo) {
+  Widget _buildSequenceItemRow(dynamic item, int stepNo, bool isEnrolled) {
     final String type = (item['type'] ?? 'materi').toString();
     final String title = (item['title'] ?? 'Item Pembelajaran').toString();
     final String desc = (item['desc'] ?? '').toString();
@@ -735,10 +906,10 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
         children: [
           CircleAvatar(
             radius: 14,
-            backgroundColor: isCompleted ? Colors.green.shade600 : Colors.deepPurple.shade900,
+            backgroundColor: isCompleted ? Colors.green.shade600 : const Color(0xFF059669),
             child: Text(
               '$stepNo',
-              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              style: GoogleFonts.outfit(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 10),
@@ -761,7 +932,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         children: [
                           Icon(categoryIcon, size: 11, color: categoryFg),
                           const SizedBox(width: 4),
-                          Text(categoryText, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: categoryFg)),
+                          Text(categoryText, style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.bold, color: categoryFg)),
                         ],
                       ),
                     ),
@@ -773,7 +944,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       ),
                       child: Text(
                         statusText,
-                        style: TextStyle(
+                        style: GoogleFonts.outfit(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: isCompleted ? Colors.green.shade800 : Colors.amber.shade900,
@@ -785,13 +956,13 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                 const SizedBox(height: 6),
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
                 if (desc.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     desc,
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                    style: GoogleFonts.inter(fontSize: 11, color: Colors.grey.shade600),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -799,17 +970,36 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '✍️ $guru',
-                  style: TextStyle(fontSize: 10.5, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
+                  style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey.shade500, fontStyle: FontStyle.italic),
                 ),
                 const SizedBox(height: 8),
                 SizedBox(
                   height: 30,
                   child: ElevatedButton.icon(
-                    onPressed: () => _handleStepAction(actionType),
-                    icon: Icon(isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded, size: 14),
-                    label: Text(actionLabel, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    onPressed: () {
+                      if (!isEnrolled) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const GabungKelasScreen()),
+                        ).then((_) => _fetchPath());
+                      } else {
+                        _handleStepAction(actionType);
+                      }
+                    },
+                    icon: Icon(
+                      !isEnrolled
+                          ? Icons.key_rounded
+                          : (isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded),
+                      size: 14,
+                    ),
+                    label: Text(
+                      !isEnrolled ? 'Input Key' : actionLabel,
+                      style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isCompleted ? Colors.green.shade700 : Colors.deepPurple.shade800,
+                      backgroundColor: !isEnrolled
+                          ? Colors.amber.shade800
+                          : (isCompleted ? Colors.green.shade700 : const Color(0xFF059669)),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -847,7 +1037,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
       nodeColor = Colors.amber.shade700;
       nodeIcon = Icons.play_circle_fill_rounded;
     } else if (!isLocked) {
-      nodeColor = Colors.deepPurple.shade700;
+      nodeColor = const Color(0xFF059669);
       nodeIcon = Icons.radio_button_checked_rounded;
     }
 
@@ -895,16 +1085,16 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       Expanded(
                         child: Text(
                           judul,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ),
                       Text(
                         '$completedCount/$totalCount',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: nodeColor),
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 11, color: nodeColor),
                       ),
                     ],
                   ),
-                  Text(sub, style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600)),
+                  Text(sub, style: GoogleFonts.inter(fontSize: 10.5, color: Colors.grey.shade600)),
                   if (!isLocked) ...[
                     const SizedBox(height: 6),
                     SizedBox(
@@ -912,9 +1102,9 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                       child: ElevatedButton.icon(
                         onPressed: () => _handleStepAction(actionType),
                         icon: Icon(isCompleted ? Icons.replay_rounded : Icons.arrow_forward_rounded, size: 14),
-                        label: Text(isCompleted ? 'Tinjau' : actionLabel, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                        label: Text(isCompleted ? 'Tinjau' : actionLabel, style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isCompleted ? Colors.grey.shade700 : (isActive ? Colors.amber.shade800 : Colors.deepPurple.shade800),
+                          backgroundColor: isCompleted ? Colors.grey.shade700 : (isActive ? Colors.amber.shade800 : const Color(0xFF059669)),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 10),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
