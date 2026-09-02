@@ -177,16 +177,25 @@ class SiswaController {
         $academicModel = new AcademicModel();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!Security::verifyCsrfToken()) {
+            $rawInput = file_get_contents('php://input');
+            $jsonInput = json_decode($rawInput, true) ?: [];
+            $inputData = array_merge($_POST, $jsonInput);
+
+            $isJsonOrApi = !empty($jsonInput) || 
+                           (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) ||
+                           (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false);
+
+            if (!$isJsonOrApi && !Security::verifyCsrfToken()) {
                 FlashHelper::setError('CSRF Token Invalid');
                 header('Location: ' . BASE_URL . 'index.php?url=siswa/tugas');
                 exit();
             }
 
-            $action = $_POST['action'] ?? '';
-            if ($action === 'request_tugas_susulan') {
-                $tugasId = (int)$_POST['tugas_id'];
-                $catatan = Security::sanitize($_POST['catatan_susulan'] ?? 'Pengajuan Susulan Pengumpulan Tugas');
+            $action = $inputData['action'] ?? $_GET['action'] ?? '';
+            $tugasId = intval($inputData['tugas_id'] ?? $_GET['tugas_id'] ?? 0);
+
+            if ($action === 'request_tugas_susulan' || $action === 'request_susulan' || strpos($_SERVER['REQUEST_URI'] ?? '', 'request_tugas_susulan') !== false) {
+                $catatan = Security::sanitize($inputData['catatan_susulan'] ?? $inputData['catatan'] ?? 'Pengajuan Susulan Pengumpulan Tugas');
                 $learningModel->requestTugasSusulan($tugasId, $siswaId, $catatan);
 
                 $commModel = new CommunicationModel();
@@ -197,6 +206,15 @@ class SiswaController {
                     "Siswa {$uName} mengajukan permohonan izin susulan pengumpulan Tugas.", 
                     'index.php?url=guru/tugas'
                 );
+
+                if ($isJsonOrApi) {
+                    echo json_encode([
+                        'success' => true,
+                        'status' => true,
+                        'message' => 'Permintaan Izin Pengumpulan Tugas Susulan telah dikirimkan ke Guru Pengampu.'
+                    ]);
+                    exit();
+                }
 
                 FlashHelper::setSuccess('Permintaan Izin Pengumpulan Tugas Susulan telah dikirimkan ke Guru Pengampu. Silakan tunggu konfirmasi persetujuan.');
                 header('Location: ' . BASE_URL . 'index.php?url=siswa/tugas');

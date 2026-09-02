@@ -340,9 +340,12 @@ class SiswaProvider with ChangeNotifier {
 
   Future<Map<String, dynamic>> requestTugasSusulan(int userId, int tugasId, String catatan) async {
     final res = await ApiService.post('siswa/request_tugas_susulan', {
+      'action': 'request_tugas_susulan',
       'user_id': userId,
+      'siswa_id': userId,
       'tugas_id': tugasId,
       'catatan_susulan': catatan,
+      'catatan': catatan,
     });
     if (res['success'] == true) {
       await fetchTugas(userId);
