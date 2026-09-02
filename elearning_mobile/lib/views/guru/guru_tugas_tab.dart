@@ -42,6 +42,7 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
       await Future.wait([
         guruProvider.fetchTugas(user.id),
         guruProvider.fetchJadwal(user.id),
+        guruProvider.fetchSusulanRequests(user.id),
       ]);
     }
   }
@@ -974,6 +975,220 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
     );
   }
 
+  void _showSusulanRequestsModal() {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return Consumer<GuruProvider>(
+          builder: (context, guruProvider, child) {
+            final requests = guruProvider.susulanList;
+            final pendingRequests = requests.where((e) => (e['status'] ?? '').toString().toLowerCase() == 'pending').toList();
+            final historyRequests = requests.where((e) => (e['status'] ?? '').toString().toLowerCase() != 'pending').toList();
+
+            return DefaultTabController(
+              length: 2,
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.85,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.mark_email_unread_rounded, color: Colors.amber, size: 24),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Permohonan Izin Susulan Siswa',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
+                      ],
+                    ),
+                    const TabBar(
+                      tabs: [
+                        Tab(text: 'Menunggu ACC'),
+                        Tab(text: 'Riwayat Konfirmasi'),
+                      ],
+                    ),
+                    Expanded(
+                      child: TabBarView(
+                        children: [
+                          _buildSusulanList(pendingRequests, isPending: true),
+                          _buildSusulanList(historyRequests, isPending: false),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSusulanList(List<dynamic> list, {required bool isPending}) {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user == null) return const SizedBox();
+
+    if (list.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(isPending ? Icons.check_circle_outline_rounded : Icons.history_rounded, size: 48, color: Colors.grey.shade400),
+            const SizedBox(height: 8),
+            Text(
+              isPending ? 'Tidak ada permohonan susulan pending.' : 'Belum ada riwayat permohonan.',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: list.length,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      itemBuilder: (context, index) {
+        final r = list[index];
+        final id = int.tryParse(r['id']?.toString() ?? '0') ?? 0;
+        final namaSiswa = r['nama_siswa'] ?? 'Siswa';
+        final namaKelas = r['nama_kelas'] ?? '-';
+        final judul = r['judul'] ?? r['judul_tugas'] ?? r['judul_quiz'] ?? 'Tugas / Quiz';
+        final type = (r['type'] ?? 'tugas').toString().toUpperCase();
+        final catatan = r['catatan'] ?? r['alasan'] ?? 'Permohonan susulan';
+        final status = (r['status'] ?? 'pending').toString().toLowerCase();
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 10),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 1,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: type == 'TUGAS' ? Colors.indigo.shade50 : Colors.purple.shade50,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '$type SUSULAN',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: type == 'TUGAS' ? Colors.indigo : Colors.purple),
+                      ),
+                    ),
+                    Text(
+                      namaKelas,
+                      style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  namaSiswa,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "Tugas/Quiz: $judul",
+                  style: TextStyle(fontSize: 12, color: Colors.blue.shade900, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Text(
+                    "Alasan: \"$catatan\"",
+                    style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.black87),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (isPending)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+                            final ok = await guruProvider.rejectSusulanRequest(user.id, id, type: type.toLowerCase());
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(ok ? 'Permohonan ditolak' : 'Gagal memproses'), backgroundColor: ok ? Colors.red : Colors.grey),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.close_rounded, size: 16, color: Colors.red),
+                          label: const Text('Tolak', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.red)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+                            final ok = await guruProvider.approveSusulanRequest(user.id, id, type: type.toLowerCase());
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(ok ? 'Permohonan disetujui (ACC)!' : 'Gagal memproses'), backgroundColor: ok ? Colors.green : Colors.grey),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
+                          label: const Text('ACC / Setujui', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: status == 'disetujui' ? Colors.green.shade50 : Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: status == 'disetujui' ? Colors.green.shade300 : Colors.red.shade300),
+                      ),
+                      child: Text(
+                        status == 'disetujui' ? '✅ Disetujui (ACC)' : '❌ Ditolak',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: status == 'disetujui' ? Colors.green.shade800 : Colors.red.shade800),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final guruProvider = Provider.of<GuruProvider>(context);
@@ -1064,7 +1279,21 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
+                      ElevatedButton.icon(
+                        onPressed: _showSusulanRequestsModal,
+                        icon: const Icon(Icons.mark_email_unread_rounded, size: 16),
+                        label: Text('Izin Susulan (${guruProvider.susulanList.where((e) => (e['status'] ?? '').toString().toLowerCase() == 'pending').length})'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade800,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
                       ElevatedButton.icon(
                         onPressed: _showAddTugasModal,
                         icon: const Icon(Icons.add_circle_rounded, size: 16),

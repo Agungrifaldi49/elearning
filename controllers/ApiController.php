@@ -2769,6 +2769,111 @@ class ApiController {
                 }
                 break;
 
+            case 'susulan_requests':
+            case 'susulan':
+            case 'tugas_susulan_requests':
+                require_once ROOT_PATH . 'models/LearningModel.php';
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                $learningModel = new LearningModel();
+                $examModel = new ExamModel();
+                $guruId = intval($guru['id'] ?? 0);
+
+                $tugasSusulan = [];
+                try {
+                    $tugasSusulan = $learningModel->getTugasSusulanRequestsByGuru($guruId);
+                    foreach ($tugasSusulan as &$ts) {
+                        $ts['type'] = 'tugas';
+                        $ts['judul'] = $ts['judul_tugas'] ?? '';
+                    }
+                    unset($ts);
+                } catch (\Throwable $eTs) {
+                    $tugasSusulan = [];
+                }
+
+                $quizSusulan = [];
+                try {
+                    $quizSusulan = $examModel->getSusulanRequestsByGuru($guruId);
+                    foreach ($quizSusulan as &$qs) {
+                        $qs['type'] = 'quiz';
+                        $qs['judul'] = $qs['judul_quiz'] ?? '';
+                    }
+                    unset($qs);
+                } catch (\Throwable $eQs) {
+                    $quizSusulan = [];
+                }
+
+                $allRequests = array_merge($tugasSusulan, $quizSusulan);
+                $this->jsonResponse(true, 'Daftar Permohonan Susulan Siswa', $allRequests);
+                break;
+
+            case 'approve_susulan':
+            case 'acc_susulan':
+                $input = $this->getPostInput();
+                $requestId = intval($_POST['request_id'] ?? $input['request_id'] ?? 0);
+                $type = trim($_POST['type'] ?? $input['type'] ?? '');
+
+                if ($requestId <= 0) {
+                    $this->jsonResponse(false, 'ID Permohonan tidak valid', null, 400);
+                }
+
+                require_once ROOT_PATH . 'models/LearningModel.php';
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                $learningModel = new LearningModel();
+                $examModel = new ExamModel();
+
+                $success = false;
+                if ($type === 'tugas') {
+                    $success = $learningModel->updateTugasSusulanStatus($requestId, 'disetujui');
+                } elseif ($type === 'quiz') {
+                    $success = $examModel->updateSusulanStatus($requestId, 'disetujui');
+                } else {
+                    $success = $learningModel->updateTugasSusulanStatus($requestId, 'disetujui');
+                    if (!$success) {
+                        $success = $examModel->updateSusulanStatus($requestId, 'disetujui');
+                    }
+                }
+
+                if ($success) {
+                    $this->jsonResponse(true, 'Permohonan susulan siswa berhasil disetujui (ACC)!');
+                } else {
+                    $this->jsonResponse(false, 'Gagal menyetujui permohonan susulan', null, 500);
+                }
+                break;
+
+            case 'reject_susulan':
+            case 'tolak_susulan':
+                $input = $this->getPostInput();
+                $requestId = intval($_POST['request_id'] ?? $input['request_id'] ?? 0);
+                $type = trim($_POST['type'] ?? $input['type'] ?? '');
+
+                if ($requestId <= 0) {
+                    $this->jsonResponse(false, 'ID Permohonan tidak valid', null, 400);
+                }
+
+                require_once ROOT_PATH . 'models/LearningModel.php';
+                require_once ROOT_PATH . 'models/ExamModel.php';
+                $learningModel = new LearningModel();
+                $examModel = new ExamModel();
+
+                $success = false;
+                if ($type === 'tugas') {
+                    $success = $learningModel->updateTugasSusulanStatus($requestId, 'ditolak');
+                } elseif ($type === 'quiz') {
+                    $success = $examModel->updateSusulanStatus($requestId, 'ditolak');
+                } else {
+                    $success = $learningModel->updateTugasSusulanStatus($requestId, 'ditolak');
+                    if (!$success) {
+                        $success = $examModel->updateSusulanStatus($requestId, 'ditolak');
+                    }
+                }
+
+                if ($success) {
+                    $this->jsonResponse(true, 'Permohonan susulan siswa telah ditolak.');
+                } else {
+                    $this->jsonResponse(false, 'Gagal menolak permohonan susulan', null, 500);
+                }
+                break;
+
             default:
                 $this->jsonResponse(false, 'Endpoint guru tidak ditemukan', null, 404);
         }

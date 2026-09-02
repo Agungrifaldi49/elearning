@@ -434,26 +434,30 @@ class GuruProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> approveSusulanRequest(int userId, int requestId) async {
+  Future<bool> approveSusulanRequest(int userId, int requestId, {String? type}) async {
     final res = await ApiService.post('guru/approve_susulan', {
       'user_id': userId,
       'request_id': requestId,
+      'type': type ?? '',
     });
     if (res['success'] == true) {
       await fetchSusulanRequests(userId);
+      await fetchTugas(userId);
       await fetchQuiz(userId);
       return true;
     }
     return false;
   }
 
-  Future<bool> rejectSusulanRequest(int userId, int requestId) async {
+  Future<bool> rejectSusulanRequest(int userId, int requestId, {String? type}) async {
     final res = await ApiService.post('guru/reject_susulan', {
       'user_id': userId,
       'request_id': requestId,
+      'type': type ?? '',
     });
     if (res['success'] == true) {
       await fetchSusulanRequests(userId);
+      await fetchTugas(userId);
       await fetchQuiz(userId);
       return true;
     }
