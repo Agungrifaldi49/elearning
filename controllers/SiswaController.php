@@ -85,6 +85,7 @@ class SiswaController {
         $jadwalList = $academicModel->getJadwal($kelasId);
         $pengumumanList = $commModel->getPengumuman('siswa');
 
+        $siswaModel = new SiswaModel();
         $certStats = $siswaModel->getSiswaCertificateRealStats($siswaId);
         $activeTa = $academicModel->getActiveTahunAjaran();
 
