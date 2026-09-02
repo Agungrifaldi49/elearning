@@ -177,9 +177,11 @@ class ApiController {
                 $userId = intval($mSid[1]);
             }
         }
-        if ($userId === 0 && AuthHelper::isSiswa()) {
+        if ($userId === 0 && AuthHelper::check()) {
             $sessionUser = AuthHelper::user();
-            $userId = intval($sessionUser['id'] ?? 0);
+            if (strtolower($sessionUser['role_name'] ?? '') === 'siswa') {
+                $userId = intval($sessionUser['id'] ?? 0);
+            }
         }
 
         require_once ROOT_PATH . 'models/SiswaModel.php';
