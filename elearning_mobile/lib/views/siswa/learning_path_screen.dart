@@ -28,15 +28,28 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     _fetchPath();
   }
 
+  bool _isTrue(dynamic val) {
+    if (val == null) return false;
+    if (val is bool) return val;
+    if (val is num) return val != 0;
+    final str = val.toString().toLowerCase().trim();
+    return str == 'true' || str == '1' || str == 'yes';
+  }
+
   Future<void> _fetchPath() async {
     setState(() => _isLoading = true);
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     final userId = user?.id ?? 0;
     final res = await ApiService.get('siswa/learning_path', params: {'user_id': userId.toString()});
+    
     if (mounted) {
-      if (res['success'] == true && res['data'] is Map) {
-        final dataMap = Map<String, dynamic>.from(res['data'] as Map);
+      final bool isSuccess = _isTrue(res['success']) || _isTrue(res['status']);
+      final dynamic rawData = res['data'];
+
+      if (isSuccess && rawData is Map) {
+        final dataMap = Map<String, dynamic>.from(rawData);
         final List mapelList = (dataMap['mapel_list'] is List) ? dataMap['mapel_list'] : [];
+        
         _expandedMapelIds.clear();
         for (var m in mapelList) {
           final mId = int.tryParse((m['mapel_id'] ?? m['id'] ?? 0).toString()) ?? 0;
@@ -53,6 +66,8 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
           _data = {
             'tingkat': user?.namaKelas ?? 'Kelas Siswa',
             'jurusan': user?.namaJurusan ?? 'Teknik & Kejuruan',
+            'nama_kelas': user?.namaKelas ?? 'Kelas Siswa',
+            'nama_jurusan': user?.namaJurusan ?? 'Teknik & Kejuruan',
             'capaian_persen': 0,
             'total_mapel': 0,
             'selesai_count': 0,
@@ -114,23 +129,38 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).currentUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     final int capaianPct = int.tryParse((_data['capaian_persen'] ?? 0).toString()) ?? 0;
-    final int totalMapel = int.tryParse((_data['total_mapel'] ?? 0).toString()) ?? 0;
-    final int selesaiCount = int.tryParse((_data['selesai_count'] ?? 0).toString()) ?? 0;
-    final int prosesCount = int.tryParse((_data['proses_count'] ?? 0).toString()) ?? 0;
-    final int belumCount = int.tryParse((_data['belum_count'] ?? 0).toString()) ?? 0;
-
     final List mapelListRaw = (_data['mapel_list'] is List) ? _data['mapel_list'] : [];
+    final int totalMapel = mapelListRaw.isNotEmpty ? mapelListRaw.length : (int.tryParse((_data['total_mapel'] ?? 0).toString()) ?? 0);
+    
+    int selesaiCount = 0;
+    int prosesCount = 0;
+    int belumCount = 0;
+
+    for (var m in mapelListRaw) {
+      final cat = (m['status_category'] ?? 'belum_dimulai').toString();
+      if (cat == 'selesai') {
+        selesaiCount++;
+      } else if (cat == 'dalam_proses') {
+        prosesCount++;
+      } else {
+        belumCount++;
+      }
+    }
 
     final filteredMapel = mapelListRaw.where((m) {
       final int mId = int.tryParse((m['mapel_id'] ?? m['id'] ?? 0).toString()) ?? 0;
-      final cat = (m['status_category'] ?? 'dalam_proses').toString();
+      final cat = (m['status_category'] ?? 'belum_dimulai').toString();
       
       bool matchesSubject = (_selectedMapelId == 0 || mId == _selectedMapelId);
       bool matchesTab = (_selectedTab == 'semua' || cat == _selectedTab);
       
       return matchesSubject && matchesTab;
     }).toList();
+
+    final String displayKelas = (_data['nama_kelas'] ?? _data['kelas'] ?? _data['tingkat'] ?? user?.namaKelas ?? 'Kelas Siswa').toString();
+    final String displayJurusan = (_data['nama_jurusan'] ?? _data['jurusan'] ?? user?.namaJurusan ?? 'Kejuruan').toString();
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
@@ -221,12 +251,12 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            (_data['nama_kelas'] ?? _data['kelas'] ?? _data['tingkat'] ?? user?.namaKelas ?? 'Kelas Siswa').toString(),
+                            displayKelas,
                             style: GoogleFonts.outfit(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            (_data['nama_jurusan'] ?? _data['jurusan'] ?? user?.namaJurusan ?? 'Teknik & Kejuruan').toString(),
+                            displayJurusan,
                             style: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
                           ),
                           const SizedBox(height: 16),
@@ -362,7 +392,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                                       ...mapelListRaw.map((m) {
                                         final mId = int.tryParse((m['mapel_id'] ?? m['id'] ?? 0).toString()) ?? 0;
                                         final mNama = (m['nama_mapel'] ?? 'Mata Pelajaran').toString();
-                                        final isEnr = m['is_enrolled'] == true;
+                                        final isEnr = _isTrue(m['is_enrolled']);
                                         return DropdownMenuItem<int>(
                                           value: mId,
                                           child: Text(
@@ -638,7 +668,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     final List sequenceItems = (m['sequence_items'] is List) ? m['sequence_items'] : [];
     final bool isExpanded = _expandedMapelIds.contains(mapelId);
 
-    final bool isEnrolled = m['is_enrolled'] == true;
+    final bool isEnrolled = _isTrue(m['is_enrolled']);
 
     Color badgeBg = Colors.amber.shade50;
     Color badgeFg = Colors.amber.shade900;
@@ -865,7 +895,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
     final String title = (item['title'] ?? 'Item Pembelajaran').toString();
     final String desc = (item['desc'] ?? '').toString();
     final String guru = (item['guru'] ?? 'Guru Pengampu').toString();
-    final bool isCompleted = item['is_completed'] == true;
+    final bool isCompleted = _isTrue(item['is_completed']);
     final String actionLabel = (item['action_label'] ?? 'Akses').toString();
     final String actionType = (item['action_type'] ?? type).toString();
 
@@ -1018,10 +1048,10 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
   Widget _buildStepRoadmapItem(dynamic s, {required bool isLast}) {
     final String judul = (s['judul'] ?? s['title'] ?? 'Tahap').toString();
     final String sub = (s['sub'] ?? s['desc'] ?? '-').toString();
-    final bool isCompleted = s['is_completed'] == true;
-    final bool isActive = (s['is_active'] == true || s['is_current'] == true);
-    final bool isUnlocked = (s['is_unlocked'] == true || isCompleted || isActive);
-    final bool isLocked = s['is_locked'] == true || (!isUnlocked && !isCompleted && !isActive);
+    final bool isCompleted = _isTrue(s['is_completed']);
+    final bool isActive = _isTrue(s['is_active']) || _isTrue(s['is_current']);
+    final bool isUnlocked = _isTrue(s['is_unlocked']) || isCompleted || isActive;
+    final bool isLocked = _isTrue(s['is_locked']) || (!isUnlocked && !isCompleted && !isActive);
     final String actionLabel = (s['action_label'] ?? (isCompleted ? 'Tinjau' : 'Pelajari')).toString();
     final String actionType = (s['action_type'] ?? 'materi').toString();
     final int completedCount = int.tryParse((s['completed_count'] ?? (isCompleted ? 1 : 0)).toString()) ?? 0;

@@ -34,7 +34,8 @@ class ApiController {
         http_response_code($statusCode);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
-            'success' => $success,
+            'success' => (bool)$success,
+            'status' => (bool)$success,
             'message' => $message,
             'data' => $data,
             'timestamp' => date('Y-m-d H:i:s')
