@@ -2776,11 +2776,11 @@ class ApiController {
                 require_once ROOT_PATH . 'models/ExamModel.php';
                 $learningModel = new LearningModel();
                 $examModel = new ExamModel();
-                $guruId = intval($guru['id'] ?? 0);
+                $gTarget = intval($guru['id'] ?? $userId ?? 0);
 
                 $tugasSusulan = [];
                 try {
-                    $tugasSusulan = $learningModel->getTugasSusulanRequestsByGuru($guruId);
+                    $tugasSusulan = $learningModel->getTugasSusulanRequestsByGuru($gTarget);
                     foreach ($tugasSusulan as &$ts) {
                         $ts['type'] = 'tugas';
                         $ts['judul'] = $ts['judul_tugas'] ?? '';
@@ -2792,7 +2792,7 @@ class ApiController {
 
                 $quizSusulan = [];
                 try {
-                    $quizSusulan = $examModel->getSusulanRequestsByGuru($guruId);
+                    $quizSusulan = $examModel->getSusulanRequestsByGuru($gTarget);
                     foreach ($quizSusulan as &$qs) {
                         $qs['type'] = 'quiz';
                         $qs['judul'] = $qs['judul_quiz'] ?? '';

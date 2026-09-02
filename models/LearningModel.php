@@ -373,7 +373,24 @@ class LearningModel extends BaseModel {
         return $stmt->execute([(int)$tugasId, (int)$siswaId, $catatan]);
     }
 
-    public function getTugasSusulanRequestsByGuru($guruId) {
+    public function getTugasSusulanRequestsByGuru($guruId = null) {
+        if ($guruId === null || (int)$guruId <= 0) {
+            $stmt = $this->db->query("
+                SELECT ts.*, t.judul as judul_tugas, s.nama_lengkap as nama_siswa, s.nisn, 
+                       COALESCE(ks.nama_kelas, k.nama_kelas, 'Umum') as nama_kelas, 
+                       map.nama_mapel
+                FROM tugas_susulan ts
+                JOIN tugas t ON ts.tugas_id = t.id
+                JOIN siswa s ON ts.siswa_id = s.id
+                LEFT JOIN kelas ks ON s.kelas_id = ks.id
+                LEFT JOIN kelas k ON t.kelas_id = k.id
+                JOIN mata_pelajaran map ON t.mapel_id = map.id
+                ORDER BY ts.id DESC
+            ");
+            return $stmt ? $stmt->fetchAll() : [];
+        }
+
+        $gId = (int)$guruId;
         $stmt = $this->db->prepare("
             SELECT ts.*, t.judul as judul_tugas, s.nama_lengkap as nama_siswa, s.nisn, 
                    COALESCE(ks.nama_kelas, k.nama_kelas, 'Umum') as nama_kelas, 
@@ -384,10 +401,10 @@ class LearningModel extends BaseModel {
             LEFT JOIN kelas ks ON s.kelas_id = ks.id
             LEFT JOIN kelas k ON t.kelas_id = k.id
             JOIN mata_pelajaran map ON t.mapel_id = map.id
-            WHERE t.guru_id = ?
+            WHERE (t.guru_id = :gid OR t.guru_id IN (SELECT id FROM guru WHERE user_id = :gid2) OR t.guru_id IN (SELECT user_id FROM guru WHERE id = :gid3))
             ORDER BY ts.id DESC
         ");
-        $stmt->execute([(int)$guruId]);
+        $stmt->execute(['gid' => $gId, 'gid2' => $gId, 'gid3' => $gId]);
         return $stmt->fetchAll();
     }
 
