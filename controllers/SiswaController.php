@@ -106,15 +106,18 @@ class SiswaController {
         $chartData = $stmtChart->fetchAll();
 
         if (empty($chartData)) {
-            $stmtEnrolled = $db->prepare("
-                SELECT DISTINCT m.nama_mapel
-                FROM siswa_mapel sm
-                JOIN mata_pelajaran m ON sm.mapel_id = m.id
-                WHERE sm.siswa_id = ?
-                LIMIT 6
-            ");
-            $stmtEnrolled->execute([$siswaId]);
-            $enrolledNames = $stmtEnrolled->fetchAll(PDO::FETCH_COLUMN);
+            $enrolledNames = [];
+            try {
+                $stmtEnrolled = $db->prepare("
+                    SELECT DISTINCT m.nama_mapel
+                    FROM siswa_mapel_enrollment sm
+                    JOIN mata_pelajaran m ON sm.mapel_id = m.id
+                    WHERE sm.siswa_id = ?
+                    LIMIT 6
+                ");
+                $stmtEnrolled->execute([$siswaId]);
+                $enrolledNames = $stmtEnrolled->fetchAll(PDO::FETCH_COLUMN);
+            } catch (\Throwable $e) {}
 
             if (empty($enrolledNames)) {
                 $enrolledNames = array_unique(array_column($tugasList, 'nama_mapel'));
