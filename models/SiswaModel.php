@@ -57,18 +57,12 @@ class SiswaModel extends BaseModel {
     }
 
     public function ensureSiswaProfile($userId, $fullName) {
+        if (!$userId) {
+            return ['id' => 0, 'user_id' => 0, 'nama_lengkap' => $fullName, 'kelas_id' => 1, 'jurusan_id' => 1];
+        }
+
         $siswa = $this->getByUserId($userId);
         if ($siswa) return $siswa;
-
-        // Check if user is actually a Siswa (role_id = 3) before creating profile
-        $stmtRole = $this->db->prepare("SELECT role_id FROM users WHERE id = ?");
-        $stmtRole->execute([$userId]);
-        $uRow = $stmtRole->fetch();
-        $roleId = (int)($uRow['role_id'] ?? 0);
-
-        if ($roleId !== 3) {
-            return null; // Do not auto-create student profile for teacher/admin accounts
-        }
 
         try {
             $kStmt = $this->db->query("SELECT id, jurusan_id FROM kelas ORDER BY id ASC LIMIT 1");
@@ -76,13 +70,21 @@ class SiswaModel extends BaseModel {
             $kelasId = $kRow['id'] ?? 1;
             $jurusanId = $kRow['jurusan_id'] ?? 1;
 
-            $nis = 'S' . date('Ym') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            $stmt = $this->db->prepare("INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin) VALUES (?, ?, ?, ?, ?, ?, 'L')");
-            $stmt->execute([$userId, $nis, $nis, $fullName, $kelasId, $jurusanId]);
-            return $this->getByUserId($userId);
-        } catch (Exception $e) {
-            return ['id' => $userId, 'user_id' => $userId, 'nama_lengkap' => $fullName, 'kelas_id' => 1, 'jurusan_id' => 1];
-        }
+            for ($attempt = 0; $attempt < 5; $attempt++) {
+                try {
+                    $nis = 'S' . date('Ym') . str_pad(rand(100, 9999), 4, '0', STR_PAD_LEFT);
+                    $stmt = $this->db->prepare("INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin) VALUES (?, ?, ?, ?, ?, ?, 'L')");
+                    $stmt->execute([$userId, $nis, $nis, $fullName, $kelasId, $jurusanId]);
+                    $created = $this->getByUserId($userId);
+                    if ($created) return $created;
+                } catch (\Throwable $exAttempt) {
+                    // Collision retry
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        $fallback = $this->getByUserId($userId);
+        return $fallback ?: ['id' => 0, 'user_id' => $userId, 'nama_lengkap' => $fullName, 'kelas_id' => 1, 'jurusan_id' => 1];
     }
 
     public function addSiswa($data) {

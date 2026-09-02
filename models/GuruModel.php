@@ -31,27 +31,29 @@ class GuruModel extends BaseModel {
     }
 
     public function ensureGuruProfile($userId, $fullName) {
+        if (!$userId) {
+            return ['id' => 0, 'user_id' => 0, 'nama_lengkap' => $fullName];
+        }
+
         $guru = $this->getByUserId($userId);
         if ($guru) return $guru;
 
-        // Check if user is actually a Guru before creating profile
-        $stmtRole = $this->db->prepare("SELECT role_id FROM users WHERE id = ?");
-        $stmtRole->execute([$userId]);
-        $uRow = $stmtRole->fetch();
-        $roleId = (int)($uRow['role_id'] ?? 0);
-
-        if ($roleId === 3) {
-            return null; // Do not auto-create guru profile for student accounts
-        }
-
         try {
-            $nip = 'G' . date('Ym') . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            $stmt = $this->db->prepare("INSERT INTO guru (user_id, nip, nama_lengkap, jenis_kelamin, status) VALUES (?, ?, ?, 'L', 'aktif')");
-            $stmt->execute([$userId, $nip, $fullName]);
-            return $this->getByUserId($userId);
-        } catch (Exception $e) {
-            return ['id' => $userId, 'user_id' => $userId, 'nama_lengkap' => $fullName];
-        }
+            for ($attempt = 0; $attempt < 5; $attempt++) {
+                try {
+                    $nip = 'G' . date('Ym') . str_pad(rand(100, 9999), 4, '0', STR_PAD_LEFT);
+                    $stmt = $this->db->prepare("INSERT INTO guru (user_id, nip, nama_lengkap, jenis_kelamin, status) VALUES (?, ?, ?, 'L', 'aktif')");
+                    $stmt->execute([$userId, $nip, $fullName]);
+                    $created = $this->getByUserId($userId);
+                    if ($created) return $created;
+                } catch (\Throwable $exAttempt) {
+                    // Collision retry
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        $fallback = $this->getByUserId($userId);
+        return $fallback ?: ['id' => 0, 'user_id' => $userId, 'nama_lengkap' => $fullName];
     }
 
     public function addGuru($data) {

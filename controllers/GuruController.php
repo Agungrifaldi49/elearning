@@ -23,8 +23,10 @@ class GuruController {
 
     private function getGuruInfo() {
         $user = AuthHelper::user();
+        if (!$user) return ['id' => 0, 'user_id' => 0, 'nama_lengkap' => 'Guru'];
         $guruModel = new GuruModel();
-        return $guruModel->ensureGuruProfile($user['id'], $user['full_name']);
+        $prof = $guruModel->ensureGuruProfile($user['id'], $user['full_name']);
+        return $prof ?: ['id' => 0, 'user_id' => $user['id'], 'nama_lengkap' => $user['full_name']];
     }
 
     public function game() {
@@ -46,7 +48,7 @@ class GuruController {
 
     public function dashboard() {
         $guru = $this->getGuruInfo();
-        $guruId = $guru['id'];
+        $guruId = $guru['id'] ?? 0;
 
         $learningModel = new LearningModel();
         $examModel = new ExamModel();

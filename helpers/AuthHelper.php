@@ -32,6 +32,9 @@ class AuthHelper {
     /**
      * Get Current Logged In User with static memory caching
      */
+    /**
+     * Get Current Logged In User with static memory caching
+     */
     public static function user() {
         if (self::$cachedUser !== null) {
             return self::$cachedUser;
@@ -42,28 +45,30 @@ class AuthHelper {
         }
 
         if (isset($_SESSION['user_id'])) {
-            // Periodic sync every 5 minutes or if session missing role_name
-            $needSync = !isset($_SESSION['role_name']) || !isset($_SESSION['last_sync']) || (time() - $_SESSION['last_sync'] > 300);
+            // Periodic sync every 15 minutes or if session missing role_name
+            $needSync = !isset($_SESSION['role_name']) || !isset($_SESSION['last_sync']) || (time() - $_SESSION['last_sync'] > 900);
             if ($needSync) {
                 try {
                     $db = Database::getConnection();
-                    $stmtSync = $db->prepare("
-                        SELECT u.full_name, u.email, u.avatar, u.role_id, r.name as role_name 
-                        FROM users u 
-                        LEFT JOIN roles r ON u.role_id = r.id 
-                        WHERE u.id = ?
-                    ");
-                    $stmtSync->execute([$_SESSION['user_id']]);
-                    $uRow = $stmtSync->fetch();
-                    if ($uRow) {
-                        $_SESSION['full_name'] = $uRow['full_name'];
-                        $_SESSION['email'] = $uRow['email'];
-                        $_SESSION['avatar'] = $uRow['avatar'] ?? 'default_avatar.png';
-                        $_SESSION['role_id'] = $uRow['role_id'];
-                        $_SESSION['role_name'] = $uRow['role_name'];
-                        $_SESSION['last_sync'] = time();
+                    if ($db) {
+                        $stmtSync = $db->prepare("
+                            SELECT u.full_name, u.email, u.avatar, u.role_id, r.name as role_name 
+                            FROM users u 
+                            LEFT JOIN roles r ON u.role_id = r.id 
+                            WHERE u.id = ?
+                        ");
+                        $stmtSync->execute([$_SESSION['user_id']]);
+                        $uRow = $stmtSync->fetch();
+                        if ($uRow) {
+                            $_SESSION['full_name'] = $uRow['full_name'];
+                            $_SESSION['email'] = $uRow['email'];
+                            $_SESSION['avatar'] = $uRow['avatar'] ?? 'default_avatar.png';
+                            $_SESSION['role_id'] = $uRow['role_id'];
+                            $_SESSION['role_name'] = $uRow['role_name'];
+                            $_SESSION['last_sync'] = time();
+                        }
                     }
-                } catch (Exception $e) {}
+                } catch (\Throwable $e) {}
             }
         }
 
@@ -88,7 +93,7 @@ class AuthHelper {
      */
     public static function login($user) {
         if (session_status() === PHP_SESSION_ACTIVE) {
-            session_regenerate_id(true);
+            @session_regenerate_id(true);
         }
 
         self::$cachedUser = null; // Reset static cache
@@ -106,20 +111,22 @@ class AuthHelper {
         // Fetch student or teacher specific IDs if applicable
         try {
             $db = Database::getConnection();
-            if ($user['role_id'] == 2 || strtolower($user['role_name']) === 'guru') { // Guru
-                $stmt = $db->prepare("SELECT id FROM guru WHERE user_id = ?");
-                $stmt->execute([$user['id']]);
-                $guru = $stmt->fetch();
-                $_SESSION['member_id'] = $guru['id'] ?? null;
-            } elseif ($user['role_id'] == 3 || strtolower($user['role_name']) === 'siswa') { // Siswa
-                $stmt = $db->prepare("SELECT id, kelas_id, jurusan_id FROM siswa WHERE user_id = ?");
-                $stmt->execute([$user['id']]);
-                $siswa = $stmt->fetch();
-                $_SESSION['member_id'] = $siswa['id'] ?? null;
-                $_SESSION['kelas_id'] = $siswa['kelas_id'] ?? null;
-                $_SESSION['jurusan_id'] = $siswa['jurusan_id'] ?? null;
+            if ($db) {
+                if ($user['role_id'] == 2 || strtolower($user['role_name'] ?? '') === 'guru') { // Guru
+                    $stmt = $db->prepare("SELECT id FROM guru WHERE user_id = ?");
+                    $stmt->execute([$user['id']]);
+                    $guru = $stmt->fetch();
+                    $_SESSION['member_id'] = $guru['id'] ?? null;
+                } elseif ($user['role_id'] == 3 || strtolower($user['role_name'] ?? '') === 'siswa') { // Siswa
+                    $stmt = $db->prepare("SELECT id, kelas_id, jurusan_id FROM siswa WHERE user_id = ?");
+                    $stmt->execute([$user['id']]);
+                    $siswa = $stmt->fetch();
+                    $_SESSION['member_id'] = $siswa['id'] ?? null;
+                    $_SESSION['kelas_id'] = $siswa['kelas_id'] ?? null;
+                    $_SESSION['jurusan_id'] = $siswa['jurusan_id'] ?? null;
+                }
             }
-        } catch (Exception $e) {}
+        } catch (\Throwable $e) {}
     }
 
     /**

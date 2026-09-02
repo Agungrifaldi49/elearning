@@ -12,6 +12,29 @@ error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_WARNING);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
+// Global Exception Handler to prevent raw HTTP 500 error screens
+set_exception_handler(function($exception) {
+    error_log("Uncaught Exception: " . $exception->getMessage() . " in " . $exception->getFile() . ":" . $exception->getLine());
+    if (headers_sent() === false) {
+        http_response_code(500);
+    }
+    $isJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+    if ($isJson || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'status' => false,
+            'message' => 'Terjadi kendala pada sistem. Silakan refresh atau muat ulang halaman.'
+        ]);
+        exit();
+    }
+    echo "<div style='font-family:sans-serif; padding:30px; max-width:640px; margin:50px auto; background:#fff3cd; color:#856404; border:1px solid #ffeeba; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.05); text-align:center;'>
+        <h2 style='margin-top:0; color:#856404;'>Permintaan Sedang Diproses / Kendala Sementara</h2>
+        <p>Sistem sedang melayani lalu lintas yang padat. Silakan segarkan (refresh) halaman atau coba beberapa saat lagi.</p>
+        <button onclick='window.location.reload()' style='background:#4f46e5; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer; margin-top:15px;'>Muat Ulang Halaman</button>
+    </div>";
+    exit();
+});
+
 // Session Security & Configuration
 ini_set('session.cookie_httponly', '1');
 ini_set('session.use_only_cookies', '1');

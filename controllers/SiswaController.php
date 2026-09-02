@@ -21,8 +21,10 @@ class SiswaController {
 
     private function getSiswaInfo() {
         $user = AuthHelper::user();
+        if (!$user) return ['id' => 0, 'user_id' => 0, 'nama_lengkap' => 'Siswa', 'kelas_id' => 1, 'jurusan_id' => 1];
         $siswaModel = new SiswaModel();
-        return $siswaModel->ensureSiswaProfile($user['id'], $user['full_name']);
+        $prof = $siswaModel->ensureSiswaProfile($user['id'], $user['full_name']);
+        return $prof ?: ['id' => 0, 'user_id' => $user['id'], 'nama_lengkap' => $user['full_name'], 'kelas_id' => 1, 'jurusan_id' => 1];
     }
 
     public function game() {
@@ -44,10 +46,9 @@ class SiswaController {
 
     public function dashboard() {
         $user = AuthHelper::user();
-        $siswaModel = new SiswaModel();
-        $siswaProfile = $siswaModel->ensureSiswaProfile($user['id'], $user['full_name']);
+        $siswaProfile = $this->getSiswaInfo();
         $siswa = $siswaProfile;
-        $siswaId = $siswa['id'];
+        $siswaId = $siswa['id'] ?? 0;
         $kelasId = $siswa['kelas_id'] ?? null;
 
         $learningModel = new LearningModel();

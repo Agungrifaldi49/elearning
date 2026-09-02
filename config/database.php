@@ -5,74 +5,73 @@
  */
 
 class Database {
-    private static $host = 'localhost';
+    private static $host = '127.0.0.1';
     private static $db_name = 'db_elearning_smkmh';
     private static $username = 'root';
     private static $password = '';
     private static $conn = null;
 
     public static function getConnection() {
-        if (self::$conn === null) {
-            $hosts = ['127.0.0.1', 'localhost'];
-            $ports = [3306, 3307];
-            $lastException = null;
+        if (self::$conn !== null) {
+            return self::$conn;
+        }
 
-            foreach ($hosts as $h) {
-                foreach ($ports as $p) {
-                    try {
-                        self::$conn = new PDO(
-                            "mysql:host={$h};port={$p};dbname=" . self::$db_name . ";charset=utf8mb4",
-                            self::$username,
-                            self::$password,
-                            [
-                                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                                PDO::ATTR_EMULATE_PREPARES => false,
-                                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
-                            ]
-                        );
-                        if (self::$conn) {
-                            break 2;
-                        }
-                    } catch (PDOException $e) {
-                        $lastException = $e;
+        $hosts = [self::$host, 'localhost'];
+        $ports = [3306];
+        $lastException = null;
+
+        $pdoOptions = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+            PDO::ATTR_TIMEOUT => 3,
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
+        ];
+
+        foreach ($hosts as $h) {
+            foreach ($ports as $p) {
+                try {
+                    self::$conn = new PDO(
+                        "mysql:host={$h};port={$p};dbname=" . self::$db_name . ";charset=utf8mb4",
+                        self::$username,
+                        self::$password,
+                        $pdoOptions
+                    );
+                    if (self::$conn) {
+                        break 2;
                     }
+                } catch (PDOException $e) {
+                    $lastException = $e;
                 }
-            }
-
-            if (self::$conn === null && $lastException) {
-                $e = $lastException;
-                $isUnknownDb = strpos($e->getMessage(), 'Unknown database') !== false || $e->getCode() == 1049;
-
-                if ($isUnknownDb) {
-                    try {
-                        $pdo = new PDO("mysql:host=" . self::$host . ";charset=utf8mb4", self::$username, self::$password);
-                        $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . self::$db_name . "` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
-                        
-                        self::$conn = new PDO(
-                            "mysql:host=" . self::$host . ";dbname=" . self::$db_name . ";charset=utf8mb4",
-                            self::$username,
-                            self::$password,
-                            [
-                                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                                PDO::ATTR_EMULATE_PREPARES => false,
-                            ]
-                        );
-
-                        self::autoImport();
-                    } catch (PDOException $ex) {
-                        self::showConnectionError($ex);
-                    }
-                } else {
-                    self::showConnectionError($e);
-                }
-            }
-
-            if (self::$conn) {
-                self::ensurePerformanceIndexes();
             }
         }
+
+        if (self::$conn === null && $lastException) {
+            $e = $lastException;
+            $isUnknownDb = strpos($e->getMessage(), 'Unknown database') !== false || $e->getCode() == 1049;
+
+            if ($isUnknownDb) {
+                try {
+                    $pdo = new PDO("mysql:host=" . self::$host . ";charset=utf8mb4", self::$username, self::$password, [PDO::ATTR_TIMEOUT => 3]);
+                    $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . self::$db_name . "` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+                    
+                    self::$conn = new PDO(
+                        "mysql:host=" . self::$host . ";dbname=" . self::$db_name . ";charset=utf8mb4",
+                        self::$username,
+                        self::$password,
+                        $pdoOptions
+                    );
+
+                    self::autoImport();
+                    self::ensurePerformanceIndexes();
+                } catch (PDOException $ex) {
+                    self::showConnectionError($ex);
+                }
+            } else {
+                self::showConnectionError($e);
+            }
+        }
+
         return self::$conn;
     }
 
@@ -80,6 +79,18 @@ class Database {
         if (headers_sent() === false) {
             http_response_code(503);
         }
+        
+        $isJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
+        if ($isJson || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'status' => false,
+                'message' => 'Kendala Server / Koneksi Database sedang sibuk. Silakan coba beberapa saat lagi.',
+                'error' => $ex->getMessage()
+            ]);
+            exit();
+        }
+
         die("<div style='font-family:sans-serif; padding:20px; max-width:600px; margin:40px auto; background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; border-radius:8px;'>
             <h3>Kendala Server / Koneksi Database</h3>
             <p>Sistem sedang menerima lonjakan trafik yang tinggi atau layanan MySQL terhenti.</p>
