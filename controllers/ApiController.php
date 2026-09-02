@@ -168,7 +168,27 @@ class ApiController {
     public function siswa($endpoint = 'dashboard') {
         $endpoint = strtolower(trim(explode('?', $endpoint)[0], '/'));
         $endpoint = str_replace('-', '_', $endpoint);
+        if (strpos($endpoint, 'siswa/') === 0) {
+            $endpoint = substr($endpoint, 6);
+        } elseif (strpos($endpoint, 'siswa_') === 0 && !in_array($endpoint, ['siswa_profile', 'siswa_tugas', 'siswa_dashboard'])) {
+            $endpoint = substr($endpoint, 6);
+        }
         $input = $this->getPostInput();
+
+        if ($endpoint === 'index' || $endpoint === 'dashboard' || $endpoint === '' || $endpoint === 'siswa') {
+            $subCandidate = $_POST['action'] ?? $input['action'] ?? $_GET['sub_action'] ?? $_GET['endpoint'] ?? $_POST['endpoint'] ?? $input['endpoint'] ?? '';
+            if (!empty($subCandidate)) {
+                $subClean = strtolower(trim(explode('?', $subCandidate)[0], '/'));
+                $subClean = str_replace('-', '_', $subClean);
+                if (strpos($subClean, 'siswa/') === 0) {
+                    $subClean = substr($subClean, 6);
+                }
+                if (!empty($subClean) && $subClean !== 'siswa') {
+                    $endpoint = $subClean;
+                }
+            }
+        }
+
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? $_GET['siswa_id'] ?? $_POST['siswa_id'] ?? $input['siswa_id'] ?? 0);
         if ($userId === 0) {
             $rawQuery = $_SERVER['QUERY_STRING'] ?? '';
@@ -975,6 +995,10 @@ class ApiController {
 
             case 'request_tugas_susulan':
             case 'request_tugas_permission':
+            case 'request_tugas_izin':
+            case 'request_tugas':
+            case 'tugas_susulan':
+            case 'request_tugas_susulan_permission':
                 $input = $this->getPostInput();
                 $tugasId = intval($_POST['tugas_id'] ?? $input['tugas_id'] ?? 0);
                 $catatan = trim($_POST['catatan_susulan'] ?? $input['catatan_susulan'] ?? $_POST['catatan'] ?? $input['catatan'] ?? 'Permohonan izin pengumpulan tugas susulan via mobile app');

@@ -15,6 +15,8 @@ class TugasModel {
   final String? komentarGuru;
   final String? submittedAt;
   final int? totalPengumpulan;
+  final String? catatanSiswa;
+  final String? filePathSiswa;
   final bool canSubmit;
   final bool isExpired;
   final String lockStatus;
@@ -37,6 +39,8 @@ class TugasModel {
     this.komentarGuru,
     this.submittedAt,
     this.totalPengumpulan,
+    this.catatanSiswa,
+    this.filePathSiswa,
     this.canSubmit = true,
     this.isExpired = false,
     this.lockStatus = 'terbuka',
@@ -103,6 +107,8 @@ class TugasModel {
       komentarGuru: json['komentar_guru'],
       submittedAt: json['submitted_at'],
       totalPengumpulan: json['total_pengumpulan'] != null ? _parseInt(json['total_pengumpulan']) : null,
+      catatanSiswa: json['catatan_siswa']?.toString(),
+      filePathSiswa: json['file_path_siswa']?.toString(),
       canSubmit: parsedCanSubmit,
       isExpired: parsedExpired,
       lockStatus: lockSt,

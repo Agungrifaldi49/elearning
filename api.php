@@ -81,8 +81,39 @@ if (empty($method)) {
 
 $controller = new ApiController();
 
+// If method is not a direct controller action, check if it belongs to 'siswa' or 'guru'
+if (!method_exists($controller, $method)) {
+    $knownSiswaActions = [
+        'request_tugas_susulan', 'request_tugas_permission', 'request_tugas_izin', 'request_tugas', 
+        'submit_tugas', 'request_susulan', 'ajukan_susulan', 'quiz_detail', 'submit_quiz', 
+        'quiz_review', 'record_violation', 'checkin_absensi', 'learning_path', 'alur_belajar'
+    ];
+    if (in_array($method, $knownSiswaActions) || strpos($method, 'siswa_') === 0 || strpos($method, 'request_') === 0) {
+        $param = $method;
+        $method = 'siswa';
+    } elseif (strpos($method, 'guru_') === 0) {
+        $param = $method;
+        $method = 'guru';
+    }
+}
+
+// If method is 'siswa' but param is 'index', attempt fallback to POST/GET sub-action
+if ($method === 'siswa' && ($param === 'index' || $param === 'dashboard' || $param === '')) {
+    $subActionCandidate = $_POST['action'] ?? $jsonInput['action'] ?? $_GET['sub_action'] ?? $_GET['endpoint'] ?? $_POST['endpoint'] ?? $jsonInput['endpoint'] ?? '';
+    if (!empty($subActionCandidate) && strtolower($subActionCandidate) !== 'siswa') {
+        $cleanSub = strtolower(trim(explode('?', $subActionCandidate)[0], '/'));
+        if (strpos($cleanSub, 'siswa/') === 0) {
+            $cleanSub = substr($cleanSub, 6);
+        }
+        if (!empty($cleanSub) && $cleanSub !== 'siswa') {
+            $param = $cleanSub;
+        }
+    }
+}
+
 if (method_exists($controller, $method)) {
     $controller->$method($param);
 } else {
     $controller->index();
 }
+

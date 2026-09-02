@@ -175,8 +175,8 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
   void _showTugasDetailAndSubmit(TugasModel t) {
     Provider.of<SiswaProvider>(context, listen: false).markTugasAsSeen(t.id);
 
-    final catatanController = TextEditingController();
-    final fileController = TextEditingController();
+    final catatanController = TextEditingController(text: t.catatanSiswa ?? '');
+    final fileController = TextEditingController(text: t.filePathSiswa ?? '');
 
     final fileUrl = ApiService.getFileUrl(t.filePath);
 
@@ -419,6 +419,29 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                   ),
                   const SizedBox(height: 14),
                 ] else ...[
+                  if (t.isSusulanDisetujui) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.teal.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Colors.teal.shade800, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Permohonan Izin Susulan Disetujui! Akses pengumpulan tugas telah dibuka kembali oleh Guru Pengampu.',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.teal.shade900),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   const Text('Form Pengumpulan Jawaban Siswa:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.secondaryColor)),
                   const SizedBox(height: 10),
                   TextField(
