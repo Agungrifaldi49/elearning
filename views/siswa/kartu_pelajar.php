@@ -174,9 +174,14 @@ $nisnNisVal = !empty($siswa['nisn']) ? $siswa['nisn'] : (!empty($siswa['nis']) ?
                 <h4 class="fw-bold mb-1 text-dark"><i class="bi bi-credit-card-2-front-fill text-primary me-2"></i>Kartu Pelajar Digital Resmi</h4>
                 <p class="text-muted small mb-0">Identitas digital resmi siswa yang dilengkapi QR Code presensi & informasi sinkron dari Admin.</p>
             </div>
-            <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-scale no-print" onclick="window.print()">
-                <i class="bi bi-printer-fill me-2"></i> Cetak Kartu Pelajar
-            </button>
+            <div class="d-flex gap-2 flex-wrap no-print">
+                <button class="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-scale" onclick="downloadQRCode()">
+                    <i class="bi bi-qr-code-scan me-2"></i> Unduh QR Code Presensi
+                </button>
+                <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-scale" onclick="window.print()">
+                    <i class="bi bi-printer-fill me-2"></i> Cetak Kartu Pelajar
+                </button>
+            </div>
         </div>
 
         <div class="row g-4 justify-content-center print-card-container">
@@ -257,9 +262,13 @@ $nisnNisVal = !empty($siswa['nisn']) ? $siswa['nisn'] : (!empty($siswa['nis']) ?
                         </div>
                         
                         <!-- High-Res QR Code for Attendance Verification -->
-                        <div class="bg-white rounded-3 p-1 shadow-sm d-flex align-items-center justify-content-center">
-                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=SMKMH-SISWA-<?= urlencode($nisnNisVal) ?>&color=0f172a&bgcolor=ffffff"
+                        <div class="bg-white rounded-3 p-1 shadow-sm d-flex align-items-center justify-content-center flex-column" 
+                             style="cursor: pointer; transition: transform 0.2s;" 
+                             onclick="downloadQRCode()" 
+                             title="Klik untuk Mengunduh QR Code Presensi">
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=SMKMH-SISWA-<?= urlencode($nisnNisVal) ?>&color=0f172a&bgcolor=ffffff"
                                  alt="QR Presensi" width="56" height="56" style="border-radius: 4px;">
+                            <span class="text-primary no-print fw-bold mt-1" style="font-size: 0.55rem; letter-spacing: 0.2px;"><i class="bi bi-download me-1"></i>Unduh</span>
                         </div>
                     </div>
 
@@ -343,5 +352,45 @@ $nisnNisVal = !empty($siswa['nisn']) ? $siswa['nisn'] : (!empty($siswa['nis']) ?
 
     </div>
 </main>
+
+<script>
+function downloadQRCode() {
+    const qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=SMKMH-SISWA-<?= urlencode($nisnNisVal) ?>&color=0f172a&bgcolor=ffffff";
+    const filename = "QR_Presensi_<?= urlencode(str_replace([' ', '/', '\\'], '_', $siswa['nama_lengkap'] ?? 'Siswa')) ?>_<?= urlencode($nisnNisVal) ?>.png";
+
+    fetch(qrUrl)
+        .then(res => res.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'QR Code Berhasil Diunduh!',
+                    text: 'File ' + filename + ' berhasil disimpan.',
+                    timer: 2200,
+                    showConfirmButton: false
+                });
+            }
+        })
+        .catch(err => {
+            const a = document.createElement('a');
+            a.href = qrUrl;
+            a.download = filename;
+            a.target = '_blank';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+}
+</script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
