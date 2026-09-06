@@ -8,9 +8,8 @@ import 'providers/theme_provider.dart';
 import 'views/auth/splash_screen.dart';
 import 'services/fcm_service.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  await FcmService.initialize();
   runApp(
     MultiProvider(
       providers: [
@@ -22,6 +21,9 @@ void main() async {
       child: const ElearningMobileApp(),
     ),
   );
+
+  // Inisialisasi FCM secara asynchronous agar tidak memblokir pembukaan aplikasi
+  FcmService.initialize();
 }
 
 class ElearningMobileApp extends StatelessWidget {

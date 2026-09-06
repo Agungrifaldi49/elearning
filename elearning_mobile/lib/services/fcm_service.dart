@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -7,9 +6,15 @@ import 'api_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  if (kDebugMode) {
-    print("Handling a background message: ${message.messageId}");
+  try {
+    await Firebase.initializeApp();
+    if (kDebugMode) {
+      print("Handling a background message: ${message.messageId}");
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print("Background FCM handler error: $e");
+    }
   }
 }
 

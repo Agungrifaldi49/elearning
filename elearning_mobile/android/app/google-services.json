@@ -9,6 +9,25 @@
       "client_info": {
         "mobilesdk_app_id": "1:719008295818:android:0d2af169d04036d6343673",
         "android_client_info": {
+          "package_name": "com.example.elearning_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAiaBtQPT4ztzWCPSAxCZZh1Hx_ZgkQwM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:719008295818:android:0d2af169d04036d6343673",
+        "android_client_info": {
           "package_name": "com.elearning_mhc"
         }
       },

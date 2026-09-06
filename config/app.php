@@ -71,3 +71,9 @@ define('UPLOADS_PATH', ASSETS_PATH . 'uploads/');
 define('SESSION_TIMEOUT', 1800); // 30 minutes inactivity timeout
 define('MAX_LOGIN_ATTEMPTS', 5); // Lock temporarily after 5 fails
 define('LOGIN_LOCKOUT_TIME', 300); // 5 minutes lockout
+
+// Firebase Cloud Messaging (FCM) HTTP v1 API Configuration
+define('FCM_CREDENTIALS_PATH', __DIR__ . '/firebase_credentials.json');
+define('FCM_PROJECT_ID', 'elearning-ff3d0');
+
+

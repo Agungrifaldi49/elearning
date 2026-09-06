@@ -1,6 +1,6 @@
 <?php
 /**
- * FCM Push Notification & In-App Notification Helper
+ * FCM Push Notification & In-App Notification Helper (Firebase HTTP v1 API)
  * E-Learning SMK Muthia Harapan Cicalengka
  */
 
@@ -9,6 +9,8 @@ require_once ROOT_PATH . 'config/database.php';
 class FcmHelper {
     private static $db = null;
     private static $tableInitialized = false;
+    private static $cachedAccessToken = null;
+    private static $accessTokenExpiresAt = 0;
 
     private static function getDb() {
         if (self::$db === null) {
@@ -40,6 +42,96 @@ class FcmHelper {
         } catch (\Throwable $e) {
             // Ignore if table creation failed or exists
         }
+    }
+
+    /**
+     * Helper to base64UrlEncode string data according to JWT spec
+     */
+    private static function base64UrlEncode($data) {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+
+    /**
+     * Generate OAuth 2.0 Access Token from Service Account JSON using pure PHP OpenSSL
+     */
+    private static function getGoogleAccessToken() {
+        if (self::$cachedAccessToken && time() < (self::$accessTokenExpiresAt - 60)) {
+            return self::$cachedAccessToken;
+        }
+
+        $credentialsPath = defined('FCM_CREDENTIALS_PATH') ? FCM_CREDENTIALS_PATH : ROOT_PATH . 'config/firebase_credentials.json';
+        if (!file_exists($credentialsPath)) {
+            $altPath = ROOT_PATH . 'config/firebase_credentials.json.json';
+            if (file_exists($altPath)) {
+                $credentialsPath = $altPath;
+            } else {
+                error_log("FcmHelper: Firebase Service Account JSON file not found at: $credentialsPath");
+                return null;
+            }
+        }
+
+        $jsonContent = file_get_contents($credentialsPath);
+        $json = json_decode($jsonContent, true);
+        if (!$json || !isset($json['private_key']) || !isset($json['client_email'])) {
+            error_log("FcmHelper: Invalid Service Account JSON file format at $credentialsPath");
+            return null;
+        }
+
+        $clientEmail = $json['client_email'];
+        $privateKey = $json['private_key'];
+        $tokenUri = $json['token_uri'] ?? 'https://oauth2.googleapis.com/token';
+
+        $now = time();
+        $header = ['alg' => 'RS256', 'typ' => 'JWT'];
+        $claimSet = [
+            'iss' => $clientEmail,
+            'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
+            'aud' => $tokenUri,
+            'iat' => $now,
+            'exp' => $now + 3600
+        ];
+
+        $encodedHeader = self::base64UrlEncode(json_encode($header));
+        $encodedClaimSet = self::base64UrlEncode(json_encode($claimSet));
+
+        $signingInput = $encodedHeader . '.' . $encodedClaimSet;
+        $signature = '';
+
+        if (!openssl_sign($signingInput, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
+            error_log("FcmHelper: Failed to sign JWT with OpenSSL.");
+            return null;
+        }
+
+        $jwt = $signingInput . '.' . self::base64UrlEncode($signature);
+
+        // Exchange JWT for Google OAuth2 Access Token
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $tokenUri);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+            'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'assertion' => $jwt
+        ]));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200) {
+            error_log("FcmHelper: OAuth token exchange failed with HTTP $httpCode: $response");
+            return null;
+        }
+
+        $data = json_decode($response, true);
+        if (isset($data['access_token'])) {
+            self::$cachedAccessToken = $data['access_token'];
+            self::$accessTokenExpiresAt = $now + (int)($data['expires_in'] ?? 3600);
+            return self::$cachedAccessToken;
+        }
+
+        return null;
     }
 
     /**
@@ -105,12 +197,12 @@ class FcmHelper {
             $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
             if (empty($userIds)) {
-                // Fallback: try finding users via siswa profile directly
+                // Fallback: try finding users via siswa role directly
                 $stmt2 = $db->prepare("
                     SELECT u.id 
                     FROM users u
-                    JOIN roles r ON u.role_id = r.id
-                    WHERE r.name = 'Siswa' AND u.fcm_token IS NOT NULL AND u.fcm_token != ''
+                    LEFT JOIN roles r ON u.role_id = r.id
+                    WHERE (r.name = 'Siswa' OR u.role_id = 4) AND u.fcm_token IS NOT NULL AND u.fcm_token != ''
                 ");
                 $stmt2->execute();
                 $userIds = $stmt2->fetchAll(PDO::FETCH_COLUMN);
@@ -171,56 +263,76 @@ class FcmHelper {
     }
 
     /**
-     * Core payload dispatcher sending request via Firebase Cloud Messaging HTTP API / cURL
+     * Core payload dispatcher sending request via Firebase Cloud Messaging HTTP v1 API
      */
     private static function sendFcmPayload(array $tokens, $title, $message, $data = []) {
-        $serverKey = defined('FCM_SERVER_KEY') ? FCM_SERVER_KEY : '';
-        if (empty($serverKey)) {
-            // FCM Server Key not set yet, payload saved in DB notification history
-            error_log("FcmHelper: FCM_SERVER_KEY is not defined. Notification logged to DB.");
-            return true;
-        }
+        $tokens = array_values(array_unique(array_filter($tokens)));
+        if (empty($tokens)) return false;
 
-        $url = 'https://fcm.googleapis.com/fcm/send';
-
-        $fields = [
-            'registration_ids' => array_values(array_unique($tokens)),
-            'notification' => [
-                'title' => $title,
-                'body' => $message,
-                'sound' => 'default',
-                'badge' => '1',
-            ],
-            'data' => array_merge([
-                'title' => $title,
-                'body' => $message,
-                'click_action' => 'FLUTTER_NOTIFICATION_CLICK'
-            ], $data),
-            'priority' => 'high'
-        ];
-
-        $headers = [
-            'Authorization: key=' . $serverKey,
-            'Content-Type: application/json'
-        ];
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
-
-        $result = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200) {
-            error_log("FcmHelper sendFcmPayload Failed with HTTP $httpCode: " . $result);
+        $accessToken = self::getGoogleAccessToken();
+        if (!$accessToken) {
+            error_log("FcmHelper: Failed to obtain Google OAuth2 access token. Notification saved to DB only.");
             return false;
         }
 
-        return true;
+        $projectId = defined('FCM_PROJECT_ID') ? FCM_PROJECT_ID : 'elearning-ff3d0';
+        $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+
+        $headers = [
+            'Authorization: Bearer ' . $accessToken,
+            'Content-Type: application/json'
+        ];
+
+        // Format data map values as strings (FCM v1 requirement: map<string, string>)
+        $stringData = [];
+        foreach ($data as $k => $v) {
+            $stringData[(string)$k] = (string)$v;
+        }
+        $stringData['title'] = (string)$title;
+        $stringData['body'] = (string)$message;
+        $stringData['click_action'] = 'FLUTTER_NOTIFICATION_CLICK';
+
+        $successCount = 0;
+
+        foreach ($tokens as $token) {
+            $payload = [
+                'message' => [
+                    'token' => $token,
+                    'notification' => [
+                        'title' => $title,
+                        'body' => $message,
+                    ],
+                    'data' => $stringData,
+                    'android' => [
+                        'priority' => 'HIGH',
+                        'notification' => [
+                            'channel_id' => 'high_importance_channel',
+                            'sound' => 'default',
+                            'notification_priority' => 'PRIORITY_HIGH'
+                        ]
+                    ]
+                ]
+            ];
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+
+            $result = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200) {
+                $successCount++;
+            } else {
+                error_log("FcmHelper FCM v1 Error (HTTP $httpCode) for token $token: " . $result);
+            }
+        }
+
+        return ($successCount > 0);
     }
 }

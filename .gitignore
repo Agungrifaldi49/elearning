@@ -1,0 +1,8 @@
+# Firebase Credentials & Secret Files (Never commit private keys to GitHub)
+config/firebase_credentials.json
+config/firebase_credentials.json.json
+*.json.json
+
+# Logs & Environment
+*.log
+.env
