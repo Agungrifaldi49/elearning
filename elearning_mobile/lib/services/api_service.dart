@@ -7,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // Production Base URL pointing directly to api.php entry point
-  static const String defaultOnlineUrl = 'https://smkmuthiaharapancicalengka.my.id/api.php?action=';
+  static const String defaultOnlineUrl = 'https://elearning.smkmuthiaharapancicalengka.my.id/api.php?action=';
   static String baseUrl = defaultOnlineUrl;
 
   static Future<void> initBaseUrl() async {
