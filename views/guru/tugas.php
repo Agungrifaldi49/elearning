@@ -710,11 +710,11 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
         </div>
     </div>
 
-    <!-- Modal Grade Submissions (Extra Wide & Modern with Bulk Save) -->
+    <!-- Modal Grade Submissions (Extra Wide & Modern with Scrollable Table & Bulk Save) -->
     <div class="modal fade" id="modalGrade<?= $t['id'] ?>" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
-            <div class="modal-content border-0 rounded-4 shadow-2xl overflow-hidden bg-white">
-                <div class="modal-header border-0 bg-dark text-white p-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%);">
+            <div class="modal-content border-0 rounded-4 shadow-2xl overflow-hidden bg-white" style="max-height: 90vh; display: flex; flex-direction: column;">
+                <div class="modal-header border-0 bg-dark text-white p-4 flex-shrink-0" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0d9488 100%);">
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-warning text-dark rounded-4 p-2.5 shadow-sm d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
                             <i class="bi bi-award-fill fs-3"></i>
@@ -730,11 +730,11 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
 
-                <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" class="d-flex flex-column h-100 mb-0">
+                <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" class="d-flex flex-column mb-0" style="flex: 1; overflow: hidden; min-height: 0;">
                     <?= Security::csrfField() ?>
                     <input type="hidden" name="action" value="bulk_grade">
 
-                    <div class="modal-body p-4 bg-light">
+                    <div class="modal-body p-4 bg-light" style="overflow-y: auto !important; max-height: calc(90vh - 130px); flex: 1 1 auto;">
                         <!-- Instruction Snippet Banner -->
                         <div class="p-3 bg-white rounded-3 border mb-3 shadow-xs">
                             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
@@ -778,9 +778,9 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                 </div>
                             <?php endif; ?>
 
-                            <div class="table-responsive rounded-4 border bg-white shadow-xs">
+                            <div class="table-responsive rounded-4 border bg-white shadow-xs" style="max-height: 52vh; overflow-y: auto;">
                                 <table class="table align-middle table-hover mb-0">
-                                    <thead class="table-light border-bottom">
+                                    <thead class="table-light border-bottom sticky-top" style="position: sticky; top: 0; z-index: 10; background-color: #f8fafc;">
                                         <tr style="font-size: 0.82rem;" class="text-uppercase text-muted fw-bold">
                                             <th class="ps-3" style="width: 25%;">Informasi Siswa</th>
                                             <th style="width: 15%;">Waktu Pengiriman</th>

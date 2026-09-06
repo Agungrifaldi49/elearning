@@ -91,9 +91,9 @@ $formTargetUrl = in_array($userRole, ['administrator', 'admin']) ? 'admin/inputN
             <?= Security::csrfField() ?>
             <input type="hidden" name="action" value="batch_save">
 
-            <div class="table-responsive">
-                <table class="table table-hover align-middle border-top">
-                    <thead class="table-light">
+            <div class="table-responsive rounded-4 border bg-white shadow-xs" style="max-height: 68vh; overflow-y: auto;">
+                <table class="table table-hover align-middle border-top mb-0">
+                    <thead class="table-light sticky-top" style="position: sticky; top: 0; z-index: 10; background-color: #f8fafc;">
                         <tr>
                             <th style="width:40px;">No</th>
                             <th>NIS & Nama Siswa</th>
