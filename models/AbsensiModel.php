@@ -150,6 +150,8 @@ class AbsensiModel extends BaseModel {
         $jStat = $stmtJ->fetch();
 
         $studentClassHasSchedule = true;
+        $classMinStart = null;
+        $classMaxEnd = null;
         if ($siswaId) {
             $stmtSiswaClass = $this->db->prepare("
                 SELECT s.kelas_id, k.nama_kelas 
@@ -162,7 +164,7 @@ class AbsensiModel extends BaseModel {
 
             if ($sData && !empty($sData['kelas_id'])) {
                 $stmtClassJadwal = $this->db->prepare("
-                    SELECT COUNT(*) as cnt 
+                    SELECT COUNT(*) as cnt, MIN(jam_mulai) as class_min_start, MAX(jam_selesai) as class_max_end 
                     FROM jadwal 
                     WHERE kelas_id = ? AND hari = ?
                 ");
@@ -171,6 +173,9 @@ class AbsensiModel extends BaseModel {
 
                 if ((int)($cStat['cnt'] ?? 0) === 0 && (int)($jStat['total_jadwal'] ?? 0) > 0) {
                     $studentClassHasSchedule = false;
+                } else {
+                    $classMinStart = $cStat['class_min_start'] ?? null;
+                    $classMaxEnd = $cStat['class_max_end'] ?? null;
                 }
             }
         }
@@ -208,11 +213,17 @@ class AbsensiModel extends BaseModel {
             ];
         }
 
+        $effectiveMaxEnd = $classMaxEnd ?: ($jStat['max_end'] ?: '14:00:00');
+        // Allow exit scan starting 10 minutes before max KBM end
+        $allowExitStart = date('H:i:s', strtotime($effectiveMaxEnd . ' -10 minutes'));
+
         return [
             'allowed' => true,
             'day_name' => $todayDayName,
             'min_start' => $minStart,
-            'max_end' => $maxEnd
+            'max_end' => $maxEnd,
+            'class_max_end' => $effectiveMaxEnd,
+            'allow_exit_start' => $allowExitStart
         ];
     }
 
@@ -568,6 +579,20 @@ class AbsensiModel extends BaseModel {
                         'message' => "Presensi siswa {$siswa['nama_lengkap']} sudah LENGKAP hari ini (Masuk: {$jamMasuk} WIB, Pulang: {$jamPulang} WIB)."
                     ];
                 } else {
+                    // Check if student is allowed to exit (must reach allow_exit_start)
+                    if (!empty($schedCheck['allow_exit_start']) && $currentTime < $schedCheck['allow_exit_start']) {
+                        $formatMaxEnd = date('H:i', strtotime($schedCheck['class_max_end'] ?? '14:00'));
+                        return [
+                            'success' => false,
+                            'already_attended' => false,
+                            'is_not_scheduled' => true,
+                            'nama' => $siswa['nama_lengkap'],
+                            'nis' => $siswa['nis'] ?: ($siswa['nisn'] ?: '-'),
+                            'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
+                            'message' => "Presensi Pulang Belum Diizinkan! Jadwal KBM kelas {$siswa['nama_kelas']} pada hari ini ({$schedCheck['day_name']}) berakhir pukul {$formatMaxEnd} WIB."
+                        ];
+                    }
+
                     // Record Presensi Pulang
                     $stmtUpd = $this->db->prepare("
                         UPDATE absensi 
