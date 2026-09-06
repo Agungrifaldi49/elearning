@@ -97,7 +97,18 @@ $backupStats = is_array($backupStats ?? null) ? $backupStats : [
         </div>
 
         <!-- Flash Notice -->
-        <?php FlashHelper::display(); ?>
+        <?php if ($msg = FlashHelper::getSuccess()): ?>
+            <div class="alert alert-success alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><?= htmlspecialchars($msg) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+        <?php if ($err = FlashHelper::getError()): ?>
+            <div class="alert alert-danger alert-dismissible fade show rounded-4 border-0 shadow-sm mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><?= htmlspecialchars($err) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
 
         <!-- Statistic Cards -->
         <div class="row g-3 mb-4">

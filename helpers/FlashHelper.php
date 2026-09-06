@@ -90,4 +90,8 @@ class FlashHelper {
 
         return $html;
     }
+
+    public static function display() {
+        echo self::render();
+    }
 }
