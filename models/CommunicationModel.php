@@ -117,7 +117,16 @@ class CommunicationModel extends BaseModel {
             INSERT INTO pengumuman (user_id, judul, isi, target_role, is_popup, banner)
             VALUES (?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([$userId, $judul, $isi, $target_role, $is_popup ? 1 : 0, $banner]);
+        $res = $stmt->execute([$userId, $judul, $isi, $target_role, $is_popup ? 1 : 0, $banner]);
+        if ($res) {
+            try {
+                require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                FcmHelper::sendToAll('📢 Pengumuman Sekolah: ' . $judul, $isi, ['type' => 'pengumuman']);
+            } catch (\Throwable $e) {
+                error_log("CommunicationModel FCM Error: " . $e->getMessage());
+            }
+        }
+        return $res;
     }
 
     public function addPengumuman($judul, $isi, $target_role = 'all', $is_popup = 0, $banner = null) {
