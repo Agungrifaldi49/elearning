@@ -274,18 +274,26 @@ class AbsensiModel extends BaseModel {
         $stmtJ->execute([(int)$guruId, $todayDayName]);
         $gStat = $stmtJ->fetch();
 
-        // Check if teacher has teaching schedule on other days in system
-        $stmtAllJ = $this->db->prepare("SELECT COUNT(*) as total_all FROM jadwal WHERE guru_id = ?");
-        $stmtAllJ->execute([(int)$guruId]);
-        $allStat = $stmtAllJ->fetch();
-        $hasAnyTeachingScheduleInSystem = ((int)($allStat['total_all'] ?? 0) > 0);
+        // Check if school has any KBM schedule today
+        $stmtSchoolDay = $this->db->prepare("SELECT COUNT(*) as cnt FROM jadwal WHERE hari = ?");
+        $stmtSchoolDay->execute([$todayDayName]);
+        $schoolDayStat = $stmtSchoolDay->fetch();
+        $hasSchoolScheduleToday = ((int)($schoolDayStat['cnt'] ?? 0) > 0);
 
-        if ((int)($gStat['total_jadwal'] ?? 0) === 0 && $hasAnyTeachingScheduleInSystem) {
-            return [
-                'allowed' => false,
-                'reason' => 'no_schedule_today',
-                'message' => "Bukan jadwal mengajar! Bpk/Ibu Guru tidak memiliki jadwal KBM mengajar pada hari $todayDayName ($todayDate)."
-            ];
+        if ((int)($gStat['total_jadwal'] ?? 0) === 0) {
+            if ($todayDayName === 'Minggu' || !$hasSchoolScheduleToday) {
+                return [
+                    'allowed' => false,
+                    'reason' => 'no_schedule_today',
+                    'message' => "Bukan jadwal mengajar! Hari $todayDayName ($todayDate) adalah hari libur KBM sekolah. Pemindaian presensi tidak dapat dilakukan."
+                ];
+            } else {
+                return [
+                    'allowed' => false,
+                    'reason' => 'no_schedule_today',
+                    'message' => "Bukan jadwal mengajar! Bpk/Ibu Guru tidak memiliki jadwal KBM mengajar pada hari $todayDayName ($todayDate)."
+                ];
+            }
         }
 
         // Determine schedule bounds
@@ -544,7 +552,7 @@ class AbsensiModel extends BaseModel {
 
             // Strict Academic Schedule & Holiday Verification
             $schedCheck = $this->verifySchoolScheduleToday($siswa['id'], $today, $currentTime);
-            if (!$schedCheck['allowed'] && ($schedCheck['reason'] ?? '') === 'holiday') {
+            if (!$schedCheck['allowed']) {
                 return [
                     'success' => false,
                     'is_not_scheduled' => true,
