@@ -191,7 +191,7 @@ class FcmHelper {
                 SELECT u.id 
                 FROM users u
                 JOIN siswa s ON (s.user_id = u.id OR s.nis = u.username)
-                WHERE s.kelas_id = ? AND u.fcm_token IS NOT NULL AND u.fcm_token != ''
+                WHERE s.kelas_id = ?
             ");
             $stmt->execute([$kelasId]);
             $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -202,7 +202,7 @@ class FcmHelper {
                     SELECT u.id 
                     FROM users u
                     LEFT JOIN roles r ON u.role_id = r.id
-                    WHERE (r.name = 'Siswa' OR u.role_id = 4) AND u.fcm_token IS NOT NULL AND u.fcm_token != ''
+                    WHERE (r.name = 'Siswa' OR u.role_id = 4)
                 ");
                 $stmt2->execute();
                 $userIds = $stmt2->fetchAll(PDO::FETCH_COLUMN);
@@ -223,11 +223,7 @@ class FcmHelper {
     public static function sendToAll($title, $message, $data = []) {
         try {
             $db = self::getDb();
-            $stmt = $db->query("
-                SELECT id 
-                FROM users 
-                WHERE fcm_token IS NOT NULL AND fcm_token != ''
-            ");
+            $stmt = $db->query("SELECT id FROM users");
             $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
             if (!empty($userIds)) {

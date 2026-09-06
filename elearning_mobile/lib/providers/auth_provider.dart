@@ -18,6 +18,11 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     _currentUser = await AuthService.loadSession();
+    if (_currentUser != null) {
+      try {
+        FcmService.sendTokenToBackend(_currentUser!.id);
+      } catch (_) {}
+    }
     _isLoading = false;
     notifyListeners();
   }
