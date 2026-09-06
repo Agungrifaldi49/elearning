@@ -67,6 +67,14 @@ class ForumController {
 
             $commModel->createForumTopic($user['id'], $mapelId, $judul, $konten, $gambar, $visibility, $targetRole, $targetKelasId);
             
+            require_once ROOT_PATH . 'helpers/FcmHelper.php';
+            $authorName = $user['full_name'] ?? 'Pengguna';
+            if ($targetKelasId > 0) {
+                FcmHelper::sendToKelas($targetKelasId, '🗣️ Forum Diskusi Kelas: ' . $judul, "$authorName memposting topik diskusi baru.", ['type' => 'forum']);
+            } else {
+                FcmHelper::sendToAll('🗣️ Forum Diskusi Baru: ' . $judul, "$authorName memposting topik diskusi baru.", ['type' => 'forum']);
+            }
+
             if (isset($_POST['is_ajax']) || isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
                 header('Content-Type: application/json');
                 echo json_encode(['status' => 'success', 'message' => 'Topik diskusi baru berhasil dibuat.']);
@@ -323,6 +331,17 @@ class ForumController {
             }
 
             $commModel->addKomentar($id, $user['id'], $komentar, $parentId, $gambar);
+
+            require_once ROOT_PATH . 'helpers/FcmHelper.php';
+            if ((int)($topic['user_id'] ?? 0) !== (int)$user['id']) {
+                $replierName = $user['full_name'] ?? 'Pengguna';
+                FcmHelper::sendToUser(
+                    $topic['user_id'],
+                    '💬 Balasan Baru di Forum',
+                    "$replierName mengomentari postingan Anda: \"{$topic['judul']}\"",
+                    ['type' => 'forum', 'id' => $id]
+                );
+            }
 
             if (isset($_POST['is_ajax']) || isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
                 header('Content-Type: application/json');

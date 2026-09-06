@@ -6,9 +6,11 @@ import 'providers/siswa_provider.dart';
 import 'providers/guru_provider.dart';
 import 'providers/theme_provider.dart';
 import 'views/auth/splash_screen.dart';
+import 'services/fcm_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await FcmService.initialize();
   runApp(
     MultiProvider(
       providers: [

@@ -3912,4 +3912,84 @@ class ApiController {
                 break;
         }
     }
+
+    public function save_fcm_token() {
+        $input = $this->getPostInput();
+        $userId = intval($input['user_id'] ?? 0);
+        $token = trim($input['fcm_token'] ?? '');
+
+        if ($userId <= 0 || empty($token)) {
+            $this->jsonResponse(false, 'Parameter user_id dan fcm_token wajib diisi!', null, 400);
+        }
+
+        try {
+            // Auto-migrate fcm_token column into users table if it does not exist yet
+            try {
+                $this->db->exec("ALTER TABLE users ADD COLUMN fcm_token TEXT NULL");
+            } catch (\Throwable $eIgnored) {
+                // Column already exists
+            }
+
+            $stmt = $this->db->prepare("UPDATE users SET fcm_token = ? WHERE id = ?");
+            $stmt->execute([$token, $userId]);
+
+            $this->jsonResponse(true, 'Token FCM berhasil disimpan', ['user_id' => $userId]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, 'Gagal menyimpan token FCM: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    public function get_notifications() {
+        $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? 0);
+        if ($userId <= 0) {
+            $this->jsonResponse(false, 'Parameter user_id wajib diisi!', null, 400);
+        }
+
+        try {
+            require_once ROOT_PATH . 'helpers/FcmHelper.php';
+            $stmt = $this->db->prepare("
+                SELECT id, title, message, type, target_id, is_read, created_at 
+                FROM notifications 
+                WHERE user_id = ? 
+                ORDER BY created_at DESC 
+                LIMIT 50
+            ");
+            $stmt->execute([$userId]);
+            $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $stmtUnread = $this->db->prepare("
+                SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0
+            ");
+            $stmtUnread->execute([$userId]);
+            $unreadCount = intval($stmtUnread->fetchColumn());
+
+            $this->jsonResponse(true, 'Daftar Notifikasi System', [
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount
+            ]);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, 'Gagal mengambil notifikasi: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    public function mark_notification_read() {
+        $input = $this->getPostInput();
+        $notificationId = intval($input['notification_id'] ?? 0);
+        $userId = intval($input['user_id'] ?? 0);
+
+        try {
+            if ($notificationId > 0) {
+                $stmt = $this->db->prepare("UPDATE notifications SET is_read = 1 WHERE id = ?");
+                $stmt->execute([$notificationId]);
+            } elseif ($userId > 0) {
+                $stmt = $this->db->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?");
+                $stmt->execute([$userId]);
+            }
+            $this->jsonResponse(true, 'Notifikasi berhasil diperbarui');
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, 'Gagal memperbarui status notifikasi: ' . $e->getMessage(), null, 500);
+        }
+    }
 }
+
+

@@ -128,6 +128,16 @@ class ChatController {
         if ($receiverId > 0 && !empty($message)) {
             $commModel = new CommunicationModel();
             $commModel->sendChatMessage($user['id'], $receiverId, $message);
+
+            require_once ROOT_PATH . 'helpers/FcmHelper.php';
+            $senderName = $user['full_name'] ?? 'Pengguna';
+            FcmHelper::sendToUser(
+                $receiverId,
+                '💬 Pesan dari ' . $senderName,
+                $message,
+                ['type' => 'chat', 'sender_id' => $user['id']]
+            );
+
             echo json_encode(['status' => 'success']);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Pesan tidak boleh kosong']);

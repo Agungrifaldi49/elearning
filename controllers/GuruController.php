@@ -131,6 +131,12 @@ class GuruController {
 
                 // Simpan 1 baris materi dengan seluruh kelas_ids yang dicentang
                 $learningModel->addMateri($guruId, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url);
+
+                require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                foreach ($kelas_ids as $kId) {
+                    FcmHelper::sendToKelas($kId, '📚 Materi Pembelajaran Baru: ' . $judul, 'Guru mengunggah materi baru untuk kelas Anda.', ['type' => 'materi']);
+                }
+
                 FlashHelper::setSuccess('Materi Pembelajaran baru berhasil diunggah.');
 
             } elseif ($action === 'update' && $id > 0) {
@@ -241,6 +247,7 @@ class GuruController {
                 $learningModel->addTugas($guruId, $mapel_id, $kelas_ids, $judul, $deskripsi, $filePath, $deadline);
                 
                 $commModel = new CommunicationModel();
+                require_once ROOT_PATH . 'helpers/FcmHelper.php';
                 foreach ($kelas_ids as $kId) {
                     $commModel->sendNotificationToClass(
                         $kId, 
@@ -248,6 +255,7 @@ class GuruController {
                         "Guru mempublikasikan Tugas Baru: {$judul}. Batas deadline: {$deadline}.", 
                         'index.php?url=siswa/tugas'
                     );
+                    FcmHelper::sendToKelas($kId, '📝 Tugas Pembelajaran Baru: ' . $judul, "Batas deadline: {$deadline}", ['type' => 'tugas']);
                 }
 
                 FlashHelper::setSuccess('Tugas baru berhasil dibuat.');
@@ -540,6 +548,12 @@ class GuruController {
                     $accessKey
                 );
 
+                require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                $judulQuiz = Security::sanitize($_POST['judul'] ?? 'Paket Ujian');
+                foreach ($kelas_ids as $kId) {
+                    FcmHelper::sendToKelas($kId, '📝 Ujian / CBT Baru: ' . $judulQuiz, 'Paket Ujian baru telah dipublikasikan untuk kelas Anda.', ['type' => 'quiz', 'id' => $quizId]);
+                }
+
                 if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] === UPLOAD_ERR_OK) {
                     $uploadedImages = $_FILES['gambar_soal_files'] ?? [];
                     $resImport = $examModel->importSoalFromExcel($quizId, $_FILES['file_excel']['tmp_name'], $uploadedImages);
@@ -732,6 +746,12 @@ class GuruController {
                     $kategori,
                     $accessKey
                 );
+
+                require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                $judulQuiz = Security::sanitize($_POST['judul'] ?? 'Quiz/CBT');
+                foreach ($kelas_ids as $kId) {
+                    FcmHelper::sendToKelas($kId, '📝 Quiz / CBT Baru: ' . $judulQuiz, 'Quiz baru telah dipublikasikan untuk kelas Anda.', ['type' => 'quiz', 'id' => $quizId]);
+                }
 
                 $pilAArr = $_POST['pil_a'] ?? [];
                 $pilBArr = $_POST['pil_b'] ?? [];

@@ -69,6 +69,10 @@ class AdminController {
                 }
 
                 $commModel->addPengumuman($judul, $isi, $targetRole, $isPopup, $bannerPath);
+                
+                require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                FcmHelper::sendToAll('📢 Pengumuman Sekolah: ' . $judul, $isi, ['type' => 'pengumuman']);
+
                 FlashHelper::setSuccess('Informasi / Pengumuman sekolah baru berhasil diterbitkan!');
             }
 
@@ -1363,6 +1367,10 @@ class AdminController {
                 }
 
                 $commModel->createPengumuman($user['id'], $judul, $isi, $targetRole, $isPopup, $bannerPath);
+
+                require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                FcmHelper::sendToAll('📢 Pengumuman Sekolah: ' . $judul, $isi, ['type' => 'pengumuman']);
+
                 FlashHelper::setSuccess('Pengumuman / Informasi baru berhasil diterbitkan!');
 
             } elseif ($action === 'update') {
