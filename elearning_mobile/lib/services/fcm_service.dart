@@ -50,9 +50,15 @@ class FcmService {
               AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(channel);
 
-      // 4. Request Notification Permission
+      // 4. Request Notification Permission & Foreground Options
       NotificationSettings settings =
           await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
         alert: true,
         badge: true,
         sound: true,

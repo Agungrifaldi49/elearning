@@ -295,16 +295,23 @@ class FcmHelper {
                 'message' => [
                     'token' => $token,
                     'notification' => [
-                        'title' => $title,
-                        'body' => $message,
+                        'title' => (string)$title,
+                        'body' => (string)$message,
                     ],
                     'data' => $stringData,
                     'android' => [
                         'priority' => 'HIGH',
+                        'direct_boot_ok' => true,
                         'notification' => [
+                            'title' => (string)$title,
+                            'body' => (string)$message,
                             'channel_id' => 'high_importance_channel',
                             'sound' => 'default',
-                            'notification_priority' => 'PRIORITY_HIGH'
+                            'default_sound' => true,
+                            'default_vibrate_timings' => true,
+                            'notification_priority' => 'PRIORITY_MAX',
+                            'visibility' => 'PUBLIC',
+                            'icon' => '@mipmap/ic_launcher'
                         ]
                     ]
                 ]
