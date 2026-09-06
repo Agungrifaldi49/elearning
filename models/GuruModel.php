@@ -6,13 +6,39 @@ require_once ROOT_PATH . 'models/BaseModel.php';
 
 class GuruModel extends BaseModel {
 
-    public function getAll() {
-        return $this->db->query("
+    public function getAll($keyword = null, $jenisKelamin = null, $status = null) {
+        $sql = "
             SELECT g.*, u.username, u.email, u.avatar 
             FROM guru g 
             JOIN users u ON g.user_id = u.id 
-            ORDER BY g.nama_lengkap ASC
-        ")->fetchAll();
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if ($jenisKelamin && in_array(strtoupper($jenisKelamin), ['L', 'P'])) {
+            $sql .= " AND g.jenis_kelamin = ?";
+            $params[] = strtoupper($jenisKelamin);
+        }
+
+        if ($status && trim($status) !== '') {
+            $sql .= " AND g.status = ?";
+            $params[] = trim($status);
+        }
+
+        if ($keyword && trim($keyword) !== '') {
+            $sql .= " AND (g.nip LIKE ? OR g.nama_lengkap LIKE ? OR u.username LIKE ? OR u.email LIKE ? OR g.no_telepon LIKE ?)";
+            $term = '%' . trim($keyword) . '%';
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+        }
+
+        $sql .= " ORDER BY g.nama_lengkap ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
     }
 
     public function getGuru() {
@@ -116,5 +142,74 @@ class GuruModel extends BaseModel {
             return $stmtDel->execute([$guru['user_id']]);
         }
         return false;
+    }
+
+    public function bulkDeleteGuru($guruIds) {
+        if (empty($guruIds) || !is_array($guruIds)) return 0;
+        $ids = array_map('intval', $guruIds);
+        $inClause = implode(',', $ids);
+        
+        $this->db->beginTransaction();
+        try {
+            $stmtUserIds = $this->db->query("SELECT user_id FROM guru WHERE id IN ({$inClause})");
+            $uIds = $stmtUserIds ? $stmtUserIds->fetchAll(PDO::FETCH_COLUMN) : [];
+            
+            if (!empty($uIds)) {
+                $uIn = implode(',', array_map('intval', $uIds));
+                $this->db->exec("DELETE FROM users WHERE id IN ({$uIn})");
+            }
+            $this->db->commit();
+            return count($ids);
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            return 0;
+        }
+    }
+
+    public function bulkUpdateStatusGuru($guruIds, $status) {
+        if (empty($guruIds) || !is_array($guruIds) || empty($status)) return 0;
+        $ids = array_map('intval', $guruIds);
+        $inClause = implode(',', $ids);
+        $sql = "UPDATE guru SET status = ? WHERE id IN ({$inClause})";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([Security::sanitize($status)]);
+        return $stmt->rowCount();
+    }
+
+    public function bulkUpdateMatrix($matrixData) {
+        if (empty($matrixData) || !is_array($matrixData)) return 0;
+        $count = 0;
+        $this->db->beginTransaction();
+        try {
+            $stmtGuru = $this->db->prepare("UPDATE guru SET nip = ?, nama_lengkap = ?, jenis_kelamin = ?, no_telepon = ?, status = ? WHERE id = ?");
+            $stmtUser = $this->db->prepare("UPDATE users u JOIN guru g ON u.id = g.user_id SET u.full_name = ?, u.email = ? WHERE g.id = ?");
+
+            foreach ($matrixData as $id => $row) {
+                $gId = (int)$id;
+                if ($gId <= 0) continue;
+                $nip = Security::sanitize($row['nip'] ?? '');
+                $nama = Security::sanitize($row['nama_lengkap'] ?? '');
+                $email = Security::sanitize($row['email'] ?? '');
+                $telepon = Security::sanitize($row['no_telepon'] ?? '');
+                $jk = in_array(strtoupper($row['jenis_kelamin'] ?? 'L'), ['L', 'P']) ? strtoupper($row['jenis_kelamin']) : 'L';
+                $status = in_array(strtolower($row['status'] ?? 'aktif'), ['aktif', 'nonaktif']) ? strtolower($row['status']) : 'aktif';
+
+                if (!empty($nama) && !empty($nip)) {
+                    $stmtGuru->execute([$nip, $nama, $jk, $telepon, $status, $gId]);
+                    if (!empty($email)) {
+                        $stmtUser->execute([$nama, $email, $gId]);
+                    } else {
+                        $stmtUser2 = $this->db->prepare("UPDATE users u JOIN guru g ON u.id = g.user_id SET u.full_name = ? WHERE g.id = ?");
+                        $stmtUser2->execute([$nama, $gId]);
+                    }
+                    $count++;
+                }
+            }
+            $this->db->commit();
+            return $count;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            return 0;
+        }
     }
 }

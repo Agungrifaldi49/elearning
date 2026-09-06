@@ -156,12 +156,47 @@ class AdminController {
             } elseif ($action === 'delete') {
                 $guruModel->deleteGuru((int)$_POST['id']);
                 FlashHelper::setSuccess('Data Guru berhasil dihapus.');
+            } elseif ($action === 'bulk_update_status') {
+                $selectedGuru = $_POST['selected_guru'] ?? [];
+                $targetStatus = Security::sanitize($_POST['target_status'] ?? '');
+                if (!empty($selectedGuru) && !empty($targetStatus)) {
+                    $cnt = $guruModel->bulkUpdateStatusGuru($selectedGuru, $targetStatus);
+                    FlashHelper::setSuccess("Berhasil mengubah status {$cnt} data guru secara masal.");
+                } else {
+                    FlashHelper::setError('Pilih minimal satu guru dan pilih status tujuan.');
+                }
+            } elseif ($action === 'bulk_delete') {
+                $selectedGuru = $_POST['selected_guru'] ?? [];
+                if (!empty($selectedGuru)) {
+                    $cnt = $guruModel->bulkDeleteGuru($selectedGuru);
+                    FlashHelper::setSuccess("Berhasil menghapus {$cnt} data guru secara masal.");
+                } else {
+                    FlashHelper::setError('Pilih minimal satu guru untuk dihapus.');
+                }
+            } elseif ($action === 'bulk_edit_matrix') {
+                $matrixData = $_POST['matrix_guru'] ?? [];
+                if (!empty($matrixData) && is_array($matrixData)) {
+                    $cnt = $guruModel->bulkUpdateMatrix($matrixData);
+                    FlashHelper::setSuccess("Berhasil memperbarui {$cnt} data guru sekaligus dalam sekali simpan!");
+                } else {
+                    FlashHelper::setError('Tidak ada data perubahan yang dikirimkan.');
+                }
             }
-            header('Location: ' . BASE_URL . 'index.php?url=admin/guru');
+
+            // Build redirect URL keeping active filters
+            $redirectUrl = BASE_URL . 'index.php?url=admin/guru';
+            if (!empty($_POST['redirect_query'])) {
+                $redirectUrl .= '&' . ltrim($_POST['redirect_query'], '&');
+            }
+            header('Location: ' . $redirectUrl);
             exit();
         }
 
-        $guruList = $guruModel->getAll();
+        $searchKeyword = isset($_GET['q']) ? Security::sanitize($_GET['q']) : null;
+        $selectedJenisKelamin = isset($_GET['jk']) && in_array(strtoupper($_GET['jk']), ['L', 'P']) ? strtoupper($_GET['jk']) : null;
+        $selectedStatus = isset($_GET['status']) ? Security::sanitize($_GET['status']) : null;
+
+        $guruList = $guruModel->getAll($searchKeyword, $selectedJenisKelamin, $selectedStatus);
         require_once ROOT_PATH . 'views/admin/guru.php';
     }
 
