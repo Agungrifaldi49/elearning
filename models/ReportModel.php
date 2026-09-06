@@ -274,38 +274,251 @@ class ReportModel extends BaseModel {
         }
     }
 
-    public function createDatabaseBackup() {
-        $fileName = 'backup_' . date('Y-m-d_H-i-s') . '.sql';
+    public function ensureBackupTableExist() {
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS backup (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    file_name VARCHAR(255) NOT NULL,
+                    file_size VARCHAR(50) NOT NULL,
+                    type VARCHAR(20) DEFAULT 'manual',
+                    note TEXT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            ");
+
+            $cols = $this->db->query("SHOW COLUMNS FROM backup LIKE 'type'")->fetchAll();
+            if (empty($cols)) {
+                $this->db->exec("ALTER TABLE backup ADD COLUMN type VARCHAR(20) DEFAULT 'manual'");
+            }
+            $colsNote = $this->db->query("SHOW COLUMNS FROM backup LIKE 'note'")->fetchAll();
+            if (empty($colsNote)) {
+                $this->db->exec("ALTER TABLE backup ADD COLUMN note TEXT NULL");
+            }
+        } catch (Throwable $e) {}
+    }
+
+    public function createDatabaseBackup($type = 'manual', $note = '') {
+        $this->ensureBackupTableExist();
+        try {
+            $prefix = ($type === 'auto') ? 'auto_backup_' : 'backup_';
+            $fileName = $prefix . date('Y-m-d_H-i-s') . '.sql';
+            $filePath = ROOT_PATH . 'database/' . $fileName;
+
+            if (!file_exists(ROOT_PATH . 'database/')) {
+                mkdir(ROOT_PATH . 'database/', 0777, true);
+            }
+
+            $tables = $this->db->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+            $output = "-- ========================================================\n";
+            $output .= "-- Database Backup: " . (defined('APP_NAME') ? APP_NAME : 'E-Learning SMK MH') . "\n";
+            $output .= "-- Date: " . date('Y-m-d H:i:s') . "\n";
+            $output .= "-- Type: " . strtoupper($type) . "\n";
+            $output .= "-- Note: " . ($note ?: 'Auto Backup Activity System') . "\n";
+            $output .= "-- ========================================================\n\n";
+            $output .= "SET FOREIGN_KEY_CHECKS = 0;\n\n";
+
+            foreach ($tables as $table) {
+                if ($table === 'backup') continue;
+                $createTableStmt = $this->db->query("SHOW CREATE TABLE `$table`")->fetch(PDO::FETCH_ASSOC);
+                if (!$createTableStmt) continue;
+
+                $output .= "-- Table structure for `$table` --\n";
+                $output .= "DROP TABLE IF EXISTS `$table`;\n";
+                $output .= $createTableStmt['Create Table'] . ";\n\n";
+
+                $rows = $this->db->query("SELECT * FROM `$table`")->fetchAll(PDO::FETCH_ASSOC);
+                if (!empty($rows)) {
+                    $output .= "-- Dumping data for `$table` --\n";
+                    foreach ($rows as $row) {
+                        $fields = array_map(function($val) {
+                            if ($val === null) return "NULL";
+                            return $this->db->quote($val);
+                        }, array_values($row));
+                        $output .= "INSERT INTO `$table` VALUES(" . implode(', ', $fields) . ");\n";
+                    }
+                    $output .= "\n";
+                }
+            }
+
+            $output .= "SET FOREIGN_KEY_CHECKS = 1;\n";
+
+            file_put_contents($filePath, $output);
+            $bytes = filesize($filePath);
+            $fileSize = round($bytes / 1024, 2) . ' KB';
+            if ($bytes >= 1048576) {
+                $fileSize = round($bytes / 1048576, 2) . ' MB';
+            }
+
+            $stmt = $this->db->prepare("INSERT INTO backup (file_name, file_size, type, note) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$fileName, $fileSize, $type, $note]);
+
+            if ($type === 'auto') {
+                $oldAutoBackups = $this->db->query("SELECT id, file_name FROM backup WHERE type = 'auto' ORDER BY id DESC LIMIT 100 OFFSET 30")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($oldAutoBackups as $old) {
+                    $oldPath = ROOT_PATH . 'database/' . $old['file_name'];
+                    if (file_exists($oldPath)) @unlink($oldPath);
+                    $this->db->prepare("DELETE FROM backup WHERE id = ?")->execute([$old['id']]);
+                }
+            }
+
+            return $fileName;
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    public function restoreDatabaseBackup($fileName) {
+        $this->ensureBackupTableExist();
+        $fileName = basename($fileName);
         $filePath = ROOT_PATH . 'database/' . $fileName;
 
-        $tables = $this->db->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-        $output = "-- Database Backup: " . APP_NAME . "\n-- Date: " . date('Y-m-d H:i:s') . "\n\n";
-
-        foreach ($tables as $table) {
-            $createTable = $this->db->query("SHOW CREATE TABLE `$table`")->fetch(PDO::FETCH_ASSOC);
-            $output .= "\n\n" . $createTable['Create Table'] . ";\n\n";
-
-            $rows = $this->db->query("SELECT * FROM `$table`")->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($rows as $row) {
-                $fields = array_map(function($val) {
-                    if ($val === null) return "NULL";
-                    return "'" . addslashes($val) . "'";
-                }, array_values($row));
-                $output .= "INSERT INTO `$table` VALUES(" . implode(', ', $fields) . ");\n";
-            }
+        if (!file_exists($filePath)) {
+            throw new Exception("File backup '{$fileName}' tidak ditemukan di server.");
         }
 
-        file_put_contents($filePath, $output);
-        $fileSize = round(filesize($filePath) / 1024, 2) . ' KB';
+        $sql = file_get_contents($filePath);
+        if (empty($sql)) {
+            throw new Exception("File backup kosong atau korup.");
+        }
 
-        $stmt = $this->db->prepare("INSERT INTO backup (file_name, file_size) VALUES (?, ?)");
-        $stmt->execute([$fileName, $fileSize]);
+        try {
+            $this->db->exec("SET FOREIGN_KEY_CHECKS = 0;");
+            $this->db->exec($sql);
+            $this->db->exec("SET FOREIGN_KEY_CHECKS = 1;");
+            return true;
+        } catch (Throwable $e) {
+            $this->db->exec("SET FOREIGN_KEY_CHECKS = 1;");
+            throw new Exception("Gagal memulihkan database: " . $e->getMessage());
+        }
+    }
 
-        return $fileName;
+    public function restoreFromUploadedSql($fileArray) {
+        $this->ensureBackupTableExist();
+        if (empty($fileArray['tmp_name']) || $fileArray['error'] !== UPLOAD_ERR_OK) {
+            throw new Exception("Gagal mengunggah file .sql. Silakan coba lagi.");
+        }
+
+        $ext = strtolower(pathinfo($fileArray['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'sql') {
+            throw new Exception("Format file harus berupa .sql!");
+        }
+
+        $fileName = 'upload_restore_' . date('Y-m-d_H-i-s') . '.sql';
+        $destination = ROOT_PATH . 'database/' . $fileName;
+
+        if (!file_exists(ROOT_PATH . 'database/')) {
+            mkdir(ROOT_PATH . 'database/', 0777, true);
+        }
+
+        if (!move_uploaded_file($fileArray['tmp_name'], $destination)) {
+            throw new Exception("Gagal menyimpan file .sql yang diunggah.");
+        }
+
+        $bytes = filesize($destination);
+        $fileSize = round($bytes / 1024, 2) . ' KB';
+        if ($bytes >= 1048576) {
+            $fileSize = round($bytes / 1048576, 2) . ' MB';
+        }
+
+        $stmt = $this->db->prepare("INSERT INTO backup (file_name, file_size, type, note) VALUES (?, ?, 'manual', ?)");
+        $stmt->execute([$fileName, $fileSize, 'Uploaded Restore File']);
+
+        return $this->restoreDatabaseBackup($fileName);
+    }
+
+    public function deleteDatabaseBackup($id) {
+        $this->ensureBackupTableExist();
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM backup WHERE id = ?");
+            $stmt->execute([(int)$id]);
+            $b = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$b) return false;
+
+            $filePath = ROOT_PATH . 'database/' . $b['file_name'];
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+
+            $delStmt = $this->db->prepare("DELETE FROM backup WHERE id = ?");
+            return $delStmt->execute([(int)$id]);
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
+    public function triggerAutoBackupIfNeeded($source = 'activity') {
+        $this->ensureBackupTableExist();
+        try {
+            $stmt = $this->db->query("SELECT created_at FROM backup WHERE type = 'auto' ORDER BY id DESC LIMIT 1");
+            $lastCreated = $stmt ? $stmt->fetchColumn() : null;
+
+            $shouldBackup = false;
+            if (!$lastCreated) {
+                $shouldBackup = true;
+            } else {
+                $lastTime = strtotime($lastCreated);
+                // Trigger auto-backup if 10 minutes have elapsed since last auto-backup
+                if ((time() - $lastTime) >= 600) {
+                    $shouldBackup = true;
+                }
+            }
+
+            if ($shouldBackup) {
+                $user = class_exists('AuthHelper') ? AuthHelper::user() : null;
+                $userName = $user ? ($user['full_name'] ?? $user['username'] ?? 'User') : 'User';
+                $roleName = $user ? ($user['role_name'] ?? 'System') : 'System';
+                $note = "Otomatisasi Backup pasca aktivitas {$roleName} ({$userName}) - Source: {$source}";
+                $this->createDatabaseBackup('auto', $note);
+            }
+        } catch (Throwable $e) {}
     }
 
     public function getBackups() {
-        return $this->db->query("SELECT * FROM backup ORDER BY id DESC")->fetchAll();
+        $this->ensureBackupTableExist();
+        return $this->db->query("SELECT * FROM backup ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    public function getBackupStats() {
+        $this->ensureBackupTableExist();
+        try {
+            $totalFiles = (int)$this->db->query("SELECT COUNT(*) FROM backup")->fetchColumn();
+            $autoFiles = (int)$this->db->query("SELECT COUNT(*) FROM backup WHERE type = 'auto'")->fetchColumn();
+            $manualFiles = (int)$this->db->query("SELECT COUNT(*) FROM backup WHERE type = 'manual'")->fetchColumn();
+
+            $lastAuto = $this->db->query("SELECT created_at FROM backup WHERE type = 'auto' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: null;
+            $lastManual = $this->db->query("SELECT created_at FROM backup WHERE type = 'manual' ORDER BY id DESC LIMIT 1")->fetchColumn() ?: null;
+
+            $totalSize = 0;
+            $files = glob(ROOT_PATH . 'database/*.sql');
+            if ($files) {
+                foreach ($files as $f) {
+                    $totalSize += filesize($f);
+                }
+            }
+            $formattedSize = round($totalSize / 1024, 2) . ' KB';
+            if ($totalSize >= 1048576) {
+                $formattedSize = round($totalSize / 1048576, 2) . ' MB';
+            }
+
+            return [
+                'total_files' => $totalFiles,
+                'auto_files' => $autoFiles,
+                'manual_files' => $manualFiles,
+                'last_auto' => $lastAuto,
+                'last_manual' => $lastManual,
+                'total_storage' => $formattedSize
+            ];
+        } catch (Throwable $e) {
+            return [
+                'total_files' => 0,
+                'auto_files' => 0,
+                'manual_files' => 0,
+                'last_auto' => null,
+                'last_manual' => null,
+                'total_storage' => '0 KB'
+            ];
+        }
     }
 
     public function getLmsAnalytics() {

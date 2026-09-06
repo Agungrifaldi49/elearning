@@ -376,15 +376,62 @@ class AdminController {
 
     public function backup() {
         $reportModel = new ReportModel();
+        $reportModel->ensureBackupTableExist();
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $fileName = $reportModel->createDatabaseBackup();
-            FlashHelper::setSuccess("Backup database berhasil dibuat: {$fileName}");
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('Token CSRF tidak valid.');
+                header('Location: ' . BASE_URL . 'index.php?url=admin/backup');
+                exit();
+            }
+
+            $action = $_POST['action'] ?? 'create';
+
+            try {
+                if ($action === 'create') {
+                    $note = Security::sanitize($_POST['note'] ?? 'Manual Backup oleh Admin');
+                    $fileName = $reportModel->createDatabaseBackup('manual', $note);
+                    if ($fileName) {
+                        FlashHelper::setSuccess("Backup database berhasil dibuat: {$fileName}");
+                    } else {
+                        FlashHelper::setError("Gagal membuat backup database.");
+                    }
+
+                } elseif ($action === 'restore') {
+                    $fileName = Security::sanitize($_POST['file_name'] ?? '');
+                    if (empty($fileName)) {
+                        FlashHelper::setError("Nama file backup tidak valid.");
+                    } else {
+                        $reportModel->restoreDatabaseBackup($fileName);
+                        FlashHelper::setSuccess("Database berhasil dipulihkan secara penuh dari file backup: {$fileName}");
+                    }
+
+                } elseif ($action === 'upload_restore') {
+                    if (!empty($_FILES['sql_file']['name'])) {
+                        $reportModel->restoreFromUploadedSql($_FILES['sql_file']);
+                        FlashHelper::setSuccess("File SQL berhasil diunggah dan database berhasil dipulihkan secara penuh.");
+                    } else {
+                        FlashHelper::setError("Pilih file .sql yang valid untuk diunggah.");
+                    }
+
+                } elseif ($action === 'delete') {
+                    $id = (int)($_POST['id'] ?? 0);
+                    if ($id > 0 && $reportModel->deleteDatabaseBackup($id)) {
+                        FlashHelper::setSuccess("File backup berhasil dihapus dari server.");
+                    } else {
+                        FlashHelper::setError("Gagal menghapus file backup.");
+                    }
+                }
+            } catch (Throwable $e) {
+                FlashHelper::setError("Terjadi kesalahan: " . $e->getMessage());
+            }
+
             header('Location: ' . BASE_URL . 'index.php?url=admin/backup');
             exit();
         }
 
         $backups = $reportModel->getBackups();
+        $backupStats = $reportModel->getBackupStats();
         require_once ROOT_PATH . 'views/admin/backup.php';
     }
 

@@ -10,6 +10,15 @@ require_once __DIR__ . '/helpers/AuthHelper.php';
 require_once __DIR__ . '/helpers/Security.php';
 require_once __DIR__ . '/helpers/FlashHelper.php';
 
+// Global Automatic Database Backup Trigger (Admin, Guru, Siswa, Kepsek Activity)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' || !empty($_SESSION['user_id'])) {
+    try {
+        require_once ROOT_PATH . 'models/ReportModel.php';
+        $globalReportModel = new ReportModel();
+        $globalReportModel->triggerAutoBackupIfNeeded('user_activity');
+    } catch (Throwable $eAutoBackup) {}
+}
+
 // Route parser
 $url = $_GET['url'] ?? 'landing';
 $url = rtrim($url, '/');
