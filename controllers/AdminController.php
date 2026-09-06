@@ -1406,6 +1406,34 @@ class AdminController {
         require_once ROOT_PATH . 'views/admin/pengumuman.php';
     }
 
+    public function testNotifikasi() {
+        $db = Database::getConnection();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $action = $_POST['action'] ?? '';
+            if ($action === 'send_test') {
+                $judul = Security::sanitize($_POST['judul'] ?? '📢 Pengumuman Tes Realtime');
+                $isi = Security::sanitize($_POST['isi'] ?? 'Pesan uji coba push notification.');
+
+                require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                $res = FcmHelper::sendToAll($judul, $isi, ['type' => 'test']);
+
+                if ($res) {
+                    FlashHelper::setSuccess('🚀 Push Notification telah dikirim ke Google Firebase v1 API! Cek layar HP Anda.');
+                } else {
+                    FlashHelper::setError('❌ Gagal mengirim notifikasi. Pastikan file config/firebase_credentials.json sudah diunggah ke hosting.');
+                }
+            }
+            header('Location: ' . BASE_URL . 'index.php?url=admin/testNotifikasi');
+            exit();
+        }
+
+        $stmtTokens = $db->query("SELECT id, username, fcm_token FROM users WHERE fcm_token IS NOT NULL AND fcm_token != ''");
+        $usersWithToken = $stmtTokens ? $stmtTokens->fetchAll(PDO::FETCH_ASSOC) : [];
+
+        require_once ROOT_PATH . 'views/admin/test_notifikasi.php';
+    }
+
     public function enrollmentKey() {
         $academicModel = new AcademicModel();
         $guruModel = new GuruModel();

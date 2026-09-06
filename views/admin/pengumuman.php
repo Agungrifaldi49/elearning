@@ -10,9 +10,14 @@
             <h4 class="fw-bold mb-1"><i class="bi bi-megaphone-fill text-primary me-2"></i>Manajemen Pengumuman & Informasi Sekolah</h4>
             <p class="text-muted small mb-0">Terbitkan pengumuman resmi dan informasi penting secara serentak ke seluruh antarmuka (Dashboard Siswa, Guru, & Kepsek).</p>
         </div>
-        <button type="button" class="btn btn-primary shadow-sm fw-bold px-3 py-2" data-bs-toggle="modal" data-bs-target="#modalAddPengumuman">
-            <i class="bi bi-plus-circle me-1"></i> Terbitkan Pengumuman Baru
-        </button>
+        <div>
+            <a href="<?= BASE_URL ?>index.php?url=admin/testNotifikasi" class="btn btn-outline-info shadow-sm fw-bold px-3 py-2 me-2">
+                <i class="bi bi-bell-fill me-1"></i> Tes Push Notifikasi FCM
+            </a>
+            <button type="button" class="btn btn-primary shadow-sm fw-bold px-3 py-2" data-bs-toggle="modal" data-bs-target="#modalAddPengumuman">
+                <i class="bi bi-plus-circle me-1"></i> Terbitkan Pengumuman Baru
+            </button>
+        </div>
     </div>
 
     <!-- Table Pengumuman -->
