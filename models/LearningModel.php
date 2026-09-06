@@ -416,27 +416,27 @@ class LearningModel extends BaseModel {
     // --- LIVE CLASS & VIRTUAL MEETING ---
     public function ensureLiveClassTableExist() {
         try {
-            $this->db->exec("
-                CREATE TABLE IF NOT EXISTS live_class (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    guru_id INT NOT NULL,
-                    mapel_id INT NOT NULL,
-                    kelas_id INT NULL,
-                    topik VARCHAR(255) NOT NULL,
-                    deskripsi TEXT NULL,
-                    platform VARCHAR(50) DEFAULT 'embedded',
-                    meeting_link VARCHAR(500) NULL,
-                    room_code VARCHAR(100) NOT NULL,
-                    tgl_pertemuan DATE NOT NULL,
-                    jam_mulai TIME NOT NULL,
-                    jam_selesai TIME NULL,
-                    is_active TINYINT(1) DEFAULT 1,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-            ");
+            $checkTable = $this->db->query("SHOW TABLES LIKE 'live_class'")->fetch();
+            if (!$checkTable) {
+                $this->db->exec("
+                    CREATE TABLE IF NOT EXISTS live_class (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        guru_id INT NOT NULL,
+                        mapel_id INT NOT NULL,
+                        kelas_id INT NULL,
+                        topik VARCHAR(255) NOT NULL,
+                        deskripsi TEXT NULL,
+                        platform VARCHAR(50) DEFAULT 'embedded',
+                        meeting_link VARCHAR(500) NULL,
+                        room_code VARCHAR(100) NOT NULL,
+                        tgl_pertemuan DATE NOT NULL,
+                        jam_mulai TIME NOT NULL,
+                        jam_selesai TIME NULL,
+                        is_active TINYINT(1) DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+                ");
 
-            $countStmt = $this->db->query("SELECT COUNT(*) FROM live_class");
-            if ($countStmt && (int)$countStmt->fetchColumn() === 0) {
                 $guruStmt = $this->db->query("SELECT id FROM guru ORDER BY id ASC LIMIT 1");
                 $guruId = $guruStmt ? (int)($guruStmt->fetchColumn() ?: 1) : 1;
 
@@ -574,15 +574,21 @@ class LearningModel extends BaseModel {
     public function deleteLiveClass($id, $guruId = null, $isAdmin = false) {
         $this->ensureLiveClassTableExist();
         try {
+            $id = (int)$id;
+            if ($id <= 0) return false;
+
             $room = $this->getLiveClassById($id);
             if (!$room) return false;
 
-            if (!$isAdmin && (int)($room['guru_id'] ?? 0) !== (int)$guruId) {
-                return false;
+            if (!$isAdmin && $guruId !== null && (int)$guruId > 0) {
+                $roomGuruId = (int)($room['guru_id'] ?? 0);
+                if ($roomGuruId > 0 && $roomGuruId !== (int)$guruId) {
+                    return false;
+                }
             }
 
             $stmt = $this->db->prepare("DELETE FROM live_class WHERE id = ?");
-            return $stmt->execute([(int)$id]);
+            return $stmt->execute([$id]);
         } catch (Throwable $e) {
             return false;
         }

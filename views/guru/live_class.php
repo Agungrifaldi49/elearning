@@ -6,6 +6,8 @@
 $liveClasses = is_array($liveClasses ?? null) ? $liveClasses : [];
 $mapelList = is_array($mapelList ?? null) ? $mapelList : [];
 $kelasList = is_array($kelasList ?? null) ? $kelasList : [];
+$isAdmin = isset($isAdmin) ? $isAdmin : in_array(strtolower(AuthHelper::user()['role_name'] ?? ''), ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+$formTargetUrl = BASE_URL . 'index.php?url=' . htmlspecialchars($_GET['url'] ?? ($isAdmin ? 'admin/liveClass' : 'guru/liveClass'));
 ?>
 
 <style>
@@ -430,7 +432,7 @@ $kelasList = is_array($kelasList ?? null) ? $kelasList : [];
                                                     </li>
                                                     <li><hr class="dropdown-divider my-1"></li>
                                                     <li>
-                                                        <form action="<?= BASE_URL ?>index.php?url=guru/liveClass" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus ruang Live Virtual Meeting ini?');">
+                                                        <form action="<?= $formTargetUrl ?>" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus ruang Live Virtual Meeting ini?');">
                                                             <?= Security::csrfField() ?>
                                                             <input type="hidden" name="action" value="delete">
                                                             <input type="hidden" name="id" value="<?= $room['id'] ?>">
@@ -453,7 +455,7 @@ $kelasList = is_array($kelasList ?? null) ? $kelasList : [];
                                                 <h5 class="fw-bold text-dark"><i class="bi bi-pencil-square text-warning me-2"></i>Edit Sesi Live Class</h5>
                                                 <button class="btn-close" data-bs-dismiss="modal"></button>
                                             </div>
-                                            <form action="<?= BASE_URL ?>index.php?url=guru/liveClass" method="POST" class="p-4 pt-2">
+                                            <form action="<?= $formTargetUrl ?>" method="POST" class="p-4 pt-2">
                                                 <?= Security::csrfField() ?>
                                                 <input type="hidden" name="action" value="update">
                                                 <input type="hidden" name="id" value="<?= $room['id'] ?>">
@@ -541,7 +543,7 @@ $kelasList = is_array($kelasList ?? null) ? $kelasList : [];
                 <h5 class="fw-bold text-dark"><i class="bi bi-camera-video-fill text-danger me-2"></i>Buat Sesi Live Class Baru</h5>
                 <button class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="<?= BASE_URL ?>index.php?url=guru/liveClass" method="POST" class="p-4 pt-2">
+            <form action="<?= $formTargetUrl ?>" method="POST" class="p-4 pt-2">
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="create">
 
