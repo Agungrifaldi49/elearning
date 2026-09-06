@@ -209,16 +209,57 @@ class AdminController {
             } elseif ($action === 'delete') {
                 $siswaModel->deleteSiswa((int)$_POST['id']);
                 FlashHelper::setSuccess('Data Siswa berhasil dihapus.');
+            } elseif ($action === 'bulk_update_kelas') {
+                $selectedSiswa = $_POST['selected_siswa'] ?? [];
+                $targetKelasId = (int)($_POST['target_kelas_id'] ?? 0);
+                if (!empty($selectedSiswa) && $targetKelasId > 0) {
+                    $cnt = $siswaModel->bulkUpdateKelas($selectedSiswa, $targetKelasId);
+                    FlashHelper::setSuccess("Berhasil memindahkan/mengubah kelas {$cnt} siswa secara masal.");
+                } else {
+                    FlashHelper::setError('Pilih minimal satu siswa dan pilih kelas tujuan yang valid.');
+                }
+            } elseif ($action === 'bulk_update_jurusan') {
+                $selectedSiswa = $_POST['selected_siswa'] ?? [];
+                $targetJurusanId = (int)($_POST['target_jurusan_id'] ?? 0);
+                if (!empty($selectedSiswa) && $targetJurusanId > 0) {
+                    $cnt = $siswaModel->bulkUpdateJurusan($selectedSiswa, $targetJurusanId);
+                    FlashHelper::setSuccess("Berhasil mengubah jurusan {$cnt} siswa secara masal.");
+                } else {
+                    FlashHelper::setError('Pilih minimal satu siswa dan pilih jurusan tujuan.');
+                }
+            } elseif ($action === 'bulk_delete') {
+                $selectedSiswa = $_POST['selected_siswa'] ?? [];
+                if (!empty($selectedSiswa)) {
+                    $cnt = $siswaModel->bulkDeleteSiswa($selectedSiswa);
+                    FlashHelper::setSuccess("Berhasil menghapus {$cnt} data siswa secara masal.");
+                } else {
+                    FlashHelper::setError('Pilih minimal satu siswa untuk dihapus.');
+                }
+            } elseif ($action === 'bulk_edit_matrix') {
+                $matrixData = $_POST['matrix_siswa'] ?? [];
+                if (!empty($matrixData) && is_array($matrixData)) {
+                    $cnt = $siswaModel->bulkUpdateMatrix($matrixData);
+                    FlashHelper::setSuccess("Berhasil memperbarui {$cnt} data siswa sekaligus dalam sekali simpan!");
+                } else {
+                    FlashHelper::setError('Tidak ada data perubahan yang dikirimkan.');
+                }
             }
-            header('Location: ' . BASE_URL . 'index.php?url=admin/siswa');
+            
+            // Build redirect URL keeping active filters
+            $redirectUrl = BASE_URL . 'index.php?url=admin/siswa';
+            if (!empty($_POST['redirect_query'])) {
+                $redirectUrl .= '&' . ltrim($_POST['redirect_query'], '&');
+            }
+            header('Location: ' . $redirectUrl);
             exit();
         }
 
         $selectedKelasId = isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] > 0 ? (int)$_GET['kelas_id'] : null;
         $selectedJurusanId = isset($_GET['jurusan_id']) && (int)$_GET['jurusan_id'] > 0 ? (int)$_GET['jurusan_id'] : null;
+        $selectedJenisKelamin = isset($_GET['jk']) && in_array(strtoupper($_GET['jk']), ['L', 'P']) ? strtoupper($_GET['jk']) : null;
         $searchKeyword = isset($_GET['q']) ? Security::sanitize($_GET['q']) : null;
 
-        $siswaList = $siswaModel->getAll($selectedKelasId, $selectedJurusanId, $searchKeyword);
+        $siswaList = $siswaModel->getAll($selectedKelasId, $selectedJurusanId, $searchKeyword, $selectedJenisKelamin);
         $kelasList = $academicModel->getKelas();
         $jurusanList = $academicModel->getJurusan();
 

@@ -6,7 +6,7 @@ require_once ROOT_PATH . 'models/BaseModel.php';
 
 class SiswaModel extends BaseModel {
 
-    public function getAll($kelasId = null, $jurusanId = null, $keyword = null) {
+    public function getAll($kelasId = null, $jurusanId = null, $keyword = null, $jenisKelamin = null) {
         $sql = "
             SELECT s.*, k.nama_kelas, j.nama_jurusan, u.username, u.email, u.avatar 
             FROM siswa s 
@@ -25,6 +25,11 @@ class SiswaModel extends BaseModel {
         if ($jurusanId && (int)$jurusanId > 0) {
             $sql .= " AND s.jurusan_id = ?";
             $params[] = (int)$jurusanId;
+        }
+
+        if ($jenisKelamin && in_array(strtoupper($jenisKelamin), ['L', 'P'])) {
+            $sql .= " AND s.jenis_kelamin = ?";
+            $params[] = strtoupper($jenisKelamin);
         }
 
         if ($keyword && trim($keyword) !== '') {
@@ -222,5 +227,91 @@ class SiswaModel extends BaseModel {
             'presensi_log' => $presensiStr,
             'evaluasi_lms' => $evaluasiLmsStr
         ];
+    }
+
+    public function bulkUpdateKelas($siswaIds, $newKelasId) {
+        if (empty($siswaIds) || !is_array($siswaIds) || (int)$newKelasId <= 0) return 0;
+        $ids = array_map('intval', $siswaIds);
+        $inClause = implode(',', $ids);
+        
+        $stmtK = $this->db->prepare("SELECT jurusan_id FROM kelas WHERE id = ?");
+        $stmtK->execute([(int)$newKelasId]);
+        $kRow = $stmtK->fetch();
+        $jurusanId = $kRow ? (int)$kRow['jurusan_id'] : 0;
+
+        if ($jurusanId > 0) {
+            $sql = "UPDATE siswa SET kelas_id = ?, jurusan_id = ? WHERE id IN ({$inClause})";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([(int)$newKelasId, $jurusanId]);
+        } else {
+            $sql = "UPDATE siswa SET kelas_id = ? WHERE id IN ({$inClause})";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([(int)$newKelasId]);
+        }
+        return $stmt->rowCount();
+    }
+
+    public function bulkUpdateJurusan($siswaIds, $newJurusanId) {
+        if (empty($siswaIds) || !is_array($siswaIds) || (int)$newJurusanId <= 0) return 0;
+        $ids = array_map('intval', $siswaIds);
+        $inClause = implode(',', $ids);
+        $sql = "UPDATE siswa SET jurusan_id = ? WHERE id IN ({$inClause})";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([(int)$newJurusanId]);
+        return $stmt->rowCount();
+    }
+
+    public function bulkDeleteSiswa($siswaIds) {
+        if (empty($siswaIds) || !is_array($siswaIds)) return 0;
+        $ids = array_map('intval', $siswaIds);
+        $inClause = implode(',', $ids);
+        
+        $this->db->beginTransaction();
+        try {
+            $stmtUserIds = $this->db->query("SELECT user_id FROM siswa WHERE id IN ({$inClause})");
+            $uIds = $stmtUserIds ? $stmtUserIds->fetchAll(PDO::FETCH_COLUMN) : [];
+            
+            if (!empty($uIds)) {
+                $uIn = implode(',', array_map('intval', $uIds));
+                $this->db->exec("DELETE FROM users WHERE id IN ({$uIn})");
+            }
+            $this->db->commit();
+            return count($ids);
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            return 0;
+        }
+    }
+
+    public function bulkUpdateMatrix($matrixData) {
+        if (empty($matrixData) || !is_array($matrixData)) return 0;
+        $count = 0;
+        $this->db->beginTransaction();
+        try {
+            $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ? WHERE id = ?");
+            $stmtUser = $this->db->prepare("UPDATE users u JOIN siswa s ON u.id = s.user_id SET u.full_name = ? WHERE s.id = ?");
+
+            foreach ($matrixData as $id => $row) {
+                $sId = (int)$id;
+                if ($sId <= 0) continue;
+                $nis = Security::sanitize($row['nis'] ?? '');
+                $nisn = Security::sanitize($row['nisn'] ?? '');
+                $nama = Security::sanitize($row['nama_lengkap'] ?? '');
+                $kelasId = (int)($row['kelas_id'] ?? 0);
+                $jurusanId = (int)($row['jurusan_id'] ?? 0);
+                $jk = in_array(strtoupper($row['jenis_kelamin'] ?? 'L'), ['L', 'P']) ? strtoupper($row['jenis_kelamin']) : 'L';
+
+                if (!empty($nama) && $kelasId > 0 && $jurusanId > 0) {
+                    $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $sId]);
+                    $stmtUser->execute([$nama, $sId]);
+                    $count++;
+                }
+            }
+            $this->db->commit();
+            return $count;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            return 0;
+        }
     }
 }

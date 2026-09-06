@@ -7,14 +7,17 @@
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
                 <h4 class="fw-bold mb-1"><i class="bi bi-people-fill text-primary me-2"></i>Kelola Data Siswa</h4>
-                <p class="text-muted small mb-0">Daftar Peserta Didik SMK Muthia Harapan Cicalengka.</p>
+                <p class="text-muted small mb-0">Daftar Peserta Didik SMK Muthia Harapan Cicalengka dengan Pencarian & Edit Massal.</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-warning shadow-sm fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalBulkMatrixEdit">
+                    <i class="bi bi-pencil-square me-1"></i> Mode Edit Massal (<?= count($siswaList) ?> Siswa)
+                </button>
                 <a href="<?= BASE_URL ?>index.php?url=admin/templateSiswa" class="btn btn-outline-success">
-                    <i class="bi bi-download me-1"></i> Unduh Template Excel
+                    <i class="bi bi-download me-1"></i> Template Excel
                 </a>
                 <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportSiswa">
-                    <i class="bi bi-file-earmark-excel me-1"></i> Import Excel Siswa
+                    <i class="bi bi-file-earmark-excel me-1"></i> Import Excel
                 </button>
                 <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAddSiswa">
                     <i class="bi bi-plus-circle me-1"></i> Tambah Siswa Baru
@@ -22,13 +25,13 @@
             </div>
         </div>
 
-        <!-- Filter & Search Toolbar (Auto Filter / Instant Typing Search) -->
+        <!-- Filter & Search Toolbar (Multi-criteria search) -->
         <div class="card card-custom p-3 p-md-4 mb-4 shadow-sm border-0 rounded-4">
             <form action="<?= BASE_URL ?>index.php" method="GET" id="autoFilterForm" class="row g-3 align-items-end">
                 <input type="hidden" name="url" value="admin/siswa">
 
-                <div class="col-md-5 col-12">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search text-primary me-1"></i> Cari NISN / NIS / Nama (Otomatis)</label>
+                <div class="col-md-4 col-12">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search text-primary me-1"></i> Cari NISN / NIS / Nama</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
                         <input type="text" name="q" id="autoSearchInput" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Ketik NISN, NIS, atau Nama..." autocomplete="off">
@@ -59,16 +62,20 @@
                     </select>
                 </div>
 
-                <div class="col-md-1 col-12">
-                    <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id'])): ?>
-                        <a href="<?= BASE_URL ?>index.php?url=admin/siswa" class="btn btn-outline-secondary w-100 rounded-3" title="Reset Filter">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
-                        </a>
-                    <?php else: ?>
-                        <button type="submit" class="btn btn-primary w-100 rounded-3 shadow-sm fw-semibold" title="Filter Data">
-                            <i class="bi bi-funnel-fill"></i>
-                        </button>
-                    <?php endif; ?>
+                <div class="col-md-2 col-12">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-gender-ambiguous text-secondary me-1"></i> Jenis Kelamin</label>
+                    <div class="d-flex gap-2">
+                        <select name="jk" class="form-select rounded-3" onchange="this.form.submit()">
+                            <option value="">-- Semua --</option>
+                            <option value="L" <?= (isset($_GET['jk']) && $_GET['jk'] === 'L') ? 'selected' : '' ?>>Laki-Laki (L)</option>
+                            <option value="P" <?= (isset($_GET['jk']) && $_GET['jk'] === 'P') ? 'selected' : '' ?>>Perempuan (P)</option>
+                        </select>
+                        <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id']) || !empty($_GET['jk'])): ?>
+                            <a href="<?= BASE_URL ?>index.php?url=admin/siswa" class="btn btn-outline-secondary rounded-3 px-3" title="Reset Filter">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </a>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </form>
         </div>
@@ -81,19 +88,15 @@
 
             let debounceTimer;
             searchInput.addEventListener('input', function() {
-                // Instant client-side DataTables filter if available
                 if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable) {
                     window.jQuery('.datatable').DataTable().search(this.value).draw();
                 }
-
-                // Debounced auto-submit for server-side query persistence
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
                     form.submit();
                 }, 450);
             });
 
-            // Maintain cursor position at end of text after reload
             if (searchInput.value) {
                 searchInput.focus();
                 const len = searchInput.value.length;
@@ -102,7 +105,7 @@
         });
         </script>
 
-        <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id']) || !empty($selectedKelas)): ?>
+        <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id']) || !empty($_GET['jk']) || !empty($selectedKelas)): ?>
             <div class="alert alert-primary border-0 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:38px; height:38px;">
@@ -128,21 +131,33 @@
                                 ?>
                                 Jurusan: <strong><?= htmlspecialchars($jurName) ?></strong> |
                             <?php endif; ?>
+                            <?php if (!empty($_GET['jk'])): ?>
+                                Gender: <strong><?= $_GET['jk'] === 'L' ? 'Laki-Laki' : 'Perempuan' ?></strong> |
+                            <?php endif; ?>
                         </small>
                     </div>
                 </div>
-                <a href="<?= BASE_URL ?>index.php?url=admin/siswa" class="btn btn-sm btn-outline-dark fw-semibold rounded-pill">
-                    <i class="bi bi-x-circle me-1"></i> Tampilkan Semua Siswa
-                </a>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#modalBulkMatrixEdit">
+                        <i class="bi bi-pencil-square me-1"></i> Edit Massal Hasil Filter (<?= count($siswaList) ?>)
+                    </button>
+                    <a href="<?= BASE_URL ?>index.php?url=admin/siswa" class="btn btn-sm btn-outline-dark fw-semibold rounded-pill">
+                        <i class="bi bi-x-circle me-1"></i> Tampilkan Semua
+                    </a>
+                </div>
             </div>
         <?php endif; ?>
 
-        <div class="card card-custom p-4">
+        <!-- Table Data Siswa with Multi-Select Checkboxes -->
+        <div class="card card-custom p-4 shadow-sm border-0 rounded-4">
             <div class="table-responsive">
-                <table class="table table-hover align-middle datatable">
+                <table class="table table-hover align-middle datatable" id="tableSiswa">
                     <thead class="table-light">
                         <tr>
-                            <th>No</th>
+                            <th style="width: 40px;" class="text-center">
+                                <input type="checkbox" class="form-check-input" id="selectAllSiswa" title="Pilih Semua Siswa">
+                            </th>
+                            <th style="width: 50px;">No</th>
                             <th>NIS / NISN</th>
                             <th>Nama Lengkap</th>
                             <th>Kelas</th>
@@ -154,6 +169,9 @@
                     <tbody>
                         <?php foreach ($siswaList as $i => $s): ?>
                             <tr>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input siswa-checkbox" value="<?= $s['id'] ?>">
+                                </td>
                                 <td><?= $i + 1 ?></td>
                                 <td><code><?= htmlspecialchars($s['nis']) ?></code> / <small><?= htmlspecialchars($s['nisn']) ?></small></td>
                                 <td class="fw-bold"><?= htmlspecialchars($s['nama_lengkap']) ?></td>
@@ -175,6 +193,7 @@
                                             <?= Security::csrfField() ?>
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" value="<?= $s['id'] ?>">
+                                            <input type="hidden" name="redirect_query" value="<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
                                             <button class="btn btn-sm btn-danger" title="Hapus Siswa"><i class="bi bi-trash"></i> Hapus</button>
                                         </form>
                                     </div>
@@ -188,7 +207,301 @@
     </div>
 </main>
 
-<!-- ALL MODALS PLACED OUTSIDE TABLE -->
+<!-- Floating Bulk Action Toolbar (Appears when checkboxes are selected) -->
+<div id="floatingBulkBar" class="position-fixed bottom-0 start-50 translate-middle-x mb-4 shadow-lg p-3 bg-white border border-primary border-2 rounded-4 d-none" style="z-index: 1055; width: 92%; max-width: 860px;">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill" id="selectedCountBadge">0 Siswa Dipilih</span>
+            <small class="text-muted d-none d-md-inline">Pilih opsi aksi masal untuk siswa terpilih:</small>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-warning btn-sm text-dark fw-bold rounded-3" onclick="openBulkKelasModal()">
+                <i class="bi bi-door-open-fill me-1"></i> Pindah Kelas Masal
+            </button>
+            <button type="button" class="btn btn-info btn-sm text-white fw-bold rounded-3" onclick="openBulkJurusanModal()">
+                <i class="bi bi-journal-bookmark-fill me-1"></i> Ubah Jurusan
+            </button>
+            <button type="button" class="btn btn-danger btn-sm fw-bold rounded-3" onclick="confirmBulkDelete()">
+                <i class="bi bi-trash me-1"></i> Hapus Terpilih
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm rounded-3" onclick="deselectAllSiswa()">
+                Batal
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheck = document.getElementById('selectAllSiswa');
+    const siswaChecks = document.querySelectorAll('.siswa-checkbox');
+    const floatingBar = document.getElementById('floatingBulkBar');
+    const countBadge = document.getElementById('selectedCountBadge');
+
+    function updateBulkState() {
+        const checked = document.querySelectorAll('.siswa-checkbox:checked');
+        const count = checked.length;
+        
+        if (count > 0) {
+            countBadge.textContent = count + ' Siswa Dipilih';
+            floatingBar.classList.remove('d-none');
+        } else {
+            floatingBar.classList.add('d-none');
+        }
+
+        if (selectAllCheck) {
+            selectAllCheck.checked = (siswaChecks.length > 0 && count === siswaChecks.length);
+        }
+    }
+
+    if (selectAllCheck) {
+        selectAllCheck.addEventListener('change', function() {
+            siswaChecks.forEach(cb => cb.checked = this.checked);
+            updateBulkState();
+        });
+    }
+
+    siswaChecks.forEach(cb => {
+        cb.addEventListener('change', updateBulkState);
+    });
+
+    window.deselectAllSiswa = function() {
+        if (selectAllCheck) selectAllCheck.checked = false;
+        siswaChecks.forEach(cb => cb.checked = false);
+        updateBulkState();
+    };
+
+    window.getSelectedSiswaIds = function() {
+        const checked = document.querySelectorAll('.siswa-checkbox:checked');
+        return Array.from(checked).map(cb => cb.value);
+    };
+
+    window.openBulkKelasModal = function() {
+        const ids = getSelectedSiswaIds();
+        if (ids.length === 0) return alert('Pilih minimal satu siswa terlebih dahulu.');
+        
+        const container = document.getElementById('bulkKelasIdsContainer');
+        container.innerHTML = '';
+        ids.forEach(id => {
+            const inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = 'selected_siswa[]';
+            inp.value = id;
+            container.appendChild(inp);
+        });
+        document.getElementById('bulkKelasCountText').textContent = ids.length;
+
+        const modal = new bootstrap.Modal(document.getElementById('modalBulkKelas'));
+        modal.show();
+    };
+
+    window.openBulkJurusanModal = function() {
+        const ids = getSelectedSiswaIds();
+        if (ids.length === 0) return alert('Pilih minimal satu siswa terlebih dahulu.');
+        
+        const container = document.getElementById('bulkJurusanIdsContainer');
+        container.innerHTML = '';
+        ids.forEach(id => {
+            const inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = 'selected_siswa[]';
+            inp.value = id;
+            container.appendChild(inp);
+        });
+        document.getElementById('bulkJurusanCountText').textContent = ids.length;
+
+        const modal = new bootstrap.Modal(document.getElementById('modalBulkJurusan'));
+        modal.show();
+    };
+
+    window.confirmBulkDelete = function() {
+        const ids = getSelectedSiswaIds();
+        if (ids.length === 0) return alert('Pilih minimal satu siswa terlebih dahulu.');
+        if (confirm('Apakah Anda yakin ingin menghapus ' + ids.length + ' data siswa yang dipilih sekaligus? Data yang dihapus tidak dapat dikembalikan!')) {
+            const form = document.getElementById('formBulkDeleteAction');
+            const container = document.getElementById('bulkDeleteIdsContainer');
+            container.innerHTML = '';
+            ids.forEach(id => {
+                const inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = 'selected_siswa[]';
+                inp.value = id;
+                container.appendChild(inp);
+            });
+            form.submit();
+        }
+    };
+});
+</script>
+
+<!-- Form Hidden Bulk Delete -->
+<form id="formBulkDeleteAction" action="<?= BASE_URL ?>index.php?url=admin/siswa" method="POST" class="d-none">
+    <?= Security::csrfField() ?>
+    <input type="hidden" name="action" value="bulk_delete">
+    <input type="hidden" name="redirect_query" value="<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
+    <div id="bulkDeleteIdsContainer"></div>
+</form>
+
+<!-- Modal Bulk Pindah Kelas -->
+<div class="modal fade" id="modalBulkKelas" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold modal-title"><i class="bi bi-door-open-fill text-warning me-2"></i>Pindah Kelas Masal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="<?= BASE_URL ?>index.php?url=admin/siswa" method="POST">
+                <div class="modal-body">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="action" value="bulk_update_kelas">
+                    <input type="hidden" name="redirect_query" value="<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
+                    <div id="bulkKelasIdsContainer"></div>
+
+                    <div class="alert alert-info border-0 rounded-3 small">
+                        Anda akan memindahkan <strong id="bulkKelasCountText">0</strong> siswa terpilih ke kelas baru secara sekaligus.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Pilih Kelas Tujuan Baru</label>
+                        <select name="target_kelas_id" class="form-select rounded-3" required>
+                            <option value="">-- Pilih Kelas Tujuan --</option>
+                            <?php foreach ($kelasList as $k): ?>
+                                <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning px-4 fw-bold">Pindahkan Masal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bulk Ubah Jurusan -->
+<div class="modal fade" id="modalBulkJurusan" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold modal-title"><i class="bi bi-journal-bookmark-fill text-info me-2"></i>Ubah Jurusan Masal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="<?= BASE_URL ?>index.php?url=admin/siswa" method="POST">
+                <div class="modal-body">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="action" value="bulk_update_jurusan">
+                    <input type="hidden" name="redirect_query" value="<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
+                    <div id="bulkJurusanIdsContainer"></div>
+
+                    <div class="alert alert-info border-0 rounded-3 small">
+                        Anda akan mengubah jurusan <strong id="bulkJurusanCountText">0</strong> siswa terpilih.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Pilih Jurusan Tujuan</label>
+                        <select name="target_jurusan_id" class="form-select rounded-3" required>
+                            <option value="">-- Pilih Jurusan Tujuan --</option>
+                            <?php foreach ($jurusanList as $j): ?>
+                                <option value="<?= $j['id'] ?>"><?= htmlspecialchars($j['nama_jurusan']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-info text-white px-4 fw-bold">Ubah Jurusan Masal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Massal Matrix (Mode Tabel / Spreadsheet Edit Sekaligus) -->
+<div class="modal fade" id="modalBulkMatrixEdit" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h5 class="fw-bold modal-title"><i class="bi bi-pencil-square text-warning me-2"></i>Mode Edit Massal Data Siswa (Tabel Spreadsheet)</h5>
+                    <p class="text-muted small mb-0">Ubah data NIS, NISN, Nama, Kelas, Jurusan, & JK secara sekaligus dalam 1 kali simpan.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="<?= BASE_URL ?>index.php?url=admin/siswa" method="POST">
+                <div class="modal-body">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="action" value="bulk_edit_matrix">
+                    <input type="hidden" name="redirect_query" value="<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
+
+                    <div class="table-responsive" style="max-height: 480px;">
+                        <table class="table table-bordered align-middle small table-striped">
+                            <thead class="table-primary sticky-top">
+                                <tr>
+                                    <th style="width: 40px;">No</th>
+                                    <th style="width: 140px;">NIS</th>
+                                    <th style="width: 140px;">NISN</th>
+                                    <th>Nama Lengkap Siswa</th>
+                                    <th style="width: 160px;">Kelas</th>
+                                    <th style="width: 160px;">Jurusan</th>
+                                    <th style="width: 90px;">JK</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($siswaList as $idx => $sw): ?>
+                                    <tr>
+                                        <td class="text-center fw-bold"><?= $idx + 1 ?></td>
+                                        <td>
+                                            <input type="text" name="matrix_siswa[<?= $sw['id'] ?>][nis]" value="<?= htmlspecialchars($sw['nis']) ?>" class="form-control form-control-sm font-monospace" required>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="matrix_siswa[<?= $sw['id'] ?>][nisn]" value="<?= htmlspecialchars($sw['nisn']) ?>" class="form-control form-control-sm font-monospace" required>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="matrix_siswa[<?= $sw['id'] ?>][nama_lengkap]" value="<?= htmlspecialchars($sw['nama_lengkap']) ?>" class="form-control form-control-sm fw-semibold" required>
+                                        </td>
+                                        <td>
+                                            <select name="matrix_siswa[<?= $sw['id'] ?>][kelas_id]" class="form-select form-select-sm" required>
+                                                <?php foreach ($kelasList as $kls): ?>
+                                                    <option value="<?= $kls['id'] ?>" <?= $kls['id'] == $sw['kelas_id'] ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($kls['nama_kelas']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="matrix_siswa[<?= $sw['id'] ?>][jurusan_id]" class="form-select form-select-sm" required>
+                                                <?php foreach ($jurusanList as $jur): ?>
+                                                    <option value="<?= $jur['id'] ?>" <?= $jur['id'] == $sw['jurusan_id'] ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars($jur['nama_jurusan']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select name="matrix_siswa[<?= $sw['id'] ?>][jenis_kelamin]" class="form-select form-select-sm">
+                                                <option value="L" <?= $sw['jenis_kelamin'] === 'L' ? 'selected' : '' ?>>L</option>
+                                                <option value="P" <?= $sw['jenis_kelamin'] === 'P' ? 'selected' : '' ?>>P</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 justify-content-between">
+                    <span class="text-muted small"><i class="bi bi-info-circle me-1"></i> Total <?= count($siswaList) ?> baris data siap diperbarui.</span>
+                    <div>
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-warning px-4 fw-bold"><i class="bi bi-check-all me-1"></i> Simpan Semua Perubahan</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Modal Add Siswa -->
 <div class="modal fade" id="modalAddSiswa" tabindex="-1">
@@ -202,6 +515,7 @@
                 <div class="modal-body">
                     <?= Security::csrfField() ?>
                     <input type="hidden" name="action" value="create">
+                    <input type="hidden" name="redirect_query" value="<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
 
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -266,7 +580,7 @@
     </div>
 </div>
 
-<!-- Modals Detail & Edit Siswa -->
+<!-- Modals Detail & Edit Siswa Single -->
 <?php foreach ($siswaList as $s): ?>
     <!-- Modal Detail Siswa -->
     <div class="modal fade" id="modalDetailSiswa<?= $s['id'] ?>" tabindex="-1">
@@ -300,7 +614,7 @@
         </div>
     </div>
 
-    <!-- Modal Edit Siswa -->
+    <!-- Modal Edit Siswa Single -->
     <div class="modal fade" id="modalEditSiswa<?= $s['id'] ?>" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content rounded-4 border-0 shadow">
@@ -313,6 +627,7 @@
                         <?= Security::csrfField() ?>
                         <input type="hidden" name="action" value="update">
                         <input type="hidden" name="id" value="<?= $s['id'] ?>">
+                        <input type="hidden" name="redirect_query" value="<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
 
                         <div class="row g-3">
                             <div class="col-md-6">
