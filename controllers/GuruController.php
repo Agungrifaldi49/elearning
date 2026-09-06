@@ -319,6 +319,66 @@ class GuruController {
 
                 FlashHelper::setSuccess('Nilai tugas siswa berhasil disimpan dan tersinkronisasi ke E-Rapor.');
 
+            } elseif ($action === 'bulk_grade') {
+                $grades = $_POST['grades'] ?? [];
+                $gradedCount = 0;
+                $studentsToSync = [];
+
+                if (is_array($grades) && !empty($grades)) {
+                    require_once ROOT_PATH . 'models/NilaiModel.php';
+                    $nilaiModel = new NilaiModel();
+                    $commModel = new CommunicationModel();
+
+                    foreach ($grades as $pengId => $gData) {
+                        $pengId = (int)$pengId;
+                        if ($pengId <= 0) continue;
+
+                        $rawNilai = $gData['nilai'] ?? null;
+                        if ($rawNilai === '' || $rawNilai === null) continue;
+
+                        $nilai = (float)$rawNilai;
+                        $komentar = Security::sanitize($gData['komentar'] ?? '');
+
+                        $learningModel->gradeTugas($pengId, $nilai, $komentar);
+                        $gradedCount++;
+
+                        $stmtPengInfo = Database::getConnection()->prepare("
+                            SELECT pt.siswa_id, t.mapel_id, t.judul 
+                            FROM pengumpulan_tugas pt 
+                            JOIN tugas t ON pt.tugas_id = t.id 
+                            WHERE pt.id = ?
+                        ");
+                        $stmtPengInfo->execute([$pengId]);
+                        $pData = $stmtPengInfo->fetch(PDO::FETCH_ASSOC);
+                        if ($pData) {
+                            $sId = (int)$pData['siswa_id'];
+                            $mId = (int)$pData['mapel_id'];
+                            $studentsToSync[$sId] = $mId;
+
+                            try {
+                                $commModel->sendNotificationToStudent(
+                                    $sId, 
+                                    '🏆 Nilai Tugas Telah Diberikan', 
+                                    "Guru telah memberikan Nilai {$nilai} untuk tugas: {$pData['judul']}.", 
+                                    'index.php?url=siswa/tugas'
+                                );
+                            } catch (Throwable $eNotif) {}
+                        }
+                    }
+
+                    foreach ($studentsToSync as $sId => $mId) {
+                        try {
+                            $nilaiModel->syncSiswaMapelNilai($sId, $mId);
+                        } catch (Throwable $eSync) {}
+                    }
+                }
+
+                if ($gradedCount > 0) {
+                    FlashHelper::setSuccess("Berhasil menyimpan nilai untuk {$gradedCount} siswa secara bersamaan dan tersinkronisasi ke E-Rapor.");
+                } else {
+                    FlashHelper::setError("Tidak ada nilai siswa yang diisi atau diperbarui.");
+                }
+
             } elseif ($action === 'approve_tugas_susulan') {
                 $reqId = (int)$_POST['request_id'];
                 $learningModel->updateTugasSusulanStatus($reqId, 'disetujui');

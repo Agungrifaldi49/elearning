@@ -710,7 +710,7 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
         </div>
     </div>
 
-    <!-- Modal Grade Submissions (Extra Wide & Modern) -->
+    <!-- Modal Grade Submissions (Extra Wide & Modern with Bulk Save) -->
     <div class="modal fade" id="modalGrade<?= $t['id'] ?>" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
             <div class="modal-content border-0 rounded-4 shadow-2xl overflow-hidden bg-white">
@@ -730,186 +730,207 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
 
-                <div class="modal-body p-4 bg-light">
-                    <!-- Instruction Snippet Banner -->
-                    <div class="p-3 bg-white rounded-3 border mb-4 shadow-xs">
-                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                            <div>
-                                <small class="text-uppercase fw-bold text-muted d-block" style="font-size:0.68rem;">Petunjuk Pengerjaan & Rubrik Tugas:</small>
-                                <span class="text-dark small fw-medium text-clamp-2"><?= htmlspecialchars(mb_strimwidth($t['deskripsi'], 0, 180, '...')) ?></span>
+                <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" class="d-flex flex-column h-100 mb-0">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="action" value="bulk_grade">
+
+                    <div class="modal-body p-4 bg-light">
+                        <!-- Instruction Snippet Banner -->
+                        <div class="p-3 bg-white rounded-3 border mb-3 shadow-xs">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                <div>
+                                    <small class="text-uppercase fw-bold text-muted d-block" style="font-size:0.68rem;">Petunjuk Pengerjaan & Rubrik Tugas:</small>
+                                    <span class="text-dark small fw-medium text-clamp-2"><?= htmlspecialchars(mb_strimwidth($t['deskripsi'], 0, 180, '...')) ?></span>
+                                </div>
+                                <?php if (!empty($t['file_path'])): ?>
+                                    <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-3 py-1 fw-bold"
+                                            onclick="previewSubmissionFile('<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['file_path']) ?>', 'Lampiran Soal Guru: <?= htmlspecialchars($t['judul']) ?>', 'Bahan Soal Guru')">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i> Lihat Soal Modul
+                                    </button>
+                                <?php endif; ?>
                             </div>
-                            <?php if (!empty($t['file_path'])): ?>
-                                <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-3 py-1 fw-bold"
-                                        onclick="previewSubmissionFile('<?= BASE_URL ?>assets/uploads/tugas/<?= htmlspecialchars($t['file_path']) ?>', 'Lampiran Soal Guru: <?= htmlspecialchars($t['judul']) ?>', 'Bahan Soal Guru')">
-                                    <i class="bi bi-file-earmark-pdf me-1"></i> Lihat Soal Modul
+                        </div>
+
+                        <?php if (empty($submissions)): ?>
+                            <div class="card border-0 rounded-4 shadow-sm p-5 text-center text-muted bg-white">
+                                <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px;">
+                                    <i class="bi bi-inbox fs-1"></i>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">Belum Ada Pengumpulan Siswa</h6>
+                                <p class="small text-muted mb-0">Belum ada berkas tugas yang dikirimkan oleh siswa untuk rombel ini.</p>
+                            </div>
+                        <?php else: ?>
+
+                            <?php if (!$isAdminMonitoring): ?>
+                                <!-- Quick Fill All Bar & Bulk Save Button Header -->
+                                <div class="d-flex justify-content-between align-items-center mb-3 bg-white p-3 rounded-3 border shadow-xs flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <small class="fw-bold text-dark me-1"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Isi Cepat Semua Siswa:</small>
+                                        <button type="button" class="btn btn-xs btn-outline-success rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;" onclick="bulkFillScores(<?= $t['id'] ?>, 100)">Set Semua 100</button>
+                                        <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;" onclick="bulkFillScores(<?= $t['id'] ?>, 90)">Set Semua 90</button>
+                                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;" onclick="bulkFillScores(<?= $t['id'] ?>, 85)">Set Semua 85</button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;" onclick="bulkFillScores(<?= $t['id'] ?>, 75)">Set Semua 75</button>
+                                    </div>
+                                    <button type="submit" class="btn btn-success fw-bold rounded-pill px-4 py-2 shadow-sm d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); font-size: 0.88rem;">
+                                        <i class="bi bi-check-all fs-5"></i>
+                                        <span>Simpan Semua Nilai Siswa</span>
+                                    </button>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="table-responsive rounded-4 border bg-white shadow-xs">
+                                <table class="table align-middle table-hover mb-0">
+                                    <thead class="table-light border-bottom">
+                                        <tr style="font-size: 0.82rem;" class="text-uppercase text-muted fw-bold">
+                                            <th class="ps-3" style="width: 25%;">Informasi Siswa</th>
+                                            <th style="width: 15%;">Waktu Pengiriman</th>
+                                            <th style="width: 23%;">Berkas Kiriman Siswa</th>
+                                            <th style="width: 12%;">Status & Skor Saat Ini</th>
+                                            <th style="width: 25%;" class="pe-3">Form Input Nilai & Catatan Rubrik</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($submissions as $sub): 
+                                            $subFile = trim($sub['file_path'] ?? '');
+                                            $catatanText = trim($sub['catatan_siswa'] ?? '');
+
+                                            $extractedUrlFromCatatan = null;
+                                            if (preg_match('/(https?:\/\/[^\s]+)/i', $catatanText, $matches)) {
+                                                $extractedUrlFromCatatan = $matches[1];
+                                            }
+
+                                            $isUrlFile = (!empty($subFile) && (str_starts_with($subFile, 'http://') || str_starts_with($subFile, 'https://')));
+                                            $isUrlCatatan = (!empty($extractedUrlFromCatatan));
+
+                                            if ($isUrlFile) {
+                                                $fileUrl = $subFile;
+                                                $isDrive = (strpos($subFile, 'drive.google.com') !== false || strpos($subFile, 'docs.google.com') !== false);
+                                            } elseif ($isUrlCatatan && empty($subFile)) {
+                                                $fileUrl = $extractedUrlFromCatatan;
+                                                $isDrive = (strpos($extractedUrlFromCatatan, 'drive.google.com') !== false || strpos($extractedUrlFromCatatan, 'docs.google.com') !== false);
+                                            } elseif (!empty($subFile)) {
+                                                $fileUrl = BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($subFile);
+                                                $isDrive = false;
+                                            } else {
+                                                $fileUrl = null;
+                                                $isDrive = false;
+                                            }
+
+                                            $fileExt = (!empty($subFile) && !$isUrlFile) ? strtolower(pathinfo($subFile, PATHINFO_EXTENSION)) : ($isDrive ? 'DRIVE' : ($isUrlFile || $isUrlCatatan ? 'LINK' : ''));
+                                        ?>
+                                            <tr>
+                                                <td class="ps-3">
+                                                    <div class="d-flex align-items-center gap-2.5">
+                                                        <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width:38px; height:38px;">
+                                                            <i class="bi bi-person-fill fs-5"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-bold text-dark fs-6 mb-0"><?= htmlspecialchars($sub['nama_lengkap']) ?></div>
+                                                            <small class="text-muted d-block" style="font-size:0.75rem;">NIS: <strong><?= htmlspecialchars($sub['nis']) ?></strong> &bull; Kelas: <?= htmlspecialchars($sub['nama_kelas'] ?? '-') ?></small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="small fw-semibold text-dark"><i class="bi bi-clock-history text-primary me-1"></i><?= date('d M Y', strtotime($sub['submitted_at'])) ?></div>
+                                                    <small class="text-muted" style="font-size:0.72rem;"><?= date('H:i', strtotime($sub['submitted_at'])) ?> WIB</small>
+                                                </td>
+                                                <td>
+                                                    <?php if ($fileUrl): ?>
+                                                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                                            <button type="button" class="btn btn-sm <?= $isDrive ? 'btn-success' : 'btn-primary' ?> rounded-pill px-3 py-1 fw-bold shadow-xs hover-scale" style="font-size:0.75rem;"
+                                                                    onclick="previewSubmissionFile('<?= htmlspecialchars($fileUrl) ?>', '<?= htmlspecialchars($isDrive ? 'Google Drive: ' . $sub['nama_lengkap'] : ($subFile ? $subFile : 'Link Jawaban Siswa')) ?>', '<?= htmlspecialchars($sub['nama_lengkap']) ?>')">
+                                                                <i class="bi <?= $isDrive ? 'bi-google' : 'bi-eye-fill' ?> me-1"></i> <?= $isDrive ? 'Pratinjau Drive' : 'Lihat Berkas' ?>
+                                                            </button>
+
+                                                            <?php if ($isUrlFile || $isUrlCatatan): ?>
+                                                                <a href="<?= htmlspecialchars($fileUrl) ?>" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.75rem;" title="Buka Link di Tab Baru">
+                                                                    <i class="bi bi-box-arrow-up-right me-1"></i> Buka Link
+                                                                </a>
+                                                            <?php else: ?>
+                                                                <a href="<?= htmlspecialchars($fileUrl) ?>" download class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.75rem;" title="Unduh File Berkas">
+                                                                    <i class="bi bi-download me-1"></i> Unduh
+                                                                </a>
+                                                            <?php endif; ?>
+
+                                                            <span class="badge bg-<?= $isDrive ? 'success' : 'secondary' ?>-subtle text-<?= $isDrive ? 'success' : 'secondary' ?> rounded-pill px-2 py-0.5" style="font-size:0.68rem;"><?= strtoupper($fileExt) ?></span>
+                                                        </div>
+                                                        <?php if (!empty($catatanText)): ?>
+                                                            <div class="small text-muted mt-1" style="font-size:0.75rem;">
+                                                                <i class="bi bi-chat-left-text me-1 text-primary"></i><?= htmlspecialchars($catatanText) ?>
+                                                            </div>
+                                                        <?php endif; ?>
+                                                    <?php else: ?>
+                                                        <?php if (!empty($catatanText)): ?>
+                                                            <div class="small text-dark bg-light p-2 rounded border" style="font-size:0.78rem;">
+                                                                <i class="bi bi-chat-left-text me-1 text-primary"></i><?= htmlspecialchars($catatanText) ?>
+                                                            </div>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-light text-muted border rounded-pill px-2.5 py-1" style="font-size:0.72rem;"><i class="bi bi-x-circle me-1"></i>Tanpa File / Link</span>
+                                                        <?php endif; ?>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?php if ($sub['nilai'] !== null): ?>
+                                                        <?php
+                                                        $valScore = (float)$sub['nilai'];
+                                                        $scoreBadgeClass = ($valScore >= 85) ? 'bg-success text-white' : (($valScore >= 75) ? 'bg-primary text-white' : 'bg-danger text-white');
+                                                        ?>
+                                                        <span class="badge <?= $scoreBadgeClass ?> fs-6 rounded-pill px-3 py-1.5 shadow-xs fw-extrabold">
+                                                            <?= number_format($valScore, 1) ?> / 100
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="badge bg-warning text-dark border border-warning-subtle rounded-pill px-2.5 py-1.5 fw-bold" style="font-size:0.72rem;">
+                                                            <i class="bi bi-hourglass-split me-1"></i>Belum Dinilai
+                                                        </span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td class="pe-3">
+                                                    <?php if (!$isAdminMonitoring): ?>
+                                                        <div class="bg-light p-2.5 rounded-3 border">
+                                                            <div class="input-group input-group-sm mb-1.5">
+                                                                <span class="input-group-text bg-white fw-bold text-primary">Skor</span>
+                                                                <input type="number" name="grades[<?= $sub['id'] ?>][nilai]" class="form-control fw-extrabold text-primary score-input-<?= $t['id'] ?>" value="<?= $sub['nilai'] ?>" placeholder="0-100" min="0" max="100" style="font-size:0.9rem;">
+                                                            </div>
+
+                                                            <div class="mb-1.5">
+                                                                <input type="text" name="grades[<?= $sub['id'] ?>][komentar]" class="form-control form-control-sm text-dark" value="<?= htmlspecialchars($sub['komentar_guru'] ?? '') ?>" placeholder="Catatan rubrik / evaluasi...">
+                                                            </div>
+
+                                                            <div class="d-flex align-items-center justify-content-between gap-1">
+                                                                <div class="d-flex gap-1">
+                                                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('.bg-light').querySelector('input[name*=\'[nilai\']').value=100">100</button>
+                                                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('.bg-light').querySelector('input[name*=\'[nilai\']').value=90">90</button>
+                                                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('.bg-light').querySelector('input[name*=\'[nilai\']').value=85">85</button>
+                                                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('.bg-light').querySelector('input[name*=\'[nilai\']').value=75">75</button>
+                                                                </div>
+                                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5 rounded-pill" style="font-size:0.68rem;">Input Siap</span>
+                                                            </div>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <small class="text-muted fw-semibold"><i class="bi bi-chat-quote me-1"></i><?= htmlspecialchars($sub['komentar_guru'] ?? 'Belum ada catatan rubrik') ?></small>
+                                                    <?php endif; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="modal-footer border-0 pt-0 p-4 justify-content-between bg-white border-top">
+                        <span class="text-muted small"><i class="bi bi-info-circle me-1 text-primary"></i>Nilai tersimpan akan otomatis tersinkronisasi ke E-Rapor Digital.</span>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Tutup</button>
+                            <?php if (!$isAdminMonitoring && !empty($submissions)): ?>
+                                <button type="submit" class="btn btn-success fw-bold rounded-pill px-4 py-2 shadow-sm d-inline-flex align-items-center gap-2" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                    <i class="bi bi-check-all fs-5"></i>
+                                    <span>Simpan Semua Nilai Siswa</span>
                                 </button>
                             <?php endif; ?>
                         </div>
                     </div>
-
-                    <?php if (empty($submissions)): ?>
-                        <div class="card border-0 rounded-4 shadow-sm p-5 text-center text-muted bg-white">
-                            <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px;">
-                                <i class="bi bi-inbox fs-1"></i>
-                            </div>
-                            <h6 class="fw-bold text-dark mb-1">Belum Ada Pengumpulan Siswa</h6>
-                            <p class="small text-muted mb-0">Belum ada berkas tugas yang dikirimkan oleh siswa untuk rombel ini.</p>
-                        </div>
-                    <?php else: ?>
-                        <div class="table-responsive rounded-4 border bg-white shadow-xs">
-                            <table class="table align-middle table-hover mb-0">
-                                <thead class="table-light border-bottom">
-                                    <tr style="font-size: 0.82rem;" class="text-uppercase text-muted fw-bold">
-                                        <th class="ps-3" style="width: 25%;">Informasi Siswa</th>
-                                        <th style="width: 15%;">Waktu Pengiriman</th>
-                                        <th style="width: 25%;">Berkas Kiriman Siswa</th>
-                                        <th style="width: 12%;">Status & Skor</th>
-                                        <th style="width: 23%;" class="pe-3">Form Grading Guru & Rubrik</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($submissions as $sub): 
-                                        $subFile = trim($sub['file_path'] ?? '');
-                                        $catatanText = trim($sub['catatan_siswa'] ?? '');
-
-                                        // Extract URL from catatan_siswa if present
-                                        $extractedUrlFromCatatan = null;
-                                        if (preg_match('/(https?:\/\/[^\s]+)/i', $catatanText, $matches)) {
-                                            $extractedUrlFromCatatan = $matches[1];
-                                        }
-
-                                        $isUrlFile = (!empty($subFile) && (str_starts_with($subFile, 'http://') || str_starts_with($subFile, 'https://')));
-                                        $isUrlCatatan = (!empty($extractedUrlFromCatatan));
-
-                                        if ($isUrlFile) {
-                                            $fileUrl = $subFile;
-                                            $isDrive = (strpos($subFile, 'drive.google.com') !== false || strpos($subFile, 'docs.google.com') !== false);
-                                        } elseif ($isUrlCatatan && empty($subFile)) {
-                                            $fileUrl = $extractedUrlFromCatatan;
-                                            $isDrive = (strpos($extractedUrlFromCatatan, 'drive.google.com') !== false || strpos($extractedUrlFromCatatan, 'docs.google.com') !== false);
-                                        } elseif (!empty($subFile)) {
-                                            $fileUrl = BASE_URL . 'assets/uploads/tugas/' . htmlspecialchars($subFile);
-                                            $isDrive = false;
-                                        } else {
-                                            $fileUrl = null;
-                                            $isDrive = false;
-                                        }
-
-                                        $fileExt = (!empty($subFile) && !$isUrlFile) ? strtolower(pathinfo($subFile, PATHINFO_EXTENSION)) : ($isDrive ? 'DRIVE' : ($isUrlFile || $isUrlCatatan ? 'LINK' : ''));
-                                    ?>
-                                        <tr>
-                                            <td class="ps-3">
-                                                <div class="d-flex align-items-center gap-2.5">
-                                                    <div class="bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width:38px; height:38px;">
-                                                        <i class="bi bi-person-fill fs-5"></i>
-                                                    </div>
-                                                    <div>
-                                                        <div class="fw-bold text-dark fs-6 mb-0"><?= htmlspecialchars($sub['nama_lengkap']) ?></div>
-                                                        <small class="text-muted d-block" style="font-size:0.75rem;">NIS: <strong><?= htmlspecialchars($sub['nis']) ?></strong> &bull; Kelas: <?= htmlspecialchars($sub['nama_kelas'] ?? '-') ?></small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div class="small fw-semibold text-dark"><i class="bi bi-clock-history text-primary me-1"></i><?= date('d M Y', strtotime($sub['submitted_at'])) ?></div>
-                                                <small class="text-muted" style="font-size:0.72rem;"><?= date('H:i', strtotime($sub['submitted_at'])) ?> WIB</small>
-                                            </td>
-                                            <td>
-                                                <?php if ($fileUrl): ?>
-                                                    <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                                        <!-- Preview / View Link Button -->
-                                                        <button type="button" class="btn btn-sm <?= $isDrive ? 'btn-success' : 'btn-primary' ?> rounded-pill px-3 py-1 fw-bold shadow-xs hover-scale" style="font-size:0.75rem;"
-                                                                onclick="previewSubmissionFile('<?= htmlspecialchars($fileUrl) ?>', '<?= htmlspecialchars($isDrive ? 'Google Drive: ' . $sub['nama_lengkap'] : ($subFile ? $subFile : 'Link Jawaban Siswa')) ?>', '<?= htmlspecialchars($sub['nama_lengkap']) ?>')">
-                                                            <i class="bi <?= $isDrive ? 'bi-google' : 'bi-eye-fill' ?> me-1"></i> <?= $isDrive ? 'Pratinjau Drive' : 'Lihat Berkas' ?>
-                                                        </button>
-
-                                                        <!-- Open Direct / Download Button -->
-                                                        <?php if ($isUrlFile || $isUrlCatatan): ?>
-                                                            <a href="<?= htmlspecialchars($fileUrl) ?>" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.75rem;" title="Buka Link di Tab Baru">
-                                                                <i class="bi bi-box-arrow-up-right me-1"></i> Buka Link
-                                                            </a>
-                                                        <?php else: ?>
-                                                            <a href="<?= htmlspecialchars($fileUrl) ?>" download class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.75rem;" title="Unduh File Berkas">
-                                                                <i class="bi bi-download me-1"></i> Unduh
-                                                            </a>
-                                                        <?php endif; ?>
-
-                                                        <span class="badge bg-<?= $isDrive ? 'success' : 'secondary' ?>-subtle text-<?= $isDrive ? 'success' : 'secondary' ?> rounded-pill px-2 py-0.5" style="font-size:0.68rem;"><?= strtoupper($fileExt) ?></span>
-                                                    </div>
-                                                    <?php if (!empty($catatanText)): ?>
-                                                        <div class="small text-muted mt-1" style="font-size:0.75rem;">
-                                                            <i class="bi bi-chat-left-text me-1 text-primary"></i><?= htmlspecialchars($catatanText) ?>
-                                                        </div>
-                                                    <?php endif; ?>
-                                                <?php else: ?>
-                                                    <?php if (!empty($catatanText)): ?>
-                                                        <div class="small text-dark bg-light p-2 rounded border" style="font-size:0.78rem;">
-                                                            <i class="bi bi-chat-left-text me-1 text-primary"></i><?= htmlspecialchars($catatanText) ?>
-                                                        </div>
-                                                    <?php else: ?>
-                                                        <span class="badge bg-light text-muted border rounded-pill px-2.5 py-1" style="font-size:0.72rem;"><i class="bi bi-x-circle me-1"></i>Tanpa File / Link</span>
-                                                    <?php endif; ?>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <?php if ($sub['nilai'] !== null): ?>
-                                                    <?php
-                                                    $valScore = (float)$sub['nilai'];
-                                                    $scoreBadgeClass = ($valScore >= 85) ? 'bg-success text-white' : (($valScore >= 75) ? 'bg-primary text-white' : 'bg-danger text-white');
-                                                    ?>
-                                                    <span class="badge <?= $scoreBadgeClass ?> fs-6 rounded-pill px-3 py-1.5 shadow-xs fw-extrabold">
-                                                        <?= number_format($valScore, 1) ?> / 100
-                                                    </span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-warning text-dark border border-warning-subtle rounded-pill px-2.5 py-1.5 fw-bold" style="font-size:0.72rem;">
-                                                        <i class="bi bi-hourglass-split me-1"></i>Belum Dinilai
-                                                    </span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="pe-3">
-                                                <?php if (!$isAdminMonitoring): ?>
-                                                    <form action="<?= BASE_URL ?>index.php?url=guru/tugas" method="POST" class="bg-light p-2 rounded-3 border">
-                                                        <?= Security::csrfField() ?>
-                                                        <input type="hidden" name="action" value="grade">
-                                                        <input type="hidden" name="pengumpulan_id" value="<?= $sub['id'] ?>">
-
-                                                        <div class="input-group input-group-sm mb-1.5">
-                                                            <span class="input-group-text bg-white fw-bold text-primary">Skor</span>
-                                                            <input type="number" name="nilai" class="form-control fw-extrabold text-primary" value="<?= $sub['nilai'] ?>" placeholder="0-100" min="0" max="100" required style="font-size:0.9rem;">
-                                                        </div>
-
-                                                        <div class="mb-1.5">
-                                                            <input type="text" name="komentar" class="form-control form-control-sm text-dark" value="<?= htmlspecialchars($sub['komentar_guru'] ?? '') ?>" placeholder="Catatan rubrik / evaluasi...">
-                                                        </div>
-
-                                                        <!-- Preset Score Chips -->
-                                                        <div class="d-flex align-items-center justify-content-between gap-1">
-                                                            <div class="d-flex gap-1">
-                                                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('form').querySelector('input[name=\'nilai\']').value=100">100</button>
-                                                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('form').querySelector('input[name=\'nilai\']').value=90">90</button>
-                                                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('form').querySelector('input[name=\'nilai\']').value=85">85</button>
-                                                                <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size:0.68rem;" onclick="this.closest('form').querySelector('input[name=\'nilai\']').value=75">75</button>
-                                                            </div>
-                                                            <button type="submit" class="btn btn-sm btn-success fw-bold rounded-pill px-3 py-0.5 text-nowrap" style="font-size:0.75rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                                                                <i class="bi bi-check-lg me-1"></i> Simpan
-                                                            </button>
-                                                        </div>
-                                                    </form>
-                                                <?php else: ?>
-                                                    <small class="text-muted fw-semibold"><i class="bi bi-chat-quote me-1"></i><?= htmlspecialchars($sub['komentar_guru'] ?? 'Belum ada catatan rubrik') ?></small>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
-
-                <div class="modal-footer border-0 pt-0 p-4 justify-content-between bg-white border-top">
-                    <span class="text-muted small"><i class="bi bi-info-circle me-1 text-primary"></i>Semua nilai yang disimpan otomatis tersinkronisasi ke E-Rapor Digital.</span>
-                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Tutup</button>
-                </div>
+                </form>
             </div>
         </div>
     </div>
@@ -1045,6 +1066,13 @@ function previewSubmissionFile(fileUrl, fileName, studentName) {
 
     const viewerModal = new bootstrap.Modal(document.getElementById('modalSubmissionFileViewer'));
     viewerModal.show();
+}
+
+function bulkFillScores(tugasId, score) {
+    const inputs = document.querySelectorAll('.score-input-' + tugasId);
+    inputs.forEach(input => {
+        input.value = score;
+    });
 }
 
 function filterGuruTugasTable() {
