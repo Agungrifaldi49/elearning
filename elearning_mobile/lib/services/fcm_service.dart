@@ -151,17 +151,10 @@ class FcmService {
 
     switch (type) {
       case 'chat':
-        if (targetId > 0) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SiswaChatScreen(
-                contactId: targetId,
-                contactName: data['title']?.toString().replaceAll('💬 Pesan dari ', '') ?? 'Kontak Chat',
-              ),
-            ),
-          );
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SiswaChatScreen()),
+        );
         break;
 
       case 'forum':

@@ -30,7 +30,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userId = authProvider.user?['id'];
+    final userId = authProvider.currentUser?.id;
 
     if (userId == null) {
       setState(() {
@@ -41,7 +41,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     try {
-      final response = await ApiService.get('get_notifications', queryParameters: {'user_id': userId});
+      final response = await ApiService.get('get_notifications', params: {'user_id': userId.toString()});
 
       if (response['success'] == true && response['data'] != null) {
         final data = response['data'];
@@ -66,7 +66,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _markAsRead({int? notificationId}) async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userId = authProvider.user?['id'];
+    final userId = authProvider.currentUser?.id;
 
     try {
       final body = <String, dynamic>{'user_id': userId};
