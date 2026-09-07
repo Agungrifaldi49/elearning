@@ -58,6 +58,217 @@ class NotificationCronProcessor {
     }
 
     /**
+     * Run targeted reminders specifically for a single User ID (on login / dashboard load)
+     */
+    public function runUserReminders($userId) {
+        $userId = (int)$userId;
+        if ($userId <= 0) return false;
+
+        try {
+            $todayDate = date('Y-m-d');
+            $nowTime = date('H:i:s');
+
+            // Fetch user info
+            $stmtU = $this->db->prepare("
+                SELECT u.*, COALESCE(r.name, 'Siswa') as role_name 
+                FROM users u 
+                LEFT JOIN roles r ON u.role_id = r.id 
+                WHERE u.id = ? LIMIT 1
+            ");
+            $stmtU->execute([$userId]);
+            $user = $stmtU->fetch(PDO::FETCH_ASSOC);
+
+            if (!$user) return false;
+
+            $roleName = strtolower($user['role_name'] ?? 'siswa');
+            $isGuru = strpos($roleName, 'guru') !== false;
+
+            if ($isGuru) {
+                // Find Guru details
+                $stmtG = $this->db->prepare("
+                    SELECT g.* FROM guru g 
+                    WHERE g.user_id = ? OR g.nip = ? LIMIT 1
+                ");
+                $stmtG->execute([$userId, $user['username']]);
+                $guru = $stmtG->fetch(PDO::FETCH_ASSOC);
+
+                if ($guru) {
+                    $guruId = (int)$guru['id'];
+
+                    // A. Check Guru Absen Masuk
+                    $stmtAbsG = $this->db->prepare("SELECT id FROM absensi_guru WHERE guru_id = ? AND tanggal = ? LIMIT 1");
+                    $stmtAbsG->execute([$guruId, $todayDate]);
+                    $hasAbsenG = $stmtAbsG->fetch();
+
+                    if (!$hasAbsenG) {
+                        $stmtCheck = $this->db->prepare("
+                            SELECT COUNT(*) FROM notifikasi 
+                            WHERE user_id = ? AND type = 'absensi' AND DATE(created_at) = ? AND title LIKE '%Masuk%'
+                        ");
+                        $stmtCheck->execute([$userId, $todayDate]);
+                        if ((int)$stmtCheck->fetchColumn() === 0) {
+                            FcmHelper::sendToUser(
+                                $userId,
+                                '⏰ Pengingat Absensi Guru',
+                                "Bpk/Ibu {$guru['nama_lengkap']}, Anda belum melakukan presensi masuk GTK hari ini. Segera catat kehadiran!",
+                                ['type' => 'absensi', 'action' => 'masuk']
+                            );
+                        }
+                    } else {
+                        // B. Check Guru Absen Pulang (Afternoon >= 12:00)
+                        if ($nowTime >= '12:00:00') {
+                            $stmtAbsGOut = $this->db->prepare("SELECT id FROM absensi_guru WHERE guru_id = ? AND tanggal = ? AND waktu_pulang IS NOT NULL AND waktu_pulang != '' LIMIT 1");
+                            $stmtAbsGOut->execute([$guruId, $todayDate]);
+                            if (!$stmtAbsGOut->fetch()) {
+                                $stmtCheckOut = $this->db->prepare("
+                                    SELECT COUNT(*) FROM notifikasi 
+                                    WHERE user_id = ? AND type = 'absensi' AND DATE(created_at) = ? AND title LIKE '%Pulang%'
+                                ");
+                                $stmtCheckOut->execute([$userId, $todayDate]);
+                                if ((int)$stmtCheckOut->fetchColumn() === 0) {
+                                    FcmHelper::sendToUser(
+                                        $userId,
+                                        '🏠 Pengingat Absensi Pulang Guru',
+                                        "Bpk/Ibu {$guru['nama_lengkap']}, jangan lupa melakukan presensi pulang GTK sebelum meninggalkan sekolah!",
+                                        ['type' => 'absensi', 'action' => 'pulang']
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    // C. Check Guru Schedule Reminders today
+                    $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+                    $dayName = $daysMap[date('N', strtotime($todayDate))] ?? 'Senin';
+
+                    $stmtJadwalG = $this->db->prepare("
+                        SELECT j.id as jadwal_id, j.jam_mulai, m.nama_mapel, COALESCE(k.nama_kelas, 'Rombel') as nama_kelas
+                        FROM jadwal j
+                        JOIN mata_pelajaran m ON j.mapel_id = m.id
+                        LEFT JOIN kelas k ON j.kelas_id = k.id
+                        WHERE j.guru_id = ? AND j.hari = ?
+                    ");
+                    $stmtJadwalG->execute([$guruId, $dayName]);
+                    $schListG = $stmtJadwalG->fetchAll(PDO::FETCH_ASSOC);
+
+                    foreach ($schListG as $schG) {
+                        $jamMulai = date('H:i', strtotime($schG['jam_mulai']));
+                        $stmtCheckSch = $this->db->prepare("
+                            SELECT COUNT(*) FROM notifikasi 
+                            WHERE user_id = ? AND type = 'jadwal' AND target_id = ? AND DATE(created_at) = ?
+                        ");
+                        $stmtCheckSch->execute([$userId, $schG['jadwal_id'], $todayDate]);
+                        if ((int)$stmtCheckSch->fetchColumn() === 0) {
+                            FcmHelper::sendToUser(
+                                $userId,
+                                "📚 Pengingat Mengajar: {$schG['nama_mapel']}",
+                                "Bpk/Ibu {$guru['nama_lengkap']}, Anda memiliki jadwal mengajar mapel {$schG['nama_mapel']} di {$schG['nama_kelas']} hari ini pukul {$jamMulai} WIB.",
+                                ['type' => 'jadwal', 'id' => $schG['jadwal_id']]
+                            );
+                        }
+                    }
+                }
+
+            } else {
+                // Siswa
+                $stmtS = $this->db->prepare("
+                    SELECT s.*, k.nama_kelas 
+                    FROM siswa s 
+                    LEFT JOIN kelas k ON s.kelas_id = k.id 
+                    WHERE s.user_id = ? OR s.nis = ? LIMIT 1
+                ");
+                $stmtS->execute([$userId, $user['username']]);
+                $siswa = $stmtS->fetch(PDO::FETCH_ASSOC);
+
+                if ($siswa) {
+                    $siswaId = (int)$siswa['id'];
+                    $kelasId = intval($siswa['kelas_id'] ?? 0);
+
+                    // A. Check Siswa Absen Masuk
+                    $stmtAbsS = $this->db->prepare("SELECT id FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
+                    $stmtAbsS->execute([$siswaId, $todayDate]);
+                    $hasAbsenS = $stmtAbsS->fetch();
+
+                    if (!$hasAbsenS) {
+                        $stmtCheck = $this->db->prepare("
+                            SELECT COUNT(*) FROM notifikasi 
+                            WHERE user_id = ? AND type = 'absensi' AND DATE(created_at) = ? AND title LIKE '%Masuk%'
+                        ");
+                        $stmtCheck->execute([$userId, $todayDate]);
+                        if ((int)$stmtCheck->fetchColumn() === 0) {
+                            FcmHelper::sendToUser(
+                                $userId,
+                                '⏰ Pengingat Absensi Masuk',
+                                "Halo {$siswa['nama_lengkap']}, Anda belum melakukan presensi masuk hari ini. Segera scan QR Code Presensi!",
+                                ['type' => 'absensi', 'action' => 'masuk']
+                            );
+                        }
+                    } else {
+                        // B. Check Siswa Absen Pulang (Afternoon >= 12:00)
+                        if ($nowTime >= '12:00:00') {
+                            $stmtAbsSOut = $this->db->prepare("SELECT id FROM absensi WHERE siswa_id = ? AND tanggal = ? AND waktu_pulang IS NOT NULL AND waktu_pulang != '' LIMIT 1");
+                            $stmtAbsSOut->execute([$siswaId, $todayDate]);
+                            if (!$stmtAbsSOut->fetch()) {
+                                $stmtCheckOut = $this->db->prepare("
+                                    SELECT COUNT(*) FROM notifikasi 
+                                    WHERE user_id = ? AND type = 'absensi' AND DATE(created_at) = ? AND title LIKE '%Pulang%'
+                                ");
+                                $stmtCheckOut->execute([$userId, $todayDate]);
+                                if ((int)$stmtCheckOut->fetchColumn() === 0) {
+                                    FcmHelper::sendToUser(
+                                        $userId,
+                                        '🏠 Pengingat Absensi Pulang',
+                                        "Halo {$siswa['nama_lengkap']}, jangan lupa melakukan presensi pulang sebelum meninggalkan lingkungan sekolah!",
+                                        ['type' => 'absensi', 'action' => 'pulang']
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    // C. Check Siswa Schedule Reminders today
+                    $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+                    $dayName = $daysMap[date('N', strtotime($todayDate))] ?? 'Senin';
+
+                    if ($kelasId > 0) {
+                        $stmtJadwalS = $this->db->prepare("
+                            SELECT j.id as jadwal_id, j.jam_mulai, m.nama_mapel, COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru
+                            FROM jadwal j
+                            JOIN mata_pelajaran m ON j.mapel_id = m.id
+                            LEFT JOIN guru g ON j.guru_id = g.id
+                            WHERE j.kelas_id = ? AND j.hari = ?
+                        ");
+                        $stmtJadwalS->execute([$kelasId, $dayName]);
+                        $schListS = $stmtJadwalS->fetchAll(PDO::FETCH_ASSOC);
+
+                        foreach ($schListS as $schS) {
+                            $jamMulai = date('H:i', strtotime($schS['jam_mulai']));
+                            $stmtCheckSch = $this->db->prepare("
+                                SELECT COUNT(*) FROM notifikasi 
+                                WHERE user_id = ? AND type = 'jadwal' AND target_id = ? AND DATE(created_at) = ?
+                            ");
+                            $stmtCheckSch->execute([$userId, $schS['jadwal_id'], $todayDate]);
+                            if ((int)$stmtCheckSch->fetchColumn() === 0) {
+                                FcmHelper::sendToUser(
+                                    $userId,
+                                    "📚 Pengingat Kelas: {$schS['nama_mapel']}",
+                                    "Jadwal KBM {$schS['nama_mapel']} bersama {$schS['nama_guru']} hari ini dimulai pukul {$jamMulai} WIB. Bersiaplah!",
+                                    ['type' => 'jadwal', 'id' => $schS['jadwal_id']]
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            error_log("runUserReminders Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Remind Siswa who haven't clocked in today
      */
     private function checkSiswaAbsenMasuk($todayDate) {
@@ -72,7 +283,7 @@ class NotificationCronProcessor {
                       SELECT siswa_id FROM absensi WHERE tanggal = ?
                   )
                   AND u.id NOT IN (
-                      SELECT user_id FROM notifications 
+                      SELECT user_id FROM notifikasi 
                       WHERE type = 'absensi' 
                         AND DATE(created_at) = ? 
                         AND title LIKE '%Masuk%'
@@ -112,7 +323,7 @@ class NotificationCronProcessor {
                       SELECT guru_id FROM absensi_guru WHERE tanggal = ?
                   )
                   AND u.id NOT IN (
-                      SELECT user_id FROM notifications 
+                      SELECT user_id FROM notifikasi 
                       WHERE type = 'absensi' 
                         AND DATE(created_at) = ? 
                         AND title LIKE '%Guru%'
@@ -152,7 +363,7 @@ class NotificationCronProcessor {
                   AND a.waktu_masuk IS NOT NULL
                   AND (a.waktu_pulang IS NULL OR a.waktu_pulang = '')
                   AND u.id NOT IN (
-                      SELECT user_id FROM notifications 
+                      SELECT user_id FROM notifikasi 
                       WHERE type = 'absensi' 
                         AND DATE(created_at) = ? 
                         AND title LIKE '%Pulang%'
@@ -192,7 +403,7 @@ class NotificationCronProcessor {
                   AND ag.waktu_masuk IS NOT NULL
                   AND (ag.waktu_pulang IS NULL OR ag.waktu_pulang = '')
                   AND u.id NOT IN (
-                      SELECT user_id FROM notifications 
+                      SELECT user_id FROM notifikasi 
                       WHERE type = 'absensi' 
                         AND DATE(created_at) = ? 
                         AND title LIKE '%Pulang Guru%'
@@ -245,7 +456,7 @@ class NotificationCronProcessor {
                     
                     // Check if already notified for this schedule today
                     $stmtCheck = $this->db->prepare("
-                        SELECT COUNT(*) FROM notifications 
+                        SELECT COUNT(*) FROM notifikasi 
                         WHERE type = 'jadwal' AND target_id = ? AND DATE(created_at) = ?
                     ");
                     $stmtCheck->execute([$sch['jadwal_id'], $todayDate]);
@@ -288,7 +499,7 @@ class NotificationCronProcessor {
                 $msg = "Bpk/Ibu {$sch['nama_lengkap']}, Anda memiliki jadwal mengajar mapel {$sch['nama_mapel']} di {$sch['nama_kelas']} hari ini pukul {$jamMulai} WIB.";
 
                 $stmtCheck = $this->db->prepare("
-                    SELECT COUNT(*) FROM notifications 
+                    SELECT COUNT(*) FROM notifikasi 
                     WHERE type = 'jadwal' AND target_id = ? AND user_id = ? AND DATE(created_at) = ?
                 ");
                 $stmtCheck->execute([$sch['jadwal_id'], $sch['user_id'], $todayDate]);

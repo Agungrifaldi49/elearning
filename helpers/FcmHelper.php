@@ -25,19 +25,22 @@ class FcmHelper {
         try {
             $db = Database::getConnection();
             $db->exec("
-                CREATE TABLE IF NOT EXISTS notifications (
+                CREATE TABLE IF NOT EXISTS notifikasi (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     user_id INT NOT NULL,
                     title VARCHAR(255) NOT NULL,
                     message TEXT NOT NULL,
                     type VARCHAR(50) DEFAULT 'general',
                     target_id INT NULL,
+                    link VARCHAR(255) NULL,
                     is_read TINYINT(1) DEFAULT 0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     INDEX idx_user_id (user_id),
                     INDEX idx_is_read (is_read)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+            try { $db->exec("ALTER TABLE notifikasi ADD COLUMN type VARCHAR(50) DEFAULT 'general'"); } catch (\Throwable $e) {}
+            try { $db->exec("ALTER TABLE notifikasi ADD COLUMN target_id INT NULL"); } catch (\Throwable $e) {}
             self::$tableInitialized = true;
         } catch (\Throwable $e) {
             // Ignore if table creation failed or exists
@@ -141,7 +144,7 @@ class FcmHelper {
         try {
             $db = self::getDb();
             $stmt = $db->prepare("
-                INSERT INTO notifications (user_id, title, message, type, target_id, created_at)
+                INSERT INTO notifikasi (user_id, title, message, type, target_id, created_at)
                 VALUES (?, ?, ?, ?, ?, NOW())
             ");
             $stmt->execute([$userId, $title, $message, $type, $targetId]);

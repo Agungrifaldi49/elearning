@@ -3987,6 +3987,14 @@ class ApiController {
             $stmt = $this->db->prepare("UPDATE users SET fcm_token = ? WHERE id = ?");
             $stmt->execute([$token, $userId]);
 
+            if (file_exists(ROOT_PATH . 'cron_notifications.php')) {
+                try {
+                    require_once ROOT_PATH . 'cron_notifications.php';
+                    $processor = new NotificationCronProcessor();
+                    $processor->runUserReminders($userId);
+                } catch (\Throwable $eRem) {}
+            }
+
             $this->jsonResponse(true, 'Token FCM berhasil disimpan', ['user_id' => $userId]);
         } catch (\Throwable $e) {
             $this->jsonResponse(false, 'Gagal menyimpan token FCM: ' . $e->getMessage(), null, 500);
@@ -4011,7 +4019,7 @@ class ApiController {
             require_once ROOT_PATH . 'helpers/FcmHelper.php';
             $stmt = $this->db->prepare("
                 SELECT id, title, message, type, target_id, is_read, created_at 
-                FROM notifications 
+                FROM notifikasi 
                 WHERE user_id = ? 
                 ORDER BY created_at DESC 
                 LIMIT 50
@@ -4020,7 +4028,7 @@ class ApiController {
             $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $stmtUnread = $this->db->prepare("
-                SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0
+                SELECT COUNT(*) FROM notifikasi WHERE user_id = ? AND is_read = 0
             ");
             $stmtUnread->execute([$userId]);
             $unreadCount = intval($stmtUnread->fetchColumn());
@@ -4041,10 +4049,10 @@ class ApiController {
 
         try {
             if ($notificationId > 0) {
-                $stmt = $this->db->prepare("UPDATE notifications SET is_read = 1 WHERE id = ?");
+                $stmt = $this->db->prepare("UPDATE notifikasi SET is_read = 1 WHERE id = ?");
                 $stmt->execute([$notificationId]);
             } elseif ($userId > 0) {
-                $stmt = $this->db->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?");
+                $stmt = $this->db->prepare("UPDATE notifikasi SET is_read = 1 WHERE user_id = ?");
                 $stmt->execute([$userId]);
             }
             $this->jsonResponse(true, 'Notifikasi berhasil diperbarui');
