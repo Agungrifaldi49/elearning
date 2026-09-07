@@ -193,8 +193,8 @@ class FcmHelper {
                 SELECT u.id 
                 FROM users u
                 LEFT JOIN roles r ON u.role_id = r.id
-                JOIN guru g ON g.user_id = u.id
-                WHERE (r.name = 'Guru' OR u.role_id = 3 OR u.role_id = 2)
+                JOIN guru g ON (g.user_id = u.id OR g.nip = u.username)
+                WHERE (r.name IN ('Guru', 'Kepala Sekolah') OR u.role_id IN (2, 4))
             ");
             $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
             if (!empty($userIds)) {
@@ -217,7 +217,8 @@ class FcmHelper {
                 SELECT u.id 
                 FROM users u
                 JOIN siswa s ON (s.user_id = u.id OR s.nis = u.username)
-                WHERE s.kelas_id = ?
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE s.kelas_id = ? AND (r.name = 'Siswa' OR u.role_id = 3)
             ");
             $stmt->execute([$kelasId]);
             $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -228,7 +229,7 @@ class FcmHelper {
                     SELECT u.id 
                     FROM users u
                     LEFT JOIN roles r ON u.role_id = r.id
-                    WHERE (r.name = 'Siswa' OR u.role_id = 4)
+                    WHERE (r.name = 'Siswa' OR u.role_id = 3)
                 ");
                 $stmt2->execute();
                 $userIds = $stmt2->fetchAll(PDO::FETCH_COLUMN);

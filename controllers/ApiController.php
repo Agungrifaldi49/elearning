@@ -4012,7 +4012,7 @@ class ApiController {
                 try {
                     require_once ROOT_PATH . 'cron_notifications.php';
                     $processor = new NotificationCronProcessor();
-                    $processor->runAllChecks();
+                    $processor->runUserReminders($userId);
                 } catch (\Throwable $eCron) {}
             }
 

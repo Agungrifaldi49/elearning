@@ -80,10 +80,12 @@ class NotificationCronProcessor {
 
             if (!$user) return false;
 
+            $roleId = intval($user['role_id'] ?? 3);
             $roleName = strtolower($user['role_name'] ?? 'siswa');
-            $isGuru = strpos($roleName, 'guru') !== false;
+            $isGuru = ($roleId == 2 || $roleId == 4 || strpos($roleName, 'guru') !== false || strpos($roleName, 'kepala') !== false);
+            $isSiswa = ($roleId == 3 || strpos($roleName, 'siswa') !== false);
 
-            if ($isGuru) {
+            if ($isGuru && !$isSiswa) {
                 // Find Guru details
                 $stmtG = $this->db->prepare("
                     SELECT g.* FROM guru g 
@@ -169,7 +171,7 @@ class NotificationCronProcessor {
                     }
                 }
 
-            } else {
+            } else if ($isSiswa) {
                 // Siswa
                 $stmtS = $this->db->prepare("
                     SELECT s.*, k.nama_kelas 
@@ -278,7 +280,9 @@ class NotificationCronProcessor {
                 SELECT u.id as user_id, s.nama_lengkap
                 FROM siswa s
                 JOIN users u ON (s.user_id = u.id OR s.nis = u.username)
-                WHERE (s.status IS NULL OR s.status = 'aktif')
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE (u.role_id = 3 OR r.name = 'Siswa')
+                  AND (s.status IS NULL OR s.status = 'aktif')
                   AND s.id NOT IN (
                       SELECT siswa_id FROM absensi WHERE tanggal = ?
                   )
@@ -318,7 +322,9 @@ class NotificationCronProcessor {
                 SELECT u.id as user_id, g.nama_lengkap
                 FROM guru g
                 JOIN users u ON (g.user_id = u.id OR g.nip = u.username)
-                WHERE (g.status IS NULL OR g.status = 'aktif')
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE (u.role_id IN (2, 4) OR r.name IN ('Guru', 'Kepala Sekolah'))
+                  AND (g.status IS NULL OR g.status = 'aktif')
                   AND g.id NOT IN (
                       SELECT guru_id FROM absensi_guru WHERE tanggal = ?
                   )
@@ -359,7 +365,9 @@ class NotificationCronProcessor {
                 FROM absensi a
                 JOIN siswa s ON a.siswa_id = s.id
                 JOIN users u ON (s.user_id = u.id OR s.nis = u.username)
-                WHERE a.tanggal = ?
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE (u.role_id = 3 OR r.name = 'Siswa')
+                  AND a.tanggal = ?
                   AND a.waktu_masuk IS NOT NULL
                   AND (a.waktu_pulang IS NULL OR a.waktu_pulang = '')
                   AND u.id NOT IN (
@@ -399,7 +407,9 @@ class NotificationCronProcessor {
                 FROM absensi_guru ag
                 JOIN guru g ON ag.guru_id = g.id
                 JOIN users u ON (g.user_id = u.id OR g.nip = u.username)
-                WHERE ag.tanggal = ?
+                LEFT JOIN roles r ON u.role_id = r.id
+                WHERE (u.role_id IN (2, 4) OR r.name IN ('Guru', 'Kepala Sekolah'))
+                  AND ag.tanggal = ?
                   AND ag.waktu_masuk IS NOT NULL
                   AND (ag.waktu_pulang IS NULL OR ag.waktu_pulang = '')
                   AND u.id NOT IN (
@@ -487,8 +497,9 @@ class NotificationCronProcessor {
                 JOIN mata_pelajaran m ON j.mapel_id = m.id
                 JOIN guru g ON j.guru_id = g.id
                 JOIN users u ON (g.user_id = u.id OR g.nip = u.username)
+                LEFT JOIN roles r ON u.role_id = r.id
                 LEFT JOIN kelas k ON j.kelas_id = k.id
-                WHERE j.hari = ?
+                WHERE j.hari = ? AND (u.role_id IN (2, 4) OR r.name IN ('Guru', 'Kepala Sekolah'))
             ");
             $stmt->execute([$dayName]);
             $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC);
