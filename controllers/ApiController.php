@@ -3232,9 +3232,19 @@ class ApiController {
                 $konten = ProfanityFilterHelper::filter($konten);
             }
 
+            require_once ROOT_PATH . 'helpers/FcmHelper.php';
+            $stmtUser = $this->db->prepare("SELECT full_name FROM users WHERE id = ? LIMIT 1");
+            $stmtUser->execute([$userId]);
+            $authorName = $stmtUser->fetchColumn() ?: 'Pengguna';
+
             if ($commModel) {
                 try {
                     $commModel->createForumTopic($userId, $mapelId > 0 ? $mapelId : null, $judul, $konten, $gambarFilename, $visibility, null, $targetKelasId > 0 ? $targetKelasId : null);
+                    if ($targetKelasId > 0) {
+                        FcmHelper::sendToKelas($targetKelasId, '🗣️ Forum Diskusi Kelas: ' . $judul, "$authorName memposting topik diskusi baru.", ['type' => 'forum']);
+                    } else {
+                        FcmHelper::sendToAll('🗣️ Forum Diskusi Baru: ' . $judul, "$authorName memposting topik diskusi baru.", ['type' => 'forum']);
+                    }
                     $this->jsonResponse(true, 'Topik diskusi berhasil diterbitkan!');
                 } catch (\Throwable $eCm) {}
             }
@@ -3253,6 +3263,11 @@ class ApiController {
                     'vis' => $visibility === 'private' ? 'private' : 'public',
                     'tkid' => $targetKelasId > 0 ? $targetKelasId : null
                 ]);
+                if ($targetKelasId > 0) {
+                    FcmHelper::sendToKelas($targetKelasId, '🗣️ Forum Diskusi Kelas: ' . $judul, "$authorName memposting topik diskusi baru.", ['type' => 'forum']);
+                } else {
+                    FcmHelper::sendToAll('🗣️ Forum Diskusi Baru: ' . $judul, "$authorName memposting topik diskusi baru.", ['type' => 'forum']);
+                }
                 $this->jsonResponse(true, 'Topik diskusi berhasil diterbitkan!');
             } catch (\Throwable $eC) {
                 try {
@@ -3266,6 +3281,7 @@ class ApiController {
                         'ktn' => $konten,
                         'gbr' => $gambarFilename
                     ]);
+                    FcmHelper::sendToAll('🗣️ Forum Diskusi Baru: ' . $judul, "$authorName memposting topik diskusi baru.", ['type' => 'forum']);
                     $this->jsonResponse(true, 'Topik diskusi berhasil diterbitkan!');
                 } catch (\Throwable $eFB) {
                     $this->jsonResponse(false, 'Gagal menerbitkan topik: ' . $eFB->getMessage(), null, 500);
@@ -3309,9 +3325,26 @@ class ApiController {
                 $komentar = ProfanityFilterHelper::filter($komentar);
             }
 
+            require_once ROOT_PATH . 'helpers/FcmHelper.php';
+            $stmtTopic = $this->db->prepare("SELECT user_id, judul FROM forum WHERE id = ? LIMIT 1");
+            $stmtTopic->execute([$forumId]);
+            $topicData = $stmtTopic->fetch();
+
+            $stmtUser = $this->db->prepare("SELECT full_name FROM users WHERE id = ? LIMIT 1");
+            $stmtUser->execute([$userId]);
+            $replierName = $stmtUser->fetchColumn() ?: 'Pengguna';
+
             if ($commModel) {
                 try {
                     $commModel->addKomentar($forumId, $userId, $komentar, null, $gambarFilename);
+                    if ($topicData && (int)$topicData['user_id'] !== $userId) {
+                        FcmHelper::sendToUser(
+                            $topicData['user_id'],
+                            '💬 Balasan Baru di Forum',
+                            "$replierName mengomentari postingan Anda: \"{$topicData['judul']}\"",
+                            ['type' => 'forum', 'id' => $forumId]
+                        );
+                    }
                     $this->jsonResponse(true, 'Komentar berhasil ditambahkan!');
                 } catch (\Throwable $eAm) {}
             }
@@ -3327,6 +3360,14 @@ class ApiController {
                     'km' => $komentar,
                     'gbr' => $gambarFilename
                 ]);
+                if ($topicData && (int)$topicData['user_id'] !== $userId) {
+                    FcmHelper::sendToUser(
+                        $topicData['user_id'],
+                        '💬 Balasan Baru di Forum',
+                        "$replierName mengomentari postingan Anda: \"{$topicData['judul']}\"",
+                        ['type' => 'forum', 'id' => $forumId]
+                    );
+                }
                 $this->jsonResponse(true, 'Komentar berhasil ditambahkan!');
             } catch (\Throwable $eKm) {
                 $this->jsonResponse(false, 'Gagal menambahkan komentar: ' . $eKm->getMessage(), null, 500);
@@ -3624,6 +3665,19 @@ class ApiController {
                     'rid' => $receiverId,
                     'msg' => $pesan
                 ]);
+
+                require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                $stmtSender = $this->db->prepare("SELECT full_name FROM users WHERE id = ? LIMIT 1");
+                $stmtSender->execute([$userId]);
+                $senderName = $stmtSender->fetchColumn() ?: 'Pengguna';
+
+                FcmHelper::sendToUser(
+                    $receiverId,
+                    '💬 Pesan dari ' . $senderName,
+                    $pesan,
+                    ['type' => 'chat', 'sender_id' => $userId]
+                );
+
                 $this->jsonResponse(true, 'Pesan terkirim!');
             } catch (\Throwable $eMsg) {
                 $this->jsonResponse(false, 'Gagal mengirim pesan: ' . $eMsg->getMessage(), null, 500);
@@ -3988,6 +4042,17 @@ class ApiController {
             $this->jsonResponse(true, 'Notifikasi berhasil diperbarui');
         } catch (\Throwable $e) {
             $this->jsonResponse(false, 'Gagal memperbarui status notifikasi: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    public function check_reminders() {
+        try {
+            require_once ROOT_PATH . 'cron_notifications.php';
+            $processor = new NotificationCronProcessor();
+            $data = $processor->runAllChecks();
+            $this->jsonResponse(true, 'Pengecekan pengingat notifikasi berhasil diproses', $data);
+        } catch (\Throwable $e) {
+            $this->jsonResponse(false, 'Gagal memproses pengingat: ' . $e->getMessage(), null, 500);
         }
     }
 }

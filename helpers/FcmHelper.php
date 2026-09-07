@@ -181,6 +181,29 @@ class FcmHelper {
     }
 
     /**
+     * Send notification to all Teachers (Guru) in system or specific Guru User IDs
+     */
+    public static function sendToTeachers($title, $message, $data = []) {
+        try {
+            $db = self::getDb();
+            $stmt = $db->query("
+                SELECT u.id 
+                FROM users u
+                LEFT JOIN roles r ON u.role_id = r.id
+                JOIN guru g ON g.user_id = u.id
+                WHERE (r.name = 'Guru' OR u.role_id = 3 OR u.role_id = 2)
+            ");
+            $userIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            if (!empty($userIds)) {
+                return self::sendToUsers($userIds, $title, $message, $data);
+            }
+        } catch (\Throwable $e) {
+            error_log("FcmHelper sendToTeachers Error: " . $e->getMessage());
+        }
+        return false;
+    }
+
+    /**
      * Send notification to all Students in a specific Kelas ID
      */
     public static function sendToKelas($kelasId, $title, $message, $data = []) {

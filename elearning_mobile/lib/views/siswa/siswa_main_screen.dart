@@ -17,20 +17,22 @@ import 'siswa_nilai_tab.dart';
 import 'siswa_forum_screen.dart';
 import 'siswa_chat_screen.dart';
 import 'gabung_kelas_screen.dart';
+import '../shared/notifications_screen.dart';
 import '../shared/edit_profil_screen.dart';
 import '../../services/attendance_reminder_service.dart';
 
 import '../../providers/siswa_provider.dart';
 
 class SiswaMainScreen extends StatefulWidget {
-  const SiswaMainScreen({super.key});
+  final int initialIndex;
+  const SiswaMainScreen({super.key, this.initialIndex = 0});
 
   @override
   State<SiswaMainScreen> createState() => _SiswaMainScreenState();
 }
 
 class _SiswaMainScreenState extends State<SiswaMainScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
 
   final List<Widget> _tabs = [
     const SiswaDashboardTab(),
@@ -227,6 +229,7 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
@@ -319,6 +322,13 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
             tooltip: 'Kartu Pelajar Digital',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            tooltip: 'Pusat Notifikasi',
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
             },
           ),
           IconButton(

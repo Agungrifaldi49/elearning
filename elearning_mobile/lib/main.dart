@@ -34,6 +34,7 @@ class ElearningMobileApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
+      navigatorKey: FcmService.navigatorKey,
       title: 'MHC E-LEARNING',
       debugShowCheckedModeBanner: false,
       themeMode: themeProvider.themeMode,
