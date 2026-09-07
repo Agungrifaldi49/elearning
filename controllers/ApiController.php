@@ -4000,6 +4000,14 @@ class ApiController {
         }
 
         try {
+            if (file_exists(ROOT_PATH . 'cron_notifications.php')) {
+                try {
+                    require_once ROOT_PATH . 'cron_notifications.php';
+                    $processor = new NotificationCronProcessor();
+                    $processor->runAllChecks();
+                } catch (\Throwable $eCron) {}
+            }
+
             require_once ROOT_PATH . 'helpers/FcmHelper.php';
             $stmt = $this->db->prepare("
                 SELECT id, title, message, type, target_id, is_read, created_at 

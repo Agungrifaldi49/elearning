@@ -539,7 +539,31 @@ class LearningModel extends BaseModel {
                 $jamMulai,
                 $jamSelesai ?: null
             ]);
-            return $this->db->lastInsertId();
+            $liveClassId = $this->db->lastInsertId();
+
+            try {
+                require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                $stmtG = $this->db->prepare("SELECT nama_lengkap FROM guru WHERE id = ? LIMIT 1");
+                $stmtG->execute([(int)$guruId]);
+                $guruNama = $stmtG->fetchColumn() ?: 'Guru';
+
+                if (!empty($kelasId) && (int)$kelasId > 0) {
+                    FcmHelper::sendToKelas(
+                        (int)$kelasId,
+                        '🎥 Live Class Dimulai: ' . $topik,
+                        "$guruNama telah mempublikasikan sesi Live Class. Ketuk untuk bergabung!",
+                        ['type' => 'live_class', 'id' => $liveClassId]
+                    );
+                } else {
+                    FcmHelper::sendToAll(
+                        '🎥 Live Class Dimulai: ' . $topik,
+                        "$guruNama telah mempublikasikan sesi Live Class. Ketuk untuk bergabung!",
+                        ['type' => 'live_class', 'id' => $liveClassId]
+                    );
+                }
+            } catch (\Throwable $eFcm) {}
+
+            return $liveClassId;
         } catch (Throwable $e) {
             return false;
         }
