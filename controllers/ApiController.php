@@ -2561,39 +2561,94 @@ class ApiController {
                 break;
 
             case 'input_nilai':
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                require_once ROOT_PATH . 'models/SiswaModel.php';
+                require_once ROOT_PATH . 'models/NilaiModel.php';
+                $academicModel = new AcademicModel();
+                $siswaModel = new SiswaModel();
+                $nilaiModel = new NilaiModel();
+                $guruId = intval($guru['id'] ?? 0);
+
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $input = $this->getPostInput();
-                    $siswaId = intval($input['siswa_id'] ?? 0);
-                    $mapelId = intval($input['mapel_id'] ?? 0);
-                    $nilaiTugas = floatval($input['nilai_tugas'] ?? 0);
-                    $nilaiUts = floatval($input['nilai_uts'] ?? 0);
-                    $nilaiUas = floatval($input['nilai_uas'] ?? 0);
+                    $siswaId = intval($input['siswa_id'] ?? $_POST['siswa_id'] ?? 0);
+                    $mapelId = intval($input['mapel_id'] ?? $_POST['mapel_id'] ?? 0);
+                    $nilaiTugas = min(100.0, max(0.0, floatval($input['nilai_tugas'] ?? $_POST['nilai_tugas'] ?? 0)));
+                    $nilaiQuiz  = min(100.0, max(0.0, floatval($input['nilai_quiz']  ?? $_POST['nilai_quiz']  ?? 0)));
+                    $nilaiUts   = min(100.0, max(0.0, floatval($input['nilai_uts']   ?? $_POST['nilai_uts']   ?? 0)));
+                    $nilaiUas   = min(100.0, max(0.0, floatval($input['nilai_uas']   ?? $_POST['nilai_uas']   ?? 0)));
 
                     if ($siswaId <= 0 || $mapelId <= 0) {
                         $this->jsonResponse(false, 'Siswa dan Mapel wajib dipilih', null, 400);
                     }
 
-                    $nilaiAkhir = round(($nilaiTugas * 0.3) + ($nilaiUts * 0.3) + ($nilaiUas * 0.4), 2);
-
-                    try {
-                        $stmtIns = $this->db->prepare("
-                            INSERT INTO nilai (siswa_id, mapel_id, nilai_tugas, nilai_uts, nilai_uas, nilai_akhir) 
-                            VALUES (:sid, :mid, :nt, :uts, :uas, :na)
-                            ON DUPLICATE KEY UPDATE nilai_tugas = :nt, nilai_uts = :uts, nilai_uas = :uas, nilai_akhir = :na
-                        ");
-                        $stmtIns->execute([
-                            'sid' => $siswaId,
-                            'mid' => $mapelId,
-                            'nt' => $nilaiTugas,
-                            'uts' => $nilaiUts,
-                            'uas' => $nilaiUas,
-                            'na' => $nilaiAkhir
-                        ]);
-                        $this->jsonResponse(true, 'Nilai siswa berhasil disimpan!');
-                    } catch (\Throwable $eN) {
-                        $this->jsonResponse(false, 'Gagal menyimpan nilai: ' . $eN->getMessage(), null, 500);
+                    $resSave = $nilaiModel->saveNilai($siswaId, $mapelId, 1, 1, $nilaiTugas, $nilaiQuiz, $nilaiUts, $nilaiUas);
+                    if ($resSave) {
+                        $this->jsonResponse(true, 'Nilai E-Rapor siswa berhasil disimpan!');
+                    } else {
+                        $this->jsonResponse(false, 'Gagal menyimpan nilai siswa.', null, 500);
                     }
                 }
+
+                // GET request: Fetch kelas list, mapel list, selected kelas/mapel, and student list with current grades
+                $kelasList = $academicModel->getKelasByGuru($guruId);
+                if (empty($kelasList)) {
+                    $kelasList = $academicModel->getKelas();
+                }
+
+                $mapelList = $academicModel->getMapelByGuru($guruId);
+                if (empty($mapelList)) {
+                    $mapelList = $academicModel->getMapel();
+                }
+
+                $selectedKelasId = intval($_GET['kelas_id'] ?? $_POST['kelas_id'] ?? ($kelasList[0]['id'] ?? 0));
+                $selectedMapelId = intval($_GET['mapel_id'] ?? $_POST['mapel_id'] ?? ($mapelList[0]['id'] ?? 0));
+
+                $students = [];
+                if ($selectedKelasId > 0) {
+                    $rawSiswa = $siswaModel->getAll($selectedKelasId);
+                    $existingNilai = [];
+                    if ($selectedMapelId > 0) {
+                        $existingNilai = $nilaiModel->getNilaiByKelasAndMapel($selectedKelasId, $selectedMapelId);
+                    }
+
+                    foreach ($rawSiswa as $s) {
+                        $sId = (int)$s['id'];
+                        $nInfo = $existingNilai[$sId] ?? null;
+                        
+                        $nTugas = (float)($nInfo['nilai_tugas'] ?? 0);
+                        $nQuiz  = (float)($nInfo['nilai_quiz'] ?? 0);
+                        $nUts   = (float)($nInfo['nilai_uts'] ?? 0);
+                        $nUas   = (float)($nInfo['nilai_uas'] ?? 0);
+                        $nAkhir = (float)($nInfo['nilai_akhir'] ?? 0);
+
+                        $predikatObj = NilaiModel::getPredikat($nAkhir);
+
+                        $students[] = [
+                            'siswa_id' => $sId,
+                            'nama_lengkap' => $s['nama_lengkap'] ?? '',
+                            'nis' => $s['nis'] ?? '-',
+                            'foto' => $s['foto'] ?? null,
+                            'kelas_id' => $s['kelas_id'] ?? $selectedKelasId,
+                            'nama_kelas' => $s['nama_kelas'] ?? '',
+                            'nilai_tugas' => $nTugas,
+                            'nilai_quiz' => $nQuiz,
+                            'nilai_uts' => $nUts,
+                            'nilai_uas' => $nUas,
+                            'nilai_akhir' => $nAkhir,
+                            'predikat' => $predikatObj['grade'] . ' (' . $predikatObj['label'] . ')',
+                            'grade' => $predikatObj['grade'],
+                        ];
+                    }
+                }
+
+                $this->jsonResponse(true, 'Data Leger & Input Nilai Guru', [
+                    'kelas_list' => $kelasList,
+                    'mapel_list' => $mapelList,
+                    'selected_kelas_id' => $selectedKelasId,
+                    'selected_mapel_id' => $selectedMapelId,
+                    'students' => $students
+                ]);
                 break;
 
             case 'bank_soal':
