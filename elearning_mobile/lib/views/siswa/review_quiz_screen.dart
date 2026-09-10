@@ -39,11 +39,19 @@ class _ReviewQuizScreenState extends State<ReviewQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Review Jawaban Quiz'),
-        backgroundColor: Colors.purple,
-        foregroundColor: Colors.white,
+        title: Text(
+          'Review Jawaban Quiz',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+        ),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+        elevation: 1,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

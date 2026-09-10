@@ -265,7 +265,7 @@ class _GuruKeyMapelScreenState extends State<GuruKeyMapelScreen> {
                         icon: const Icon(Icons.casino_rounded, size: 16),
                         label: const Text('Acak', style: TextStyle(fontSize: 12)),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.amber.shade800,
+                          backgroundColor: const Color(0xFF1D4ED8),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -350,13 +350,17 @@ class _GuruKeyMapelScreenState extends State<GuruKeyMapelScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kode Key Mapel Kelas Virtual'),
-        backgroundColor: Colors.amber.shade900,
+        title: const Text('Kode Key Mapel Kelas Virtual', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.guruGradient,
+          ),
+        ),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             tooltip: 'Muat Ulang Key Mapel',
             onPressed: _loadKeyMapelData,
           ),
@@ -368,13 +372,9 @@ class _GuruKeyMapelScreenState extends State<GuruKeyMapelScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.amber.shade900, Colors.orange.shade800],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: const BorderRadius.only(
+            decoration: const BoxDecoration(
+              gradient: AppTheme.guruGradient,
+              borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(24),
                 bottomRight: Radius.circular(24),
               ),
@@ -479,11 +479,11 @@ class _GuruKeyMapelScreenState extends State<GuruKeyMapelScreen> {
                                         Container(
                                           padding: const EdgeInsets.all(10),
                                           decoration: BoxDecoration(
-                                            color: Colors.amber.shade50,
+                                            color: const Color(0xFFEFF6FF),
                                             borderRadius: BorderRadius.circular(12),
-                                            border: Border.all(color: Colors.amber.shade200),
+                                            border: Border.all(color: const Color(0xFFBFDBFE)),
                                           ),
-                                          child: Icon(Icons.class_rounded, color: Colors.amber.shade900, size: 24),
+                                          child: const Icon(Icons.class_rounded, color: Color(0xFF1D4ED8), size: 24),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
@@ -549,7 +549,7 @@ class _GuruKeyMapelScreenState extends State<GuruKeyMapelScreen> {
                                       ),
                                       child: Row(
                                         children: [
-                                          const Icon(Icons.key_rounded, size: 18, color: Colors.amber),
+                                          const Icon(Icons.key_rounded, size: 18, color: Color(0xFF38BDF8)),
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: SelectableText(
@@ -588,8 +588,8 @@ class _GuruKeyMapelScreenState extends State<GuruKeyMapelScreen> {
                                         icon: const Icon(Icons.edit_rounded, size: 16),
                                         label: const Text('Perbarui Key', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                         style: TextButton.styleFrom(
-                                          foregroundColor: Colors.amber.shade900,
-                                          backgroundColor: Colors.amber.shade50,
+                                          foregroundColor: const Color(0xFF1D4ED8),
+                                          backgroundColor: const Color(0xFFEFF6FF),
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                         ),
@@ -607,7 +607,7 @@ class _GuruKeyMapelScreenState extends State<GuruKeyMapelScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showEditKeyModal(),
-        backgroundColor: Colors.amber.shade900,
+        backgroundColor: const Color(0xFF1D4ED8),
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Tambah / Perbarui Key', style: TextStyle(fontWeight: FontWeight.bold)),

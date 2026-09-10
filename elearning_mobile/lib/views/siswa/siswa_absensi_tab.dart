@@ -96,11 +96,19 @@ class _SiswaAbsensiTabState extends State<SiswaAbsensiTab> {
       'izin_sakit_alpha': absensiList.where((a) => ['sakit', 'izin', 'alpa', 'alpha'].contains(a.status.toLowerCase())).length,
     };
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Laporan & History Presensi'),
-        backgroundColor: Colors.indigo.shade900,
-        foregroundColor: Colors.white,
+        title: Text(
+          'Laporan & History Presensi',
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+        elevation: 1,
       ),
       body: RefreshIndicator(
         onRefresh: () async => _loadAbsensi(),

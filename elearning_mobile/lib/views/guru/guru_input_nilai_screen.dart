@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../theme/app_theme.dart';
 
 class GuruInputNilaiScreen extends StatefulWidget {
   const GuruInputNilaiScreen({super.key});
@@ -115,25 +116,18 @@ class _GuruInputNilaiScreenState extends State<GuruInputNilaiScreen> {
           children: [
             Text(
               'Input & Edit Nilai Siswa',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(
               'Entri Penilaian Rapor & Evaluasi KBM',
-              style: TextStyle(fontSize: 11, color: Colors.white70),
+              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
             ),
           ],
         ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0F172A), Color(0xFF0D9488), Color(0xFF14B8A6)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -147,11 +141,7 @@ class _GuruInputNilaiScreenState extends State<GuruInputNilaiScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0D9488), Color(0xFF14B8A6), Color(0xFF2DD4BF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: AppTheme.guruGradient,
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(

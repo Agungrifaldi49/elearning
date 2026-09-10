@@ -32,13 +32,23 @@ class AppTheme {
   );
 
   static const LinearGradient guruGradient = LinearGradient(
-    colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+    colors: [
+      Color(0xFF1D4ED8), // Royal Blue
+      Color(0xFF1E3A8A), // Deep Navy Blue
+      Color(0xFF0F172A), // Dark Slate
+      Color(0xFF020617), // Rich Obsidian Black
+    ],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient siswaGradient = LinearGradient(
-    colors: [Color(0xFF10B981), Color(0xFF059669)],
+    colors: [
+      Color(0xFF10B981), // Vibrant Emerald Green
+      Color(0xFF047857), // Deep Forest Emerald
+      Color(0xFF0F172A), // Dark Slate
+      Color(0xFF020617), // Rich Obsidian Black
+    ],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );

@@ -25,7 +25,7 @@ import '../../providers/siswa_provider.dart';
 
 class SiswaMainScreen extends StatefulWidget {
   final int initialIndex;
-  const SiswaMainScreen({super.key, this.initialIndex = 0});
+  const SiswaMainScreen({super.key, this.initialIndex = 2});
 
   @override
   State<SiswaMainScreen> createState() => _SiswaMainScreenState();
@@ -35,9 +35,9 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
   late int _currentIndex;
 
   final List<Widget> _tabs = [
-    const SiswaDashboardTab(),
     const SiswaJadwalTab(),
     const SiswaMateriTab(),
+    const SiswaDashboardTab(),
     const SiswaTugasTab(),
     const SiswaCbtTab(),
   ];
@@ -275,10 +275,14 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
     final unreadQuiz = siswaProvider.unreadQuizCount;
     final unreadForum = siswaProvider.unreadForumCount;
     final unreadChat = siswaProvider.unreadChatCount;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+        elevation: 1,
         title: InkWell(
           onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
@@ -287,10 +291,10 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: AppTheme.secondaryColor.withValues(alpha: 0.2),
+                backgroundColor: isDark ? Colors.white24 : AppTheme.secondaryColor.withValues(alpha: 0.15),
                 backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
                 child: avatarUrl.isEmpty
-                    ? const Icon(Icons.person, color: AppTheme.secondaryColor)
+                    ? Icon(Icons.person, color: isDark ? Colors.white : AppTheme.secondaryColor)
                     : null,
               ),
               const SizedBox(width: 12),
@@ -302,13 +306,13 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
                       user?.fullName ?? 'Siswa',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                     ),
                     Text(
                       user?.subTitle ?? 'Siswa SMK MH',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.grey.shade600),
                     ),
                   ],
                 ),
@@ -318,14 +322,14 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.badge_outlined),
+            icon: Icon(Icons.badge_outlined, color: isDark ? Colors.white : const Color(0xFF0F172A)),
             tooltip: 'Kartu Pelajar Digital',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
             },
           ),
           IconButton(
-            icon: const Icon(Icons.notifications_outlined),
+            icon: Icon(Icons.notifications_outlined, color: isDark ? Colors.white : const Color(0xFF0F172A)),
             tooltip: 'Pusat Notifikasi',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
@@ -336,9 +340,9 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
                 ? Badge(
                     label: Text('$unreadForum', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                     backgroundColor: Colors.amber.shade800,
-                    child: const Icon(Icons.forum_outlined),
+                    child: Icon(Icons.forum_outlined, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                   )
-                : const Icon(Icons.forum_outlined),
+                : Icon(Icons.forum_outlined, color: isDark ? Colors.white : const Color(0xFF0F172A)),
             tooltip: 'Forum Diskusi Komunitas',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaForumScreen()));
@@ -349,15 +353,16 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
                 ? Badge(
                     label: Text('$unreadChat', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                     backgroundColor: Colors.red,
-                    child: const Icon(Icons.chat_bubble_outline),
+                    child: Icon(Icons.chat_bubble_outline, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                   )
-                : const Icon(Icons.chat_bubble_outline),
+                : Icon(Icons.chat_bubble_outline, color: isDark ? Colors.white : const Color(0xFF0F172A)),
             tooltip: 'Pesan & Chat Direct',
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaChatScreen()));
             },
           ),
           PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert, color: isDark ? Colors.white : const Color(0xFF0F172A)),
             onSelected: (value) async {
               if (value == 'logout') {
                 _showLogoutConfirmationDialog(context);
@@ -395,100 +400,206 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
         index: _currentIndex,
         children: _tabs,
       ),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+          height: 68,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.12) : Colors.grey.shade200,
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // 0. Jadwal
+              _buildNavItem(
+                index: 0,
+                icon: Icons.calendar_month_outlined,
+                activeIcon: Icons.calendar_month_rounded,
+                label: 'Jadwal',
+                badgeCount: unreadJadwal,
+                isDark: isDark,
+              ),
+
+              // 1. Materi
+              _buildNavItem(
+                index: 1,
+                icon: Icons.menu_book_outlined,
+                activeIcon: Icons.menu_book_rounded,
+                label: 'Materi',
+                badgeCount: unreadMateri,
+                isDark: isDark,
+              ),
+
+              // 2. Beranda (Center Floating Hero Button)
+              _buildCenterHomeNavItem(isDark: isDark),
+
+              // 3. Tugas
+              _buildNavItem(
+                index: 3,
+                icon: Icons.assignment_outlined,
+                activeIcon: Icons.assignment_rounded,
+                label: 'Tugas',
+                badgeCount: unreadTugas,
+                isDark: isDark,
+              ),
+
+              // 4. CBT Quiz
+              _buildNavItem(
+                index: 4,
+                icon: Icons.quiz_outlined,
+                activeIcon: Icons.quiz_rounded,
+                label: 'CBT Quiz',
+                badgeCount: unreadQuiz,
+                isDark: isDark,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    required int badgeCount,
+    required bool isDark,
+  }) {
+    final bool isSelected = _currentIndex == index;
+    const activeColor = Color(0xFF10B981);
+    final Color inactiveColor = isDark ? Colors.white54 : Colors.grey.shade500;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _currentIndex = index;
+        });
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 10,
-              offset: const Offset(0, -4),
+          color: isSelected ? activeColor.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            badgeCount > 0
+                ? Badge(
+                    label: Text(
+                      '$badgeCount',
+                      style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    backgroundColor: Colors.redAccent,
+                    child: Icon(
+                      isSelected ? activeIcon : icon,
+                      color: isSelected ? activeColor : inactiveColor,
+                      size: 22,
+                    ),
+                  )
+                : Icon(
+                    isSelected ? activeIcon : icon,
+                    color: isSelected ? activeColor : inactiveColor,
+                    size: 22,
+                  ),
+            const SizedBox(height: 3),
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              style: TextStyle(
+                fontSize: isSelected ? 11 : 10.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? activeColor : inactiveColor,
+              ),
+              child: Text(label),
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppTheme.secondaryColor,
-          unselectedItemColor: Colors.grey,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard),
-              label: 'Beranda',
+      ),
+    );
+  }
+
+  Widget _buildCenterHomeNavItem({required bool isDark}) {
+    final bool isSelected = _currentIndex == 2;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _currentIndex = 2;
+        });
+      },
+      child: Transform.translate(
+        offset: const Offset(0, -6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: isSelected
+                    ? AppTheme.siswaGradient
+                    : LinearGradient(
+                        colors: isDark
+                            ? [const Color(0xFF334155), const Color(0xFF1E293B)]
+                            : [Colors.grey.shade200, Colors.grey.shade300],
+                      ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF10B981).withValues(alpha: 0.45),
+                          blurRadius: 14,
+                          offset: const Offset(0, 5),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: isSelected ? AppTheme.siswaGradient : null,
+                  color: isSelected ? null : (isDark ? const Color(0xFF1E293B) : Colors.white),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isSelected ? Icons.grid_view_rounded : Icons.grid_view_outlined,
+                  color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.grey.shade600),
+                  size: 22,
+                ),
+              ),
             ),
-            BottomNavigationBarItem(
-              icon: unreadJadwal > 0
-                  ? Badge(
-                      label: Text('$unreadJadwal', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      backgroundColor: Colors.red,
-                      child: const Icon(Icons.calendar_month_outlined),
-                    )
-                  : const Icon(Icons.calendar_month_outlined),
-              activeIcon: unreadJadwal > 0
-                  ? Badge(
-                      label: Text('$unreadJadwal', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      backgroundColor: Colors.red,
-                      child: const Icon(Icons.calendar_month),
-                    )
-                  : const Icon(Icons.calendar_month),
-              label: 'Jadwal',
-            ),
-            BottomNavigationBarItem(
-              icon: unreadMateri > 0
-                  ? Badge(
-                      label: Text('$unreadMateri', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      backgroundColor: Colors.red,
-                      child: const Icon(Icons.book_outlined),
-                    )
-                  : const Icon(Icons.book_outlined),
-              activeIcon: unreadMateri > 0
-                  ? Badge(
-                      label: Text('$unreadMateri', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      backgroundColor: Colors.red,
-                      child: const Icon(Icons.book),
-                    )
-                  : const Icon(Icons.book),
-              label: 'Materi',
-            ),
-            BottomNavigationBarItem(
-              icon: unreadTugas > 0
-                  ? Badge(
-                      label: Text('$unreadTugas', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      backgroundColor: Colors.red,
-                      child: const Icon(Icons.assignment_outlined),
-                    )
-                  : const Icon(Icons.assignment_outlined),
-              activeIcon: unreadTugas > 0
-                  ? Badge(
-                      label: Text('$unreadTugas', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      backgroundColor: Colors.red,
-                      child: const Icon(Icons.assignment),
-                    )
-                  : const Icon(Icons.assignment),
-              label: 'Tugas',
-            ),
-            BottomNavigationBarItem(
-              icon: unreadQuiz > 0
-                  ? Badge(
-                      label: Text('$unreadQuiz', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      backgroundColor: Colors.red,
-                      child: const Icon(Icons.quiz_outlined),
-                    )
-                  : const Icon(Icons.quiz_outlined),
-              activeIcon: unreadQuiz > 0
-                  ? Badge(
-                      label: Text('$unreadQuiz', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      backgroundColor: Colors.red,
-                      child: const Icon(Icons.quiz),
-                    )
-                  : const Icon(Icons.quiz),
-              label: 'CBT Quiz',
+            const SizedBox(height: 2),
+            Text(
+              'Beranda',
+              style: TextStyle(
+                fontSize: isSelected ? 11 : 10.5,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? const Color(0xFF10B981) : (isDark ? Colors.white54 : Colors.grey.shade500),
+              ),
             ),
           ],
         ),

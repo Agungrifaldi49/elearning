@@ -653,16 +653,23 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Forum Diskusi Komunitas'),
-        backgroundColor: Colors.indigo.shade900,
-        foregroundColor: Colors.white,
-        elevation: 0,
+        title: Text(
+          'Forum Diskusi Komunitas',
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+        elevation: 1,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showNewTopicDialog,
-        backgroundColor: Colors.amber.shade800,
+        backgroundColor: AppTheme.primaryColor,
         icon: const Icon(Icons.add_comment_rounded, color: Colors.white),
         label: const Text('Topik Baru', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
@@ -673,18 +680,12 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.indigo.shade900,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.indigo.shade900.withValues(alpha: 0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
+                border: Border(bottom: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade300)),
               ),
               child: Row(
                 children: [
-                  const Text('Filter Akses:', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text('Filter Akses:', style: TextStyle(color: isDark ? Colors.white70 : Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.bold)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: SingleChildScrollView(

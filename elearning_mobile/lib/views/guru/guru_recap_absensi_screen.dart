@@ -153,14 +153,18 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Rekap Presensi Bulanan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-        backgroundColor: AppTheme.primaryColor,
+        title: const Text('Rekap Presensi Bulanan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.guruGradient,
+          ),
+        ),
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
             tooltip: 'Muat Ulang Data',
             onPressed: _loadRecap,
           ),
@@ -172,9 +176,9 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor,
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+            decoration: const BoxDecoration(
+              gradient: AppTheme.guruGradient,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
             ),
             child: Column(
               children: [
@@ -384,9 +388,7 @@ class _GuruRecapAbsensiScreenState extends State<GuruRecapAbsensiScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppTheme.primaryColor, AppTheme.primaryColor.withValues(alpha: 0.85)],
-                    ),
+                    gradient: AppTheme.guruGradient,
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(

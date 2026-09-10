@@ -229,35 +229,53 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.shield_rounded, color: Colors.white, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          "Hak Akses: $statusHakAkses",
-                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                         ),
-                        const SizedBox(width: 10),
-                        const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 16),
-                        const SizedBox(width: 6),
-                        Text(
-                          "T.A. ${activeTa['tahun_ajaran']} — ${activeTa['semester']}",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.shield_rounded, color: Colors.white, size: 14),
+                            const SizedBox(width: 5),
+                            Text(
+                              "Hak Akses: $statusHakAkses",
+                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 14),
+                            const SizedBox(width: 5),
+                            Text(
+                              "T.A. ${activeTa['tahun_ajaran']} — ${activeTa['semester']}",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -406,7 +424,7 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 2.1,
+              childAspectRatio: 2.2,
               children: [
                 _buildKpiCard(
                   title: 'Materi Dibaca',
@@ -841,9 +859,13 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      count,
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        count,
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+                      ),
                     ),
                     const SizedBox(height: 1),
                     Text(

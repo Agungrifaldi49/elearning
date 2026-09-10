@@ -435,10 +435,10 @@ class _LoginScreenState extends State<LoginScreen>
                     height: 72,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: isGuru ? AppTheme.primaryGradient : AppTheme.siswaGradient,
+                      gradient: isGuru ? AppTheme.guruGradient : AppTheme.siswaGradient,
                       boxShadow: [
                         BoxShadow(
-                          color: (isGuru ? AppTheme.primaryColor : AppTheme.secondaryColor).withValues(alpha: 0.4),
+                          color: (isGuru ? const Color(0xFF1D4ED8) : const Color(0xFF10B981)).withValues(alpha: 0.4),
                           blurRadius: 16,
                           offset: const Offset(0, 6),
                         ),
@@ -466,7 +466,7 @@ class _LoginScreenState extends State<LoginScreen>
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isGuru ? AppTheme.primaryColor : AppTheme.secondaryColor,
+                      color: isGuru ? const Color(0xFF1D4ED8) : const Color(0xFF10B981),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -476,7 +476,7 @@ class _LoginScreenState extends State<LoginScreen>
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: (isGuru ? AppTheme.primaryColor : AppTheme.secondaryColor).withValues(alpha: 0.2),
+                        color: (isGuru ? const Color(0xFF1D4ED8) : const Color(0xFF10B981)).withValues(alpha: 0.2),
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -510,7 +510,7 @@ class _LoginScreenState extends State<LoginScreen>
                         style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isGuru ? AppTheme.primaryColor : AppTheme.secondaryColor,
+                        backgroundColor: isGuru ? const Color(0xFF1D4ED8) : const Color(0xFF10B981),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 4,
@@ -590,18 +590,10 @@ class _LoginScreenState extends State<LoginScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final primaryGradient = _selectedRole == 'guru'
-        ? const LinearGradient(
-            colors: [Color(0xFF4F46E5), Color(0xFF3730A3)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          )
-        : const LinearGradient(
-            colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          );
+        ? AppTheme.guruGradient
+        : AppTheme.siswaGradient;
 
-    final activeColor = _selectedRole == 'guru' ? const Color(0xFF4F46E5) : const Color(0xFF0EA5E9);
+    final activeColor = _selectedRole == 'guru' ? const Color(0xFF1D4ED8) : const Color(0xFF10B981);
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
@@ -838,15 +830,13 @@ class _LoginScreenState extends State<LoginScreen>
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                   decoration: BoxDecoration(
                                     gradient: _selectedRole == 'siswa'
-                                        ? const LinearGradient(
-                                            colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
-                                          )
+                                        ? AppTheme.siswaGradient
                                         : null,
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: _selectedRole == 'siswa'
                                         ? [
                                             BoxShadow(
-                                              color: const Color(0xFF0EA5E9).withValues(alpha: 0.35),
+                                              color: const Color(0xFF10B981).withValues(alpha: 0.35),
                                               blurRadius: 10,
                                               offset: const Offset(0, 4),
                                             ),
@@ -889,15 +879,13 @@ class _LoginScreenState extends State<LoginScreen>
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                   decoration: BoxDecoration(
                                     gradient: _selectedRole == 'guru'
-                                        ? const LinearGradient(
-                                            colors: [Color(0xFF4F46E5), Color(0xFF3730A3)],
-                                          )
+                                        ? AppTheme.guruGradient
                                         : null,
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: _selectedRole == 'guru'
                                         ? [
                                             BoxShadow(
-                                              color: const Color(0xFF4F46E5).withValues(alpha: 0.35),
+                                              color: const Color(0xFF1D4ED8).withValues(alpha: 0.35),
                                               blurRadius: 10,
                                               offset: const Offset(0, 4),
                                             ),

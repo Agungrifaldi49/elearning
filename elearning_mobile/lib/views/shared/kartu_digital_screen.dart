@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../theme/app_theme.dart';
 
 class KartuDigitalScreen extends StatelessWidget {
   const KartuDigitalScreen({super.key});
@@ -27,9 +28,14 @@ class KartuDigitalScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isSiswa ? 'Kartu Pelajar Digital' : 'Kartu Guru Digital'),
-        backgroundColor: isSiswa ? Colors.indigo : Colors.teal,
-        foregroundColor: Colors.white,
+        title: Text(
+          isSiswa ? 'Kartu Pelajar Digital' : 'Kartu Guru Digital',
+          style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -46,13 +52,13 @@ class KartuDigitalScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(
-                    colors: isSiswa
-                        ? [Colors.indigo.shade800, Colors.blue.shade600]
-                        : [Colors.teal.shade800, Colors.teal.shade500],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: isSiswa
+                      ? const LinearGradient(
+                          colors: [Color(0xFF3730A3), Color(0xFF4F46E5)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : AppTheme.guruGradient,
                 ),
                 child: Column(
                   children: [

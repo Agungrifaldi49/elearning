@@ -127,14 +127,16 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kamera Scanner Presensi Siswa'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
+        title: const Text('Kamera Scanner Presensi Siswa', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
             icon: Icon(
               _isTorchOn ? Icons.flash_on : Icons.flash_off,
-              color: _isTorchOn ? Colors.amber : Colors.white,
+              color: _isTorchOn ? const Color(0xFF1D4ED8) : Colors.black87,
             ),
             onPressed: () {
               _scannerController.toggleTorch();
@@ -144,7 +146,7 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.cameraswitch, color: Colors.white),
+            icon: const Icon(Icons.cameraswitch, color: Colors.black87),
             onPressed: () => _scannerController.switchCamera(),
           ),
         ],
@@ -176,13 +178,13 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
                   height: 250,
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: _isProcessing ? Colors.amber : Colors.tealAccent,
+                      color: _isProcessing ? const Color(0xFF38BDF8) : const Color(0xFF60A5FA),
                       width: 3,
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: (isSuccess ? Colors.teal : Colors.black).withValues(alpha: 0.3),
+                        color: (isSuccess ? const Color(0xFF1D4ED8) : Colors.black).withValues(alpha: 0.3),
                         blurRadius: 10,
                       ),
                     ],
@@ -205,9 +207,9 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
                             ? const SizedBox(
                                 width: 14,
                                 height: 14,
-                                child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2),
+                                child: CircularProgressIndicator(color: Color(0xFF38BDF8), strokeWidth: 2),
                               )
-                            : const Icon(Icons.qr_code_scanner, color: Colors.tealAccent, size: 18),
+                            : const Icon(Icons.qr_code_scanner, color: Color(0xFF38BDF8), size: 18),
                         const SizedBox(width: 8),
                         Text(
                           _isProcessing ? 'Memproses Presensi...' : 'Arahkan kamera ke QR Code Kartu Pelajar',
@@ -293,7 +295,7 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
                                   children: [
                                     Text(
                                       "⏰ Jam Masuk: $jamMasukVal",
-                                      style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 13),
+                                      style: const TextStyle(color: Color(0xFF1D4ED8), fontWeight: FontWeight.bold, fontSize: 13),
                                     ),
                                     if (jamPulangVal != null) ...[
                                       const SizedBox(width: 12),
@@ -308,7 +310,7 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: isSuccess ? Colors.teal : Colors.red.shade700,
+                                    color: isSuccess ? const Color(0xFF1D4ED8) : Colors.red.shade700,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -328,7 +330,7 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
                   // Manual Input Fallback Accordion
                   ExpansionTile(
                     initiallyExpanded: false,
-                    leading: const Icon(Icons.keyboard, color: Colors.teal),
+                    leading: const Icon(Icons.keyboard, color: Color(0xFF1D4ED8)),
                     title: const Text('Input Manual NIS / Payload QR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     children: [
                       Padding(
@@ -350,7 +352,7 @@ class _GuruScanQRScreenState extends State<GuruScanQRScreen> {
                                 onPressed: _isProcessing ? null : () => _processScan(_manualInputController.text),
                                 icon: const Icon(Icons.check),
                                 label: const Text('Rekam Presensi Manual'),
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D4ED8), foregroundColor: Colors.white),
                               ),
                             ),
                           ],

@@ -67,73 +67,73 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
       _buildFeatureGridItem(
         icon: Icons.vpn_key_rounded,
         label: 'Kode Key Mapel',
-        color: Colors.amber.shade800,
+        color: const Color(0xFF38BDF8),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruKeyMapelScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.edit_note_rounded,
         label: 'Input Nilai',
-        color: Colors.indigo,
+        color: const Color(0xFF818CF8),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.how_to_reg_rounded,
         label: 'Presensi Manual',
-        color: Colors.green.shade700,
+        color: const Color(0xFF34D399),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputAbsensiScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.bar_chart_rounded,
         label: 'Rekap Presensi',
-        color: Colors.blue.shade800,
+        color: const Color(0xFF60A5FA),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruRecapAbsensiScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.qr_code_scanner_rounded,
         label: 'Scan QR Presensi',
-        color: Colors.teal.shade800,
+        color: const Color(0xFF2DD4BF),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruScanQRScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.inventory_2_rounded,
         label: 'Bank Soal CBT',
-        color: Colors.amber.shade900,
+        color: const Color(0xFFA78BFA),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruBankSoalScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.videocam_rounded,
         label: 'Live Meeting',
-        color: Colors.red,
+        color: const Color(0xFFF472B6),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveClassScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.badge_rounded,
         label: 'Kartu Guru',
-        color: Colors.blue.shade700,
+        color: const Color(0xFF3B82F6),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.menu_book_rounded,
         label: 'Perpustakaan',
-        color: Colors.deepOrange,
+        color: const Color(0xFF38BDF8),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.sports_esports_rounded,
         label: 'EduGame',
-        color: Colors.purple,
+        color: const Color(0xFFC084FC),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.help_outline_rounded,
         label: 'Panduan LMS',
-        color: Colors.blueGrey,
+        color: const Color(0xFF94A3B8),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PanduanScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.person_rounded,
         label: 'Edit Profil',
-        color: Colors.blueGrey.shade700,
+        color: const Color(0xFF64748B),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen())),
       ),
     ];
@@ -157,8 +157,8 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withValues(alpha: 0.3),
-                    blurRadius: 12,
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.4),
+                    blurRadius: 14,
                     offset: const Offset(0, 6),
                   ),
                 ],
@@ -199,8 +199,9 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                         ),
                         child: const Icon(Icons.co_present, color: Colors.white, size: 28),
                       ),
@@ -210,9 +211,9 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
+                      color: Colors.black.withValues(alpha: 0.25),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -242,13 +243,16 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.amber.shade700, Colors.orange.shade800],
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E3A8A), Color(0xFF0F172A), Color(0xFF020617)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.3)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.amber.shade900.withValues(alpha: 0.3),
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.35),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -258,11 +262,11 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Colors.white24,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.access_time_filled_rounded, color: Colors.white, size: 24),
+                        child: const Icon(Icons.access_time_filled_rounded, color: Color(0xFF60A5FA), size: 24),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -276,12 +280,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                             SizedBox(height: 2),
                             Text(
                               'Ketuk untuk membuka Kartu Guru Digital & presensi masuk',
-                              style: TextStyle(color: Colors.white70, fontSize: 11),
+                              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
                     ],
                   ),
                 ),
@@ -294,13 +298,16 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.indigo.shade700, Colors.blue.shade900],
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1D4ED8), Color(0xFF0F172A), Color(0xFF020617)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.indigo.shade900.withValues(alpha: 0.3),
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.35),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -310,11 +317,11 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                     children: [
                       Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Colors.white24,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF60A5FA).withValues(alpha: 0.25),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.home_work_rounded, color: Colors.white, size: 24),
+                        child: const Icon(Icons.home_work_rounded, color: Color(0xFF93C5FD), size: 24),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -328,12 +335,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                             SizedBox(height: 2),
                             Text(
                               'Ketuk untuk membuka Kartu Guru Digital & presensi pulang',
-                              style: TextStyle(color: Colors.white70, fontSize: 11),
+                              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
                     ],
                   ),
                 ),
@@ -343,18 +350,28 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.green.shade50,
+                  gradient: LinearGradient(
+                    colors: isDark
+                        ? [const Color(0xFF0F172A), const Color(0xFF1E3A8A).withValues(alpha: 0.5)]
+                        : [const Color(0xFFEFF6FF), const Color(0xFFDBEAFE)],
+                  ),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.green.shade300),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFBFDBFE),
+                  ),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.check_circle_rounded, color: Colors.green.shade700, size: 22),
+                    Icon(Icons.check_circle_rounded, color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB), size: 22),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         '🎉 Presensi Masuk & Pulang Anda hari ini telah LENGKAP',
-                        style: TextStyle(color: Colors.green.shade900, fontWeight: FontWeight.bold, fontSize: 12.5),
+                        style: TextStyle(
+                          color: isDark ? Colors.white : const Color(0xFF1E3A8A),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12.5,
+                        ),
                       ),
                     ),
                   ],
@@ -377,28 +394,28 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                   title: 'Materi Upload',
                   count: stats['materi'].toString(),
                   icon: Icons.upload_file_rounded,
-                  color: Colors.blue,
+                  color: const Color(0xFF38BDF8),
                   isDark: isDark,
                 ),
                 _buildStatCard(
                   title: 'Tugas Active',
                   count: stats['tugas'].toString(),
                   icon: Icons.task_alt_rounded,
-                  color: Colors.green,
+                  color: const Color(0xFF34D399),
                   isDark: isDark,
                 ),
                 _buildStatCard(
                   title: 'Quiz / CBT',
                   count: stats['quiz'].toString(),
                   icon: Icons.quiz_rounded,
-                  color: Colors.amber.shade800,
+                  color: const Color(0xFFA78BFA),
                   isDark: isDark,
                 ),
                 _buildStatCard(
                   title: 'Siswa Terdaftar',
                   count: (stats['siswa_terdaftar'] ?? 0).toString(),
                   icon: Icons.people_alt_rounded,
-                  color: Colors.purple,
+                  color: const Color(0xFF60A5FA),
                   isDark: isDark,
                 ),
               ],
@@ -635,9 +652,14 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? const Color(0xFF1E3A8A).withValues(alpha: 0.4)
+              : const Color(0xFFE2E8F0),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -648,7 +670,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 22),
@@ -668,7 +690,10 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? const Color(0xFF94A3B8) : Colors.grey.shade600,
+                  ),
                 ),
               ],
             ),

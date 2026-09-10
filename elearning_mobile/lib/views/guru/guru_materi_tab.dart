@@ -690,11 +690,7 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF2563EB)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: AppTheme.guruGradient,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
@@ -768,7 +764,7 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                           'Total Modul',
                           '$totalMateriCount',
                           Icons.folder_special_rounded,
-                          Colors.lightBlueAccent,
+                          const Color(0xFF38BDF8),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -777,7 +773,7 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                           'Dokumen PDF',
                           '$pdfCount',
                           Icons.picture_as_pdf_rounded,
-                          Colors.amberAccent,
+                          const Color(0xFF818CF8),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -786,7 +782,7 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                           'Video Learn',
                           '$videoCount',
                           Icons.play_circle_fill_rounded,
-                          Colors.redAccent,
+                          const Color(0xFF60A5FA),
                         ),
                       ),
                     ],

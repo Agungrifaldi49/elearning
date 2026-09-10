@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
+import '../../theme/app_theme.dart';
 import 'edugame_play_screen.dart';
 
 class EduGameScreen extends StatefulWidget {
@@ -190,14 +191,18 @@ class _EduGameScreenState extends State<EduGameScreen> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('EduGame & Arena Kuis', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-        backgroundColor: Colors.purple.shade800,
+        title: const Text('EduGame & Arena Kuis', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.guruGradient,
+          ),
+        ),
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Icons.refresh_rounded, color: Colors.white),
             tooltip: 'Muat Ulang Data',
             onPressed: _fetchGames,
           ),
@@ -210,13 +215,11 @@ class _EduGameScreenState extends State<EduGameScreen> {
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.purple.shade800, Colors.indigo.shade900],
-              ),
+              gradient: AppTheme.guruGradient,
               borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.purple.shade900.withValues(alpha: 0.3),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.3),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -227,7 +230,7 @@ class _EduGameScreenState extends State<EduGameScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.sports_esports_rounded, color: Colors.amber, size: 28),
+                    Icon(Icons.sports_esports_rounded, color: Color(0xFF38BDF8), size: 28),
                     SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,8 +240,8 @@ class _EduGameScreenState extends State<EduGameScreen> {
                           style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          'Bermain Sambil Mengasah Kompetensi Kejuruan',
-                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                          'Bermain sambil mengasah pengetahuan!',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                       ],
                     ),

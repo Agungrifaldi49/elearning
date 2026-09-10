@@ -97,17 +97,24 @@ class _SiswaNilaiTabState extends State<SiswaNilaiTab> {
         ? (avgScore >= 88 ? 'A (Sangat Baik)' : (avgScore >= 78 ? 'B (Baik)' : (avgScore >= 68 ? 'C (Cukup)' : 'D (Kurang)')))
         : 'Belum Ada Nilai';
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Rekap Nilai & E-Rapor Digital',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
         ),
-        elevation: 0,
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+        elevation: 1,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(Icons.refresh_rounded, color: isDark ? Colors.white : const Color(0xFF0F172A)),
             tooltip: 'Sinkronkan Nilai Real-time',
             onPressed: _loadNilai,
           ),

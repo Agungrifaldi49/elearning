@@ -295,8 +295,8 @@ body {
                             </div>
 
                             <!-- Teks Pertanyaan -->
-                            <div class="lh-lg fw-semibold text-slate-800 mb-3 fs-6 fs-md-5" style="color: #1e293b;">
-                                <?= nl2br(htmlspecialchars($soal['pertanyaan'])) ?>
+                            <div class="lh-lg fw-semibold text-slate-800 mb-3 fs-6 fs-md-5" style="color: #1e293b; white-space: pre-wrap; word-break: break-word;">
+                                <?= Security::safeText($soal['pertanyaan']) ?>
                             </div>
 
                             <!-- Gambar Soal (Jika Ada) -->

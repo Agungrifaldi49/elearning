@@ -562,7 +562,7 @@ class ExamModel extends BaseModel {
                 continue;
             }
 
-            $pertanyaan = trim($data[$tanyaIdx] ?? '');
+            $pertanyaan = trim(str_replace("\r\n", "\n", $data[$tanyaIdx] ?? ''));
             $bobot = (int)($data[$bobotIdx] ?? 10);
             if ($bobot <= 0) $bobot = 10;
 

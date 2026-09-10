@@ -1375,7 +1375,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                             </div>
                             <div class="mb-2">
                                 <label class="form-label small fw-bold">Pertanyaan Soal <span class="text-danger">*</span></label>
-                                <input type="text" name="pertanyaan[]" class="form-control" placeholder="Masukkan pertanyaan soal..." required>
+                                <textarea name="pertanyaan[]" class="form-control" rows="3" placeholder="Masukkan pertanyaan atau potongan kode (code snippet)..." required style="font-family: inherit; resize: vertical; min-height: 85px;"></textarea>
                             </div>
                             <div class="mb-2">
                                 <label class="form-label small fw-bold"><i class="bi bi-image text-primary me-1"></i>Lampiran Gambar Soal <span class="text-muted fw-normal">(Opsional)</span></label>
@@ -1478,11 +1478,11 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                                 <?= Security::csrfField() ?>
                                                 <input type="hidden" name="action" value="delete_soal">
                                                 <input type="hidden" name="soal_id" value="<?= $s['id'] ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill" style="font-size:0.75rem;"><i class="bi bi-trash me-1"></i> Hapus</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill" style="font-size:0.75rem;"><i class="bi bi-trash"></i> Hapus</button>
                                             </form>
                                         <?php endif; ?>
                                     </div>
-                                    <p class="fw-semibold text-dark mb-2"><?= htmlspecialchars($s['pertanyaan']) ?></p>
+                                    <div class="fw-semibold text-dark mb-2" style="white-space: pre-wrap; word-break: break-word; font-size: 0.95rem; line-height: 1.6;"><?= Security::safeText($s['pertanyaan']) ?></div>
 
                                     <?php if (!empty($s['gambar'])): ?>
                                         <div class="my-2 p-2 bg-light rounded-3 border text-center">
@@ -1593,7 +1593,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
 
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Teks Pertanyaan Soal <span class="text-danger">*</span></label>
-                            <input type="text" name="pertanyaan" class="form-control" placeholder="Masukkan teks pertanyaan soal..." required>
+                            <textarea name="pertanyaan" class="form-control" rows="3" placeholder="Masukkan teks pertanyaan atau potongan kode (code snippet)..." required style="font-family: inherit; resize: vertical; min-height: 85px;"></textarea>
                         </div>
 
                         <div class="mb-3">
@@ -1991,7 +1991,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                         </div>
                                         <span class="badge bg-secondary rounded-pill fw-semibold">Maksimal Bobot: <?= $ea['bobot'] ?? 10 ?> Poin</span>
                                     </div>
-                                    <p class="fw-bold text-dark mb-2"><?= htmlspecialchars($ea['pertanyaan']) ?></p>
+                                    <div class="fw-bold text-dark mb-2" style="white-space: pre-wrap; word-break: break-word; font-size: 0.95rem; line-height: 1.6;"><?= Security::safeText($ea['pertanyaan']) ?></div>
                                     <div class="p-3 bg-white border rounded-3 mb-3">
                                         <small class="text-muted fw-bold d-block mb-1">Teks Jawaban Siswa:</small>
                                         <div class="font-monospace text-slate-800" style="font-size:0.9rem;"><?= nl2br(htmlspecialchars($ea['teks_jawaban_essay'] ?? 'Siswa Tidak Mengisi Jawaban Essay')) ?></div>
@@ -2078,7 +2078,7 @@ function addQuestionCard() {
         </div>
         <div class="mb-2">
             <label class="form-label small fw-bold">Pertanyaan Soal <span class="text-danger">*</span></label>
-            <input type="text" name="pertanyaan[]" class="form-control" placeholder="Masukkan pertanyaan soal..." required>
+            <textarea name="pertanyaan[]" class="form-control" rows="3" placeholder="Masukkan pertanyaan atau potongan kode (code snippet)..." required style="font-family: inherit; resize: vertical; min-height: 85px;"></textarea>
         </div>
         <div class="mb-2">
             <label class="form-label small fw-bold"><i class="bi bi-image text-primary me-1"></i>Lampiran Gambar Soal <span class="text-muted fw-normal">(Opsional)</span></label>

@@ -230,10 +230,17 @@ class _GabungKelasScreenState extends State<GabungKelasScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Gabung Rombel & Enrol Mapel', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-          backgroundColor: Colors.indigo.shade900,
-          foregroundColor: Colors.white,
-          elevation: 0,
+          title: Text(
+            'Gabung Rombel & Enrol Mapel',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 17,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
+          backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+          elevation: 1,
         ),
         body: Column(
           children: [

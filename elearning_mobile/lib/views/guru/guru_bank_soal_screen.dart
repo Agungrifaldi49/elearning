@@ -481,10 +481,11 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title: const Text('Bank Soal CBT Guru', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
+        title: const Text('Bank Soal CBT Guru', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddSoalModal,
@@ -507,11 +508,7 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF6B21A8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                gradient: AppTheme.guruGradient,
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(

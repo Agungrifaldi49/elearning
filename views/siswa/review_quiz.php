@@ -181,8 +181,8 @@ $scoreVal = (float)($hasilQuiz['total_nilai'] ?? 0);
             </div>
 
             <!-- Question Text -->
-            <div class="fw-semibold text-slate-800 fs-6 mb-3" style="line-height: 1.6; color: #1e293b;">
-                <?= nl2br(htmlspecialchars($s['pertanyaan'])) ?>
+            <div class="fw-semibold text-slate-800 fs-6 mb-3" style="line-height: 1.6; color: #1e293b; white-space: pre-wrap; word-break: break-word;">
+                <?= Security::safeText($s['pertanyaan']) ?>
             </div>
 
             <?php if (!empty($s['gambar'])): ?>

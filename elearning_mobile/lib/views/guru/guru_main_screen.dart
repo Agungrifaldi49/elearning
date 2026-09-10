@@ -26,7 +26,7 @@ import '../../services/attendance_reminder_service.dart';
 
 class GuruMainScreen extends StatefulWidget {
   final int initialIndex;
-  const GuruMainScreen({super.key, this.initialIndex = 0});
+  const GuruMainScreen({super.key, this.initialIndex = 2});
 
   @override
   State<GuruMainScreen> createState() => _GuruMainScreenState();
@@ -36,9 +36,9 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
   late int _currentIndex;
 
   final List<Widget> _tabs = [
-    const GuruDashboardTab(),
     const GuruJadwalTab(),
     const GuruMateriTab(),
+    const GuruDashboardTab(),
     const GuruTugasTab(),
     const GuruCbtTab(),
   ];
@@ -270,9 +270,15 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
     final unreadForum = guruProvider.unreadForumCount;
     final unreadChat = guruProvider.unreadChatCount;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
         title: InkWell(
           onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
@@ -281,10 +287,10 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.2),
+                backgroundColor: const Color(0xFF1D4ED8).withValues(alpha: 0.1),
                 backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
                 child: avatarUrl.isEmpty
-                    ? const Icon(Icons.co_present, color: AppTheme.primaryColor)
+                    ? const Icon(Icons.co_present, color: Color(0xFF1D4ED8))
                     : null,
               ),
               const SizedBox(width: 12),
@@ -296,13 +302,13 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
                       user?.fullName ?? 'Guru',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
                     ),
                     Text(
                       user?.subTitle ?? 'Guru SMK MH',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                     ),
                   ],
                 ),
@@ -376,17 +382,17 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(value: 'profil', child: Row(children: [Icon(Icons.person_outline_rounded, size: 20, color: Colors.blue), SizedBox(width: 10), Text('Edit & Update Profil')])),
-              const PopupMenuItem(value: 'kartu', child: Row(children: [Icon(Icons.badge_outlined, size: 20, color: Colors.purple), SizedBox(width: 10), Text('Kartu Guru Digital')])),
-              const PopupMenuItem(value: 'key_mapel', child: Row(children: [Icon(Icons.vpn_key_rounded, size: 20, color: Colors.amber), SizedBox(width: 10), Text('Kode Key Mapel Virtual')])),
-              const PopupMenuItem(value: 'input_nilai', child: Row(children: [Icon(Icons.assignment_turned_in_outlined, size: 20, color: Colors.teal), SizedBox(width: 10), Text('Input & Edit Nilai Siswa')])),
-              const PopupMenuItem(value: 'input_absensi', child: Row(children: [Icon(Icons.how_to_reg_rounded, size: 20, color: Colors.green), SizedBox(width: 10), Text('Input Presensi Manual')])),
-              const PopupMenuItem(value: 'recap_absensi', child: Row(children: [Icon(Icons.bar_chart_rounded, size: 20, color: Colors.indigo), SizedBox(width: 10), Text('Rekap Presensi Bulanan')])),
-              const PopupMenuItem(value: 'absensi', child: Row(children: [Icon(Icons.calendar_month_outlined, size: 20, color: Colors.orange), SizedBox(width: 10), Text('Jadwal & Absensi Kelas')])),
-              const PopupMenuItem(value: 'library', child: Row(children: [Icon(Icons.local_library_outlined, size: 20, color: Colors.deepOrange), SizedBox(width: 10), Text('Perpustakaan Digital')])),
-              const PopupMenuItem(value: 'game', child: Row(children: [Icon(Icons.sports_esports_outlined, size: 20, color: Colors.pink), SizedBox(width: 10), Text('EduGame & Kuis Interaktif')])),
+              const PopupMenuItem(value: 'profil', child: Row(children: [Icon(Icons.person_outline_rounded, size: 20, color: Color(0xFF64748B)), SizedBox(width: 10), Text('Edit & Update Profil')])),
+              const PopupMenuItem(value: 'kartu', child: Row(children: [Icon(Icons.badge_outlined, size: 20, color: Color(0xFF3B82F6)), SizedBox(width: 10), Text('Kartu Guru Digital')])),
+              const PopupMenuItem(value: 'key_mapel', child: Row(children: [Icon(Icons.vpn_key_rounded, size: 20, color: Color(0xFF38BDF8)), SizedBox(width: 10), Text('Kode Key Mapel Virtual')])),
+              const PopupMenuItem(value: 'input_nilai', child: Row(children: [Icon(Icons.assignment_turned_in_outlined, size: 20, color: Color(0xFF818CF8)), SizedBox(width: 10), Text('Input & Edit Nilai Siswa')])),
+              const PopupMenuItem(value: 'input_absensi', child: Row(children: [Icon(Icons.how_to_reg_rounded, size: 20, color: Color(0xFF34D399)), SizedBox(width: 10), Text('Input Presensi Manual')])),
+              const PopupMenuItem(value: 'recap_absensi', child: Row(children: [Icon(Icons.bar_chart_rounded, size: 20, color: Color(0xFF60A5FA)), SizedBox(width: 10), Text('Rekap Presensi Bulanan')])),
+              const PopupMenuItem(value: 'absensi', child: Row(children: [Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF38BDF8)), SizedBox(width: 10), Text('Jadwal & Absensi Kelas')])),
+              const PopupMenuItem(value: 'library', child: Row(children: [Icon(Icons.local_library_outlined, size: 20, color: Color(0xFF38BDF8)), SizedBox(width: 10), Text('Perpustakaan Digital')])),
+              const PopupMenuItem(value: 'game', child: Row(children: [Icon(Icons.sports_esports_outlined, size: 20, color: Color(0xFFC084FC)), SizedBox(width: 10), Text('EduGame & Kuis Interaktif')])),
               const PopupMenuDivider(),
-              const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout_rounded, size: 20, color: Colors.red), SizedBox(width: 10), Text('Keluar / Logout', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))])),
+              const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)), SizedBox(width: 10), Text('Keluar / Logout', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold))])),
             ],
           ),
         ],
@@ -397,78 +403,202 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0F172A) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 10,
+              color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
+              blurRadius: 16,
               offset: const Offset(0, -4),
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppTheme.primaryColor,
-          unselectedItemColor: Colors.grey,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard),
-              label: 'Dashboard',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_month_outlined),
-              activeIcon: Icon(Icons.calendar_month),
-              label: 'Jadwal',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.upload_file_outlined),
-              activeIcon: Icon(Icons.upload_file),
-              label: 'Materi',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.task_outlined),
-              activeIcon: Icon(Icons.task),
-              label: 'Tugas',
-            ),
-            BottomNavigationBarItem(
-              icon: Consumer<GuruProvider>(
-                builder: (context, guruProvider, child) {
-                  final pendingCount = guruProvider.susulanList
-                      .where((e) => (e['status'] ?? '') == 'pending')
-                      .length;
-                  if (pendingCount > 0) {
-                    return Badge(
-                      label: Text('$pendingCount'),
-                      backgroundColor: Colors.amber.shade900,
-                      child: const Icon(Icons.quiz_outlined),
+        child: SafeArea(
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 64, maxHeight: 72),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(
+                  index: 0,
+                  icon: Icons.calendar_month_outlined,
+                  activeIcon: Icons.calendar_month_rounded,
+                  label: 'Jadwal',
+                  isDark: isDark,
+                ),
+                _buildNavItem(
+                  index: 1,
+                  icon: Icons.menu_book_outlined,
+                  activeIcon: Icons.menu_book_rounded,
+                  label: 'Materi',
+                  isDark: isDark,
+                ),
+                _buildCenterNavItem(
+                  label: 'Beranda',
+                  isDark: isDark,
+                ),
+                _buildNavItem(
+                  index: 3,
+                  icon: Icons.assignment_outlined,
+                  activeIcon: Icons.assignment_rounded,
+                  label: 'Tugas',
+                  isDark: isDark,
+                ),
+                Consumer<GuruProvider>(
+                  builder: (context, guruProvider, child) {
+                    final pendingCount = guruProvider.susulanList
+                        .where((e) => (e['status'] ?? '') == 'pending')
+                        .length;
+                    return _buildNavItem(
+                      index: 4,
+                      icon: Icons.quiz_outlined,
+                      activeIcon: Icons.quiz_rounded,
+                      label: 'CBT Quiz',
+                      badgeCount: pendingCount,
+                      isDark: isDark,
                     );
-                  }
-                  return const Icon(Icons.quiz_outlined);
-                },
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+    int badgeCount = 0,
+    required bool isDark,
+  }) {
+    final isSelected = _currentIndex == index;
+    final activeColor = isDark ? const Color(0xFF60A5FA) : const Color(0xFF1D4ED8);
+    final inactiveColor = isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+
+    Widget iconWidget = Icon(
+      isSelected ? activeIcon : icon,
+      color: isSelected ? activeColor : inactiveColor,
+      size: 22,
+    );
+
+    if (badgeCount > 0) {
+      iconWidget = Badge(
+        label: Text(
+          '$badgeCount',
+          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        backgroundColor: Colors.amber.shade900,
+        child: iconWidget,
+      );
+    }
+
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        splashColor: activeColor.withValues(alpha: 0.1),
+        highlightColor: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              decoration: BoxDecoration(
+                color: isSelected ? activeColor.withValues(alpha: 0.12) : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
               ),
-              activeIcon: Consumer<GuruProvider>(
-                builder: (context, guruProvider, child) {
-                  final pendingCount = guruProvider.susulanList
-                      .where((e) => (e['status'] ?? '') == 'pending')
-                      .length;
-                  if (pendingCount > 0) {
-                    return Badge(
-                      label: Text('$pendingCount'),
-                      backgroundColor: Colors.amber.shade900,
-                      child: const Icon(Icons.quiz),
-                    );
-                  }
-                  return const Icon(Icons.quiz);
-                },
+              child: iconWidget,
+            ),
+            const SizedBox(height: 2),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? activeColor : inactiveColor,
+                  ),
+                  maxLines: 1,
+                ),
               ),
-              label: 'CBT Quiz',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCenterNavItem({
+    required String label,
+    required bool isDark,
+  }) {
+    final isSelected = _currentIndex == 2;
+    final activeColor = isDark ? const Color(0xFF60A5FA) : const Color(0xFF1D4ED8);
+    final inactiveColor = isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8);
+
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _currentIndex = 2;
+          });
+        },
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              width: isSelected ? 42 : 38,
+              height: isSelected ? 42 : 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppTheme.guruGradient,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF1D4ED8).withValues(alpha: isSelected ? 0.45 : 0.2),
+                    blurRadius: isSelected ? 10 : 5,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Icon(
+                isSelected ? Icons.grid_view_rounded : Icons.grid_view_outlined,
+                color: Colors.white,
+                size: isSelected ? 22 : 20,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    color: isSelected ? activeColor : inactiveColor,
+                  ),
+                  maxLines: 1,
+                ),
+              ),
             ),
           ],
         ),

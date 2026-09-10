@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../theme/app_theme.dart';
 
 class LiveClassScreen extends StatefulWidget {
   const LiveClassScreen({super.key});
@@ -65,25 +66,18 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
           children: [
             Text(
               'Kelas Virtual Live Meeting',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
             ),
             Text(
               'Tatap Muka & Sync Learning Realtime',
-              style: TextStyle(fontSize: 11, color: Colors.white70),
+              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
             ),
           ],
         ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF334155)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -97,11 +91,7 @@ class _LiveClassScreenState extends State<LiveClassScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF4338CA), Color(0xFF6366F1), Color(0xFF818CF8)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient: AppTheme.guruGradient,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(

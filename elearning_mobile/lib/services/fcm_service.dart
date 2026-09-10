@@ -173,10 +173,10 @@ class FcmService {
         break;
 
       case 'jadwal':
-        // Route to Siswa Main Screen tab 1 (Jadwal)
+        // Route to Siswa Main Screen tab 0 (Jadwal)
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const SiswaMainScreen(initialIndex: 1)),
+          MaterialPageRoute(builder: (_) => const SiswaMainScreen(initialIndex: 0)),
         );
         break;
 

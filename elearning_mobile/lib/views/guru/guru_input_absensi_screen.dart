@@ -219,8 +219,12 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Input Presensi Manual', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-        backgroundColor: AppTheme.primaryColor,
+        title: const Text('Input Presensi Manual', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17)),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.guruGradient,
+          ),
+        ),
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -231,9 +235,9 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor,
-              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+            decoration: const BoxDecoration(
+              gradient: AppTheme.guruGradient,
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

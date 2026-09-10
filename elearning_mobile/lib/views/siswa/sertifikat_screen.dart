@@ -50,11 +50,19 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sertifikat Kelulusan'),
-        backgroundColor: Colors.amber.shade800,
-        foregroundColor: Colors.white,
+        title: Text(
+          'Sertifikat Kelulusan LMS',
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+        elevation: 1,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

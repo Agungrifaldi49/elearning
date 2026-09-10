@@ -133,17 +133,22 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
       final siswaProvider = Provider.of<SiswaProvider>(context);
       chatStream = siswaProvider.chatContactsStream;
       initialContacts = siswaProvider.chatContacts;
-      totalUnreadCount = siswaProvider.unreadChatCount;
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Row(
           children: [
-            const Text(
+            Text(
               'Pesan & Direct Chat',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
             ),
             if (totalUnreadCount > 0) ...[
               const SizedBox(width: 8),
@@ -161,12 +166,12 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
             ],
           ],
         ),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+        elevation: 1,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: Icon(Icons.refresh_rounded, color: isDark ? Colors.white : const Color(0xFF0F172A)),
             tooltip: 'Segarkan Kontak',
             onPressed: () => _loadContacts(),
           ),
@@ -177,21 +182,21 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
           // Header Search Box
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            decoration: const BoxDecoration(
-              color: Color(0xFF0F172A),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              border: Border(bottom: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade200)),
             ),
             child: TextField(
               controller: _searchController,
               onChanged: (_) => setState(() {}),
-              style: const TextStyle(color: Colors.white, fontSize: 14),
+              style: TextStyle(color: isDark ? Colors.white : const Color(0xFF0F172A), fontSize: 14),
               decoration: InputDecoration(
                 hintText: 'Cari Kontak Guru, Siswa, Admin, Kepsek...',
-                hintStyle: const TextStyle(color: Colors.white54, fontSize: 13),
-                prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54),
+                hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.grey.shade500, fontSize: 13),
+                prefixIcon: Icon(Icons.search_rounded, color: isDark ? Colors.white54 : Colors.grey.shade500),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                        icon: Icon(Icons.clear_rounded, color: isDark ? Colors.white54 : Colors.grey.shade500, size: 18),
                         onPressed: () {
                           _searchController.clear();
                           setState(() {});
@@ -199,7 +204,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                       )
                     : null,
                 filled: true,
-                fillColor: Colors.white.withValues(alpha: 0.12),
+                fillColor: isDark ? const Color(0xFF0F172A) : Colors.grey.shade100,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,

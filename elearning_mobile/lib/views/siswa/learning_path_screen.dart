@@ -639,15 +639,19 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
       appBar: AppBar(
         title: Text(
           'Learning Path & Alur Kurikulum',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
         ),
-        backgroundColor: isDark ? const Color(0xFF1E293B) : const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+        elevation: 1,
         actions: [
           IconButton(
             tooltip: 'Input Key Mapel Baru',
-            icon: const Icon(Icons.key_rounded, color: Colors.amberAccent),
+            icon: Icon(Icons.key_rounded, color: isDark ? Colors.amberAccent : AppTheme.primaryColor),
             onPressed: () {
               Navigator.push(
                 context,

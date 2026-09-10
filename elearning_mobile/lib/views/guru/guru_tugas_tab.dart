@@ -324,22 +324,22 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
+                        color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.shade300),
+                        border: Border.all(color: const Color(0xFFBFDBFE)),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.event_available_rounded, color: Colors.amber.shade900, size: 20),
+                          const Icon(Icons.event_available_rounded, color: Color(0xFF1D4ED8), size: 20),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Tanggal & Waktu Batas Akhir', style: TextStyle(fontSize: 10, color: Colors.amber.shade900, fontWeight: FontWeight.w600)),
+                                const Text('Tanggal & Waktu Batas Akhir', style: TextStyle(fontSize: 10, color: Color(0xFF1D4ED8), fontWeight: FontWeight.w600)),
                                 Text(
                                   deadlineFormatted,
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
                                 ),
                               ],
                             ),
@@ -474,12 +474,12 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
             // Deadline Box
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.amber.shade50, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.amber.shade200)),
+              decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFBFDBFE))),
               child: Row(
                 children: [
-                  Icon(Icons.alarm_rounded, color: Colors.amber.shade900, size: 20),
+                  const Icon(Icons.alarm_rounded, color: Color(0xFF1D4ED8), size: 20),
                   const SizedBox(width: 8),
-                  Text('Batas Deadline: ${t.deadline}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.amber.shade900)),
+                  Text('Batas Deadline: ${t.deadline}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
                 ],
               ),
             ),
@@ -1088,12 +1088,12 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: type == 'TUGAS' ? Colors.indigo.shade50 : Colors.purple.shade50,
+                        color: type == 'TUGAS' ? const Color(0xFFEFF6FF) : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         '$type SUSULAN',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: type == 'TUGAS' ? Colors.indigo : Colors.purple),
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: type == 'TUGAS' ? const Color(0xFF1D4ED8) : const Color(0xFF475569)),
                       ),
                     ),
                     Text(
@@ -1236,11 +1236,7 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0D9488)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: AppTheme.guruGradient,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
@@ -1530,7 +1526,7 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                               gradient: LinearGradient(
                                 colors: isExpired
                                     ? [Colors.red.shade400, Colors.red.shade700]
-                                    : [AppTheme.primaryColor, Colors.teal],
+                                    : [const Color(0xFF1D4ED8), const Color(0xFF38BDF8)],
                               ),
                             ),
                           ),
@@ -1548,19 +1544,19 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: Colors.teal.shade50,
+                                          color: const Color(0xFFEFF6FF),
                                           borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: Colors.teal.shade200),
+                                          border: Border.all(color: const Color(0xFFBFDBFE)),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(Icons.book_rounded, size: 12, color: Colors.teal.shade800),
+                                            const Icon(Icons.book_rounded, size: 12, color: Color(0xFF1D4ED8)),
                                             const SizedBox(width: 4),
                                             Flexible(
                                               child: Text(
                                                 t.namaMapel,
-                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.teal.shade800),
+                                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),

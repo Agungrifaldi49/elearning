@@ -572,11 +572,7 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF7C3AED)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: AppTheme.guruGradient,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
@@ -596,18 +592,18 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: Colors.amber,
+                            color: const Color(0xFF38BDF8),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.quiz_rounded, size: 14, color: Colors.black87),
+                              Icon(Icons.quiz_rounded, size: 14, color: Color(0xFF0F172A)),
                               SizedBox(width: 4),
                               Flexible(
                                 child: Text(
                                   'CBT & Quiz Center',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.black87),
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),

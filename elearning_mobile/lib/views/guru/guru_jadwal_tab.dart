@@ -123,17 +123,17 @@ class _GuruJadwalTabState extends State<GuruJadwalTab> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: Colors.amber,
+                          color: const Color(0xFF38BDF8),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.calendar_month_rounded, size: 14, color: Colors.black87),
+                            const Icon(Icons.calendar_month_rounded, size: 14, color: Color(0xFF0F172A)),
                             const SizedBox(width: 4),
                             Text(
                               'Hari Ini: $todayName',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.black87),
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                             ),
                           ],
                         ),
@@ -192,7 +192,6 @@ class _GuruJadwalTabState extends State<GuruJadwalTab> {
             ),
             const SizedBox(height: 16),
 
-            // 🗓️ DAY FILTER CHIPS (Horizontal Scrollable)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -214,7 +213,7 @@ class _GuruJadwalTabState extends State<GuruJadwalTab> {
                               width: 6,
                               height: 6,
                               decoration: const BoxDecoration(
-                                color: Colors.amber,
+                                color: Color(0xFF38BDF8),
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -339,8 +338,8 @@ class _GuruJadwalTabState extends State<GuruJadwalTab> {
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
                                 colors: isTodaySession
-                                    ? [AppTheme.primaryColor, Colors.teal]
-                                    : [Colors.indigo.shade400, Colors.blue.shade600],
+                                    ? [const Color(0xFF1D4ED8), const Color(0xFF38BDF8)]
+                                    : [const Color(0xFF3B82F6), const Color(0xFF93C5FD)],
                               ),
                             ),
                           ),
@@ -357,26 +356,20 @@ class _GuruJadwalTabState extends State<GuruJadwalTab> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                       decoration: BoxDecoration(
-                                        color: isTodaySession ? const Color(0xFFECFDF5) : Colors.indigo.shade50,
+                                        color: const Color(0xFFEFF6FF),
                                         borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: isTodaySession ? const Color(0xFFA7F3D0) : Colors.indigo.shade200,
-                                        ),
+                                        border: Border.all(color: const Color(0xFFBFDBFE)),
                                       ),
                                       child: Row(
                                         children: [
-                                          Icon(
-                                            Icons.access_time_filled_rounded,
-                                            size: 13,
-                                            color: isTodaySession ? const Color(0xFF065F46) : Colors.indigo.shade800,
-                                          ),
-                                          const SizedBox(width: 5),
+                                          const Icon(Icons.access_time_filled_rounded, size: 13, color: Color(0xFF1D4ED8)),
+                                          const SizedBox(width: 4),
                                           Text(
-                                            '${j.jamMulai} - ${j.jamSelesai} WIB',
-                                            style: TextStyle(
+                                            '${j.jamMulai} - ${j.jamSelesai}',
+                                            style: const TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
-                                              color: isTodaySession ? const Color(0xFF064E3B) : Colors.indigo.shade900,
+                                              color: Color(0xFF1D4ED8),
                                             ),
                                           ),
                                         ],
@@ -385,20 +378,20 @@ class _GuruJadwalTabState extends State<GuruJadwalTab> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                       decoration: BoxDecoration(
-                                        color: Colors.amber.shade50,
+                                        color: const Color(0xFFF1F5F9),
                                         borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: Colors.amber.shade300),
+                                        border: Border.all(color: const Color(0xFFCBD5E1)),
                                       ),
                                       child: Row(
                                         children: [
-                                          Icon(Icons.meeting_room_rounded, size: 13, color: Colors.amber.shade900),
+                                          const Icon(Icons.meeting_room_rounded, size: 13, color: Color(0xFF475569)),
                                           const SizedBox(width: 4),
                                           Text(
                                             j.ruangan,
-                                            style: TextStyle(
+                                            style: const TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.amber.shade900,
+                                              color: Color(0xFF475569),
                                             ),
                                           ),
                                         ],
