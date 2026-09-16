@@ -72,6 +72,7 @@ class KomentarModel {
   final String fullName;
   final String avatar;
   final String? avatarUrl;
+  final String roleName;
   final String createdAt;
 
   KomentarModel({
@@ -84,6 +85,7 @@ class KomentarModel {
     required this.fullName,
     required this.avatar,
     this.avatarUrl,
+    this.roleName = 'Member',
     required this.createdAt,
   });
 
@@ -106,6 +108,7 @@ class KomentarModel {
       fullName: json['full_name'] ?? '',
       avatar: json['avatar'] ?? 'default_avatar.png',
       avatarUrl: avUrl,
+      roleName: json['role_name'] ?? 'Member',
       createdAt: json['created_at'] ?? '',
     );
   }

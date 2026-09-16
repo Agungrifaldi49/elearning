@@ -5,11 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../models/forum_model.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/siswa_provider.dart';
-import '../../providers/guru_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/profanity_service.dart';
 import '../../theme/app_theme.dart';
+import 'forum_detail_screen.dart';
 
 class SiswaForumScreen extends StatefulWidget {
   const SiswaForumScreen({super.key});
@@ -136,8 +135,8 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Row(
-            children: const [
+          title: const Row(
+            children: [
               Icon(Icons.add_comment_rounded, color: AppTheme.primaryColor),
               SizedBox(width: 10),
               Text('Buat Diskusi Komunitas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -294,6 +293,9 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                   return;
                 }
 
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+
                 String? base64Image;
                 if (topicImage != null) {
                   final bytes = await File(topicImage!.path).readAsBytes();
@@ -323,8 +325,6 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                   _applyFilter();
                 });
 
-                final navigator = Navigator.of(context);
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
                 navigator.pop();
 
                 final bodyData = <String, dynamic>{
@@ -363,291 +363,15 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
     );
   }
 
-  void _showForumDetailBottomSheet(ForumModel forum) async {
-    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-    if (user != null) {
-      if (user.roleName.toLowerCase().contains('guru')) {
-        Provider.of<GuruProvider>(context, listen: false).markForumAsSeen(forum.id);
-      } else {
-        Provider.of<SiswaProvider>(context, listen: false).markForumAsSeen(forum.id);
-      }
-    }
-
-    final commentController = TextEditingController();
-    bool isLoadingComments = true;
-    List<dynamic> comments = [];
-    XFile? commentImage;
-
-    Future<void> fetchComments() async {
-      final res = await ApiService.get('forum/detail', params: {'forum_id': forum.id.toString()});
-      if (res['success'] == true && res['data'] is Map && res['data']['comments'] is List) {
-        comments = res['data']['comments'];
-      }
-      isLoadingComments = false;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+  void _showForumDetailBottomSheet(ForumModel forum) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ForumDetailScreen(
+          forum: forum,
+          onCommentAdded: _loadForum,
+        ),
       ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            if (isLoadingComments) {
-              fetchComments().then((_) {
-                if (context.mounted) {
-                  setModalState(() {});
-                }
-              });
-            }
-
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                left: 16,
-                right: 16,
-                top: 16,
-              ),
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.75,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            ProfanityService.filter(forum.judul),
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                    const Divider(),
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
-                          backgroundImage: (forum.avatarUrl != null && forum.avatarUrl!.isNotEmpty)
-                              ? NetworkImage(forum.avatarUrl!)
-                              : null,
-                          child: (forum.avatarUrl == null || forum.avatarUrl!.isEmpty)
-                              ? Text(forum.fullName.isNotEmpty ? forum.fullName[0] : 'U')
-                              : null,
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(forum.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                            Text("${forum.roleName} • ${forum.createdAt}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.indigo.shade50.withValues(alpha: 0.5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.indigo.shade100),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SelectableText(
-                            ProfanityService.filter(forum.konten),
-                            style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
-                          ),
-                          if (forum.gambarUrl != null && forum.gambarUrl!.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: () => _showImageViewer(context, forum.gambarUrl!),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  forum.gambarUrl!,
-                                  height: 200,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const SizedBox(),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Komentar & Thread Tanggapan:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 8),
-                    Expanded(
-                      child: isLoadingComments
-                          ? const Center(child: CircularProgressIndicator())
-                          : comments.isEmpty
-                              ? const Center(child: Text('Belum ada tanggapan. Berikan jawaban Anda!'))
-                              : ListView.builder(
-                                  itemCount: comments.length,
-                                  itemBuilder: (context, index) {
-                                    final c = comments[index];
-                                    final avatarUrl = c['avatar_url'];
-                                    final fullName = c['full_name'] ?? 'User';
-                                    final cmtImgUrl = c['gambar_url'];
-
-                                    return ListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      leading: CircleAvatar(
-                                        backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
-                                        backgroundImage: (avatarUrl != null && avatarUrl.toString().isNotEmpty)
-                                            ? NetworkImage(avatarUrl)
-                                            : null,
-                                        child: (avatarUrl == null || avatarUrl.toString().isEmpty)
-                                            ? Text(fullName.isNotEmpty ? fullName[0] : 'U')
-                                            : null,
-                                      ),
-                                      title: Text(fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                      subtitle: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            ProfanityService.filter(c['isi_komentar'] ?? ''),
-                                            style: const TextStyle(fontSize: 13, color: Colors.black87),
-                                          ),
-                                          if (cmtImgUrl != null && cmtImgUrl.toString().isNotEmpty) ...[
-                                            const SizedBox(height: 6),
-                                            GestureDetector(
-                                              onTap: () => _showImageViewer(context, cmtImgUrl.toString()),
-                                              child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(8),
-                                                child: Image.network(
-                                                  cmtImgUrl.toString(),
-                                                  height: 120,
-                                                  width: 180,
-                                                  fit: BoxFit.cover,
-                                                  errorBuilder: (_, __, ___) => const SizedBox(),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                      trailing: Text(c['created_at'] ?? '', style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                                    );
-                                  },
-                                ),
-                    ),
-                    if (commentImage != null) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                File(commentImage!.path),
-                                height: 50,
-                                width: 50,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Text('Gambar terlampir', style: TextStyle(fontSize: 12, color: Colors.indigo, fontWeight: FontWeight.bold)),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(Icons.cancel, color: Colors.grey, size: 20),
-                              onPressed: () => setModalState(() => commentImage = null),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.add_a_photo_rounded, color: Colors.indigo),
-                            onPressed: () async {
-                              final img = await _pickImage();
-                              if (img != null) {
-                                setModalState(() => commentImage = img);
-                              }
-                            },
-                          ),
-                          Expanded(
-                            child: TextField(
-                              controller: commentController,
-                              decoration: InputDecoration(
-                                hintText: 'Tulis tanggapan / balasan...',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-                              final text = commentController.text.trim();
-                              if (user == null || text.isEmpty) return;
-
-                              String? base64CmtImage;
-                              if (commentImage != null) {
-                                final bytes = await File(commentImage!.path).readAsBytes();
-                                final ext = commentImage!.path.split('.').last;
-                                base64CmtImage = 'data:image/$ext;base64,${base64Encode(bytes)}';
-                              }
-
-                              commentController.clear();
-                              setModalState(() => commentImage = null);
-
-                              final bodyData = <String, dynamic>{
-                                'user_id': user.id,
-                                'forum_id': forum.id,
-                                'komentar': text,
-                              };
-                              if (base64CmtImage != null) {
-                                bodyData['gambar_base64'] = base64CmtImage;
-                              }
-
-                              final res = await ApiService.post('forum/comment', bodyData);
-
-                              if (res['success'] == true) {
-                                isLoadingComments = true;
-                                await fetchComments();
-                                setModalState(() {});
-                                _loadForum();
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: const Icon(Icons.send_rounded),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 
@@ -857,7 +581,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                                   margin: const EdgeInsets.all(10),
                                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                                   decoration: BoxDecoration(
-                                                    color: Colors.black.withOpacity(0.75),
+                                                    color: Colors.black.withValues(alpha: 0.75),
                                                     borderRadius: BorderRadius.circular(20),
                                                   ),
                                                   child: const Row(
@@ -895,11 +619,39 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                               ),
                                               Row(
                                                 children: [
-                                                  Icon(Icons.chat_bubble_outline_rounded, size: 15, color: Colors.indigo.shade600),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    '${f.totalKomentar} Balasan',
-                                                    style: TextStyle(fontSize: 12, color: Colors.indigo.shade900, fontWeight: FontWeight.bold),
+                                                  Row(
+                                                    children: [
+                                                      Icon(Icons.chat_bubble_outline_rounded, size: 15, color: Colors.indigo.shade600),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        '${f.totalKomentar} Balasan',
+                                                        style: TextStyle(fontSize: 12, color: Colors.indigo.shade900, fontWeight: FontWeight.bold),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                    decoration: BoxDecoration(
+                                                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                      border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+                                                    ),
+                                                    child: const Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.reply_rounded, size: 14, color: AppTheme.primaryColor),
+                                                        SizedBox(width: 4),
+                                                        Text(
+                                                          'Tulis Tanggapan',
+                                                          style: TextStyle(
+                                                            color: AppTheme.primaryColor,
+                                                            fontSize: 11.5,
+                                                            fontWeight: FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
                                                   ),
                                                 ],
                                               ),

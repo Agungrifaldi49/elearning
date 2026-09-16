@@ -3551,9 +3551,11 @@ class ApiController {
                     $stmtK = $this->db->prepare("
                         SELECT k.id, k.forum_id, k.user_id, k.komentar as isi_komentar, k.gambar, k.created_at,
                                COALESCE(u.full_name, 'Pengguna') as full_name, 
-                               COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file
+                               COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file,
+                               COALESCE(r.name, 'Member') as role_name
                         FROM komentar k
                         LEFT JOIN users u ON k.user_id = u.id
+                        LEFT JOIN roles r ON u.role_id = r.id
                         LEFT JOIN siswa s ON s.user_id = u.id
                         LEFT JOIN guru g ON g.user_id = u.id
                         WHERE k.forum_id = :fid
