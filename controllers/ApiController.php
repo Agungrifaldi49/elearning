@@ -3294,7 +3294,71 @@ class ApiController {
 
         $commModel = class_exists('CommunicationModel') ? new CommunicationModel() : null;
 
-        if ($endpoint === 'create' || ($_SERVER['REQUEST_METHOD'] === 'POST' && $endpoint !== 'comment')) {
+        if ($endpoint === 'delete') {
+            $forumId = intval($_POST['forum_id'] ?? $input['forum_id'] ?? $_GET['forum_id'] ?? 0);
+            if ($forumId <= 0) {
+                $this->jsonResponse(false, 'ID Topik forum tidak valid!', null, 400);
+            }
+
+            // Check author or admin
+            $stmtF = $this->db->prepare("SELECT user_id, gambar FROM forum WHERE id = ? LIMIT 1");
+            $stmtF->execute([$forumId]);
+            $topic = $stmtF->fetch();
+            if (!$topic) {
+                $this->jsonResponse(false, 'Topik diskusi tidak ditemukan!', null, 404);
+            }
+
+            // Get user role
+            $stmtRole = $this->db->prepare("SELECT r.name FROM users u JOIN roles r ON u.role_id = r.id WHERE u.id = ? LIMIT 1");
+            $stmtRole->execute([$userId]);
+            $userRole = strtolower($stmtRole->fetchColumn() ?: '');
+
+            $isAuthor = ((int)$topic['user_id'] === $userId);
+            $isAdmin = ($userRole === 'administrator' || $userRole === 'admin');
+
+            if (!$isAuthor && !$isAdmin) {
+                $this->jsonResponse(false, 'Hanya pembuat diskusi yang dapat menghapus topik ini!', null, 403);
+            }
+
+            // Delete attached image if exists
+            if (!empty($topic['gambar'])) {
+                $filePath = ROOT_PATH . 'assets/uploads/forum/' . $topic['gambar'];
+                if (file_exists($filePath)) {
+                    @unlink($filePath);
+                }
+            }
+
+            // Delete comments images if exist
+            try {
+                $stmtC = $this->db->prepare("SELECT gambar FROM komentar WHERE forum_id = ? AND gambar IS NOT NULL");
+                $stmtC->execute([$forumId]);
+                $cImages = $stmtC->fetchAll(\PDO::FETCH_COLUMN);
+                foreach ($cImages as $cImg) {
+                    if (!empty($cImg)) {
+                        $cPath = ROOT_PATH . 'assets/uploads/forum/' . $cImg;
+                        if (file_exists($cPath)) {
+                            @unlink($cPath);
+                        }
+                    }
+                }
+            } catch (\Throwable $eDelC) {}
+
+            if ($commModel) {
+                try {
+                    $commModel->deleteForumTopic($forumId, $userId, $userRole);
+                } catch (\Throwable $eDelM) {}
+            }
+
+            try {
+                $this->db->prepare("DELETE FROM komentar WHERE forum_id = ?")->execute([$forumId]);
+                $this->db->prepare("DELETE FROM forum_reactions WHERE forum_id = ?")->execute([$forumId]);
+                $this->db->prepare("DELETE FROM forum WHERE id = ?")->execute([$forumId]);
+            } catch (\Throwable $eDelDB) {}
+
+            $this->jsonResponse(true, 'Topik diskusi berhasil dihapus!');
+        }
+
+        if ($endpoint === 'create' || ($_SERVER['REQUEST_METHOD'] === 'POST' && $endpoint !== 'comment' && $endpoint !== 'delete')) {
             $judul = trim($input['judul'] ?? '');
             $konten = trim($input['konten'] ?? '');
             $kategori = trim($input['kategori'] ?? 'Umum');

@@ -263,6 +263,137 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
     return const Color(0xFF10B981);
   }
 
+  void _confirmDeleteDetailTopic(int userId) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Hapus Diskusi?',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Apakah Anda yakin ingin menghapus diskusi ini?',
+              style: TextStyle(
+                fontSize: 13.5,
+                color: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+              ),
+              child: Text(
+                '"${widget.forum.judul}"',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontStyle: FontStyle.italic,
+                  color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Topik serta seluruh komentar tanggapan di dalamnya akan dihapus secara permanen dari forum.',
+              style: TextStyle(fontSize: 12, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text(
+              'Batal',
+              style: TextStyle(
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              await _deleteDetailTopic(userId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+            ),
+            child: const Text('Hapus Sekarang', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteDetailTopic(int userId) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final nav = Navigator.of(context);
+
+    try {
+      final res = await ApiService.post('forum/delete', {
+        'user_id': userId,
+        'forum_id': widget.forum.id,
+      });
+
+      if (res['success'] == true) {
+        widget.onCommentAdded?.call();
+        nav.pop();
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Diskusi berhasil dihapus.'),
+            backgroundColor: Color(0xFF10B981),
+          ),
+        );
+      } else {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(res['message'] ?? 'Gagal menghapus diskusi'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -312,6 +443,46 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
             tooltip: 'Segarkan Komentar',
             onPressed: _fetchComments,
           ),
+          if (currentUser != null && (currentUser.id == widget.forum.userId || currentUser.roleName.toLowerCase().contains('admin'))) ...[
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded),
+              tooltip: 'Opsi Diskusi',
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              elevation: 4,
+              onSelected: (val) {
+                if (val == 'delete') {
+                  _confirmDeleteDetailTopic(currentUser.id);
+                }
+              },
+              itemBuilder: (ctx) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Hapus Diskusi',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
       body: Column(
@@ -325,7 +496,7 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 children: [
                   // 1. TOPIC HERO CARD
-                  _buildTopicHeroCard(isDark, isPrivate, roleColor),
+                  _buildTopicHeroCard(isDark, isPrivate, roleColor, currentUser),
 
                   const SizedBox(height: 20),
 
@@ -404,7 +575,7 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
   }
 
   // Widget: Topic Hero Card
-  Widget _buildTopicHeroCard(bool isDark, bool isPrivate, Color roleColor) {
+  Widget _buildTopicHeroCard(bool isDark, bool isPrivate, Color roleColor, dynamic currentUser) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
@@ -476,29 +647,81 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isPrivate
-                        ? (isDark ? const Color(0xFFD97706).withValues(alpha: 0.2) : const Color(0xFFFEF3C7))
-                        : (isDark ? const Color(0xFF059669).withValues(alpha: 0.2) : const Color(0xFFD1FAE5)),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isPrivate
-                          ? (isDark ? const Color(0xFFD97706) : const Color(0xFFFCD34D))
-                          : (isDark ? const Color(0xFF059669) : const Color(0xFF6EE7B7)),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isPrivate
+                            ? (isDark ? const Color(0xFFD97706).withValues(alpha: 0.2) : const Color(0xFFFEF3C7))
+                            : (isDark ? const Color(0xFF059669).withValues(alpha: 0.2) : const Color(0xFFD1FAE5)),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isPrivate
+                              ? (isDark ? const Color(0xFFD97706) : const Color(0xFFFCD34D))
+                              : (isDark ? const Color(0xFF059669) : const Color(0xFF6EE7B7)),
+                        ),
+                      ),
+                      child: Text(
+                        isPrivate ? '🔒 Kelas' : '🌐 Public',
+                        style: TextStyle(
+                          color: isPrivate
+                              ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309))
+                              : (isDark ? const Color(0xFF34D399) : const Color(0xFF047857)),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    isPrivate ? '🔒 Kelas' : '🌐 Public',
-                    style: TextStyle(
-                      color: isPrivate
-                          ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309))
-                          : (isDark ? const Color(0xFF34D399) : const Color(0xFF047857)),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                    if (currentUser != null && (currentUser.id == widget.forum.userId || currentUser.roleName.toLowerCase().contains('admin'))) ...[
+                      const SizedBox(width: 4),
+                      PopupMenuButton<String>(
+                        icon: Icon(
+                          Icons.more_vert_rounded,
+                          size: 20,
+                          color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Opsi Diskusi',
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                        elevation: 4,
+                        onSelected: (val) {
+                          if (val == 'delete') {
+                            _confirmDeleteDetailTopic(currentUser.id);
+                          }
+                        },
+                        itemBuilder: (ctx) => [
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
+                                ),
+                                const SizedBox(width: 10),
+                                const Text(
+                                  'Hapus Diskusi',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
