@@ -39,7 +39,9 @@ set_exception_handler(function($exception) {
     exit();
 });
 
-// Session Security & Configuration
+// Session Security & Configuration (Extended 8 hours lifetime for exams & LMS activity)
+ini_set('session.gc_maxlifetime', '28800'); // 8 hours server session lifetime
+ini_set('session.cookie_lifetime', '28800'); // 8 hours cookie lifetime
 ini_set('session.cookie_httponly', '1');
 ini_set('session.use_only_cookies', '1');
 
@@ -68,7 +70,7 @@ define('ASSETS_PATH', ROOT_PATH . 'assets/');
 define('UPLOADS_PATH', ASSETS_PATH . 'uploads/');
 
 // Session & Security Settings
-define('SESSION_TIMEOUT', 1800); // 30 minutes inactivity timeout
+define('SESSION_TIMEOUT', 28800); // 8 hours inactivity timeout (prevents logout during long exams)
 define('MAX_LOGIN_ATTEMPTS', 5); // Lock temporarily after 5 fails
 define('LOGIN_LOCKOUT_TIME', 300); // 5 minutes lockout
 

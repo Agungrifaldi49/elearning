@@ -288,13 +288,22 @@ class ExamModel extends BaseModel {
         // The active attempt number for this session
         $currentActiveAttempt = $completedAttempts + 1;
 
-        $stmtExist = $this->db->prepare("SELECT id, attempt_count FROM hasil_quiz WHERE siswa_id = ? AND quiz_id = ?");
+        $stmtExist = $this->db->prepare("SELECT id, attempt_count, finished_at FROM hasil_quiz WHERE siswa_id = ? AND quiz_id = ?");
         $stmtExist->execute([(int)$siswaId, (int)$quizId]);
         $exist = $stmtExist->fetch();
 
         if ($exist) {
-            $stmt = $this->db->prepare("UPDATE hasil_quiz SET attempt_count = GREATEST(COALESCE(attempt_count, 0), ?), started_at = NOW() WHERE id = ?");
-            $stmt->execute([$currentActiveAttempt, $exist['id']]);
+            // Only clear previous draft answers if starting a brand new retake attempt (finished_at was set)
+            if (!empty($exist['finished_at'])) {
+                $delStmt = $this->db->prepare("DELETE FROM jawaban_siswa WHERE siswa_id = ? AND quiz_id = ?");
+                $delStmt->execute([(int)$siswaId, (int)$quizId]);
+                $stmt = $this->db->prepare("UPDATE hasil_quiz SET attempt_count = GREATEST(COALESCE(attempt_count, 0), ?), started_at = NOW(), finished_at = NULL WHERE id = ?");
+                $stmt->execute([$currentActiveAttempt, $exist['id']]);
+            } else {
+                // Ongoing attempt (e.g. reload/reconnect): preserve started_at and all ongoing draft answers
+                $stmt = $this->db->prepare("UPDATE hasil_quiz SET attempt_count = GREATEST(COALESCE(attempt_count, 0), ?) WHERE id = ?");
+                $stmt->execute([$currentActiveAttempt, $exist['id']]);
+            }
         } else {
             $stmt = $this->db->prepare("INSERT INTO hasil_quiz (siswa_id, quiz_id, total_nilai, attempt_count, status_lulus, started_at) VALUES (?, ?, 0.00, ?, 'menunggu', NOW())");
             $stmt->execute([(int)$siswaId, (int)$quizId, $currentActiveAttempt]);
@@ -691,6 +700,40 @@ class ExamModel extends BaseModel {
             }
         }
         return $soals;
+    }
+
+    public function getSoalByQuizOrdered($quiz_id, $orderedIds = [], $randomPilihan = false) {
+        $quizId = (int)$quiz_id;
+        if (!empty($orderedIds) && is_array($orderedIds)) {
+            $safeIds = implode(',', array_map('intval', $orderedIds));
+            $sql = "SELECT * FROM soal WHERE quiz_id = {$quizId} AND id IN ({$safeIds}) ORDER BY FIELD(id, {$safeIds})";
+        } else {
+            $sql = "SELECT * FROM soal WHERE quiz_id = {$quizId} ORDER BY id ASC";
+        }
+        $soals = $this->db->query($sql)->fetchAll();
+
+        foreach ($soals as &$s) {
+            if ($s['jenis_soal'] === 'pg' || $s['jenis_soal'] === 'tf') {
+                $stmtPil = $this->db->prepare("SELECT * FROM pilihan_jawaban WHERE soal_id = ? " . ($randomPilihan ? "ORDER BY RAND()" : "ORDER BY id ASC"));
+                $stmtPil->execute([$s['id']]);
+                $s['pilihan'] = $stmtPil->fetchAll();
+            }
+        }
+        return $soals;
+    }
+
+    public function getSavedAnswers($quizId, $siswaId) {
+        $stmt = $this->db->prepare("SELECT soal_id, pilihan_id, teks_jawaban_essay FROM jawaban_siswa WHERE quiz_id = ? AND siswa_id = ?");
+        $stmt->execute([(int)$quizId, (int)$siswaId]);
+        $rows = $stmt->fetchAll();
+        $map = [];
+        foreach ($rows as $r) {
+            $map[$r['soal_id']] = [
+                'pilihan_id' => $r['pilihan_id'],
+                'teks_jawaban_essay' => $r['teks_jawaban_essay']
+            ];
+        }
+        return $map;
     }
 
     public function submitAnswer($siswa_id, $quiz_id, $soal_id, $pilihan_id = null, $essay = null) {

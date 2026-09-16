@@ -189,7 +189,13 @@ body {
     </div>
 
     <!-- Status & Timer Controls -->
-    <div class="d-flex align-items-center gap-1.5 gap-sm-3">
+    <div class="d-flex align-items-center gap-1.5 gap-sm-2 gap-md-3">
+        <!-- Auto-Save Cloud Status Indicator -->
+        <div id="autoSaveIndicator" class="bg-slate-800 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-pill d-inline-flex align-items-center gap-1.5 shadow-xs" style="background: rgba(15, 23, 42, 0.6);" title="Status sinkronisasi jawaban otomatis">
+            <i id="autoSaveIcon" class="bi bi-cloud-check-fill text-emerald-400" style="font-size:0.82rem;"></i>
+            <span id="autoSaveText" class="small fw-semibold text-light" style="font-size: 0.72rem;">Tersimpan</span>
+        </div>
+
         <!-- Live Status Badge (Desktop/Tablet) -->
         <div class="bg-slate-800 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-pill d-none d-md-inline-flex align-items-center gap-1.5 shadow-xs" style="background: rgba(15, 23, 42, 0.6);">
             <span class="dot-pulse"></span>
@@ -276,8 +282,15 @@ body {
                 <form id="formCBT" action="<?= BASE_URL ?>index.php?url=siswa/quiz&id=<?= $quiz_id ?>" method="POST">
                     <?= Security::csrfField() ?>
 
-                    <?php foreach ($soalList as $idx => $soal): ?>
-                        <div class="soal-block mb-2 <?= $idx > 0 ? 'd-none' : '' ?>" id="soalCard_<?= $idx ?>" data-index="<?= $idx ?>">
+                    <?php 
+                    $savedAnswers = $savedAnswers ?? [];
+                    foreach ($soalList as $idx => $soal): 
+                        $sId = $soal['id'];
+                        $savedPilId = $savedAnswers[$sId]['pilihan_id'] ?? null;
+                        $savedEssay = $savedAnswers[$sId]['teks_jawaban_essay'] ?? '';
+                        $hasSaved = !empty($savedPilId) || (isset($savedEssay) && trim($savedEssay) !== '');
+                    ?>
+                        <div class="soal-block mb-2 <?= $idx > 0 ? 'd-none' : '' ?>" id="soalCard_<?= $idx ?>" data-index="<?= $idx ?>" data-soal-id="<?= $sId ?>">
                             
                             <!-- Header Info Soal -->
                             <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom flex-wrap gap-2">
@@ -289,8 +302,8 @@ body {
                                         <i class="bi bi-star-fill text-warning me-1"></i>Bobot: <?= $soal['bobot'] ?> Poin
                                     </span>
                                 </div>
-                                <span class="badge status-tag-<?= $idx ?> bg-slate-100 text-slate-500 border px-2.5 py-1.5 rounded-pill fw-semibold" style="background:#f8fafc; color:#64748b; font-size:0.75rem;">
-                                    ⚪ Belum Dijawab
+                                <span class="badge status-tag-<?= $idx ?> <?= $hasSaved ? 'bg-success text-white' : 'bg-slate-100 text-slate-500 border' ?> px-2.5 py-1.5 rounded-pill fw-semibold" style="<?= $hasSaved ? '' : 'background:#f8fafc; color:#64748b;' ?> font-size:0.75rem;">
+                                    <?= $hasSaved ? '🟢 Sudah Dijawab' : '⚪ Belum Dijawab' ?>
                                 </span>
                             </div>
 
@@ -313,9 +326,10 @@ body {
                                     $labels = ['A', 'B', 'C', 'D', 'E', 'F'];
                                     foreach ($soal['pilihan'] as $pIdx => $pil): 
                                         $lbl = ($soal['jenis_soal'] === 'tf') ? ($pIdx === 0 ? '✓' : '✗') : ($labels[$pIdx] ?? ($pIdx + 1));
+                                        $isSelected = ($savedPilId !== null && (int)$savedPilId === (int)$pil['id']);
                                     ?>
-                                        <label class="cbt-choice-card d-flex align-items-center">
-                                            <input class="form-check-input d-none input-jawaban" type="radio" name="jawaban[<?= $soal['id'] ?>]" value="<?= $pil['id'] ?>" data-soal-idx="<?= $idx ?>" onchange="onAnswerSelected(<?= $idx ?>)">
+                                        <label class="cbt-choice-card d-flex align-items-center <?= $isSelected ? 'selected' : '' ?>">
+                                            <input class="form-check-input d-none input-jawaban" type="radio" name="jawaban[<?= $soal['id'] ?>]" value="<?= $pil['id'] ?>" data-soal-id="<?= $soal['id'] ?>" data-soal-idx="<?= $idx ?>" <?= $isSelected ? 'checked' : '' ?> onchange="onAnswerSelected(<?= $idx ?>, <?= $soal['id'] ?>, <?= $pil['id'] ?>)">
                                             <span class="choice-badge me-2.5 me-sm-3 <?= $soal['jenis_soal'] === 'tf' ? ($pIdx === 0 ? 'bg-success text-white' : 'bg-danger text-white') : '' ?>"><?= $lbl ?></span>
                                             <span class="fw-medium text-slate-800 flex-grow-1" style="font-size: 0.92rem; color:#1e293b;"><?= htmlspecialchars($pil['teks_pilihan']) ?></span>
                                         </label>
@@ -324,7 +338,7 @@ body {
                             <?php else: ?>
                                 <div class="mb-4">
                                     <label class="form-label small fw-bold text-primary mb-1.5"><i class="bi bi-pencil-square me-1"></i>Jawaban Essay Siswa:</label>
-                                    <textarea name="essay[<?= $soal['id'] ?>]" class="form-control input-essay rounded-4 p-3 border-2" rows="4" placeholder="Ketikkan lembar jawaban essay Anda secara lengkap di sini..." data-soal-idx="<?= $idx ?>" oninput="onAnswerSelected(<?= $idx ?>)" style="font-size: 0.9rem;"></textarea>
+                                    <textarea name="essay[<?= $soal['id'] ?>]" class="form-control input-essay rounded-4 p-3 border-2" rows="4" placeholder="Ketikkan lembar jawaban essay Anda secara lengkap di sini..." data-soal-id="<?= $soal['id'] ?>" data-soal-idx="<?= $idx ?>" oninput="onEssayInput(<?= $idx ?>, <?= $soal['id'] ?>, this.value)" style="font-size: 0.9rem;"><?= htmlspecialchars($savedEssay) ?></textarea>
                                 </div>
                             <?php endif; ?>
 
@@ -396,8 +410,11 @@ body {
                 <!-- Interactive Question Palette Matrix Grid -->
                 <label class="small text-slate-500 fw-bold mb-2">Matriks Lembar Soal:</label>
                 <div class="d-flex flex-wrap gap-2 mb-4 justify-content-start" style="max-height: 280px; overflow-y: auto; padding: 2px;">
-                    <?php for ($i = 0; $i < $totalSoal; $i++): ?>
-                        <div id="qBtn_<?= $i ?>" class="q-grid-btn unanswered <?= $i === 0 ? 'active-q' : '' ?>" onclick="navSoal(<?= $i ?>)">
+                    <?php for ($i = 0; $i < $totalSoal; $i++): 
+                        $sId = $soalList[$i]['id'];
+                        $isAns = !empty($savedAnswers[$sId]['pilihan_id']) || (isset($savedAnswers[$sId]['teks_jawaban_essay']) && trim($savedAnswers[$sId]['teks_jawaban_essay']) !== '');
+                    ?>
+                        <div id="qBtn_<?= $i ?>" class="q-grid-btn <?= $isAns ? 'answered' : 'unanswered' ?> <?= $i === 0 ? 'active-q' : '' ?>" onclick="navSoal(<?= $i ?>)">
                             <?= $i + 1 ?>
                         </div>
                     <?php endfor; ?>
@@ -462,8 +479,11 @@ body {
 
         <label class="small text-slate-500 fw-bold mb-2">Pilih Nomor Soal:</label>
         <div class="d-flex flex-wrap gap-2 justify-content-start mb-3" style="max-height: 250px; overflow-y: auto;">
-            <?php for ($i = 0; $i < $totalSoal; $i++): ?>
-                <div id="qBtnMob_<?= $i ?>" class="q-grid-btn unanswered <?= $i === 0 ? 'active-q' : '' ?>" onclick="navSoal(<?= $i ?>); closeMobileOffcanvas();">
+            <?php for ($i = 0; $i < $totalSoal; $i++): 
+                $sId = $soalList[$i]['id'];
+                $isAns = !empty($savedAnswers[$sId]['pilihan_id']) || (isset($savedAnswers[$sId]['teks_jawaban_essay']) && trim($savedAnswers[$sId]['teks_jawaban_essay']) !== '');
+            ?>
+                <div id="qBtnMob_<?= $i ?>" class="q-grid-btn <?= $isAns ? 'answered' : 'unanswered' ?> <?= $i === 0 ? 'active-q' : '' ?>" onclick="navSoal(<?= $i ?>); closeMobileOffcanvas();">
                     <?= $i + 1 ?>
                 </div>
             <?php endfor; ?>
@@ -478,6 +498,7 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 const quizId = '<?= $quiz_id ?>';
+let currentCsrfToken = '<?= Security::csrfToken() ?>';
 
 // 1. Instant LocalStorage Violation Check (Prevents Refresh Bypass)
 if (localStorage.getItem('cbt_violation_locked_' + quizId) === '1') {
@@ -488,8 +509,10 @@ let currentSoalIdx = 0;
 const totalSoalCount = <?= $totalSoal ?>;
 let durationSeconds = <?= $durasiMenit ?> * 60;
 let timerInterval = null;
+let heartbeatInterval = null;
 let warningCount = 0;
 let isExamActive = false;
+let essayDebounceTimers = {};
 
 // 2. Restore saved warning count if student refreshed during exam
 const savedWarns = sessionStorage.getItem('cbt_warning_count_' + quizId);
@@ -528,8 +551,107 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Initialize answer progress & counters from pre-saved database values
+    updateAnswerCounters();
+
+    // Start background keepalive heartbeat immediately to protect session
+    startHeartbeat();
+
     enableAntiCheating();
 });
+
+// --- SESSION KEEPALIVE & HEARTBEAT ENGINE (60s INTERVAL) ---
+function startHeartbeat() {
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+
+    heartbeatInterval = setInterval(async () => {
+        try {
+            const fd = new FormData();
+            fd.append('action', 'keepalive');
+            fd.append('quiz_id', quizId);
+            fd.append('csrf_token', currentCsrfToken);
+
+            const resp = await fetch('<?= BASE_URL ?>index.php?url=siswa/quiz', {
+                method: 'POST',
+                body: fd
+            });
+
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data && data.csrf_token) {
+                    currentCsrfToken = data.csrf_token;
+                    document.querySelectorAll('input[name="csrf_token"]').forEach(el => el.value = data.csrf_token);
+                }
+            }
+        } catch (err) {
+            console.warn('Keepalive ping notice:', err);
+        }
+    }, 60000); // Send ping every 60 seconds
+}
+
+// --- REAL-TIME AUTOSAVE ENGINE ---
+function updateAutoSaveUI(state, text) {
+    const indicator = document.getElementById('autoSaveIndicator');
+    const icon = document.getElementById('autoSaveIcon');
+    const txt = document.getElementById('autoSaveText');
+    if (!indicator || !icon || !txt) return;
+
+    if (state === 'saving') {
+        icon.className = 'spinner-border spinner-border-sm text-warning';
+        icon.style.width = '12px';
+        icon.style.height = '12px';
+        txt.textContent = text || 'Menyimpan...';
+        txt.className = 'small fw-semibold text-warning';
+    } else if (state === 'saved') {
+        icon.className = 'bi bi-cloud-check-fill text-emerald-400';
+        icon.style.width = '';
+        icon.style.height = '';
+        txt.textContent = text || 'Tersimpan';
+        txt.className = 'small fw-semibold text-light';
+    } else if (state === 'error') {
+        icon.className = 'bi bi-cloud-slash-fill text-danger';
+        icon.style.width = '';
+        icon.style.height = '';
+        txt.textContent = text || 'Koneksi Terputus';
+        txt.className = 'small fw-semibold text-danger';
+    }
+}
+
+async function autoSaveAnswer(soalId, pilihanId, essayText) {
+    updateAutoSaveUI('saving', 'Menyimpan...');
+
+    const fd = new FormData();
+    fd.append('action', 'autosave');
+    fd.append('quiz_id', quizId);
+    fd.append('soal_id', soalId);
+    if (pilihanId !== null && pilihanId !== undefined) {
+        fd.append('pilihan_id', pilihanId);
+    }
+    if (essayText !== null && essayText !== undefined) {
+        fd.append('essay', essayText);
+    }
+    fd.append('csrf_token', currentCsrfToken);
+
+    try {
+        const resp = await fetch('<?= BASE_URL ?>index.php?url=siswa/quiz', {
+            method: 'POST',
+            body: fd
+        });
+        const data = await resp.json();
+        if (data && data.status === 'success') {
+            if (data.csrf_token) {
+                currentCsrfToken = data.csrf_token;
+                document.querySelectorAll('input[name="csrf_token"]').forEach(el => el.value = data.csrf_token);
+            }
+            updateAutoSaveUI('saved', 'Tersimpan');
+        } else {
+            updateAutoSaveUI('error', 'Cek Jaringan');
+        }
+    } catch (err) {
+        console.error('Autosave error:', err);
+        updateAutoSaveUI('error', 'Koneksi Terputus');
+    }
+}
 
 function startCBTEngine() {
     // Clear any previous violation locks for fresh new attempt session
@@ -581,7 +703,7 @@ function startTimer() {
             Swal.fire({
                 icon: 'warning',
                 title: 'Waktu Ujian Habis!',
-                text: 'Jawaban Anda dikirim otomatis ke server.',
+                text: 'Seluruh jawaban Anda akan disimpan dan diselesaikan otomatis ke server.',
                 confirmButtonText: 'OK',
                 allowOutsideClick: false
             }).then(() => {
@@ -638,20 +760,52 @@ function closeMobileOffcanvas() {
     if (bsOffcanvas) bsOffcanvas.hide();
 }
 
-function onAnswerSelected(idx) {
+function onAnswerSelected(idx, soalId, pilihanId) {
     const card = document.getElementById('soalCard_' + idx);
     if (!card) return;
 
-    let isAnswered = false;
-    const radioChecked = card.querySelector('input[type="radio"]:checked');
-    const essayText = card.querySelector('textarea.input-essay');
-
-    if (radioChecked) {
-        isAnswered = true;
-    } else if (essayText && essayText.value.trim() !== '') {
-        isAnswered = true;
+    if (!soalId) {
+        soalId = card.getAttribute('data-soal-id');
+    }
+    if (!pilihanId) {
+        const checked = card.querySelector('input[type="radio"]:checked');
+        if (checked) pilihanId = checked.value;
     }
 
+    const qBtn = document.getElementById('qBtn_' + idx);
+    const qBtnMob = document.getElementById('qBtnMob_' + idx);
+    const statusTag = card.querySelector('.status-tag-' + idx);
+
+    if (qBtn) {
+        qBtn.classList.remove('unanswered');
+        qBtn.classList.add('answered');
+    }
+    if (qBtnMob) {
+        qBtnMob.classList.remove('unanswered');
+        qBtnMob.classList.add('answered');
+    }
+    if (statusTag) {
+        statusTag.className = 'badge status-tag-' + idx + ' bg-success text-white px-2.5 py-1.5 rounded-pill fw-semibold';
+        statusTag.innerHTML = '🟢 Sudah Dijawab';
+    }
+
+    updateAnswerCounters();
+
+    // Trigger instant real-time autosave to server
+    if (soalId && pilihanId) {
+        autoSaveAnswer(soalId, pilihanId, null);
+    }
+}
+
+function onEssayInput(idx, soalId, text) {
+    const card = document.getElementById('soalCard_' + idx);
+    if (!card) return;
+
+    if (!soalId) {
+        soalId = card.getAttribute('data-soal-id');
+    }
+
+    const isAnswered = text && text.trim() !== '';
     const qBtn = document.getElementById('qBtn_' + idx);
     const qBtnMob = document.getElementById('qBtnMob_' + idx);
     const statusTag = card.querySelector('.status-tag-' + idx);
@@ -687,6 +841,15 @@ function onAnswerSelected(idx) {
     }
 
     updateAnswerCounters();
+
+    // Debounce autosave 800ms
+    if (essayDebounceTimers[soalId]) {
+        clearTimeout(essayDebounceTimers[soalId]);
+    }
+    updateAutoSaveUI('saving', 'Menyimpan...');
+    essayDebounceTimers[soalId] = setTimeout(() => {
+        autoSaveAnswer(soalId, null, text);
+    }, 800);
 }
 
 function updateAnswerCounters() {
@@ -749,11 +912,70 @@ function confirmSubmitExam() {
     });
 }
 
-function submitExamForm() {
+async function submitExamForm() {
     sessionStorage.removeItem('cbt_remaining_time_' + quizId);
     sessionStorage.removeItem('cbt_warning_count_' + quizId);
     isExamActive = false;
-    document.getElementById('formCBT').submit();
+
+    // Show loading indicator
+    Swal.fire({
+        title: 'Menyimpan & Merekap Ujian...',
+        html: '<div class="spinner-border text-primary my-3" style="width: 3rem; height: 3rem;" role="status"></div><p class="text-muted fw-semibold">Mohon tunggu, sistem sedang merekap nilai Anda...</p>',
+        allowOutsideClick: false,
+        showConfirmButton: false
+    });
+
+    const form = document.getElementById('formCBT');
+    const formData = new FormData(form);
+    formData.append('is_ajax', '1');
+    formData.append('csrf_token', currentCsrfToken);
+
+    try {
+        const resp = await fetch('<?= BASE_URL ?>index.php?url=siswa/quiz&id=' + quizId, {
+            method: 'POST',
+            body: formData
+        });
+
+        const contentType = resp.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            const result = await resp.json();
+            if (result.status === 'success') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Ujian Berhasil Diselesaikan!',
+                    text: result.message || 'Nilai Anda telah direkap ke sistem.',
+                    confirmButtonText: 'Lihat Nilai',
+                    confirmButtonColor: '#10b981',
+                    allowOutsideClick: false
+                }).then(() => {
+                    window.location.href = result.redirect || '<?= BASE_URL ?>index.php?url=siswa/nilai';
+                });
+                return;
+            } else {
+                throw new Error(result.message || 'Gagal merekap nilai ujian.');
+            }
+        } else {
+            // Non-JSON fallback submit
+            form.submit();
+            return;
+        }
+    } catch (err) {
+        console.error('Submission error:', err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Kendala Pengiriman',
+            text: 'Terjadi kendala saat mengirimkan lembar ujian: ' + (err.message || 'Koneksi terputus') + '. Seluruh jawaban Anda tetap aman tersimpan. Silakan coba kirim ulang.',
+            showCancelButton: true,
+            confirmButtonText: 'Coba Kirim Ulang',
+            cancelButtonText: 'Batal',
+            confirmButtonColor: '#2563eb',
+            cancelButtonColor: '#64748b'
+        }).then((r) => {
+            if (r.isConfirmed) {
+                submitExamForm();
+            }
+        });
+    }
 }
 
 // --- STRICT ANTI-CHEATING & FULLSCREEN ENFORCEMENT ENGINE ---

@@ -345,6 +345,53 @@ class SiswaController {
             exit();
         }
 
+        // Keepalive / Heartbeat Ping to prevent session timeout during exam
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array($_POST['action'], ['keepalive', 'ping'])) {
+            $_SESSION['last_activity'] = time();
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'status' => 'success',
+                'csrf_token' => Security::csrfToken(),
+                'time' => time()
+            ]);
+            exit();
+        }
+
+        // Real-Time Answer Autosave to MySQL database
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'autosave') {
+            $qId = (int)($_POST['quiz_id'] ?? 0);
+            $soalId = (int)($_POST['soal_id'] ?? 0);
+            $pilihanId = !empty($_POST['pilihan_id']) ? (int)$_POST['pilihan_id'] : null;
+            $teksEssay = isset($_POST['essay']) ? Security::sanitize($_POST['essay']) : null;
+
+            if ($qId <= 0 || $soalId <= 0) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap']);
+                exit();
+            }
+
+            // Access check
+            $accessCheck = $examModel->canSiswaAccessQuiz($qId, $siswaId);
+            if (!$accessCheck['access']) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['status' => 'error', 'message' => 'Akses kuis tidak diizinkan']);
+                exit();
+            }
+
+            $examModel->submitAnswer($siswaId, $qId, $soalId, $pilihanId, $teksEssay);
+            $_SESSION['last_activity'] = time();
+
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Tersimpan otomatis',
+                'saved_at' => date('H:i:s'),
+                'soal_id' => $soalId,
+                'csrf_token' => Security::csrfToken()
+            ]);
+            exit();
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'record_violation') {
             $qId = (int)$_POST['quiz_id'];
             $resViolation = $examModel->recordPelanggaran($siswaId, $qId);
@@ -436,7 +483,16 @@ class SiswaController {
             }
 
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') ||
+                          (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) ||
+                          (isset($_POST['is_ajax']) && $_POST['is_ajax'] == '1');
+
                 if (!Security::verifyCsrfToken()) {
+                    if ($isAjax) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['status' => 'error', 'message' => 'Token CSRF tidak valid atau sesi berakhir. Silakan refresh halaman.']);
+                        exit();
+                    }
                     FlashHelper::setError('CSRF Token Invalid');
                     header('Location: ' . BASE_URL . 'index.php?url=siswa/quiz');
                     exit();
@@ -446,14 +502,19 @@ class SiswaController {
                 $essay = $_POST['essay'] ?? [];
 
                 foreach ($jawaban as $soalId => $pilihanId) {
-                    $examModel->submitAnswer($siswaId, $quiz_id, $soalId, $pilihanId, null);
+                    if (!empty($pilihanId)) {
+                        $examModel->submitAnswer($siswaId, $quiz_id, (int)$soalId, (int)$pilihanId, null);
+                    }
                 }
 
                 foreach ($essay as $soalId => $teksEssay) {
-                    $examModel->submitAnswer($siswaId, $quiz_id, $soalId, null, Security::sanitize($teksEssay));
+                    $examModel->submitAnswer($siswaId, $quiz_id, (int)$soalId, null, Security::sanitize($teksEssay));
                 }
 
                 $totalScore = $examModel->finishQuiz($siswaId, $quiz_id);
+
+                // Clear question ordering session for fresh future attempts
+                unset($_SESSION['quiz_order_' . $quiz_id . '_' . $siswaId]);
 
                 $commModel = new CommunicationModel();
                 $uName = AuthHelper::user()['full_name'] ?? 'Siswa';
@@ -464,14 +525,39 @@ class SiswaController {
                     'index.php?url=guru/quiz'
                 );
 
-                FlashHelper::setSuccess("Quiz Selesai! Nilai Anda: {$totalScore}");
+                if ($isAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode([
+                        'status' => 'success',
+                        'message' => "Quiz Selesai! Nilai Anda: {$totalScore}",
+                        'score' => $totalScore,
+                        'redirect' => BASE_URL . 'index.php?url=siswa/nilai'
+                    ]);
+                    exit();
+                }
 
+                FlashHelper::setSuccess("Quiz Selesai! Nilai Anda: {$totalScore}");
                 header('Location: ' . BASE_URL . 'index.php?url=siswa/nilai');
                 exit();
             }
 
             $quizInfo = $examModel->getQuizById($quiz_id);
-            $soalList = $examModel->getSoalByQuiz($quiz_id, true);
+            $savedAnswers = $examModel->getSavedAnswers($quiz_id, $siswaId);
+
+            // Deterministic Question Ordering per student exam session
+            $sessionOrderKey = 'quiz_order_' . $quiz_id . '_' . $siswaId;
+            $isRandomSoal = !empty($quizInfo['random_soal']) && strtoupper($quizInfo['random_soal']) === 'Y';
+            $isRandomJawaban = !empty($quizInfo['random_jawaban']) && strtoupper($quizInfo['random_jawaban']) === 'Y';
+
+            if (!empty($_SESSION[$sessionOrderKey]) && is_array($_SESSION[$sessionOrderKey])) {
+                $soalList = $examModel->getSoalByQuizOrdered($quiz_id, $_SESSION[$sessionOrderKey], $isRandomJawaban);
+            } else {
+                $soalList = $examModel->getSoalByQuiz($quiz_id, $isRandomSoal);
+                if (!empty($soalList)) {
+                    $_SESSION[$sessionOrderKey] = array_column($soalList, 'id');
+                }
+            }
+
             require_once ROOT_PATH . 'views/siswa/kerjakan_quiz.php';
             exit();
         }
