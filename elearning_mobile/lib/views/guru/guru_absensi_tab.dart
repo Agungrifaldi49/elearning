@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 import '../../theme/app_theme.dart';
 import 'guru_input_absensi_screen.dart';
+import 'guru_presensi_selfie_screen.dart';
 
 class GuruAbsensiTab extends StatefulWidget {
   const GuruAbsensiTab({super.key});
@@ -283,6 +284,14 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.camera_front_rounded),
+            tooltip: 'Presensi Selfie & GPS Guru',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const GuruPresensiSelfieScreen()),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Muat Ulang Data DB',
             onPressed: _loadAbsensiData,
@@ -452,37 +461,91 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   ),
                 ),
-                const SizedBox(height: 10),
-                InkWell(
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => GuruInputAbsensiScreen(initialMapelId: _selectedMapelId)));
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade700,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const GuruPresensiSelfieScreen()),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF059669), Color(0xFF047857)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.camera_front_rounded, size: 16, color: Colors.white),
+                              SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Selfie & GPS Guru',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11.5),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
+                      ),
                     ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.edit_calendar_rounded, size: 16, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text(
-                          '⚡ Input Presensi Manual (Absen Masuk & Pulang)',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => GuruInputAbsensiScreen(initialMapelId: _selectedMapelId)),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade700,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.edit_calendar_rounded, size: 16, color: Colors.white),
+                              SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  'Presensi Siswa',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11.5),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),

@@ -16,6 +16,7 @@ import 'guru_input_nilai_screen.dart';
 import 'guru_key_mapel_screen.dart';
 import 'guru_recap_absensi_screen.dart';
 import 'guru_scan_qr_screen.dart';
+import 'guru_presensi_selfie_screen.dart';
 
 class GuruDashboardTab extends StatefulWidget {
   const GuruDashboardTab({super.key});
@@ -64,6 +65,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
 
     // Complete Features List for Guru
     final allFeatures = [
+      _buildFeatureGridItem(
+        icon: Icons.camera_front_rounded,
+        label: 'Presensi Selfie',
+        color: const Color(0xFF10B981),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruPresensiSelfieScreen())),
+      ),
       _buildFeatureGridItem(
         icon: Icons.vpn_key_rounded,
         label: 'Kode Key Mapel',
@@ -238,18 +245,18 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
             if (!guruProvider.hasClockedInToday) ...[
               const SizedBox(height: 14),
               InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruPresensiSelfieScreen())),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF1E3A8A), Color(0xFF0F172A), Color(0xFF020617)],
+                      colors: [Color(0xFF065F46), Color(0xFF0F172A), Color(0xFF020617)],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFF2563EB).withValues(alpha: 0.3)),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.4)),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF0F172A).withValues(alpha: 0.35),
@@ -263,10 +270,10 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
+                          color: const Color(0xFF10B981).withValues(alpha: 0.25),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.access_time_filled_rounded, color: Color(0xFF60A5FA), size: 24),
+                        child: const Icon(Icons.camera_front_rounded, color: Color(0xFF34D399), size: 24),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -274,12 +281,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '🔔 Belum Presensi Masuk Guru',
+                              '📸 Presensi Selfie Masuk Guru',
                               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Ketuk untuk membuka Kartu Guru Digital & presensi masuk',
+                              'Ketuk untuk ambil foto selfie & validasi GPS sekolah',
                               style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
                             ),
                           ],
@@ -293,7 +300,7 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
             ] else if (guruProvider.hasClockedInToday && !guruProvider.hasClockedOutToday) ...[
               const SizedBox(height: 14),
               InkWell(
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen())),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruPresensiSelfieScreen())),
                 borderRadius: BorderRadius.circular(16),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -318,10 +325,10 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF60A5FA).withValues(alpha: 0.25),
+                          color: const Color(0xFF3B82F6).withValues(alpha: 0.25),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.home_work_rounded, color: Color(0xFF93C5FD), size: 24),
+                        child: const Icon(Icons.door_front_door_rounded, color: Color(0xFF60A5FA), size: 24),
                       ),
                       const SizedBox(width: 12),
                       const Expanded(
@@ -329,12 +336,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '🏠 Pengingat Presensi Pulang Guru',
+                              '🚪 Presensi Selfie Pulang Guru',
                               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Ketuk untuk membuka Kartu Guru Digital & presensi pulang',
+                              'Ketuk untuk foto selfie pulang & validasi lokasi GPS',
                               style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
                             ),
                           ],

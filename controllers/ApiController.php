@@ -2848,6 +2848,66 @@ class ApiController {
                 }
                 break;
 
+            case 'presensi_selfie_info':
+            case 'geofence_info':
+            case 'presensi_guru_info':
+                require_once ROOT_PATH . 'models/SettingsModel.php';
+                require_once ROOT_PATH . 'models/AbsensiModel.php';
+                $settingsModel = new SettingsModel();
+                $absensiModel = new AbsensiModel();
+                $settings = $settingsModel->getAll();
+
+                $todayDate = date('Y-m-d');
+                $presensiHariIni = $absensiModel->getPresensiGuruHariIni($guruId, $todayDate);
+                $riwayatPresensi = $absensiModel->getRiwayatPresensiGuru($guruId, 15);
+
+                $this->jsonResponse(true, 'Data Geofencing & Presensi Guru', [
+                    'guru' => $guru,
+                    'lokasi_sekolah_nama' => $settings['lokasi_sekolah_nama'] ?? 'SMK Muthia Harapan Cicalengka',
+                    'lokasi_sekolah_lat' => (float)($settings['lokasi_sekolah_lat'] ?? -6.984042),
+                    'lokasi_sekolah_lng' => (float)($settings['lokasi_sekolah_lng'] ?? 107.838612),
+                    'lokasi_sekolah_radius' => (int)($settings['lokasi_sekolah_radius'] ?? 150),
+                    'presensi_jam_masuk_mulai' => $settings['presensi_jam_masuk_mulai'] ?? '06:00',
+                    'presensi_jam_masuk_batas' => $settings['presensi_jam_masuk_batas'] ?? '07:30',
+                    'presensi_jam_pulang_mulai' => $settings['presensi_jam_pulang_mulai'] ?? '15:00',
+                    'presensi_hari_ini' => $presensiHariIni,
+                    'riwayat_presensi' => $riwayatPresensi
+                ]);
+                break;
+
+            case 'submit_presensi_selfie':
+            case 'presensi_selfie':
+                $input = $this->getPostInput();
+                $jenis = strtolower(trim($input['jenis'] ?? $_POST['jenis'] ?? 'masuk'));
+                $lat = $input['latitude'] ?? $_POST['latitude'] ?? null;
+                $lng = $input['longitude'] ?? $_POST['longitude'] ?? null;
+                $imageBase64 = $input['image_base64'] ?? $_POST['image_base64'] ?? '';
+                $keterangan = $input['keterangan'] ?? $_POST['keterangan'] ?? '';
+
+                if (empty($imageBase64)) {
+                    $this->jsonResponse(false, 'Foto selfie wajib diambil!', null, 400);
+                }
+                if ($lat === null || $lng === null) {
+                    $this->jsonResponse(false, 'Koordinat GPS perangkat wajib disertakan!', null, 400);
+                }
+
+                require_once ROOT_PATH . 'models/AbsensiModel.php';
+                $absensiModel = new AbsensiModel();
+                $res = $absensiModel->submitPresensiGuruSelfie($guruId, [
+                    'jenis' => $jenis,
+                    'latitude' => $lat,
+                    'longitude' => $lng,
+                    'image_base64' => $imageBase64,
+                    'keterangan' => $keterangan
+                ]);
+
+                if (!empty($res['status']) && $res['status'] === 'success') {
+                    $this->jsonResponse(true, $res['message'] ?? 'Presensi selfie berhasil dicatat!', $res);
+                } else {
+                    $this->jsonResponse(false, $res['message'] ?? 'Gagal memproses presensi selfie', $res, 400);
+                }
+                break;
+
             case 'susulan_requests':
             case 'susulan':
             case 'tugas_susulan_requests':
