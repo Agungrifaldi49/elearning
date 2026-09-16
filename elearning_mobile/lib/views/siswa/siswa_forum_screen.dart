@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -23,30 +23,123 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
   bool _isLoading = false;
   String _selectedFilter = 'semua'; // 'semua', 'public', 'private'
 
-  Future<XFile?> _pickImage() async {
-    try {
-      final picker = ImagePicker();
-      return await picker.pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 1200);
-    } catch (e) {
-      debugPrint('Error picking image: $e');
-      return null;
-    }
+  Future<void> _pickTopicImage(
+    BuildContext context,
+    Function(Uint8List bytes, String filename) onImageSelected,
+  ) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (bCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pilih Sumber Foto/Gambar',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+              ),
+              const SizedBox(height: 14),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2563EB).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.photo_library_rounded, color: Color(0xFF2563EB)),
+                ),
+                title: const Text('Buka Galeri Foto', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Pilih foto dari galeri penyimpanan', style: TextStyle(fontSize: 12)),
+                onTap: () async {
+                  Navigator.pop(bCtx);
+                  try {
+                    final picker = ImagePicker();
+                    final picked = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      imageQuality: 70,
+                      maxWidth: 1024,
+                      maxHeight: 1024,
+                    );
+                    if (picked != null) {
+                      final bytes = await picked.readAsBytes();
+                      onImageSelected(bytes, picked.name);
+                    }
+                  } catch (e) {
+                    debugPrint('Error picking gallery image: $e');
+                  }
+                },
+              ),
+              const SizedBox(height: 6),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, color: Color(0xFF10B981)),
+                ),
+                title: const Text('Ambil dari Kamera', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Ambil foto langsung melalui kamera', style: TextStyle(fontSize: 12)),
+                onTap: () async {
+                  Navigator.pop(bCtx);
+                  try {
+                    final picker = ImagePicker();
+                    final picked = await picker.pickImage(
+                      source: ImageSource.camera,
+                      imageQuality: 70,
+                      maxWidth: 1024,
+                      maxHeight: 1024,
+                    );
+                    if (picked != null) {
+                      final bytes = await picked.readAsBytes();
+                      onImageSelected(bytes, picked.name);
+                    }
+                  } catch (e) {
+                    debugPrint('Error picking camera image: $e');
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showImageViewer(BuildContext context, String imageUrl) {
+    final cleanUrl = ApiService.getFileUrl(imageUrl);
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.black.withValues(alpha: 0.9),
+        backgroundColor: Colors.black.withValues(alpha: 0.95),
         insetPadding: EdgeInsets.zero,
         child: Stack(
           children: [
             Center(
               child: InteractiveViewer(
                 child: Image.network(
-                  imageUrl,
+                  cleanUrl,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white, size: 60),
+                  errorBuilder: (_, __, ___) => const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image_rounded, color: Colors.white70, size: 60),
+                      SizedBox(height: 8),
+                      Text('Gagal memuat gambar', style: TextStyle(color: Colors.white70)),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -54,7 +147,7 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
               top: 40,
               right: 20,
               child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                icon: const Icon(Icons.close_rounded, color: Colors.white, size: 30),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
@@ -128,237 +221,615 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
     final kontenController = TextEditingController();
     String visibility = 'public';
     String kategori = 'Umum';
-    XFile? topicImage;
+    Uint8List? topicImageBytes;
+    String? topicImageName;
+    bool isSubmitting = false;
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
-            children: [
-              Icon(Icons.add_comment_rounded, color: AppTheme.primaryColor),
-              SizedBox(width: 10),
-              Text('Buat Diskusi Komunitas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: SingleChildScrollView(
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => StatefulBuilder(
+        builder: (sheetContext, setSheetState) {
+          final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
+
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(sheetContext).size.height * 0.92,
+            ),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Akses Keterbukaan Topik:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.public, size: 14),
-                            SizedBox(width: 4),
-                            Text('🌐 Public'),
-                          ],
-                        ),
-                        selected: visibility == 'public',
-                        selectedColor: Colors.green.shade100,
-                        labelStyle: TextStyle(
-                          color: visibility == 'public' ? Colors.green.shade900 : Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                        onSelected: (selected) {
-                          if (selected) setDialogState(() => visibility = 'public');
-                        },
-                      ),
+                // Drag handle
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 10, bottom: 6),
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: ChoiceChip(
-                        label: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.lock, size: 14),
-                            SizedBox(width: 4),
-                            Text('🔒 Kelas Saya'),
-                          ],
-                        ),
-                        selected: visibility == 'private',
-                        selectedColor: Colors.amber.shade100,
-                        labelStyle: TextStyle(
-                          color: visibility == 'private' ? Colors.amber.shade900 : Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                        onSelected: (selected) {
-                          if (selected) setDialogState(() => visibility = 'private');
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                DropdownButtonFormField<String>(
-                  initialValue: kategori,
-                  decoration: InputDecoration(
-                    labelText: 'Kategori Diskusi',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  ),
-                  items: ['Umum', 'Tanya Jawab KBM', 'Diskusi Tugas', 'Pengumuman Kelas']
-                      .map((cat) => DropdownMenuItem(value: cat, child: Text(cat, style: const TextStyle(fontSize: 13))))
-                      .toList(),
-                  onChanged: (val) {
-                    if (val != null) setDialogState(() => kategori = val);
-                  },
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: judulController,
-                  decoration: InputDecoration(
-                    labelText: 'Judul Topik Diskusi',
-                    hintText: 'Misal: Diskusi Persiapan Ujian KBM...',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: kontenController,
-                  maxLines: 4,
-                  decoration: InputDecoration(
-                    labelText: 'Isi Pertanyaan / Penjelasan Detail',
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                if (topicImage != null) ...[
-                  Stack(
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          File(topicImage!.path),
-                          height: 140,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.add_comment_rounded, color: AppTheme.primaryColor, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Buat Topik Diskusi Baru',
+                              style: TextStyle(
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                            ),
+                            Text(
+                              'Mulai diskusi terbuka atau khusus kelas',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Positioned(
-                        top: 6,
-                        right: 6,
-                        child: GestureDetector(
-                          onTap: () => setDialogState(() => topicImage = null),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                            child: const Icon(Icons.close, color: Colors.white, size: 18),
-                          ),
-                        ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        color: isDark ? Colors.white70 : Colors.grey.shade600,
+                        onPressed: isSubmitting ? null : () => Navigator.pop(sheetContext),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                ],
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final img = await _pickImage();
-                    if (img != null) {
-                      setDialogState(() => topicImage = img);
-                    }
-                  },
-                  icon: const Icon(Icons.add_photo_alternate_rounded, size: 20),
-                  label: Text(topicImage == null ? 'Lampirkan Gambar / Foto' : 'Ganti Gambar Lampiran'),
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    minimumSize: const Size(double.infinity, 44),
+                ),
+
+                const Divider(height: 1),
+
+                // Scrollable Form Content (with viewInsets bottom padding to completely eliminate overflow)
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      20,
+                      16,
+                      20,
+                      MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 1. Visibility selector
+                        Text(
+                          'Akses Keterbukaan Diskusi',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => setSheetState(() => visibility = 'public'),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: visibility == 'public'
+                                        ? (isDark ? const Color(0xFF064E3B).withValues(alpha: 0.35) : const Color(0xFFD1FAE5))
+                                        : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: visibility == 'public'
+                                          ? const Color(0xFF10B981)
+                                          : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                                      width: visibility == 'public' ? 1.8 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.public_rounded,
+                                        size: 16,
+                                        color: visibility == 'public' ? const Color(0xFF059669) : Colors.grey,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '🌐 Publik (Semua)',
+                                        style: TextStyle(
+                                          color: visibility == 'public'
+                                              ? (isDark ? const Color(0xFFA7F3D0) : const Color(0xFF047857))
+                                              : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => setSheetState(() => visibility = 'private'),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: visibility == 'private'
+                                        ? (isDark ? const Color(0xFF78350F).withValues(alpha: 0.35) : const Color(0xFFFEF3C7))
+                                        : (isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC)),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: visibility == 'private'
+                                          ? const Color(0xFFF59E0B)
+                                          : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                                      width: visibility == 'private' ? 1.8 : 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.lock_rounded,
+                                        size: 16,
+                                        color: visibility == 'private' ? const Color(0xFFD97706) : Colors.grey,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '🔒 Kelas Saya',
+                                        style: TextStyle(
+                                          color: visibility == 'private'
+                                              ? (isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309))
+                                              : (isDark ? Colors.grey.shade400 : Colors.grey.shade700),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 2. Kategori Diskusi
+                        Text(
+                          'Kategori Diskusi',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String>(
+                          initialValue: kategori,
+                          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                          ),
+                          items: ['Umum', 'Tanya Jawab KBM', 'Diskusi Tugas', 'Pengumuman Kelas', 'Ujian & CBT']
+                              .map((cat) => DropdownMenuItem(
+                                    value: cat,
+                                    child: Text(cat, style: const TextStyle(fontSize: 13)),
+                                  ))
+                              .toList(),
+                          onChanged: (val) {
+                            if (val != null) setSheetState(() => kategori = val);
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 3. Judul Topik Diskusi
+                        Text(
+                          'Judul Pertanyaan / Diskusi',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: judulController,
+                          maxLength: 150,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Misal: Bagaimana cara menyelesaikan soal matriks no 3?',
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                              fontSize: 13,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.8),
+                            ),
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            counterText: '',
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 4. Isi Diskusi Detail
+                        Text(
+                          'Isi Pertanyaan / Penjelasan Lengkap',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: kontenController,
+                          minLines: 3,
+                          maxLines: 7,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            height: 1.4,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'Tuliskan detail pertanyaan, kendala, atau pembahasan yang ingin didiskusikan...',
+                            hintStyle: TextStyle(
+                              color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+                              fontSize: 13,
+                            ),
+                            alignLabelWithHint: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: AppTheme.primaryColor, width: 1.8),
+                            ),
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.all(14),
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // 5. Lampiran Gambar (Opsional)
+                        Text(
+                          'Lampiran Foto / Gambar (Opsional)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        if (topicImageBytes != null) ...[
+                          Container(
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.memory(
+                                    topicImageBytes!,
+                                    height: 160,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      height: 120,
+                                      color: Colors.grey.shade200,
+                                      child: const Center(
+                                        child: Text('Gagal menampilkan preview', style: TextStyle(color: Colors.grey)),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: Material(
+                                    color: Colors.black.withValues(alpha: 0.7),
+                                    shape: const CircleBorder(),
+                                    child: InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: () => setSheetState(() {
+                                        topicImageBytes = null;
+                                        topicImageName = null;
+                                      }),
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(6),
+                                        child: Icon(Icons.close_rounded, color: Colors.white, size: 18),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed: isSubmitting
+                                ? null
+                                : () => _pickTopicImage(sheetContext, (bytes, name) {
+                                      setSheetState(() {
+                                        topicImageBytes = bytes;
+                                        topicImageName = name;
+                                      });
+                                    }),
+                            icon: const Icon(Icons.edit_rounded, size: 16),
+                            label: const Text('Ganti Gambar'),
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              minimumSize: const Size(double.infinity, 40),
+                            ),
+                          ),
+                        ] else ...[
+                          InkWell(
+                            onTap: isSubmitting
+                                ? null
+                                : () => _pickTopicImage(sheetContext, (bytes, name) {
+                                      setSheetState(() {
+                                        topicImageBytes = bytes;
+                                        topicImageName = name;
+                                      });
+                                    }),
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.add_photo_alternate_rounded, size: 26, color: AppTheme.primaryColor),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Lampirkan Foto atau Gambar Soal',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Mendukung Kamera & Galeri (JPG, PNG)',
+                                    style: TextStyle(fontSize: 11, color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 24),
+
+                        // 6. Submit Button
+                        Container(
+                          width: double.infinity,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: isSubmitting
+                                ? LinearGradient(colors: [Colors.grey.shade400, Colors.grey.shade500])
+                                : const LinearGradient(
+                                    colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: isSubmitting
+                                ? []
+                                : [
+                                    BoxShadow(
+                                      color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: isSubmitting
+                                  ? null
+                                  : () async {
+                                      final user = Provider.of<AuthProvider>(sheetContext, listen: false).currentUser;
+                                      final judul = judulController.text.trim();
+                                      final konten = kontenController.text.trim();
+
+                                      if (user == null) {
+                                        ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                          const SnackBar(content: Text('Silakan login terlebih dahulu!'), backgroundColor: Colors.orange),
+                                        );
+                                        return;
+                                      }
+
+                                      if (judul.isEmpty || konten.isEmpty) {
+                                        ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                          const SnackBar(content: Text('Judul dan isi pertanyaan wajib diisi!'), backgroundColor: Colors.orange),
+                                        );
+                                        return;
+                                      }
+
+                                      setSheetState(() => isSubmitting = true);
+
+                                      try {
+                                        String? base64Image;
+                                        if (topicImageBytes != null) {
+                                          final ext = topicImageName?.split('.').last.toLowerCase() ?? 'jpg';
+                                          base64Image = 'data:image/$ext;base64,${base64Encode(topicImageBytes!)}';
+                                        }
+
+                                        final bodyData = <String, dynamic>{
+                                          'user_id': user.id,
+                                          'judul': judul,
+                                          'konten': konten,
+                                          'kategori': kategori,
+                                          'visibility': visibility,
+                                        };
+                                        if (base64Image != null) {
+                                          bodyData['gambar_base64'] = base64Image;
+                                        }
+
+                                        final res = await ApiService.post('forum/create', bodyData);
+
+                                        if (res['success'] == true) {
+                                          if (sheetContext.mounted) {
+                                            Navigator.pop(sheetContext);
+                                          }
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(res['message'] ?? 'Topik diskusi berhasil diterbitkan!'),
+                                                backgroundColor: const Color(0xFF10B981),
+                                              ),
+                                            );
+                                            await _loadForum();
+                                          }
+                                        } else {
+                                          if (sheetContext.mounted) {
+                                            setSheetState(() => isSubmitting = false);
+                                            ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                              SnackBar(
+                                                content: Text(res['message'] ?? 'Gagal menerbitkan topik diskusi.'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      } catch (e) {
+                                        if (sheetContext.mounted) {
+                                          setSheetState(() => isSubmitting = false);
+                                          ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Terjadi kesalahan: $e'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                              borderRadius: BorderRadius.circular(14),
+                              child: Center(
+                                child: isSubmitting
+                                    ? const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                          ),
+                                          SizedBox(width: 10),
+                                          Text(
+                                            'Menerbitkan Diskusi...',
+                                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                          ),
+                                        ],
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Terbitkan Diskusi Sekarang',
+                                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-            ElevatedButton(
-              onPressed: () async {
-                final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-                final judul = judulController.text.trim();
-                final konten = kontenController.text.trim();
-
-                if (user == null || judul.isEmpty || konten.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Judul dan isi diskusi wajib diisi!'), backgroundColor: Colors.orange),
-                  );
-                  return;
-                }
-
-                final navigator = Navigator.of(context);
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-                String? base64Image;
-                if (topicImage != null) {
-                  final bytes = await File(topicImage!.path).readAsBytes();
-                  final ext = topicImage!.path.split('.').last;
-                  base64Image = 'data:image/$ext;base64,${base64Encode(bytes)}';
-                }
-
-                final newTopic = ForumModel(
-                  id: DateTime.now().millisecondsSinceEpoch,
-                  userId: user.id,
-                  judul: judul,
-                  konten: konten,
-                  gambarUrl: topicImage?.path,
-                  kategori: kategori,
-                  visibility: visibility,
-                  targetNamaKelas: visibility == 'private' ? 'Kelas Saya' : 'Semua Kelas',
-                  fullName: user.fullName,
-                  avatar: 'default_avatar.png',
-                  avatarUrl: user.fullAvatarUrl,
-                  roleName: user.roleName,
-                  totalKomentar: 0,
-                  createdAt: 'Baru Saja',
-                );
-
-                setState(() {
-                  _topics.insert(0, newTopic);
-                  _applyFilter();
-                });
-
-                navigator.pop();
-
-                final bodyData = <String, dynamic>{
-                  'user_id': user.id,
-                  'judul': judul,
-                  'konten': konten,
-                  'kategori': kategori,
-                  'visibility': visibility,
-                };
-                if (base64Image != null) {
-                  bodyData['gambar_base64'] = base64Image;
-                }
-
-                final res = await ApiService.post('forum/create', bodyData);
-
-                if (mounted) {
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      content: Text(res['message'] ?? 'Topik berhasil diterbitkan'),
-                      backgroundColor: res['success'] == true ? Colors.green : Colors.blue,
-                    ),
-                  );
-                  _loadForum();
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Terbitkan Topik', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -404,12 +875,24 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.grey.shade50,
-                border: Border(bottom: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey.shade300)),
+                color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    width: 1,
+                  ),
+                ),
               ),
               child: Row(
                 children: [
-                  Text('Filter Akses:', style: TextStyle(color: isDark ? Colors.white70 : Colors.grey.shade700, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Filter Akses:',
+                    style: TextStyle(
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: SingleChildScrollView(
@@ -456,12 +939,14 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                             return Container(
                               margin: const EdgeInsets.only(bottom: 16),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: isDark ? const Color(0xFF1E293B) : Colors.white,
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.grey.shade200),
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                                ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.04),
+                                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
                                     blurRadius: 14,
                                     offset: const Offset(0, 4),
                                   ),
@@ -507,23 +992,45 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  Text(f.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                                  Text(
+                                                    f.fullName,
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 14,
+                                                      color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                                    ),
+                                                  ),
                                                   const SizedBox(height: 2),
-                                                  Text("${f.roleName} • ${f.createdAt}", style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                                                  Text(
+                                                    "${f.roleName} • ${f.createdAt}",
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                                    ),
+                                                  ),
                                                 ],
                                               ),
                                             ),
                                             Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                               decoration: BoxDecoration(
-                                                color: isPrivate ? Colors.amber.shade50 : Colors.green.shade50,
+                                                color: isPrivate
+                                                    ? (isDark ? const Color(0xFF78350F).withValues(alpha: 0.3) : const Color(0xFFFEF3C7))
+                                                    : (isDark ? const Color(0xFF064E3B).withValues(alpha: 0.3) : const Color(0xFFD1FAE5)),
                                                 borderRadius: BorderRadius.circular(20),
-                                                border: Border.all(color: isPrivate ? Colors.amber.shade200 : Colors.green.shade200),
+                                                border: Border.all(
+                                                  color: isPrivate
+                                                      ? (isDark ? const Color(0xFFD97706) : const Color(0xFFFBBF24))
+                                                      : (isDark ? const Color(0xFF059669) : const Color(0xFF34D399)),
+                                                  width: 0.8,
+                                                ),
                                               ),
                                               child: Text(
                                                 isPrivate ? '🔒 ${f.targetNamaKelas}' : '🌐 Public',
                                                 style: TextStyle(
-                                                  color: isPrivate ? Colors.amber.shade900 : Colors.green.shade900,
+                                                  color: isPrivate
+                                                      ? (isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309))
+                                                      : (isDark ? const Color(0xFFA7F3D0) : const Color(0xFF047857)),
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -534,14 +1041,23 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                         const SizedBox(height: 14),
                                         Text(
                                           ProfanityService.filter(f.judul),
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, height: 1.3),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15.5,
+                                            height: 1.3,
+                                            color: isDark ? Colors.white : const Color(0xFF0F172A),
+                                          ),
                                         ),
                                         const SizedBox(height: 6),
                                         Text(
                                           ProfanityService.filter(f.konten),
                                           maxLines: 3,
                                           overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.4),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                            height: 1.45,
+                                          ),
                                         ),
                                         if (f.gambarUrl != null && f.gambarUrl!.isNotEmpty) ...[
                                           const SizedBox(height: 12),
@@ -599,53 +1115,82 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
                                         ],
                                         const SizedBox(height: 14),
                                         Container(
-                                          padding: const EdgeInsets.only(top: 12),
+                                          padding: const EdgeInsets.only(top: 14),
                                           decoration: BoxDecoration(
-                                            border: Border(top: BorderSide(color: Colors.grey.shade100)),
+                                            border: Border(
+                                              top: BorderSide(
+                                                color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                                                width: 1,
+                                              ),
+                                            ),
                                           ),
                                           child: Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
                                               Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                                                 decoration: BoxDecoration(
-                                                  color: Colors.indigo.shade50,
+                                                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                                                   borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                                                    width: 0.8,
+                                                  ),
                                                 ),
                                                 child: Text(
-                                                  f.kategori,
-                                                  style: TextStyle(color: Colors.indigo.shade900, fontSize: 11, fontWeight: FontWeight.bold),
+                                                  '🏷️ ${f.kategori}',
+                                                  style: TextStyle(
+                                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
                                                 ),
                                               ),
                                               Row(
                                                 children: [
                                                   Row(
                                                     children: [
-                                                      Icon(Icons.chat_bubble_outline_rounded, size: 15, color: Colors.indigo.shade600),
-                                                      const SizedBox(width: 4),
+                                                      Icon(
+                                                        Icons.chat_bubble_outline_rounded,
+                                                        size: 14,
+                                                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                                      ),
+                                                      const SizedBox(width: 5),
                                                       Text(
                                                         '${f.totalKomentar} Balasan',
-                                                        style: TextStyle(fontSize: 12, color: Colors.indigo.shade900, fontWeight: FontWeight.bold),
+                                                        style: TextStyle(
+                                                          fontSize: 11.5,
+                                                          color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                                          fontWeight: FontWeight.w600,
+                                                        ),
                                                       ),
                                                     ],
                                                   ),
                                                   const SizedBox(width: 10),
                                                   Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                                     decoration: BoxDecoration(
-                                                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                                                      borderRadius: BorderRadius.circular(8),
-                                                      border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+                                                      gradient: const LinearGradient(
+                                                        colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                                                      ),
+                                                      borderRadius: BorderRadius.circular(10),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: const Color(0xFF2563EB).withValues(alpha: 0.3),
+                                                          blurRadius: 6,
+                                                          offset: const Offset(0, 2),
+                                                        ),
+                                                      ],
                                                     ),
                                                     child: const Row(
                                                       mainAxisSize: MainAxisSize.min,
                                                       children: [
-                                                        Icon(Icons.reply_rounded, size: 14, color: AppTheme.primaryColor),
-                                                        SizedBox(width: 4),
+                                                        Icon(Icons.reply_rounded, size: 14, color: Colors.white),
+                                                        SizedBox(width: 5),
                                                         Text(
-                                                          'Tulis Tanggapan',
+                                                          'Tanggapi',
                                                           style: TextStyle(
-                                                            color: AppTheme.primaryColor,
+                                                            color: Colors.white,
                                                             fontSize: 11.5,
                                                             fontWeight: FontWeight.bold,
                                                           ),
@@ -675,16 +1220,27 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
 
   Widget _buildFilterChip(String label, String value) {
     final bool isSelected = _selectedFilter == value;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
-      selectedColor: Colors.amber.shade700,
-      backgroundColor: Colors.white24,
+      selectedColor: AppTheme.primaryColor,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       elevation: isSelected ? 2 : 0,
+      pressElevation: 0,
+      side: BorderSide(
+        color: isSelected
+            ? AppTheme.primaryColor
+            : (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
+        width: 1,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.white70,
-        fontWeight: FontWeight.bold,
-        fontSize: 11,
+        color: isSelected
+            ? Colors.white
+            : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155)),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+        fontSize: 12,
       ),
       onSelected: (selected) {
         if (selected) {

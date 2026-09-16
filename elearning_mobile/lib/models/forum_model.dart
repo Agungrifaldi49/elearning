@@ -1,3 +1,5 @@
+import '../services/api_service.dart';
+
 class ForumModel {
   final int id;
   final int userId;
@@ -35,12 +37,18 @@ class ForumModel {
 
   factory ForumModel.fromJson(Map<String, dynamic> json) {
     String? avUrl = json['avatar_url'];
-    if (avUrl == null && json['avatar'] != null && json['avatar'].toString().startsWith('http')) {
-      avUrl = json['avatar'];
+    if (avUrl == null && json['avatar'] != null && json['avatar'].toString().isNotEmpty) {
+      final av = json['avatar'].toString();
+      avUrl = av.startsWith('http') ? av : ApiService.getFileUrl('assets/uploads/profile/$av');
+    } else if (avUrl != null && avUrl.isNotEmpty) {
+      avUrl = ApiService.getFileUrl(avUrl);
     }
     String? gUrl = json['gambar_url'];
-    if (gUrl == null && json['gambar'] != null && json['gambar'].toString().startsWith('http')) {
-      gUrl = json['gambar'];
+    if (gUrl == null && json['gambar'] != null && json['gambar'].toString().isNotEmpty) {
+      final g = json['gambar'].toString();
+      gUrl = g.startsWith('http') ? g : ApiService.getFileUrl('assets/uploads/forum/$g');
+    } else if (gUrl != null && gUrl.isNotEmpty) {
+      gUrl = ApiService.getFileUrl(gUrl);
     }
     return ForumModel(
       id: int.parse((json['id'] ?? 0).toString()),
@@ -91,12 +99,18 @@ class KomentarModel {
 
   factory KomentarModel.fromJson(Map<String, dynamic> json) {
     String? avUrl = json['avatar_url'];
-    if (avUrl == null && json['avatar'] != null && json['avatar'].toString().startsWith('http')) {
-      avUrl = json['avatar'];
+    if (avUrl == null && json['avatar'] != null && json['avatar'].toString().isNotEmpty) {
+      final av = json['avatar'].toString();
+      avUrl = av.startsWith('http') ? av : ApiService.getFileUrl('assets/uploads/profile/$av');
+    } else if (avUrl != null && avUrl.isNotEmpty) {
+      avUrl = ApiService.getFileUrl(avUrl);
     }
     String? gUrl = json['gambar_url'];
-    if (gUrl == null && json['gambar'] != null && json['gambar'].toString().startsWith('http')) {
-      gUrl = json['gambar'];
+    if (gUrl == null && json['gambar'] != null && json['gambar'].toString().isNotEmpty) {
+      final g = json['gambar'].toString();
+      gUrl = g.startsWith('http') ? g : ApiService.getFileUrl('assets/uploads/forum/$g');
+    } else if (gUrl != null && gUrl.isNotEmpty) {
+      gUrl = ApiService.getFileUrl(gUrl);
     }
     return KomentarModel(
       id: int.parse((json['id'] ?? 0).toString()),

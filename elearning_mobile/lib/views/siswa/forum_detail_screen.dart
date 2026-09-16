@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -34,6 +34,7 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
   bool _isSubmitting = false;
   List<KomentarModel> _comments = [];
   XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
   String? _replyingToName;
 
   @override
@@ -91,9 +92,18 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
   Future<void> _pickCommentImage() async {
     try {
       final picker = ImagePicker();
-      final img = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 1200);
+      final img = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
       if (img != null) {
-        setState(() => _selectedImage = img);
+        final bytes = await img.readAsBytes();
+        setState(() {
+          _selectedImage = img;
+          _selectedImageBytes = bytes;
+        });
       }
     } catch (e) {
       debugPrint('Error picking comment image: $e');
@@ -162,10 +172,9 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
 
     try {
       String? base64CmtImage;
-      if (_selectedImage != null) {
-        final bytes = await File(_selectedImage!.path).readAsBytes();
-        final ext = _selectedImage!.path.split('.').last;
-        base64CmtImage = 'data:image/$ext;base64,${base64Encode(bytes)}';
+      if (_selectedImageBytes != null) {
+        final ext = _selectedImage?.path.split('.').last.toLowerCase() ?? 'jpg';
+        base64CmtImage = 'data:image/$ext;base64,${base64Encode(_selectedImageBytes!)}';
       }
 
       final bodyData = <String, dynamic>{
@@ -184,6 +193,7 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
           _commentController.clear();
           setState(() {
             _selectedImage = null;
+            _selectedImageBytes = null;
             _replyingToName = null;
           });
           FocusScope.of(context).unfocus();
@@ -343,14 +353,16 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                          ),
                         ),
                         child: Text(
                           '${_comments.length} Balasan',
-                          style: const TextStyle(
-                            color: AppTheme.primaryColor,
+                          style: TextStyle(
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -467,16 +479,22 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isPrivate ? Colors.amber.withValues(alpha: 0.15) : const Color(0xFF10B981).withValues(alpha: 0.15),
+                    color: isPrivate
+                        ? (isDark ? const Color(0xFFD97706).withValues(alpha: 0.2) : const Color(0xFFFEF3C7))
+                        : (isDark ? const Color(0xFF059669).withValues(alpha: 0.2) : const Color(0xFFD1FAE5)),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isPrivate ? Colors.amber.withValues(alpha: 0.4) : const Color(0xFF10B981).withValues(alpha: 0.4),
+                      color: isPrivate
+                          ? (isDark ? const Color(0xFFD97706) : const Color(0xFFFCD34D))
+                          : (isDark ? const Color(0xFF059669) : const Color(0xFF6EE7B7)),
                     ),
                   ),
                   child: Text(
                     isPrivate ? '🔒 Kelas' : '🌐 Public',
                     style: TextStyle(
-                      color: isPrivate ? Colors.amber.shade800 : const Color(0xFF059669),
+                      color: isPrivate
+                          ? (isDark ? const Color(0xFFFBBF24) : const Color(0xFFB45309))
+                          : (isDark ? const Color(0xFF34D399) : const Color(0xFF047857)),
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -583,36 +601,58 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                    ),
                   ),
                   child: Text(
                     '🏷️ ${widget.forum.kategori}',
-                    style: const TextStyle(
-                      color: AppTheme.primaryColor,
+                    style: TextStyle(
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                       fontSize: 11.5,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                InkWell(
-                  onTap: () => _commentFocusNode.requestFocus(),
-                  borderRadius: BorderRadius.circular(8),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: Row(
-                      children: [
-                        Icon(Icons.reply_rounded, size: 16, color: AppTheme.primaryColor),
-                        SizedBox(width: 4),
-                        Text(
-                          'Tulis Tanggapan',
-                          style: TextStyle(
-                            color: AppTheme.primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _commentFocusNode.requestFocus(),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Ink(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.reply_rounded, size: 14, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text(
+                            'Tulis Tanggapan',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11.5,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -743,29 +783,43 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
                   ),
                 ),
                 // Quick Reply Button
-                InkWell(
-                  onTap: () => _replyTo(comment.fullName),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.reply_rounded, size: 14, color: isDark ? Colors.white70 : Colors.grey.shade700),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Balas',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white70 : Colors.grey.shade700,
-                          ),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _replyTo(comment.fullName),
+                    borderRadius: BorderRadius.circular(8),
+                    child: Ink(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF2563EB).withValues(alpha: 0.15)
+                            : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF2563EB).withValues(alpha: 0.4)
+                              : const Color(0xFFBFDBFE),
                         ),
-                      ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.reply_rounded,
+                            size: 13,
+                            color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
+                          ),
+                          const SizedBox(width: 3.5),
+                          Text(
+                            'Balas',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -893,15 +947,16 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
                   ),
                   child: Row(
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(_selectedImage!.path),
-                          height: 48,
-                          width: 48,
-                          fit: BoxFit.cover,
+                      if (_selectedImageBytes != null)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            _selectedImageBytes!,
+                            height: 48,
+                            width: 48,
+                            fit: BoxFit.cover,
+                          ),
                         ),
-                      ),
                       const SizedBox(width: 10),
                       const Expanded(
                         child: Column(
@@ -922,7 +977,10 @@ class _ForumDetailScreenState extends State<ForumDetailScreen> {
                       IconButton(
                         icon: const Icon(Icons.cancel_rounded, color: Colors.red, size: 22),
                         tooltip: 'Hapus Lampiran',
-                        onPressed: () => setState(() => _selectedImage = null),
+                        onPressed: () => setState(() {
+                          _selectedImage = null;
+                          _selectedImageBytes = null;
+                        }),
                       ),
                     ],
                   ),
