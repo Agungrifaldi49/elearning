@@ -1187,6 +1187,51 @@ class GuruController {
         require_once ROOT_PATH . 'views/guru/absensi.php';
     }
 
+    /**
+     * Presensi Mandiri Guru dengan Foto Selfie Kamera & Validasi Titik Geofencing GPS
+     */
+    public function presensiGuru() {
+        $guru = $this->getGuruInfo();
+        $guruId = $guru['id'] ?? 0;
+
+        $absensiModel = new AbsensiModel();
+        require_once ROOT_PATH . 'models/SettingsModel.php';
+        $settingsModel = new SettingsModel();
+        $settings = $settingsModel->getAll();
+
+        // AJAX Request for selfie presensi
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'submit_presensi_selfie') {
+            header('Content-Type: application/json');
+
+            if ($guruId <= 0) {
+                echo json_encode(['status' => 'error', 'message' => 'Profil guru tidak ditemukan. Harap hubungi administrator.']);
+                exit();
+            }
+
+            $jenis = $_POST['jenis'] ?? 'masuk';
+            $lat = $_POST['latitude'] ?? null;
+            $lng = $_POST['longitude'] ?? null;
+            $image = $_POST['image_base64'] ?? '';
+            $keterangan = $_POST['keterangan'] ?? '';
+
+            $result = $absensiModel->submitPresensiGuruSelfie($guruId, [
+                'jenis' => $jenis,
+                'latitude' => $lat,
+                'longitude' => $lng,
+                'image_base64' => $image,
+                'keterangan' => $keterangan
+            ]);
+
+            echo json_encode($result);
+            exit();
+        }
+
+        $presensiHariIni = $absensiModel->getPresensiGuruHariIni($guruId);
+        $riwayatPresensi = $absensiModel->getRiwayatPresensiGuru($guruId, 20);
+
+        require_once ROOT_PATH . 'views/guru/presensi_selfie.php';
+    }
+
     public function recapBulanan() {
         $guru = $this->getGuruInfo();
         $guruId = $guru['id'] ?? 0;

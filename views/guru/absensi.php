@@ -17,7 +17,10 @@ $activeTabParam = $_GET['tab'] ?? 'siswa';
                 <h4 class="fw-bold mb-1"><i class="bi bi-calendar-check-fill text-primary me-2"></i>Rekap Absensi Presensi & QR Code Scanner</h4>
                 <p class="text-muted small mb-0">Data presensi otomatis terhubung secara langsung dengan hasil Scan QR Code Siswa dan Guru/GTK.</p>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="<?= BASE_URL ?>index.php?url=guru/presensiGuru" class="btn btn-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-xs">
+                    <i class="bi bi-camera-fill me-1"></i> Presensi Selfie Guru
+                </a>
                 <a href="<?= $recapBulananUrl ?>" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-bold shadow-xs">
                     <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Rekap Absensi Bulanan
                 </a>
@@ -185,15 +188,17 @@ $activeTabParam = $_GET['tab'] ?? 'siswa';
                                         <th>No</th>
                                         <th>NIP</th>
                                         <th>Nama Lengkap Guru / GTK</th>
+                                        <th>Foto Selfie</th>
                                         <th>Status Presensi</th>
                                         <th>Jam Masuk</th>
                                         <th>Jam Pulang</th>
+                                        <th>Jarak (GPS)</th>
                                         <th>Keterangan / Scan QR</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php if (empty($recapGuru)): ?>
-                                        <tr><td colspan="7" class="text-center py-4 text-muted">Belum ada data guru terdaftar.</td></tr>
+                                        <tr><td colspan="9" class="text-center py-4 text-muted">Belum ada data guru terdaftar.</td></tr>
                                     <?php else: ?>
                                         <?php foreach ($recapGuru as $idx => $g): 
                                             $gId = $g['guru_id'];
@@ -208,6 +213,25 @@ $activeTabParam = $_GET['tab'] ?? 'siswa';
                                                 <td><code><?= htmlspecialchars($g['nip'] ?: '-') ?></code></td>
                                                 <td class="fw-bold text-dark">
                                                     <i class="bi bi-person-circle me-1 text-primary"></i><?= htmlspecialchars($g['nama_lengkap']) ?>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex gap-1 align-items-center">
+                                                        <?php if (!empty($g['foto_masuk'])): ?>
+                                                            <img src="<?= BASE_URL . htmlspecialchars($g['foto_masuk']) ?>" 
+                                                                 style="width:34px; height:34px; border-radius:8px; object-fit:cover; cursor:pointer; border:1px solid #cbd5e1;" 
+                                                                 title="Selfie Masuk - <?= htmlspecialchars($g['nama_lengkap']) ?>"
+                                                                 onclick="previewSelfieModal('<?= BASE_URL . htmlspecialchars($g['foto_masuk']) ?>', 'Selfie Masuk - <?= htmlspecialchars($g['nama_lengkap']) ?>')">
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($g['foto_pulang'])): ?>
+                                                            <img src="<?= BASE_URL . htmlspecialchars($g['foto_pulang']) ?>" 
+                                                                 style="width:34px; height:34px; border-radius:8px; object-fit:cover; cursor:pointer; border:1px solid #cbd5e1;" 
+                                                                 title="Selfie Pulang - <?= htmlspecialchars($g['nama_lengkap']) ?>"
+                                                                 onclick="previewSelfieModal('<?= BASE_URL . htmlspecialchars($g['foto_pulang']) ?>', 'Selfie Pulang - <?= htmlspecialchars($g['nama_lengkap']) ?>')">
+                                                        <?php endif; ?>
+                                                        <?php if (empty($g['foto_masuk']) && empty($g['foto_pulang'])): ?>
+                                                            <span class="text-muted" style="font-size:0.75rem;">-</span>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     <?php if ($isAdminRoute): ?>
@@ -243,12 +267,29 @@ $activeTabParam = $_GET['tab'] ?? 'siswa';
                                                     <?php endif; ?>
                                                 </td>
                                                 <td>
+                                                    <div class="small">
+                                                        <?php if (!empty($g['jarak_masuk_meter'])): ?>
+                                                            <div><span class="badge bg-light text-dark border" style="font-size: 0.72rem;">Masuk: <?= $g['jarak_masuk_meter'] ?>m</span></div>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($g['jarak_pulang_meter'])): ?>
+                                                            <div><span class="badge bg-light text-dark border" style="font-size: 0.72rem;">Pulang: <?= $g['jarak_pulang_meter'] ?>m</span></div>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($g['latitude_masuk']) && !empty($g['longitude_masuk'])): ?>
+                                                            <a href="https://maps.google.com/?q=<?= $g['latitude_masuk'] ?>,<?= $g['longitude_masuk'] ?>" target="_blank" class="text-primary text-decoration-none d-block mt-0.5" style="font-size:0.7rem;">
+                                                                <i class="bi bi-geo-alt-fill text-danger"></i> Maps
+                                                            </a>
+                                                        <?php elseif (empty($g['jarak_masuk_meter']) && empty($g['jarak_pulang_meter'])): ?>
+                                                            <span class="text-muted">-</span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </td>
+                                                <td>
                                                     <?php if ($isAdminRoute): ?>
                                                         <input type="text" name="keterangan_guru[<?= $gId ?>]" class="form-control form-control-sm rounded-3" value="<?= htmlspecialchars($g['keterangan'] ?? '') ?>" placeholder="Opsional (Sakit, Dinas Luar)">
                                                     <?php else: ?>
                                                         <?php if ($isHadir): ?>
                                                             <span class="badge bg-light text-dark border px-2 py-1" style="font-size:0.75rem;">
-                                                                <i class="bi bi-qr-code-scan me-1 text-success"></i><?= htmlspecialchars($g['keterangan'] ?: 'Presensi Digital Scan QR') ?>
+                                                                <i class="bi bi-check-circle me-1 text-success"></i><?= htmlspecialchars($g['keterangan'] ?: (($g['tipe_presensi'] ?? '') === 'selfie' ? 'Presensi Selfie Geofence' : 'Presensi Scan QR')) ?>
                                                             </span>
                                                         <?php else: ?>
                                                             <span class="text-muted small">-</span>
@@ -276,10 +317,35 @@ $activeTabParam = $_GET['tab'] ?? 'siswa';
     </div>
 </main>
 
+<!-- Modal Preview Foto Selfie High-Res -->
+<div class="modal fade" id="modalPreviewSelfie" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+            <div class="modal-header border-0 bg-dark text-white px-4 py-3">
+                <h6 class="modal-title fw-bold" id="modalSelfieTitle">Foto Selfie Presensi</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-black text-center">
+                <img id="modalSelfieImage" src="" class="img-fluid" style="max-height: 520px; width: 100%; object-fit: contain;">
+            </div>
+            <div class="modal-footer border-0 bg-dark px-4 py-2 text-end">
+                <button type="button" class="btn btn-sm btn-outline-light rounded-pill px-3" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function setSemuaHadir() {
     const selects = document.querySelectorAll('.select-status');
     selects.forEach(s => s.value = 'Hadir');
+}
+
+function previewSelfieModal(url, title) {
+    document.getElementById('modalSelfieImage').src = url;
+    document.getElementById('modalSelfieTitle').innerText = title;
+    const modal = new bootstrap.Modal(document.getElementById('modalPreviewSelfie'));
+    modal.show();
 }
 
 document.addEventListener('DOMContentLoaded', function() {

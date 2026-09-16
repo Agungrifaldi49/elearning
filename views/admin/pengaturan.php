@@ -50,6 +50,11 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                 <i class="bi bi-code-slash me-1"></i> API & Token Key
             </button>
         </li>
+        <li class="nav-item">
+            <button class="nav-link <?= $currentTab === 'geofencing' ? 'active' : '' ?> fw-bold" id="geofencing-tab" data-bs-toggle="tab" data-bs-target="#geofencingTab" type="button">
+                <i class="bi bi-geo-alt-fill text-danger me-1"></i> Titik Lokasi Presensi (Geofencing)
+            </button>
+        </li>
     </ul>
 
     <div class="tab-content" id="settingsTabContent">
@@ -364,6 +369,88 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                 </form>
             </div>
         </div>
+
+        <!-- Tab 6: Titik Lokasi Presensi & Geofencing Guru -->
+        <div class="tab-pane fade <?= $currentTab === 'geofencing' ? 'show active' : '' ?>" id="geofencingTab" role="tabpanel">
+            <div class="card-custom p-4 p-md-5 shadow-sm rounded-4">
+                <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2 border-bottom pb-3">
+                    <div>
+                        <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-geo-alt-fill text-danger me-2"></i>Konfigurasi Titik Lokasi & Radius Geofencing Presensi Guru</h5>
+                        <p class="text-muted small mb-0">Tentukan titik koordinat pusat sekolah dan batas radius toleransi presensi selfie kamera guru & GTK.</p>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-xs" id="btnDetectAdminGPS">
+                        <i class="bi bi-crosshair me-1"></i> Deteksi Lokasi GPS Saya
+                    </button>
+                </div>
+
+                <form action="<?= BASE_URL ?>index.php?url=admin/pengaturan" method="POST">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="section" value="geofencing">
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary">Nama Titik Lokasi / Kampus</label>
+                            <input type="text" name="lokasi_sekolah_nama" id="geoNamaSekolah" class="form-control rounded-3" value="<?= htmlspecialchars($settings['lokasi_sekolah_nama'] ?? 'SMK Muthia Harapan Cicalengka') ?>" required placeholder="Contoh: SMK Muthia Harapan Cicalengka">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary">Radius Toleransi Presensi (Meter)</label>
+                            <div class="input-group">
+                                <input type="number" name="lokasi_sekolah_radius" id="geoRadiusInput" class="form-control rounded-start-3" value="<?= htmlspecialchars($settings['lokasi_sekolah_radius'] ?? '150') ?>" min="10" max="5000" step="5" required>
+                                <span class="input-group-text bg-light fw-bold text-muted rounded-end-3">Meter</span>
+                            </div>
+                            <small class="text-muted">Jarak radius lingkaran toleransi di mana guru diizinkan melakukan presensi selfie.</small>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary">Latitude (Garis Lintang)</label>
+                            <input type="text" name="lokasi_sekolah_lat" id="geoLatInput" class="form-control font-monospace rounded-3" value="<?= htmlspecialchars($settings['lokasi_sekolah_lat'] ?? '-6.984042') ?>" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary">Longitude (Garis Bujur)</label>
+                            <input type="text" name="lokasi_sekolah_lng" id="geoLngInput" class="form-control font-monospace rounded-3" value="<?= htmlspecialchars($settings['lokasi_sekolah_lng'] ?? '107.838612') ?>" required>
+                        </div>
+
+                        <!-- Interactive Leaflet Map for Admin -->
+                        <div class="col-12 my-2">
+                            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                <label class="form-label small fw-bold mb-0 text-dark"><i class="bi bi-map me-1 text-primary"></i> Peta Titik Presensi & Radius Geofence</label>
+                                <span class="badge bg-light text-secondary border rounded-pill px-3 py-1"><i class="bi bi-cursor-fill me-1 text-primary"></i> Geser pin penanda atau klik peta untuk menentukan titik koordinat</span>
+                            </div>
+                            <div id="adminGeofenceMap" style="height: 380px; width: 100%; border-radius: 14px; border: 1px solid rgba(0,0,0,0.12); z-index: 1;"></div>
+                        </div>
+
+                        <!-- Jam Masuk & Jam Pulang Limits -->
+                        <div class="col-12 mt-4">
+                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-clock-history text-warning me-2"></i>Jadwal Jam Presensi Guru & Batas Waktu</h6>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-secondary">Jam Buka Presensi Masuk</label>
+                            <input type="time" name="presensi_jam_masuk_mulai" class="form-control rounded-3" value="<?= htmlspecialchars($settings['presensi_jam_masuk_mulai'] ?? '06:00') ?>" required>
+                            <small class="text-muted">Waktu mulai guru dapat melakukan presensi masuk.</small>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-secondary">Batas Masuk (Tepat Waktu)</label>
+                            <input type="time" name="presensi_jam_masuk_batas" class="form-control rounded-3" value="<?= htmlspecialchars($settings['presensi_jam_masuk_batas'] ?? '07:30') ?>" required>
+                            <small class="text-muted">Setelah jam ini, status presensi otomatis terhitung <b>Terlambat</b>.</small>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-secondary">Jam Buka Presensi Pulang</label>
+                            <input type="time" name="presensi_jam_pulang_mulai" class="form-control rounded-3" value="<?= htmlspecialchars($settings['presensi_jam_pulang_mulai'] ?? '15:00') ?>" required>
+                            <small class="text-muted">Waktu minimal guru diizinkan untuk presensi pulang.</small>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top d-flex gap-2">
+                        <button type="submit" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm">
+                            <i class="bi bi-save me-1"></i> Simpan Pengaturan Geofencing
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -610,6 +697,132 @@ function parseInitialMisi() {
 document.addEventListener('DOMContentLoaded', function() {
     parseInitialMisi();
 });
+
+// Leaflet Map Initialization for Admin Geofence
+let adminMap = null;
+let adminMarker = null;
+let adminCircle = null;
+
+function initAdminGeofenceMap() {
+    const latInput = document.getElementById('geoLatInput');
+    const lngInput = document.getElementById('geoLngInput');
+    const radiusInput = document.getElementById('geoRadiusInput');
+    const mapContainer = document.getElementById('adminGeofenceMap');
+    if (!mapContainer) return;
+
+    let initLat = parseFloat(latInput ? latInput.value : -6.984042) || -6.984042;
+    let initLng = parseFloat(lngInput ? lngInput.value : 107.838612) || 107.838612;
+    let initRadius = parseInt(radiusInput ? radiusInput.value : 150) || 150;
+
+    if (adminMap) {
+        adminMap.invalidateSize();
+        return;
+    }
+
+    adminMap = L.map('adminGeofenceMap').setView([initLat, initLng], 16);
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(adminMap);
+
+    // School Marker
+    adminMarker = L.marker([initLat, initLng], { draggable: true }).addTo(adminMap);
+    adminMarker.bindPopup('<div class="p-1 text-center"><strong>Titik Pusat Presensi</strong><br><small class="text-muted">Geser pin untuk memindahkan titik</small></div>').openPopup();
+
+    // Circle Geofence
+    adminCircle = L.circle([initLat, initLng], {
+        color: '#10b981',
+        fillColor: '#10b981',
+        fillOpacity: 0.22,
+        weight: 2,
+        radius: initRadius
+    }).addTo(adminMap);
+
+    function updateAdminCoord(lat, lng) {
+        if (latInput) latInput.value = Number(lat).toFixed(6);
+        if (lngInput) lngInput.value = Number(lng).toFixed(6);
+        adminMarker.setLatLng([lat, lng]);
+        adminCircle.setLatLng([lat, lng]);
+    }
+
+    adminMarker.on('dragend', function(e) {
+        const coord = e.target.getLatLng();
+        updateAdminCoord(coord.lat, coord.lng);
+    });
+
+    adminMap.on('click', function(e) {
+        updateAdminCoord(e.latlng.lat, e.latlng.lng);
+    });
+
+    if (radiusInput) {
+        radiusInput.addEventListener('input', function() {
+            const r = parseInt(this.value) || 50;
+            adminCircle.setRadius(r);
+        });
+    }
+
+    // GPS Button
+    const btnGps = document.getElementById('btnDetectAdminGPS');
+    if (btnGps) {
+        btnGps.addEventListener('click', function() {
+            if (!navigator.geolocation) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire('GPS Tidak Didukung', 'Browser Anda tidak mendukung geolokasi.', 'error');
+                } else {
+                    alert('Browser Anda tidak mendukung geolokasi.');
+                }
+                return;
+            }
+            btnGps.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Mendeteksi GPS...';
+            btnGps.disabled = true;
+
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    updateAdminCoord(lat, lng);
+                    adminMap.setView([lat, lng], 17);
+                    btnGps.innerHTML = '<i class="bi bi-check-circle me-1"></i> Lokasi Berhasil Ditemukan!';
+                    btnGps.classList.replace('btn-outline-primary', 'btn-success');
+                    setTimeout(() => {
+                        btnGps.innerHTML = '<i class="bi bi-crosshair me-1"></i> Deteksi Lokasi GPS Saya';
+                        btnGps.classList.replace('btn-success', 'btn-outline-primary');
+                        btnGps.disabled = false;
+                    }, 3000);
+                },
+                function(err) {
+                    btnGps.innerHTML = '<i class="bi bi-crosshair me-1"></i> Deteksi Lokasi GPS Saya';
+                    btnGps.disabled = false;
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire('Gagal Mengambil GPS', err.message || 'Izin lokasi ditolak atau sinyal GPS belum aktif.', 'warning');
+                    } else {
+                        alert('Gagal mengambil GPS: ' + err.message);
+                    }
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        });
+    }
+}
+
+// Hook tab shown event for Leaflet invalidation
+document.addEventListener('DOMContentLoaded', function() {
+    const geoTabBtn = document.getElementById('geofencing-tab');
+    if (geoTabBtn) {
+        geoTabBtn.addEventListener('shown.bs.tab', function() {
+            setTimeout(initAdminGeofenceMap, 200);
+        });
+    }
+
+    if (document.getElementById('geofencingTab')?.classList.contains('active')) {
+        setTimeout(initAdminGeofenceMap, 300);
+    }
+});
 </script>
+
+<!-- Leaflet CSS & JS Assets -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>

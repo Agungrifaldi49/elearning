@@ -71,6 +71,43 @@ class AbsensiModel extends BaseModel {
                     $this->db->exec("ALTER TABLE absensi ADD COLUMN waktu_hadir DATETIME DEFAULT CURRENT_TIMESTAMP AFTER waktu_pulang");
                 }
             }
+
+            // Auto-migrate columns for absensi_guru (Selfie & Geofencing GPS)
+            $stmtG = $this->db->query("SHOW COLUMNS FROM absensi_guru");
+            if ($stmtG) {
+                $rawColsG = $stmtG->fetchAll(PDO::FETCH_ASSOC);
+                $colsG = array_map(function($c) {
+                    return strtolower($c['Field'] ?? ($c['field'] ?? ''));
+                }, $rawColsG);
+
+                if (!in_array('foto_masuk', $colsG)) {
+                    $this->db->exec("ALTER TABLE absensi_guru ADD COLUMN foto_masuk VARCHAR(255) NULL AFTER waktu_masuk");
+                }
+                if (!in_array('foto_pulang', $colsG)) {
+                    $this->db->exec("ALTER TABLE absensi_guru ADD COLUMN foto_pulang VARCHAR(255) NULL AFTER waktu_pulang");
+                }
+                if (!in_array('latitude_masuk', $colsG)) {
+                    $this->db->exec("ALTER TABLE absensi_guru ADD COLUMN latitude_masuk DECIMAL(10, 8) NULL AFTER foto_masuk");
+                }
+                if (!in_array('longitude_masuk', $colsG)) {
+                    $this->db->exec("ALTER TABLE absensi_guru ADD COLUMN longitude_masuk DECIMAL(11, 8) NULL AFTER latitude_masuk");
+                }
+                if (!in_array('latitude_pulang', $colsG)) {
+                    $this->db->exec("ALTER TABLE absensi_guru ADD COLUMN latitude_pulang DECIMAL(10, 8) NULL AFTER foto_pulang");
+                }
+                if (!in_array('longitude_pulang', $colsG)) {
+                    $this->db->exec("ALTER TABLE absensi_guru ADD COLUMN longitude_pulang DECIMAL(11, 8) NULL AFTER latitude_pulang");
+                }
+                if (!in_array('jarak_masuk_meter', $colsG)) {
+                    $this->db->exec("ALTER TABLE absensi_guru ADD COLUMN jarak_masuk_meter INT NULL AFTER longitude_masuk");
+                }
+                if (!in_array('jarak_pulang_meter', $colsG)) {
+                    $this->db->exec("ALTER TABLE absensi_guru ADD COLUMN jarak_pulang_meter INT NULL AFTER longitude_pulang");
+                }
+                if (!in_array('tipe_presensi', $colsG)) {
+                    $this->db->exec("ALTER TABLE absensi_guru ADD COLUMN tipe_presensi VARCHAR(30) DEFAULT 'selfie' AFTER status");
+                }
+            }
         } catch (Throwable $e) {}
     }
 
@@ -335,6 +372,8 @@ class AbsensiModel extends BaseModel {
 
             $stmtG = $this->db->prepare("
                 SELECT ag.id, 'Guru' as role_label, ag.tanggal, ag.waktu_masuk, ag.waktu_pulang, ag.waktu_hadir, ag.status, ag.keterangan,
+                       ag.foto_masuk, ag.foto_pulang, ag.latitude_masuk, ag.longitude_masuk, ag.latitude_pulang, ag.longitude_pulang,
+                       ag.jarak_masuk_meter, ag.jarak_pulang_meter, ag.tipe_presensi,
                        g.nama_lengkap, g.nip as nis, g.nip as nisn, 'GTK / Pendidik' as nama_kelas
                 FROM absensi_guru ag
                 JOIN guru g ON ag.guru_id = g.id
@@ -739,7 +778,9 @@ class AbsensiModel extends BaseModel {
         try {
             $stmt = $this->db->prepare("
                 SELECT g.id as guru_id, g.nip, g.nama_lengkap, g.status as status_guru,
-                       ag.id as absensi_id, ag.tanggal, ag.waktu_masuk, ag.waktu_pulang, ag.waktu_hadir, ag.status, ag.qr_code, ag.keterangan
+                       ag.id as absensi_id, ag.tanggal, ag.waktu_masuk, ag.waktu_pulang, ag.waktu_hadir, ag.status, ag.qr_code, ag.keterangan,
+                       ag.foto_masuk, ag.foto_pulang, ag.latitude_masuk, ag.longitude_masuk, ag.latitude_pulang, ag.longitude_pulang,
+                       ag.jarak_masuk_meter, ag.jarak_pulang_meter, ag.tipe_presensi
                 FROM guru g
                 LEFT JOIN absensi_guru ag ON g.id = ag.guru_id AND ag.tanggal = ?
                 WHERE g.status = 'aktif'
@@ -772,6 +813,232 @@ class AbsensiModel extends BaseModel {
             }
         } catch (\Throwable $e) {
             return false;
+        }
+    }
+
+    /**
+     * Hitung jarak dua titik koordinat bumi dalam satuan meter (Haversine Formula)
+     */
+    public function calculateDistanceMeter($lat1, $lon1, $lat2, $lon2) {
+        $earthRadius = 6371000; // Radius bumi dalam meter
+        $latFrom = deg2rad((float)$lat1);
+        $lonFrom = deg2rad((float)$lon1);
+        $latTo = deg2rad((float)$lat2);
+        $lonTo = deg2rad((float)$lon2);
+
+        $latDelta = $latTo - $latFrom;
+        $lonDelta = $lonTo - $lonFrom;
+
+        $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
+            cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+        return (int)round($angle * $earthRadius);
+    }
+
+    /**
+     * Ambil data presensi guru untuk tanggal tertentu (default hari ini)
+     */
+    public function getPresensiGuruHariIni($guruId, $tanggal = null) {
+        if (!$tanggal) $tanggal = date('Y-m-d');
+        try {
+            $stmt = $this->db->prepare("
+                SELECT ag.*, g.nama_lengkap, g.nip
+                FROM absensi_guru ag
+                JOIN guru g ON ag.guru_id = g.id
+                WHERE ag.guru_id = ? AND ag.tanggal = ?
+                LIMIT 1
+            ");
+            $stmt->execute([(int)$guruId, $tanggal]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Ambil riwayat presensi guru mandiri
+     */
+    public function getRiwayatPresensiGuru($guruId, $limit = 30) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT * FROM absensi_guru
+                WHERE guru_id = ?
+                ORDER BY tanggal DESC, id DESC
+                LIMIT " . (int)$limit . "
+            ");
+            $stmt->execute([(int)$guruId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Catat Presensi Selfie Guru dengan Validasi Geofencing
+     */
+    public function submitPresensiGuruSelfie($guruId, $data) {
+        $guruId = (int)$guruId;
+        if ($guruId <= 0) {
+            return ['status' => 'error', 'message' => 'Identitas guru tidak valid atau sesi telah berakhir.'];
+        }
+
+        $jenis = strtolower(trim($data['jenis'] ?? 'masuk'));
+        if (!in_array($jenis, ['masuk', 'pulang'])) {
+            return ['status' => 'error', 'message' => 'Jenis presensi tidak valid (masuk atau pulang).'];
+        }
+
+        $lat = isset($data['latitude']) && is_numeric($data['latitude']) ? (float)$data['latitude'] : null;
+        $lng = isset($data['longitude']) && is_numeric($data['longitude']) ? (float)$data['longitude'] : null;
+
+        if ($lat === null || $lng === null || ($lat == 0 && $lng == 0)) {
+            return ['status' => 'error', 'message' => 'Titik koordinat GPS tidak terdeteksi. Pastikan GPS aktif dan izin lokasi diizinkan di browser Anda.'];
+        }
+
+        $imageBase64 = $data['image_base64'] ?? '';
+        if (empty($imageBase64)) {
+            return ['status' => 'error', 'message' => 'Foto selfie tidak ditemukan. Harap aktifkan kamera dan ambil foto selfie.'];
+        }
+
+        // Ambil konfigurasi lokasi & jam presensi dari settings
+        require_once ROOT_PATH . 'models/SettingsModel.php';
+        $settingsModel = new SettingsModel();
+        $settings = $settingsModel->getAll();
+
+        $lokasiNama = $settings['lokasi_sekolah_nama'] ?? 'SMK Muthia Harapan Cicalengka';
+        $lokasiLat = isset($settings['lokasi_sekolah_lat']) ? (float)$settings['lokasi_sekolah_lat'] : -6.984042;
+        $lokasiLng = isset($settings['lokasi_sekolah_lng']) ? (float)$settings['lokasi_sekolah_lng'] : 107.838612;
+        $radiusMaksimal = isset($settings['lokasi_sekolah_radius']) ? (int)$settings['lokasi_sekolah_radius'] : 150;
+        $jamMasukMulai = $settings['presensi_jam_masuk_mulai'] ?? '06:00';
+        $jamMasukBatas = $settings['presensi_jam_masuk_batas'] ?? '07:30';
+        $jamPulangMulai = $settings['presensi_jam_pulang_mulai'] ?? '15:00';
+
+        // Hitung jarak Haversine ke titik koordinat sekolah
+        $distance = $this->calculateDistanceMeter($lat, $lng, $lokasiLat, $lokasiLng);
+
+        // Validasi radius Geofencing
+        if ($distance > $radiusMaksimal) {
+            return [
+                'status' => 'error',
+                'message' => "Lokasi Anda berada di luar radius presensi {$lokasiNama}! Jarak Anda saat ini: {$distance} meter dari titik sekolah (Batas maksimal radius: {$radiusMaksimal} meter).",
+                'distance' => $distance,
+                'max_radius' => $radiusMaksimal
+            ];
+        }
+
+        // Decode dan simpan file foto selfie
+        $uploadDir = ROOT_PATH . 'assets/uploads/presensi_guru/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        if (preg_match('/^data:image\/(\w+);base64,/', $imageBase64, $type)) {
+            $imageBase64 = substr($imageBase64, strpos($imageBase64, ',') + 1);
+            $type = strtolower($type[1]);
+            if (!in_array($type, ['jpg', 'jpeg', 'png', 'webp'])) {
+                return ['status' => 'error', 'message' => 'Format foto selfie tidak didukung. Gunakan JPG/PNG.'];
+            }
+        } else {
+            return ['status' => 'error', 'message' => 'Format data foto kamera tidak valid.'];
+        }
+
+        $decodedImage = base64_decode($imageBase64);
+        if ($decodedImage === false) {
+            return ['status' => 'error', 'message' => 'Gagal memproses data gambar kamera.'];
+        }
+
+        $fileName = 'selfie_' . $guruId . '_' . $jenis . '_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.jpg';
+        $filePath = $uploadDir . $fileName;
+        $relativeFilePath = 'assets/uploads/presensi_guru/' . $fileName;
+
+        if (file_put_contents($filePath, $decodedImage) === false) {
+            return ['status' => 'error', 'message' => 'Gagal menyimpan file foto selfie ke server.'];
+        }
+
+        $today = date('Y-m-d');
+        $nowDateTime = date('Y-m-d H:i:s');
+        $nowTime = date('H:i:s');
+        $existing = $this->getPresensiGuruHariIni($guruId, $today);
+
+        if ($jenis === 'masuk') {
+            if ($existing && !empty($existing['waktu_masuk']) && $existing['waktu_masuk'] !== '0000-00-00 00:00:00') {
+                $masukDisplay = date('H:i', strtotime($existing['waktu_masuk']));
+                return [
+                    'status' => 'warning',
+                    'message' => 'Anda sudah melakukan presensi masuk hari ini pada pukul ' . $masukDisplay . ' WIB.'
+                ];
+            }
+
+            // Status Kehadiran (Hadir tepat waktu vs Terlambat)
+            $statusPresensi = 'Hadir';
+            $jamSekarang = date('H:i');
+            if ($jamSekarang > $jamMasukBatas) {
+                $statusPresensi = 'Terlambat';
+            }
+
+            $keterangan = trim($data['keterangan'] ?? '');
+            if ($statusPresensi === 'Terlambat' && empty($keterangan)) {
+                $keterangan = 'Terlambat hadir (Check-in ' . substr($nowTime, 0, 5) . ' WIB)';
+            }
+
+            if ($existing) {
+                $stmt = $this->db->prepare("
+                    UPDATE absensi_guru 
+                    SET waktu_masuk = ?, waktu_hadir = ?, status = ?, foto_masuk = ?, 
+                        latitude_masuk = ?, longitude_masuk = ?, jarak_masuk_meter = ?, 
+                        tipe_presensi = 'selfie', keterangan = CASE WHEN keterangan IS NULL OR keterangan = '' THEN ? ELSE keterangan END
+                    WHERE id = ?
+                ");
+                $stmt->execute([$nowDateTime, $nowDateTime, $statusPresensi, $relativeFilePath, $lat, $lng, $distance, $keterangan, $existing['id']]);
+            } else {
+                $stmt = $this->db->prepare("
+                    INSERT INTO absensi_guru 
+                    (guru_id, tanggal, waktu_masuk, waktu_hadir, status, foto_masuk, latitude_masuk, longitude_masuk, jarak_masuk_meter, tipe_presensi, keterangan)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'selfie', ?)
+                ");
+                $stmt->execute([$guruId, $today, $nowDateTime, $nowDateTime, $statusPresensi, $relativeFilePath, $lat, $lng, $distance, $keterangan]);
+            }
+
+            return [
+                'status' => 'success',
+                'message' => "Presensi MASUK berhasil dicatat! Status: {$statusPresensi}. Jarak Anda ke sekolah: {$distance} meter.",
+                'jenis' => 'masuk',
+                'waktu' => substr($nowTime, 0, 5),
+                'status_presensi' => $statusPresensi,
+                'jarak' => $distance,
+                'foto' => $relativeFilePath
+            ];
+
+        } else { // pulang
+            if (!$existing || empty($existing['waktu_masuk']) || $existing['waktu_masuk'] === '0000-00-00 00:00:00') {
+                return [
+                    'status' => 'error',
+                    'message' => 'Anda belum melakukan presensi masuk hari ini. Harap lakukan presensi masuk terlebih dahulu sebelum presensi pulang.'
+                ];
+            }
+
+            if (!empty($existing['waktu_pulang']) && $existing['waktu_pulang'] !== '0000-00-00 00:00:00') {
+                $pulangDisplay = date('H:i', strtotime($existing['waktu_pulang']));
+                return [
+                    'status' => 'warning',
+                    'message' => 'Anda sudah melakukan presensi pulang hari ini pada pukul ' . $pulangDisplay . ' WIB.'
+                ];
+            }
+
+            $stmt = $this->db->prepare("
+                UPDATE absensi_guru 
+                SET waktu_pulang = ?, foto_pulang = ?, latitude_pulang = ?, longitude_pulang = ?, 
+                    jarak_pulang_meter = ?, tipe_presensi = 'selfie'
+                WHERE id = ?
+            ");
+            $stmt->execute([$nowDateTime, $relativeFilePath, $lat, $lng, $distance, $existing['id']]);
+
+            return [
+                'status' => 'success',
+                'message' => "Presensi PULANG berhasil dicatat pada pukul " . substr($nowTime, 0, 5) . " WIB! Jarak: {$distance} meter.",
+                'jenis' => 'pulang',
+                'waktu' => substr($nowTime, 0, 5),
+                'jarak' => $distance,
+                'foto' => $relativeFilePath
+            ];
         }
     }
 

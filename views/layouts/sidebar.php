@@ -100,6 +100,9 @@ if (!empty($sidebarRawLogo)) {
             </a></li>
 
             <li class="nav-section-title">Penilaian & Presensi</li>
+            <li><a class="nav-link <?= isActive($currentUrl,'guru/presensiGuru') ?>" href="<?= BASE_URL ?>index.php?url=guru/presensiGuru">
+                <i class="bi bi-camera-fill text-success"></i> Presensi Selfie Guru
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'admin/jadwal') ?>" href="<?= BASE_URL ?>index.php?url=admin/jadwal">
                 <i class="bi bi-clock-history text-info"></i> Jadwal Pelajaran Sekolah
             </a></li>
@@ -197,6 +200,9 @@ if (!empty($sidebarRawLogo)) {
             </a></li>
 
             <li class="nav-section-title">Penilaian & Presensi</li>
+            <li><a class="nav-link <?= isActive($currentUrl,'guru/presensiGuru') ?>" href="<?= BASE_URL ?>index.php?url=guru/presensiGuru">
+                <i class="bi bi-camera-fill text-success"></i> Presensi Selfie Guru
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'guru/jadwal') ?>" href="<?= BASE_URL ?>index.php?url=guru/jadwal">
                 <i class="bi bi-clock-history text-warning"></i> Jadwal Mengajar Saya
             </a></li>
@@ -204,7 +210,7 @@ if (!empty($sidebarRawLogo)) {
                 <i class="bi bi-pencil-fill"></i> Input Nilai E-Rapor
             </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'guru/absensi') ?>" href="<?= BASE_URL ?>index.php?url=guru/absensi">
-                <i class="bi bi-calendar-check-fill"></i> Presensi Siswa
+                <i class="bi bi-calendar-check-fill"></i> Presensi Siswa & GTK
             </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'guru/recapBulanan') ?>" href="<?= BASE_URL ?>index.php?url=guru/recapBulanan">
                 <i class="bi bi-file-earmark-spreadsheet-fill text-success"></i> Rekap Absensi Bulanan
