@@ -185,19 +185,23 @@
 <!-- Modal Input / Edit Supervisi Guru -->
 <div class="modal fade" id="modalSupervisi" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <form method="POST" action="<?= BASE_URL ?>index.php?url=kepsek/supervisiGuru">
-                <input type="hidden" name="csrf_token" value="<?= Security::getCsrfToken() ?>">
-                <input type="hidden" name="action" value="save">
-                <input type="hidden" name="id" id="formSupervisiId" value="">
+        <form id="formSupervisi" method="POST" action="<?= BASE_URL ?>index.php?url=kepsek/supervisiGuru" class="modal-content rounded-4 border-0 shadow">
+            <input type="hidden" name="csrf_token" value="<?= Security::getCsrfToken() ?>">
+            <input type="hidden" name="action" value="save">
+            <input type="hidden" name="id" id="formSupervisiId" value="">
 
-                <div class="modal-header border-0 pb-0">
-                    <div>
-                        <h5 class="modal-title fw-bold" id="modalFormTitle"><i class="bi bi-pencil-square text-primary me-2"></i>Instrumen Supervisi Akademik Guru</h5>
-                        <small class="text-muted">Isi formulir penilaian pembelajaran dan pembinaan kinerja guru.</small>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeModalSupervisi()"></button>
+            <div class="modal-header border-bottom pb-3 px-4 bg-light rounded-top-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0 text-dark" id="modalFormTitle"><i class="bi bi-pencil-square text-primary me-2"></i>Instrumen Supervisi Akademik Guru</h5>
+                    <small class="text-muted">Isi formulir penilaian pembelajaran dan pembinaan kinerja guru.</small>
                 </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="submit" form="formSupervisi" class="btn btn-primary btn-sm px-3 py-1.5 rounded-pill fw-bold shadow-sm d-flex align-items-center gap-1">
+                        <i class="bi bi-check-circle-fill"></i> Simpan
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeModalSupervisi()" aria-label="Close"></button>
+                </div>
+            </div>
 
                 <div class="modal-body p-4">
                     <div class="row g-3 mb-3">
@@ -328,14 +332,13 @@
                     </div>
                 </div>
 
-                <div class="modal-footer border-0 pt-0">
+                <div class="modal-footer border-top pt-3 px-4 bg-light rounded-bottom-4 d-flex justify-content-between align-items-center">
                     <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal" onclick="closeModalSupervisi()">Batal</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold">
-                        <i class="bi bi-check-circle me-1"></i> Simpan Hasil Supervisi
+                    <button type="submit" form="formSupervisi" class="btn btn-primary rounded-3 px-4 fw-bold shadow-sm">
+                        <i class="bi bi-check-circle-fill me-1"></i> Simpan Hasil Supervisi
                     </button>
                 </div>
-            </form>
-        </div>
+        </form>
     </div>
 </div>
 
