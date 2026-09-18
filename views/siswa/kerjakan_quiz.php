@@ -171,6 +171,82 @@ body {
         font-size: 0.8rem;
     }
 }
+
+/* ==========================================================================
+   BULLETPROOF SWEETALERT2 FIX FOR MOBILE & FULLSCREEN CBT EXAMS
+   ========================================================================== */
+html.swal2-shown, 
+body.swal2-shown,
+html.swal2-height-auto, 
+body.swal2-height-auto {
+    height: 100% !important;
+    min-height: 100% !important;
+}
+
+.swal2-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100% !important;
+    height: 100dvh !important;
+    z-index: 9999999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 16px !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    background: rgba(15, 23, 42, 0.78) !important;
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+}
+
+.swal2-popup {
+    position: relative !important;
+    margin: auto !important;
+    max-width: 92vw !important;
+    width: 440px !important;
+    border-radius: 22px !important;
+    padding: 1.5rem 1.25rem !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+@media (max-width: 575.98px) {
+    .swal2-popup {
+        width: 94vw !important;
+        padding: 1.25rem 1rem !important;
+        border-radius: 20px !important;
+    }
+    .swal2-title {
+        font-size: 1.15rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .swal2-html-container {
+        font-size: 0.85rem !important;
+        margin: 0.75rem 0.25rem !important;
+        line-height: 1.45 !important;
+    }
+    .swal2-actions {
+        width: 100% !important;
+        flex-direction: column-reverse !important;
+        gap: 8px !important;
+        margin-top: 1.25rem !important;
+    }
+    .swal2-actions button {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 11px 16px !important;
+        font-size: 0.88rem !important;
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+    }
+}
 </style>
 
 <!-- CBT Sticky Navbar Header -->
@@ -489,7 +565,7 @@ body {
             <?php endfor; ?>
         </div>
 
-        <button type="button" class="btn btn-success w-100 fw-bold py-2.5 rounded-pill shadow-sm text-white" onclick="closeMobileOffcanvas(); confirmSubmitExam();">
+        <button type="button" class="btn btn-success w-100 fw-bold py-2.5 rounded-pill shadow-sm text-white" onclick="submitFromMobileDrawer();">
             <i class="bi bi-check-circle-fill me-1.5"></i> Selesaikan Ujian Sekarang
         </button>
     </div>
@@ -497,6 +573,39 @@ body {
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+// --- BULLETPROOF SWEETALERT2 INTERCEPTOR FOR MOBILE & FULLSCREEN CBT ---
+if (window.Swal) {
+    const _origSwalFire = window.Swal.fire;
+    window.Swal.fire = function(...args) {
+        let opts = {};
+        if (typeof args[0] === 'string') {
+            opts = {
+                title: args[0],
+                html: args[1] || '',
+                icon: args[2] || undefined
+            };
+        } else if (typeof args[0] === 'object' && args[0] !== null) {
+            opts = Object.assign({}, args[0]);
+        }
+
+        // 1. Force heightAuto: false to prevent mobile body/html height collapse and scroll distortion
+        opts.heightAuto = false;
+        opts.scrollbarPadding = false;
+
+        // 2. Lock target to active Fullscreen root element or body
+        if (!opts.target) {
+            opts.target = document.fullscreenElement || document.webkitFullscreenElement || document.body;
+        }
+
+        // 3. Immediately dismiss mobile virtual keyboard so viewport returns to full height
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
+        }
+
+        return _origSwalFire.call(window.Swal, opts);
+    };
+}
+
 const quizId = '<?= $quiz_id ?>';
 let currentCsrfToken = '<?= Security::csrfToken() ?>';
 
@@ -512,12 +621,29 @@ let timerInterval = null;
 let heartbeatInterval = null;
 let warningCount = 0;
 let isExamActive = false;
+let isSubmitting = false;
 let essayDebounceTimers = {};
 
 // 2. Restore saved warning count if student refreshed during exam
 const savedWarns = sessionStorage.getItem('cbt_warning_count_' + quizId);
 if (savedWarns) {
     warningCount = parseInt(savedWarns);
+}
+
+// 3. Smooth Mobile Drawer Submission Handler (Avoids Backdrop Collision)
+function submitFromMobileDrawer() {
+    const offcanvasElem = document.getElementById('offcanvasNavMobile');
+    const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasElem);
+    if (bsOffcanvas) {
+        const onHidden = () => {
+            offcanvasElem.removeEventListener('hidden.bs.offcanvas', onHidden);
+            confirmSubmitExam();
+        };
+        offcanvasElem.addEventListener('hidden.bs.offcanvas', onHidden);
+        bsOffcanvas.hide();
+    } else {
+        confirmSubmitExam();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -878,6 +1004,14 @@ function updateAnswerCounters() {
 }
 
 function confirmSubmitExam() {
+    // Dismiss mobile virtual keyboard immediately
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+    }
+
+    // Set submitting flag to avoid false positive security warnings
+    isSubmitting = true;
+
     let answeredCount = 0;
     for (let i = 0; i < totalSoalCount; i++) {
         const card = document.getElementById('soalCard_' + i);
@@ -891,23 +1025,52 @@ function confirmSubmitExam() {
     }
     const unanswerCount = totalSoalCount - answeredCount;
 
-    let subMsg = `Anda telah menjawab ${answeredCount} dari ${totalSoalCount} soal.`;
+    let subMsgHtml = `
+        <div class="text-start p-3 rounded-3 bg-light border mb-2" style="font-size:0.88rem;">
+            <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted">Soal Terjawab:</span>
+                <span class="fw-bold text-success">${answeredCount} Soal</span>
+            </div>
+            <div class="d-flex justify-content-between mb-1">
+                <span class="text-muted">Belum Dijawab:</span>
+                <span class="fw-bold ${unanswerCount > 0 ? 'text-danger' : 'text-success'}">${unanswerCount} Soal</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Total Soal:</span>
+                <span class="fw-bold text-dark">${totalSoalCount} Soal</span>
+            </div>
+        </div>
+    `;
+
     if (unanswerCount > 0) {
-        subMsg += ` Masih ada ${unanswerCount} soal yang belum dijawab! Yakin ingin menyelesaikan ujian?`;
+        subMsgHtml += `
+            <div class="alert alert-warning py-2 px-3 small text-start mb-0 border-0 rounded-3">
+                <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                <strong>Perhatian:</strong> Masih ada <strong>${unanswerCount}</strong> soal yang belum Anda jawab! Yakin ingin menyelesaikan ujian?
+            </div>
+        `;
+    } else {
+        subMsgHtml += `
+            <p class="text-muted small mb-0">Seluruh <strong>${totalSoalCount}</strong> soal telah Anda jawab. Nilai ujian akan langsung direkap dan disimpan ke sistem.</p>
+        `;
     }
 
     Swal.fire({
-        icon: 'question',
+        icon: unanswerCount > 0 ? 'warning' : 'question',
         title: 'Selesaikan & Kirim Ujian?',
-        text: subMsg,
+        html: subMsgHtml,
         showCancelButton: true,
         confirmButtonColor: '#10b981',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'Ya, Kirim Sekarang',
-        cancelButtonText: 'Batal / Cek Lagi'
+        confirmButtonText: '<i class="bi bi-check-circle-fill me-1"></i> Ya, Kirim Sekarang',
+        cancelButtonText: '<i class="bi bi-arrow-left me-1"></i> Periksa Jawaban Lagi',
+        focusConfirm: true,
+        allowOutsideClick: false
     }).then((result) => {
         if (result.isConfirmed) {
             submitExamForm();
+        } else {
+            isSubmitting = false;
         }
     });
 }
@@ -973,6 +1136,9 @@ async function submitExamForm() {
         }).then((r) => {
             if (r.isConfirmed) {
                 submitExamForm();
+            } else {
+                isExamActive = true;
+                isSubmitting = false;
             }
         });
     }
@@ -1020,7 +1186,7 @@ function enableAntiCheating() {
 }
 
 async function handleSecurityViolation() {
-    if (!isExamActive) return;
+    if (!isExamActive || isSubmitting) return;
 
     const isFull = document.fullscreenElement || document.webkitFullscreenElement;
     if (!isFull || document.hidden) {

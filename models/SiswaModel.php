@@ -157,76 +157,206 @@ class SiswaModel extends BaseModel {
     public function getSiswaCertificateRealStats($siswaId) {
         $siswaId = (int)$siswaId;
         
-        // 1. Presensi Log Rate
-        $stmtAtt = $this->db->prepare("
-            SELECT 
-                COUNT(*) as total_absensi,
-                COUNT(CASE WHEN LOWER(status) = 'hadir' THEN 1 END) as total_hadir
-            FROM absensi 
-            WHERE siswa_id = ?
-        ");
-        $stmtAtt->execute([$siswaId]);
-        $attData = $stmtAtt->fetch();
-
-        $presensiStr = "Belum Ada Data";
-        if ($attData && (int)$attData['total_absensi'] > 0) {
-            $rate = round(((int)$attData['total_hadir'] / (int)$attData['total_absensi']) * 100);
-            $presensiStr = $rate . "%";
-        }
-
-        // 2. Scores from nilai_rapor, hasil_quiz, pengumpulan_tugas
-        $scores = [];
+        // 1. Presensi Log Metrics & Rate
+        $totalAbsensi = 0;
+        $totalHadir   = 0;
+        $totalIzin    = 0;
+        $totalSakit   = 0;
+        $totalAlpa    = 0;
+        $rateHadir    = 0;
+        $presensiStr  = "Belum Ada Data";
 
         try {
-            $stmtRapor = $this->db->prepare("SELECT AVG(nilai_akhir) as avg_rapor, COUNT(nilai_akhir) as cnt_rapor FROM nilai_rapor WHERE siswa_id = ? AND nilai_akhir IS NOT NULL");
-            $stmtRapor->execute([$siswaId]);
-            $rData = $stmtRapor->fetch();
-            if ($rData && (int)$rData['cnt_rapor'] > 0 && $rData['avg_rapor'] !== null) {
-                $scores[] = (float)$rData['avg_rapor'];
+            $stmtAtt = $this->db->prepare("
+                SELECT 
+                    COUNT(*) as total_absensi,
+                    COUNT(CASE WHEN LOWER(status) = 'hadir' THEN 1 END) as total_hadir,
+                    COUNT(CASE WHEN LOWER(status) = 'izin' THEN 1 END) as total_izin,
+                    COUNT(CASE WHEN LOWER(status) = 'sakit' THEN 1 END) as total_sakit,
+                    COUNT(CASE WHEN LOWER(status) = 'alpa' THEN 1 END) as total_alpa
+                FROM absensi 
+                WHERE siswa_id = ?
+            ");
+            $stmtAtt->execute([$siswaId]);
+            $attData = $stmtAtt->fetch();
+            if ($attData) {
+                $totalAbsensi = (int)$attData['total_absensi'];
+                $totalHadir   = (int)$attData['total_hadir'];
+                $totalIzin    = (int)$attData['total_izin'];
+                $totalSakit   = (int)$attData['total_sakit'];
+                $totalAlpa    = (int)$attData['total_alpa'];
+
+                if ($totalAbsensi > 0) {
+                    $rateHadir = round(($totalHadir / $totalAbsensi) * 100);
+                    $presensiStr = $rateHadir . "%";
+                }
             }
-        } catch (Exception $e) {}
+        } catch (\Throwable $e) {}
 
+        // 2. Real Academic Evaluation Pillars (Tugas, Kuis/CBT, E-Rapor)
+        $cntTugas = 0;
+        $avgTugas = null;
         try {
-            $stmtQuiz = $this->db->prepare("SELECT AVG(total_nilai) as avg_quiz, COUNT(total_nilai) as cnt_quiz FROM hasil_quiz WHERE siswa_id = ? AND total_nilai IS NOT NULL");
-            $stmtQuiz->execute([$siswaId]);
-            $qData = $stmtQuiz->fetch();
-            if ($qData && (int)$qData['cnt_quiz'] > 0 && $qData['avg_quiz'] !== null) {
-                $scores[] = (float)$qData['avg_quiz'];
-            }
-        } catch (Exception $e) {}
-
-        try {
-            $stmtTugas = $this->db->prepare("SELECT AVG(nilai) as avg_tugas, COUNT(nilai) as cnt_tugas FROM pengumpulan_tugas WHERE siswa_id = ? AND nilai IS NOT NULL");
+            $stmtTugas = $this->db->prepare("
+                SELECT COUNT(nilai) as cnt, AVG(nilai) as avg_val 
+                FROM pengumpulan_tugas 
+                WHERE siswa_id = ? AND nilai IS NOT NULL
+            ");
             $stmtTugas->execute([$siswaId]);
             $tData = $stmtTugas->fetch();
-            if ($tData && (int)$tData['cnt_tugas'] > 0 && $tData['avg_tugas'] !== null) {
-                $scores[] = (float)$tData['avg_tugas'];
+            if ($tData && (int)$tData['cnt'] > 0 && $tData['avg_val'] !== null) {
+                $cntTugas = (int)$tData['cnt'];
+                $avgTugas = round((float)$tData['avg_val'], 1);
             }
-        } catch (Exception $e) {}
+        } catch (\Throwable $e) {}
 
-        $evaluasiLmsStr = "Belum Ada Nilai";
-        $predikatStr = "Belum Ada Data";
-
-        if (!empty($scores)) {
-            $finalAvg = round(array_sum($scores) / count($scores), 1);
-            $evaluasiLmsStr = number_format($finalAvg, 1) . " / 100";
-
-            if ($finalAvg >= 90) {
-                $predikatStr = "A (Sangat Memuaskan)";
-            } elseif ($finalAvg >= 80) {
-                $predikatStr = "B (Baik)";
-            } elseif ($finalAvg >= 70) {
-                $predikatStr = "C (Cukup)";
-            } else {
-                $predikatStr = "D (Perlu Bimbingan)";
+        $cntQuiz = 0;
+        $cntQuizLulus = 0;
+        $avgQuiz = null;
+        try {
+            $stmtQuiz = $this->db->prepare("
+                SELECT COUNT(total_nilai) as cnt,
+                       COUNT(CASE WHEN status_lulus = 'lulus' THEN 1 END) as cnt_lulus,
+                       AVG(COALESCE(nilai_tertinggi, total_nilai)) as avg_val 
+                FROM hasil_quiz 
+                WHERE siswa_id = ? AND total_nilai IS NOT NULL
+            ");
+            $stmtQuiz->execute([$siswaId]);
+            $qData = $stmtQuiz->fetch();
+            if ($qData && (int)$qData['cnt'] > 0 && $qData['avg_val'] !== null) {
+                $cntQuiz = (int)$qData['cnt'];
+                $cntQuizLulus = (int)$qData['cnt_lulus'];
+                $avgQuiz = round((float)$qData['avg_val'], 1);
             }
+        } catch (\Throwable $e) {}
+
+        $cntRapor = 0;
+        $avgRapor = null;
+        try {
+            // Filter nilai_akhir > 0 to avoid un-enrolled placeholder 0.00 dragging down true score
+            $stmtRapor = $this->db->prepare("
+                SELECT COUNT(nilai_akhir) as cnt, AVG(nilai_akhir) as avg_val 
+                FROM nilai_rapor 
+                WHERE siswa_id = ? AND nilai_akhir > 0
+            ");
+            $stmtRapor->execute([$siswaId]);
+            $rData = $stmtRapor->fetch();
+            if ($rData && (int)$rData['cnt'] > 0 && $rData['avg_val'] !== null) {
+                $cntRapor = (int)$rData['cnt'];
+                $avgRapor = round((float)$rData['avg_val'], 1);
+            }
+        } catch (\Throwable $e) {}
+
+        // 3. Proportional Weighted Composite Evaluation
+        $validPillars = [];
+        if ($avgTugas !== null) {
+            $validPillars[] = ['val' => $avgTugas, 'weight' => 0.25];
+        }
+        if ($avgQuiz !== null) {
+            $validPillars[] = ['val' => $avgQuiz, 'weight' => 0.35];
+        }
+        if ($avgRapor !== null) {
+            $validPillars[] = ['val' => $avgRapor, 'weight' => 0.40];
         }
 
+        $finalAvg = 0.0;
+        if (!empty($validPillars)) {
+            $sumVal = 0;
+            $sumWeight = 0;
+            foreach ($validPillars as $p) {
+                $sumVal += ($p['val'] * $p['weight']);
+                $sumWeight += $p['weight'];
+            }
+            $finalAvg = ($sumWeight > 0) ? round($sumVal / $sumWeight, 1) : 0.0;
+        }
+
+        // 4. Standard SMK Grade Predicate Scale
+        $grade = 'D';
+        $label = 'Perlu Bimbingan';
+        $predClass = 'bg-danger text-white';
+        $borderClass = 'border-danger';
+
+        if ($finalAvg >= 88) {
+            $grade = 'A';
+            $label = 'Sangat Memuaskan';
+            $predClass = 'bg-success text-white';
+            $borderClass = 'border-success';
+        } elseif ($finalAvg >= 78) {
+            $grade = 'B';
+            $label = 'Baik';
+            $predClass = 'bg-primary text-white';
+            $borderClass = 'border-primary';
+        } elseif ($finalAvg >= 68) {
+            $grade = 'C';
+            $label = 'Cukup';
+            $predClass = 'bg-warning text-dark';
+            $borderClass = 'border-warning';
+        } else {
+            $grade = 'D';
+            $label = 'Perlu Bimbingan';
+            $predClass = 'bg-danger text-white';
+            $borderClass = 'border-danger';
+        }
+
+        $evaluasiLmsStr = ($finalAvg > 0) ? number_format($finalAvg, 1) . " / 100" : "Belum Ada Nilai";
+        $predikatStr    = ($finalAvg > 0) ? "{$grade} ({$label})" : "Belum Ada Data";
+
         return [
+            // Backward-compatible string keys
             'predikat' => $predikatStr,
             'presensi_log' => $presensiStr,
-            'evaluasi_lms' => $evaluasiLmsStr
+            'evaluasi_lms' => $evaluasiLmsStr,
+            // Rich structured fields
+            'evaluasi_nilai' => $finalAvg,
+            'predikat_grade' => $grade,
+            'predikat_label' => $label,
+            'predikat_class' => $predClass,
+            'border_class' => $borderClass,
+            'is_tuntas' => ($finalAvg >= 75),
+            'kkm' => 75,
+            // Presensi detailed metrics
+            'total_absensi' => $totalAbsensi,
+            'total_hadir' => $totalHadir,
+            'total_izin' => $totalIzin,
+            'total_sakit' => $totalSakit,
+            'total_alpa' => $totalAlpa,
+            'rate_hadir' => $rateHadir,
+            // Academic pillars
+            'total_tugas' => $cntTugas,
+            'avg_tugas' => $avgTugas,
+            'total_quiz' => $cntQuiz,
+            'total_quiz_lulus' => $cntQuizLulus,
+            'avg_quiz' => $avgQuiz,
+            'total_mapel_rapor' => $cntRapor,
+            'avg_rapor' => $avgRapor,
         ];
+    }
+
+    /**
+     * Ambil riwayat log presensi riil siswa langsung dari tabel absensi
+     */
+    public function getSiswaPresensiLogs($siswaId, $limit = 10) {
+        $siswaId = (int)$siswaId;
+        $limit = max(1, min(50, (int)$limit));
+        try {
+            $stmt = $this->db->prepare("
+                SELECT a.*, 
+                       COALESCE(g.nama_lengkap, u.full_name, 'Guru Pengampu') as nama_guru,
+                       COALESCE(mp.nama_mapel, 'Kegiatan KBM Harian') as nama_mapel
+                FROM absensi a
+                LEFT JOIN guru g ON a.guru_id = g.id
+                LEFT JOIN users u ON g.user_id = u.id
+                LEFT JOIN jadwal j ON a.jadwal_id = j.id
+                LEFT JOIN mata_pelajaran mp ON j.mapel_id = mp.id
+                WHERE a.siswa_id = ?
+                ORDER BY a.tanggal DESC, a.waktu_masuk DESC, a.id DESC
+                LIMIT {$limit}
+            ");
+            $stmt->execute([$siswaId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     public function bulkUpdateKelas($siswaIds, $newKelasId) {

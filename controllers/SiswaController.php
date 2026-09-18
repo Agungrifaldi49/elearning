@@ -85,8 +85,16 @@ class SiswaController {
         $jadwalList = $academicModel->getJadwal($kelasId);
         $pengumumanList = $commModel->getPengumuman('siswa');
 
+        $nilaiModel = new NilaiModel();
+        if (!empty($enrolledList)) {
+            foreach ($enrolledList as $em) {
+                $nilaiModel->syncSiswaMapelNilai($siswaId, (int)$em['mapel_id']);
+            }
+        }
+
         $siswaModel = new SiswaModel();
         $certStats = $siswaModel->getSiswaCertificateRealStats($siswaId);
+        $presensiLogs = $siswaModel->getSiswaPresensiLogs($siswaId, 6);
         $activeTa = $academicModel->getActiveTahunAjaran();
 
         $db = Database::getConnection();
@@ -796,6 +804,17 @@ class SiswaController {
     public function sertifikat() {
         $siswa = $this->getSiswaInfo();
         $siswaModel = new SiswaModel();
+        $academicModel = new AcademicModel();
+        $nilaiModel = new NilaiModel();
+
+        if ($siswa && !empty($siswa['id'])) {
+            $enrolledList = $academicModel->getSiswaEnrolledMapels($siswa['id']);
+            if (!empty($enrolledList)) {
+                foreach ($enrolledList as $em) {
+                    $nilaiModel->syncSiswaMapelNilai($siswa['id'], (int)$em['mapel_id']);
+                }
+            }
+        }
 
         $certStats = $siswa ? $siswaModel->getSiswaCertificateRealStats($siswa['id']) : [
             'predikat' => 'Belum Ada Data',
