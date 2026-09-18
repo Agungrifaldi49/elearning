@@ -1634,6 +1634,7 @@ class AdminController {
 
         $globalStats = $pembayaranModel->getAdminGlobalStats();
         $studentsPaymentList = $pembayaranModel->getAllStudentPayments($filters);
+        $bridgeConfig = $pembayaranModel->getBridgeConfig();
 
         $kelasList = $academicModel->getKelas();
         $jurusanList = $academicModel->getJurusan();
@@ -1645,20 +1646,37 @@ class AdminController {
         require_once ROOT_PATH . 'models/PembayaranModel.php';
         $pembayaranModel = new PembayaranModel();
 
-        // If POST with payload data
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
-            if (!empty($input['items'])) {
-                $res = $pembayaranModel->syncExternalPaymentData($input['items']);
-                FlashHelper::setSuccess($res['message']);
-            } else {
-                // Re-seed / refresh sample data
-                $pembayaranModel->seedInitialDataIfEmpty();
-                FlashHelper::setSuccess('Data sinkronisasi jembatan pembayaran berhasil diperbarui.');
+            $action = $_POST['action'] ?? '';
+
+            if ($action === 'remote_pull') {
+                $url = trim($_POST['server_url'] ?? '');
+                $token = trim($_POST['secret_token'] ?? '');
+                $res = $pembayaranModel->pullFromRemoteServer($url, $token);
+                if ($res['status']) {
+                    FlashHelper::setSuccess($res['message']);
+                } else {
+                    FlashHelper::setError($res['message']);
+                }
+            } elseif ($action === 'import_csv') {
+                if (!empty($_FILES['csv_file']['tmp_name'])) {
+                    $res = $pembayaranModel->importFromCsv($_FILES['csv_file']['tmp_name']);
+                    if ($res['status']) {
+                        FlashHelper::setSuccess($res['message']);
+                    } else {
+                        FlashHelper::setError($res['message']);
+                    }
+                } else {
+                    FlashHelper::setError('Silakan pilih file CSV rekap tagihan yang akan diunggah.');
+                }
+            } elseif ($action === 'clear_data') {
+                $res = $pembayaranModel->clearAllPaymentData();
+                if ($res['status']) {
+                    FlashHelper::setSuccess($res['message']);
+                } else {
+                    FlashHelper::setError($res['message']);
+                }
             }
-        } else {
-            $pembayaranModel->seedInitialDataIfEmpty();
-            FlashHelper::setSuccess('Data pembayaran siswa berhasil disinkronkan.');
         }
 
         header('Location: ' . BASE_URL . 'index.php?url=admin/pembayaran');

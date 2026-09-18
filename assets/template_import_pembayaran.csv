@@ -1,0 +1,4 @@
+nisn,nis,kode_tagihan,judul,jenis_pembayaran,nominal,nominal_terbayar,periode_bulan,tahun_ajaran,tanggal_jatuh_tempo,status,keterangan
+0071234567,25260001,SPP-25260001-09,SPP Bulan September 2025,SPP,250000,250000,September 2025,2025/2026,2025-09-10,lunas,Lunas via Kasir TU
+0071234568,25260002,SPP-25260002-09,SPP Bulan September 2025,SPP,250000,0,September 2025,2025/2026,2025-09-10,belum_lunas,Menunggak 1 Bulan
+0071234569,25260003,DSP-25260003-2025,Dana Pengembangan Gedung (DSP),DSP,750000,750000,Semester Ganjil,2025/2026,2025-11-30,lunas,Lunas via Transfer Bank

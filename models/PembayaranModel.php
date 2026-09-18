@@ -12,7 +12,7 @@ class PembayaranModel {
     public function __construct() {
         $this->db = Database::getConnection();
         Database::ensureCustomTables();
-        $this->seedInitialDataIfEmpty();
+        // Auto-seed disabled so tables start completely clean for real data pull
     }
 
     /**
@@ -165,6 +165,21 @@ class PembayaranModel {
         $totalTunggakan = (float)($row['total_tunggakan'] ?? 0);
         $countBelumLunas = (int)($row['count_belum_lunas'] ?? 0);
 
+        if ($totalTagihan <= 0 && $totalTerbayar <= 0) {
+            return [
+                'total_tagihan' => 0,
+                'total_terbayar' => 0,
+                'total_tunggakan' => 0,
+                'persen_lunas' => 0,
+                'count_lunas' => 0,
+                'count_belum_lunas' => 0,
+                'has_bills' => false,
+                'is_bebas_keuangan' => false,
+                'status_label' => 'Belum Ada Data Tagihan',
+                'badge_class' => 'bg-secondary text-white'
+            ];
+        }
+
         $persenLunas = $totalTagihan > 0 ? round(($totalTerbayar / $totalTagihan) * 100, 1) : 100;
         $isBebasKeuangan = ($totalTunggakan <= 0 && $countBelumLunas === 0);
 
@@ -175,6 +190,7 @@ class PembayaranModel {
             'persen_lunas' => $persenLunas,
             'count_lunas' => (int)($row['count_lunas'] ?? 0),
             'count_belum_lunas' => $countBelumLunas,
+            'has_bills' => true,
             'is_bebas_keuangan' => $isBebasKeuangan,
             'status_label' => $isBebasKeuangan ? 'Bebas Keuangan (Lunas)' : 'Terdapat Tunggakan Aktif',
             'badge_class' => $isBebasKeuangan ? 'bg-success text-white' : 'bg-warning text-dark'
@@ -455,5 +471,158 @@ class PembayaranModel {
             'synced' => $syncedCount,
             'created' => $createdCount
         ];
+    }
+
+    /**
+     * Get Payment Bridge Remote Config
+     */
+    public function getBridgeConfig() {
+        $path = ROOT_PATH . 'config/payment_bridge.json';
+        if (file_exists($path)) {
+            return json_decode(file_get_contents($path), true) ?: [];
+        }
+        return [
+            'server_url' => '',
+            'secret_token' => '',
+            'last_sync' => null,
+            'last_status' => null
+        ];
+    }
+
+    /**
+     * Save Payment Bridge Remote Config
+     */
+    public function saveBridgeConfig($data) {
+        $path = ROOT_PATH . 'config/payment_bridge.json';
+        $current = $this->getBridgeConfig();
+        $updated = array_merge($current, $data);
+        file_put_contents($path, json_encode($updated, JSON_PRETTY_PRINT));
+        return $updated;
+    }
+
+    /**
+     * Pull data from Remote Payment Server via cURL / REST API
+     */
+    public function pullFromRemoteServer($remoteUrl, $secretToken = '') {
+        $remoteUrl = trim($remoteUrl);
+        if (empty($remoteUrl) || !filter_var($remoteUrl, FILTER_VALIDATE_URL)) {
+            return ['status' => false, 'message' => 'URL Server Pembayaran tidak valid atau kosong.'];
+        }
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $remoteUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 25);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+        $headers = [
+            'Accept: application/json',
+            'User-Agent: E-Learning-SMK-Muthia-Harapan-Bridge/1.0'
+        ];
+        if (!empty($secretToken)) {
+            $headers[] = 'Authorization: Bearer ' . trim($secretToken);
+            $headers[] = 'X-API-KEY: ' . trim($secretToken);
+        }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr = curl_error($ch);
+        curl_close($ch);
+
+        if (!empty($curlErr)) {
+            $this->saveBridgeConfig(['server_url' => $remoteUrl, 'secret_token' => $secretToken, 'last_sync' => date('Y-m-d H:i:s'), 'last_status' => 'Gagal: ' . $curlErr]);
+            return ['status' => false, 'message' => 'Koneksi ke server pembayaran gagal: ' . $curlErr];
+        }
+
+        if ($httpCode !== 200) {
+            $this->saveBridgeConfig(['server_url' => $remoteUrl, 'secret_token' => $secretToken, 'last_sync' => date('Y-m-d H:i:s'), 'last_status' => 'Gagal HTTP ' . $httpCode]);
+            return ['status' => false, 'message' => 'Server pembayaran merespon dengan kode HTTP: ' . $httpCode];
+        }
+
+        $json = json_decode($response, true);
+        if (!is_array($json)) {
+            $this->saveBridgeConfig(['server_url' => $remoteUrl, 'secret_token' => $secretToken, 'last_sync' => date('Y-m-d H:i:s'), 'last_status' => 'Format Non-JSON']);
+            return ['status' => false, 'message' => 'Format respon dari server pembayaran bukan JSON yang valid.'];
+        }
+
+        $items = $json['data'] ?? $json['items'] ?? (isset($json[0]) ? $json : []);
+        if (empty($items)) {
+            $this->saveBridgeConfig(['server_url' => $remoteUrl, 'secret_token' => $secretToken, 'last_sync' => date('Y-m-d H:i:s'), 'last_status' => 'Data Kosong']);
+            return ['status' => true, 'message' => 'Koneksi berhasil, namun belum ada tagihan di server pembayaran.', 'synced' => 0, 'created' => 0];
+        }
+
+        $syncRes = $this->syncExternalPaymentData($items);
+        $this->saveBridgeConfig([
+            'server_url' => $remoteUrl,
+            'secret_token' => $secretToken,
+            'last_sync' => date('Y-m-d H:i:s'),
+            'last_status' => 'Sukses (' . ($syncRes['synced'] ?? 0) . ' update, ' . ($syncRes['created'] ?? 0) . ' baru)'
+        ]);
+
+        return $syncRes;
+    }
+
+    /**
+     * Import Payment Records from CSV File
+     */
+    public function importFromCsv($filePath) {
+        if (!file_exists($filePath) || !is_readable($filePath)) {
+            return ['status' => false, 'message' => 'File CSV tidak dapat dibaca.'];
+        }
+
+        $handle = fopen($filePath, 'r');
+        if (!$handle) {
+            return ['status' => false, 'message' => 'Gagal membuka file CSV.'];
+        }
+
+        // Read header
+        $header = fgetcsv($handle, 2000, ',');
+        if (!$header || count($header) < 2) {
+            rewind($handle);
+            $header = fgetcsv($handle, 2000, ';');
+            $delim = ';';
+        } else {
+            $delim = ',';
+        }
+
+        if (!$header) {
+            fclose($handle);
+            return ['status' => false, 'message' => 'Header CSV tidak ditemukan atau file kosong.'];
+        }
+
+        $headerNormalized = array_map(function($h) {
+            return strtolower(trim(str_replace(['"', "'", ' '], ['', '', '_'], $h)));
+        }, $header);
+
+        $items = [];
+        while (($row = fgetcsv($handle, 2000, $delim)) !== false) {
+            if (empty(array_filter($row))) continue;
+            $item = [];
+            foreach ($headerNormalized as $idx => $colName) {
+                $item[$colName] = $row[$idx] ?? '';
+            }
+            $items[] = $item;
+        }
+        fclose($handle);
+
+        if (empty($items)) {
+            return ['status' => false, 'message' => 'Tidak ada baris data tagihan yang ditemukan dalam file.'];
+        }
+
+        return $this->syncExternalPaymentData($items);
+    }
+
+    /**
+     * Clear all payment data
+     */
+    public function clearAllPaymentData() {
+        try {
+            $this->db->exec("SET FOREIGN_KEY_CHECKS = 0; TRUNCATE TABLE pembayaran_riwayat; TRUNCATE TABLE pembayaran_tagihan; SET FOREIGN_KEY_CHECKS = 1;");
+            return ['status' => true, 'message' => 'Seluruh data tagihan dan riwayat pembayaran telah berhasil dikosongkan.'];
+        } catch (\Throwable $e) {
+            return ['status' => false, 'message' => 'Gagal mengosongkan data: ' . $e->getMessage()];
+        }
     }
 }

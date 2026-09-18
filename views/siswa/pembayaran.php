@@ -174,7 +174,18 @@
 
                 <!-- TAB 1: TAGIHAN AKTIF / BELUM LUNAS -->
                 <div class="tab-pane fade show active" id="tagihan-pane" role="tabpanel">
-                    <?php if (empty($unpaidBills)): ?>
+                    <?php if (empty($bills)): ?>
+                        <div class="text-center py-5">
+                            <div class="bg-primary-subtle text-primary p-3 rounded-circle d-inline-flex mb-3">
+                                <i class="bi bi-wallet2 fs-1"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-1">Belum Ada Data Tagihan Terdaftar</h5>
+                            <p class="text-muted small mb-3" style="max-width: 550px; margin: 0 auto;">Data administrasi tagihan SPP dan iuran pendidikan Anda saat ini belum dimuat dari sistem keuangan sekolah. Silakan hubungi bagian Tata Usaha / Keuangan untuk informasi lebih lanjut.</p>
+                            <button type="button" class="btn btn-outline-primary rounded-pill px-4 btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#modalInfoRekening">
+                                <i class="bi bi-info-circle me-1"></i> Prosedur & Rekening Sekolah
+                            </button>
+                        </div>
+                    <?php elseif (empty($unpaidBills)): ?>
                         <div class="text-center py-5">
                             <div class="bg-success-subtle text-success p-3 rounded-circle d-inline-flex mb-3">
                                 <i class="bi bi-patch-check-fill fs-1"></i>
