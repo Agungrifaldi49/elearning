@@ -136,6 +136,10 @@ class ExamModel extends BaseModel {
         return $this->db->query($sql)->fetchAll();
     }
 
+    public function getQuizzes($kelas_id = null, $guru_id = null) {
+        return $this->getQuizList($kelas_id, $guru_id);
+    }
+
     public function getQuizById($id) {
         $stmt = $this->db->prepare("
             SELECT q.*, map.nama_mapel, k.nama_kelas, g.nama_lengkap as nama_guru

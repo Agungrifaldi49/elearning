@@ -287,7 +287,7 @@ class KepsekController {
         $examModel = new ExamModel();
         $academicModel = new AcademicModel();
 
-        $quizList = $examModel->getQuizzes();
+        $quizList = $examModel->getQuizList();
         $mapelList = $academicModel->getMapel();
         $kelasList = $academicModel->getKelas();
 

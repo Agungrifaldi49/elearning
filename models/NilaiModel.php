@@ -261,6 +261,10 @@ class NilaiModel {
         return $syncedCount;
     }
 
+    public function getRekapNilai($kelasId, $mapelId = 0): array {
+        return $this->getNilaiByKelasAndMapel((int)$kelasId, (int)$mapelId);
+    }
+
     public function getNilaiByKelasAndMapel(int $kelasId, int $mapelId = 0): array {
         $stmtSiswa = $this->db->prepare("SELECT id FROM siswa WHERE kelas_id = ?");
         $stmtSiswa->execute([$kelasId]);

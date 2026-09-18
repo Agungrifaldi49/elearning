@@ -101,12 +101,15 @@
                                         <span class="badge bg-info-subtle text-dark border border-info-subtle mb-1 d-block">
                                             <i class="bi bi-stopwatch me-1"></i><?= $q['durasi_menit'] ?? 60 ?> Menit
                                         </span>
-                                        <small class="text-muted"><?= $q['total_soal'] ?? 0 ?> Butir Soal</small>
+                                        <small class="text-muted"><?= (int)($q['jumlah_soal'] ?? ($q['total_soal'] ?? 0)) ?> Butir Soal</small>
                                     </td>
                                     <td class="text-center">
-                                        <?php if (!empty($q['waktu_mulai'])): ?>
+                                        <?php if (!empty($q['deadline'])): ?>
+                                            <div class="small fw-semibold text-danger"><?= date('d/m/y H:i', strtotime($q['deadline'])) ?></div>
+                                            <small class="text-muted">Batas Pengumpulan</small>
+                                        <?php elseif (!empty($q['waktu_mulai'])): ?>
                                             <div class="small fw-semibold"><?= date('d/m/y H:i', strtotime($q['waktu_mulai'])) ?></div>
-                                            <small class="text-muted">s/d <?= date('d/m/y H:i', strtotime($q['waktu_selesai'])) ?></small>
+                                            <small class="text-muted">s/d <?= !empty($q['waktu_selesai']) ? date('d/m/y H:i', strtotime($q['waktu_selesai'])) : '-' ?></small>
                                         <?php else: ?>
                                             <span class="text-muted small">Fleksibel</span>
                                         <?php endif; ?>
