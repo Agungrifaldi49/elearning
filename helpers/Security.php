@@ -21,6 +21,13 @@ class Security {
     }
 
     /**
+     * Alias for generateCsrfToken / csrfToken
+     */
+    public static function getCsrfToken() {
+        return self::generateCsrfToken();
+    }
+
+    /**
      * Output CSRF Form Field
      */
     public static function csrfField() {

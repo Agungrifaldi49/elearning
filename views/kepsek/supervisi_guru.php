@@ -15,7 +15,7 @@
                 <a href="<?= BASE_URL ?>index.php?url=kepsek/cetakLaporan&type=supervisi" target="_blank" class="btn btn-outline-primary shadow-sm fw-bold">
                     <i class="bi bi-printer me-1"></i> Cetak Lembar Supervisi PDF
                 </a>
-                <button type="button" class="btn btn-primary shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalSupervisi">
+                <button type="button" id="btnInputSupervisi" class="btn btn-primary shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalSupervisi" onclick="openCreateModal()">
                     <i class="bi bi-plus-circle me-1"></i> Input Supervisi Baru
                 </button>
             </div>
@@ -149,6 +149,9 @@
                                             <button type="button" class="btn btn-outline-info" title="Detail Lembar Supervisi" onclick="showDetailModal(<?= htmlspecialchars(json_encode($row)) ?>)">
                                                 <i class="bi bi-eye"></i>
                                             </button>
+                                            <button type="button" class="btn btn-outline-primary" title="Edit Data Supervisi" onclick="openEditModal(<?= htmlspecialchars(json_encode($row)) ?>)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
                                             <form method="POST" action="<?= BASE_URL ?>index.php?url=kepsek/supervisiGuru" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus data supervisi ini?')">
                                                 <input type="hidden" name="csrf_token" value="<?= Security::getCsrfToken() ?>">
                                                 <input type="hidden" name="action" value="delete">
@@ -181,7 +184,7 @@
 
                 <div class="modal-header border-0 pb-0">
                     <div>
-                        <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-primary me-2"></i>Instrumen Supervisi Akademik Guru</h5>
+                        <h5 class="modal-title fw-bold" id="modalFormTitle"><i class="bi bi-pencil-square text-primary me-2"></i>Instrumen Supervisi Akademik Guru</h5>
                         <small class="text-muted">Isi formulir penilaian pembelajaran dan pembinaan kinerja guru.</small>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -347,13 +350,26 @@
 
 <script>
 function calcLiveScore() {
-    const s1 = parseFloat(document.getElementById('formSkor1').value) || 0;
-    const s2 = parseFloat(document.getElementById('formSkor2').value) || 0;
-    const s3 = parseFloat(document.getElementById('formSkor3').value) || 0;
-    const s4 = parseFloat(document.getElementById('formSkor4').value) || 0;
+    const s1 = parseFloat(document.getElementById('formSkor1').value);
+    const s2 = parseFloat(document.getElementById('formSkor2').value);
+    const s3 = parseFloat(document.getElementById('formSkor3').value);
+    const s4 = parseFloat(document.getElementById('formSkor4').value);
 
-    const total = (s1 * 0.25) + (s2 * 0.35) + (s3 * 0.25) + (s4 * 0.15);
-    document.getElementById('liveScorePreview').innerText = total.toFixed(1);
+    const hasInput = !isNaN(s1) || !isNaN(s2) || !isNaN(s3) || !isNaN(s4);
+    const v1 = isNaN(s1) ? 0 : s1;
+    const v2 = isNaN(s2) ? 0 : s2;
+    const v3 = isNaN(s3) ? 0 : s3;
+    const v4 = isNaN(s4) ? 0 : s4;
+
+    const total = (v1 * 0.25) + (v2 * 0.35) + (v3 * 0.25) + (v4 * 0.15);
+    document.getElementById('liveScorePreview').innerText = hasInput ? total.toFixed(1) : '0.0';
+
+    const predElem = document.getElementById('livePredikatPreview');
+    if (!hasInput) {
+        predElem.innerText = 'Belum Dinilai';
+        predElem.className = 'badge ms-2 bg-secondary';
+        return;
+    }
 
     let pred = 'Kurang (D)';
     let badgeClass = 'bg-danger';
@@ -361,9 +377,62 @@ function calcLiveScore() {
     else if (total >= 80) { pred = 'Baik (B)'; badgeClass = 'bg-primary'; }
     else if (total >= 70) { pred = 'Cukup (C)'; badgeClass = 'bg-warning text-dark'; }
 
-    const predElem = document.getElementById('livePredikatPreview');
     predElem.innerText = pred;
     predElem.className = 'badge ms-2 ' + badgeClass;
+}
+
+function openCreateModal(guruId = null) {
+    document.getElementById('formSupervisiId').value = '';
+    const titleEl = document.getElementById('modalFormTitle');
+    if (titleEl) titleEl.innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i>Input Instrumen Supervisi Akademik Guru';
+    
+    document.getElementById('formTanggal').value = '<?= date('Y-m-d') ?>';
+    if (guruId) {
+        document.getElementById('formGuruId').value = guruId;
+    } else {
+        document.getElementById('formGuruId').value = '';
+    }
+    document.getElementById('formMapelId').value = '';
+    document.getElementById('formKelasId').value = '';
+    document.getElementById('formSkor1').value = '';
+    document.getElementById('formSkor2').value = '';
+    document.getElementById('formSkor3').value = '';
+    document.getElementById('formSkor4').value = '';
+    document.getElementById('formKekuatan').value = '';
+    document.getElementById('formPerbaikan').value = '';
+    document.getElementById('formRekomendasi').value = '';
+    calcLiveScore();
+
+    const modalEl = document.getElementById('modalSupervisi');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+}
+
+function openEditModal(row) {
+    document.getElementById('formSupervisiId').value = row.id || '';
+    const titleEl = document.getElementById('modalFormTitle');
+    if (titleEl) titleEl.innerHTML = '<i class="bi bi-pencil-square text-warning me-2"></i>Edit Hasil Supervisi Akademik Guru';
+    
+    document.getElementById('formTanggal').value = row.tanggal_supervisi || '<?= date('Y-m-d') ?>';
+    document.getElementById('formGuruId').value = row.guru_id || '';
+    document.getElementById('formMapelId').value = row.mapel_id || '';
+    document.getElementById('formKelasId').value = row.kelas_id || '';
+    document.getElementById('formSkor1').value = row.skor_perencanaan ?? '';
+    document.getElementById('formSkor2').value = row.skor_pelaksanaan ?? '';
+    document.getElementById('formSkor3').value = row.skor_evaluasi ?? '';
+    document.getElementById('formSkor4').value = row.skor_kedisiplinan ?? '';
+    document.getElementById('formKekuatan').value = row.catatan_kekuatan || '';
+    document.getElementById('formPerbaikan').value = row.catatan_perbaikan || '';
+    document.getElementById('formRekomendasi').value = row.rekomendasi_tindak_lanjut || '';
+    calcLiveScore();
+
+    const modalEl = document.getElementById('modalSupervisi');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
 }
 
 function showDetailModal(row) {
@@ -414,8 +483,20 @@ function showDetailModal(row) {
         </div>
     `;
     document.getElementById('modalDetailBody').innerHTML = html;
-    new bootstrap.Modal(document.getElementById('modalDetailSupervisi')).show();
+    const modalEl = document.getElementById('modalDetailSupervisi');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    <?php if (!empty($editData)): ?>
+        openEditModal(<?= json_encode($editData) ?>);
+    <?php elseif (!empty($selectedGuruId)): ?>
+        openCreateModal(<?= (int)$selectedGuruId ?>);
+    <?php endif; ?>
+});
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
