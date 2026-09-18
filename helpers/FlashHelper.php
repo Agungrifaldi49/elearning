@@ -6,6 +6,49 @@
 
 class FlashHelper {
 
+    public static function set($key, $message) {
+        if ($key === 'success') {
+            self::setSuccess($message);
+        } elseif ($key === 'error') {
+            self::setError($message);
+        } elseif ($key === 'info') {
+            self::setInfo($message);
+        } else {
+            $_SESSION['flash_' . $key] = $message;
+        }
+    }
+
+    public static function has($key = null) {
+        if ($key === 'success') {
+            return self::hasSuccess();
+        } elseif ($key === 'error') {
+            return self::hasError();
+        } elseif ($key === 'info') {
+            return self::hasInfo();
+        } elseif ($key !== null) {
+            return !empty($_SESSION['flash_' . $key]);
+        }
+        return self::hasSuccess() || self::hasError() || self::hasInfo();
+    }
+
+    public static function get($key = null) {
+        if ($key === 'success') {
+            return self::getSuccess();
+        } elseif ($key === 'error') {
+            return self::getError();
+        } elseif ($key === 'info') {
+            return self::getInfo();
+        } elseif ($key !== null) {
+            if (!empty($_SESSION['flash_' . $key])) {
+                $msg = $_SESSION['flash_' . $key];
+                unset($_SESSION['flash_' . $key]);
+                return $msg;
+            }
+            return null;
+        }
+        return self::getSuccess() ?: (self::getError() ?: self::getInfo());
+    }
+
     public static function setSuccess($message) {
         $_SESSION['flash_success'] = $message;
     }

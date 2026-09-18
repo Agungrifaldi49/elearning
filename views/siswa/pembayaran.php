@@ -51,15 +51,15 @@
 <div class="container-fluid">
 
     <!-- Flash Notification -->
-    <?php if (FlashHelper::has('success')): ?>
+    <?php if (FlashHelper::hasSuccess()): ?>
         <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-xs mb-4" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i><?= FlashHelper::get('success') ?>
+            <i class="bi bi-check-circle-fill me-2"></i><?= FlashHelper::getSuccess() ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
-    <?php if (FlashHelper::has('error')): ?>
+    <?php if (FlashHelper::hasError()): ?>
         <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-xs mb-4" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i><?= FlashHelper::get('error') ?>
+            <i class="bi bi-exclamation-triangle-fill me-2"></i><?= FlashHelper::getError() ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
