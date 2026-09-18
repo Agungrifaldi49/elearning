@@ -247,8 +247,8 @@
             <div class="col-12 col-xl-7">
                 <!-- Breadcrumb & Badges -->
                 <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-                    <span class="badge bg-white bg-opacity-15 text-white border border-white border-opacity-20 px-3 py-1.5 rounded-pill fw-bold text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
-                        <i class="bi bi-shield-check text-info me-1.5"></i> Finance & Billing Bridge
+                    <span class="badge bg-white text-dark px-3 py-1.5 rounded-pill fw-bold text-uppercase shadow-xs" style="font-size: 0.74rem; letter-spacing: 0.5px; color: #000000 !important;">
+                        <i class="bi bi-shield-check text-primary me-1.5"></i> <span style="color: #000000 !important;">Finance & Billing Bridge</span>
                     </span>
                     <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-1.5 rounded-pill fw-bold" style="font-size: 0.72rem;">
                         <span class="pulse-dot-live me-1.5"></span> Arsitektur Lintas Server (Cross-Server)
