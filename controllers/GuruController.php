@@ -2152,4 +2152,248 @@ class GuruController {
     public function supervisiAkademik() {
         $this->supervisi();
     }
+
+    /**
+     * Cetak Lembar Supervisi Akademik & Instrumen Penilaian Kinerja Guru (PDF)
+     */
+    public function cetakSupervisi() {
+        require_once ROOT_PATH . 'models/ReportModel.php';
+        require_once ROOT_PATH . 'helpers/PdfHelper.php';
+
+        $guru = $this->getGuruInfo();
+        $guruId = (int)($guru['id'] ?? 0);
+
+        $reportModel = new ReportModel();
+        $id = (int)($_GET['id'] ?? 0);
+        $type = $_GET['type'] ?? '';
+
+        $supervisiList = $reportModel->getSupervisiList($guruId);
+
+        // Jika tidak ada ID spesifik dan bukan mode rekap, default ke supervisi terbaru jika ada
+        if ($id <= 0 && $type !== 'rekap' && !empty($supervisiList)) {
+            $id = (int)$supervisiList[0]['id'];
+        }
+
+        if ($id > 0 && $type !== 'rekap') {
+            // Cetak Lembar Instrumen Supervisi Resmi (Per Berkas)
+            $supervisi = $reportModel->getSupervisiById($id);
+            if (!$supervisi || (int)$supervisi['guru_id'] !== $guruId) {
+                echo "<script>alert('Berkas lembar supervisi tidak ditemukan atau Anda tidak memiliki akses.'); window.close();</script>";
+                exit();
+            }
+
+            $title = "LEMBAR HASIL SUPERVISI AKADEMIK & PENILAIAN KINERJA GURU";
+            $subtitle = "Instrumen Observasi Pembelajaran & Evaluasi Mutu Pendidik";
+
+            $tglObservasi = date('d F Y', strtotime($supervisi['tanggal_supervisi']));
+            $namaGuru = htmlspecialchars($supervisi['nama_guru']);
+            $nip = htmlspecialchars($supervisi['nip'] ?? '-');
+            $mapel = htmlspecialchars($supervisi['nama_mapel'] ?? 'Semua Mata Pelajaran');
+            $kelas = htmlspecialchars($supervisi['nama_kelas'] ?? 'Rombel Umum');
+            $penilai = htmlspecialchars($supervisi['nama_kepsek'] ?? 'Kepala Sekolah');
+
+            $skorP = (float)$supervisi['skor_perencanaan'];
+            $skorL = (float)$supervisi['skor_pelaksanaan'];
+            $skorE = (float)$supervisi['skor_evaluasi'];
+            $skorD = (float)$supervisi['skor_kedisiplinan'];
+            $nilaiAkhir = (float)$supervisi['nilai_akhir'];
+            $predikat = htmlspecialchars($supervisi['predikat'] ?? '-');
+
+            $kekuatan = nl2br(htmlspecialchars($supervisi['catatan_kekuatan'] ?: 'Modul ajar dan perangkat pembelajaran tersusun rapi serta KBM berlangsung interaktif.'));
+            $perbaikan = nl2br(htmlspecialchars($supervisi['catatan_perbaikan'] ?: 'Tingkatkan keteraturan dokumentasi tindak lanjut dan umpan balik tugas siswa di LMS.'));
+            $rekomendasi = nl2br(htmlspecialchars($supervisi['rekomendasi_tindak_lanjut'] ?: 'Pertahankan mutu KBM dan terus kembangkan media pembelajaran berbasis digital.'));
+
+            $content = "
+            <table style='width:100%; border:none; margin-bottom:15px; font-size:12px;'>
+                <tr>
+                    <td style='width:18%; border:none; padding:4px 0;'><b>Nama Guru</b></td>
+                    <td style='width:2%; border:none; padding:4px 0;'>:</td>
+                    <td style='width:35%; border:none; padding:4px 0;'><b>{$namaGuru}</b></td>
+                    <td style='width:18%; border:none; padding:4px 0;'><b>Hari / Tanggal</b></td>
+                    <td style='width:2%; border:none; padding:4px 0;'>:</td>
+                    <td style='width:25%; border:none; padding:4px 0;'>{$tglObservasi}</td>
+                </tr>
+                <tr>
+                    <td style='border:none; padding:4px 0;'><b>NIP / Identitas</b></td>
+                    <td style='border:none; padding:4px 0;'>:</td>
+                    <td style='border:none; padding:4px 0;'>{$nip}</td>
+                    <td style='border:none; padding:4px 0;'><b>Kelas / Rombel</b></td>
+                    <td style='border:none; padding:4px 0;'>:</td>
+                    <td style='border:none; padding:4px 0;'>{$kelas}</td>
+                </tr>
+                <tr>
+                    <td style='border:none; padding:4px 0;'><b>Mata Pelajaran</b></td>
+                    <td style='border:none; padding:4px 0;'>:</td>
+                    <td style='border:none; padding:4px 0;'>{$mapel}</td>
+                    <td style='border:none; padding:4px 0;'><b>Supervisor / Penilai</b></td>
+                    <td style='border:none; padding:4px 0;'>:</td>
+                    <td style='border:none; padding:4px 0;'><b>{$penilai}</b></td>
+                </tr>
+            </table>
+
+            <div style='font-size:13px; font-weight:bold; margin-top:10px; margin-bottom:6px; color:#0f172a;'>I. RUBRIK PENILAIAN KINERJA PEMBELAJARAN (4 PILAR STANDAR)</div>
+            <table border='1' cellpadding='7' cellspacing='0' style='width:100%; border-collapse:collapse; margin-bottom:15px;'>
+                <thead>
+                    <tr style='background-color:#f1f5f9;'>
+                        <th style='width:35px; text-align:center;'>No</th>
+                        <th>Komponen Pilar Supervisi</th>
+                        <th>Indikator & Aspek Pengamatan</th>
+                        <th style='width:70px; text-align:center;'>Bobot</th>
+                        <th style='width:70px; text-align:center;'>Skor (0-100)</th>
+                        <th style='width:80px; text-align:center;'>Skor Terbobot</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style='text-align:center;'>1</td>
+                        <td><b>Perencanaan Pembelajaran</b></td>
+                        <td>Kesiapan modul ajar/RPP, keselarasan CP/TP, bahan ajar digital, LKPD, dan media belajar LMS</td>
+                        <td style='text-align:center;'>25%</td>
+                        <td style='text-align:center;'><b>{$skorP}</b></td>
+                        <td style='text-align:center;'>" . number_format($skorP * 0.25, 2) . "</td>
+                    </tr>
+                    <tr>
+                        <td style='text-align:center;'>2</td>
+                        <td><b>Pelaksanaan Pembelajaran</b></td>
+                        <td>Penguasaan materi, metode student-centered, interaktivitas, motivasi siswa, dan pemanfaatan LMS</td>
+                        <td style='text-align:center;'>35%</td>
+                        <td style='text-align:center;'><b>{$skorL}</b></td>
+                        <td style='text-align:center;'>" . number_format($skorL * 0.35, 2) . "</td>
+                    </tr>
+                    <tr>
+                        <td style='text-align:center;'>3</td>
+                        <td><b>Evaluasi & Penilaian</b></td>
+                        <td>Pelaksanaan tugas terstruktur, paket kuis CBT, rubrik asesmen, dan ketertiban e-rapor</td>
+                        <td style='text-align:center;'>25%</td>
+                        <td style='text-align:center;'><b>{$skorE}</b></td>
+                        <td style='text-align:center;'>" . number_format($skorE * 0.25, 2) . "</td>
+                    </tr>
+                    <tr>
+                        <td style='text-align:center;'>4</td>
+                        <td><b>Kedisiplinan & Presensi</b></td>
+                        <td>Ketepatan kehadiran mengajar, presensi selfie geotagging, kepatuhan jadwal dan jam mengajar</td>
+                        <td style='text-align:center;'>15%</td>
+                        <td style='text-align:center;'><b>{$skorD}</b></td>
+                        <td style='text-align:center;'>" . number_format($skorD * 0.15, 2) . "</td>
+                    </tr>
+                    <tr style='background-color:#f8fafc; font-size:13px;'>
+                        <td colspan='4' style='text-align:right; font-weight:bold;'>NILAI AKHIR KINERJA GURU:</td>
+                        <td colspan='2' style='text-align:center; font-weight:bold; color:#0d6efd; font-size:15px;'>" . number_format($nilaiAkhir, 2) . "</td>
+                    </tr>
+                    <tr style='background-color:#f1f5f9; font-size:12px;'>
+                        <td colspan='4' style='text-align:right; font-weight:bold;'>PREDIKAT KINERJA / KUALIFIKASI:</td>
+                        <td colspan='2' style='text-align:center; font-weight:bold; text-transform:uppercase;'>{$predikat}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div style='font-size:13px; font-weight:bold; margin-top:15px; margin-bottom:6px; color:#0f172a;'>II. CATATAN KUALITATIF & PEMBINAAN KEPALA SEKOLAH</div>
+            <table border='1' cellpadding='8' cellspacing='0' style='width:100%; border-collapse:collapse; margin-bottom:10px;'>
+                <tr>
+                    <td style='width:30%; background-color:#f8fafc;'><b>1. Kekuatan & Keunggulan Guru</b></td>
+                    <td>{$kekuatan}</td>
+                </tr>
+                <tr>
+                    <td style='background-color:#f8fafc;'><b>2. Aspek Perlu Peningkatan</b></td>
+                    <td>{$perbaikan}</td>
+                </tr>
+                <tr>
+                    <td style='background-color:#fffbeb;'><b>3. Rekomendasi Tindak Lanjut</b></td>
+                    <td style='background-color:#fffdf5;'><b>{$rekomendasi}</b></td>
+                </tr>
+            </table>
+            ";
+
+            $dateNow = date('d F Y');
+            $customFooter = "
+            <table class='footer-table'>
+                <tr>
+                    <td style='width:50%; text-align:center; vertical-align:top;'>
+                        <p style='margin-bottom:0;'>Guru yang Disupervisi,</p>
+                        <p style='margin-top:60px; margin-bottom:0;'><b><u>{$namaGuru}</u></b></p>
+                        <small style='color:#555;'>NIP: {$nip}</small>
+                    </td>
+                    <td style='width:50%; text-align:center; vertical-align:top;'>
+                        <p style='margin-bottom:0;'>Cicalengka, {$dateNow}<br>Kepala Sekolah / Supervisor,</p>
+                        <p style='margin-top:45px; margin-bottom:0;'><b><u>{$penilai}</u></b></p>
+                        <small style='color:#555;'>Pimpinan Satuan Pendidikan</small>
+                    </td>
+                </tr>
+            </table>
+            ";
+
+            echo PdfHelper::renderReportPage($title, $subtitle, $content, $customFooter);
+            exit();
+
+        } else {
+            // Cetak Rekapitulasi Riwayat Supervisi Guru
+            $namaGuru = htmlspecialchars($guru['nama_lengkap'] ?? 'Guru');
+            $nip = htmlspecialchars($guru['nip'] ?? '-');
+
+            $title = "REKAPITULASI HASIL SUPERVISI AKADEMIK GURU";
+            $subtitle = "Nama Pengajar: {$namaGuru} | NIP: {$nip} | Satuan Pendidikan: SMK Muthia Harapan Cicalengka";
+
+            $table = "<table border='1' cellpadding='8' cellspacing='0' style='width:100%; border-collapse:collapse;'>
+                <thead>
+                    <tr style='background-color:#f1f5f9; text-align:left;'>
+                        <th style='width:30px; text-align:center;'>No</th>
+                        <th>Tanggal</th>
+                        <th>Mapel & Kelas</th>
+                        <th>Supervisor (Kepala Sekolah)</th>
+                        <th style='text-align:center;'>Skor 4 Pilar (P/L/E/D)</th>
+                        <th style='text-align:center;'>Nilai Akhir</th>
+                        <th style='text-align:center;'>Predikat</th>
+                        <th>Rekomendasi Tindak Lanjut</th>
+                    </tr>
+                </thead><tbody>";
+
+            if (empty($supervisiList)) {
+                $table .= "<tr><td colspan='8' style='text-align:center; padding:25px;'>Belum ada riwayat lembar supervisi akademik yang diterbitkan.</td></tr>";
+            } else {
+                foreach ($supervisiList as $i => $row) {
+                    $num = $i + 1;
+                    $tgl = date('d/m/Y', strtotime($row['tanggal_supervisi']));
+                    $mapelKls = htmlspecialchars(($row['nama_mapel'] ?? '-') . ' (' . ($row['nama_kelas'] ?? '-') . ')');
+                    $kepsekName = htmlspecialchars($row['nama_kepsek'] ?? 'Kepala Sekolah');
+                    $pilar = "P:{$row['skor_perencanaan']} | L:{$row['skor_pelaksanaan']} | E:{$row['skor_evaluasi']} | D:{$row['skor_kedisiplinan']}";
+                    $nilai = number_format((float)$row['nilai_akhir'], 1);
+                    $predikat = htmlspecialchars($row['predikat'] ?? '-');
+                    $rekom = htmlspecialchars($row['rekomendasi_tindak_lanjut'] ?? '-');
+
+                    $table .= "<tr>
+                        <td style='text-align:center;'>{$num}</td>
+                        <td>{$tgl}</td>
+                        <td>{$mapelKls}</td>
+                        <td>{$kepsekName}</td>
+                        <td style='text-align:center; font-size:11px;'>{$pilar}</td>
+                        <td style='text-align:center;'><b>{$nilai}</b></td>
+                        <td style='text-align:center;'><b>{$predikat}</b></td>
+                        <td style='font-size:11px;'>{$rekom}</td>
+                    </tr>";
+                }
+            }
+            $table .= "</tbody></table>";
+
+            $dateNow = date('d F Y');
+            $customFooter = "
+            <table class='footer-table'>
+                <tr>
+                    <td style='width:50%; text-align:center; vertical-align:top;'>
+                        <p style='margin-bottom:0;'>Mengetahui Pengajar,</p>
+                        <p style='margin-top:60px; margin-bottom:0;'><b><u>{$namaGuru}</u></b></p>
+                        <small style='color:#555;'>NIP: {$nip}</small>
+                    </td>
+                    <td style='width:50%; text-align:center; vertical-align:top;'>
+                        <p style='margin-bottom:0;'>Cicalengka, {$dateNow}<br>Kepala Sekolah,</p>
+                        <p style='margin-top:45px; margin-bottom:0;'><b><u>H. Supriyadi, M.M.</u></b></p>
+                        <small style='color:#555;'>Pimpinan Satuan Pendidikan</small>
+                    </td>
+                </tr>
+            </table>
+            ";
+
+            echo PdfHelper::renderReportPage($title, $subtitle, $table, $customFooter);
+            exit();
+        }
+    }
 }

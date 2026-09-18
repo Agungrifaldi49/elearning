@@ -9,7 +9,7 @@ class PdfHelper {
     /**
      * Render Printable HTML Report Layout
      */
-    public static function renderReportPage($title, $subtitle, $tableHtml) {
+    public static function renderReportPage($title, $subtitle, $tableHtml, $customFooterHtml = null) {
         $settingsPath = ROOT_PATH . 'config/settings.json';
         $appSettings = [];
         if (file_exists($settingsPath)) {
@@ -35,6 +35,17 @@ class PdfHelper {
             : "<div style='background:#0D6EFD; color:#fff; border-radius:12px; width:65px; height:65px; display:inline-flex; align-items:center; justify-content:center; font-size:32px; font-weight:bold;'>🎓</div>";
 
         $date = date('d F Y');
+        $footerContent = $customFooterHtml ?: "
+                <table class='footer-table'>
+                    <tr>
+                        <td style='width:65%;'></td>
+                        <td style='text-align:center;'>
+                            <p>Cicalengka, {$date}</p>
+                            <p style='margin-top:55px;'><b><u>" . htmlspecialchars($kepalaSekolah) . "</u></b><br><small style='color:#555;'>Kepala Sekolah / Pengelola</small></p>
+                        </td>
+                    </tr>
+                </table>";
+
         return "
         <!DOCTYPE html>
         <html lang='id'>
@@ -86,15 +97,7 @@ class PdfHelper {
             {$tableHtml}
 
             <div class='footer'>
-                <table class='footer-table'>
-                    <tr>
-                        <td style='width:65%;'></td>
-                        <td style='text-align:center;'>
-                            <p>Cicalengka, {$date}</p>
-                            <p style='margin-top:55px;'><b><u>" . htmlspecialchars($kepalaSekolah) . "</u></b><br><small style='color:#555;'>Kepala Sekolah / Pengelola</small></p>
-                        </td>
-                    </tr>
-                </table>
+                {$footerContent}
             </div>
         </body>
         </html>

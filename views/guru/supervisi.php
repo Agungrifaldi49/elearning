@@ -12,9 +12,16 @@
                 <p class="text-muted small mb-0">Transkrip evaluasi KBM, umpan balik pembinaan, dan rubrik penilaian 4 pilar dari Kepala Sekolah.</p>
             </div>
             <?php if (!empty($supervisiList)): ?>
-                <a href="<?= BASE_URL ?>index.php?url=kepsek/cetakLaporan&type=supervisi" target="_blank" class="btn btn-outline-primary shadow-sm fw-bold">
-                    <i class="bi bi-printer me-1"></i> Cetak Lembar Supervisi PDF
-                </a>
+                <div class="d-flex gap-2 flex-wrap">
+                    <?php if (!empty($supervisiTerbaru)): ?>
+                        <a href="<?= BASE_URL ?>index.php?url=guru/cetakSupervisi&id=<?= $supervisiTerbaru['id'] ?>" target="_blank" class="btn btn-primary shadow-sm fw-bold">
+                            <i class="bi bi-printer-fill me-1"></i> Cetak Lembar Supervisi (PDF)
+                        </a>
+                    <?php endif; ?>
+                    <a href="<?= BASE_URL ?>index.php?url=guru/cetakSupervisi&type=rekap" target="_blank" class="btn btn-outline-secondary shadow-sm fw-bold">
+                        <i class="bi bi-file-earmark-text me-1"></i> Cetak Rekap Riwayat
+                    </a>
+                </div>
             <?php endif; ?>
         </div>
 
@@ -67,9 +74,14 @@
                             Kelas: <b><?= htmlspecialchars($supervisiTerbaru['nama_kelas'] ?? 'Rombel Umum') ?></b>
                         </small>
                     </div>
-                    <div class="text-end">
-                        <span class="fs-3 fw-bold text-primary"><?= number_format((float)$supervisiTerbaru['nilai_akhir'], 1) ?></span>
-                        <span class="badge bg-success ms-2 px-3 py-2 fs-6 rounded-pill"><?= htmlspecialchars($supervisiTerbaru['predikat'] ?? '-') ?></span>
+                    <div class="text-end d-flex align-items-center gap-2">
+                        <div>
+                            <span class="fs-3 fw-bold text-primary"><?= number_format((float)$supervisiTerbaru['nilai_akhir'], 1) ?></span>
+                            <span class="badge bg-success ms-2 px-3 py-2 fs-6 rounded-pill"><?= htmlspecialchars($supervisiTerbaru['predikat'] ?? '-') ?></span>
+                        </div>
+                        <a href="<?= BASE_URL ?>index.php?url=guru/cetakSupervisi&id=<?= $supervisiTerbaru['id'] ?>" target="_blank" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3 py-2 shadow-xs" title="Cetak Lembar Supervisi Ini">
+                            <i class="bi bi-printer-fill me-1"></i> Cetak Lembar
+                        </a>
                     </div>
                 </div>
 
@@ -177,7 +189,7 @@
                             <th class="text-center">Nilai Akhir</th>
                             <th class="text-center">Predikat</th>
                             <th>Rekomendasi Tindak Lanjut</th>
-                            <th style="width:80px;" class="text-center">Aksi</th>
+                            <th style="width:115px;" class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -234,9 +246,14 @@
                                         </div>
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2.5 py-1" title="Lihat Lembar Supervisi Lengkap" onclick="showDetailModal(<?= htmlspecialchars(json_encode($row)) ?>)">
-                                            <i class="bi bi-eye-fill me-1"></i> Detail
-                                        </button>
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1" title="Lihat Lembar Supervisi Lengkap" onclick="showDetailModal(<?= htmlspecialchars(json_encode($row)) ?>)">
+                                                <i class="bi bi-eye-fill"></i>
+                                            </button>
+                                            <a href="<?= BASE_URL ?>index.php?url=guru/cetakSupervisi&id=<?= $row['id'] ?>" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" title="Cetak Lembar Supervisi PDF">
+                                                <i class="bi bi-printer-fill"></i>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -260,7 +277,10 @@
             <div class="modal-body p-4" id="modalDetailBody">
                 <!-- Injected via JavaScript -->
             </div>
-            <div class="modal-footer border-0 pt-0 justify-content-center">
+            <div class="modal-footer border-0 pt-0 justify-content-center gap-2">
+                <a href="#" id="modalBtnCetak" target="_blank" class="btn btn-primary px-3 rounded-3 fw-bold">
+                    <i class="bi bi-printer-fill me-1"></i> Cetak Lembar Supervisi PDF
+                </a>
                 <button type="button" class="btn btn-secondary px-4 rounded-3" data-bs-dismiss="modal" onclick="closeModalDetailSupervisi()">Tutup</button>
             </div>
         </div>
@@ -317,6 +337,9 @@ function showDetailModal(row) {
     `;
     const detailBody = document.getElementById('modalDetailBody');
     if (detailBody) detailBody.innerHTML = html;
+
+    const btnCetak = document.getElementById('modalBtnCetak');
+    if (btnCetak) btnCetak.href = '<?= BASE_URL ?>index.php?url=guru/cetakSupervisi&id=' + row.id;
 
     const modalEl = document.getElementById('modalDetailSupervisi');
     if (!modalEl) return;
