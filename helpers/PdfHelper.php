@@ -18,7 +18,7 @@ class PdfHelper {
 
         $schoolName = !empty($appSettings['nama_sekolah']) ? $appSettings['nama_sekolah'] : 'SMK MUTHIA HARAPAN CICALENGKA';
         $alamat = !empty($appSettings['alamat']) ? $appSettings['alamat'] : 'Jl. Raya Cicalengka, Kab. Bandung, Jawa Barat | Email: info@smkmh-cicalengka.sch.id';
-        $kepalaSekolah = !empty($appSettings['kepala_sekolah']) ? $appSettings['kepala_sekolah'] : 'H. Supriyadi, M.M.';
+        $kepalaSekolah = !empty($appSettings['kepala_sekolah']) ? $appSettings['kepala_sekolah'] : 'H. ASEP SAEPULLOH, S. Ag';
 
         $rawLogo = $appSettings['logo'] ?? '';
         $logoUrl = null;

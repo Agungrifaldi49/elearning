@@ -2169,6 +2169,16 @@ class GuruController {
 
         $supervisiList = $reportModel->getSupervisiList($guruId);
 
+        // Ambil data resmi Kepala Sekolah dari konfigurasi sekolah (settings.json)
+        $settingsPath = ROOT_PATH . 'config/settings.json';
+        $appSettings = [];
+        if (file_exists($settingsPath)) {
+            $appSettings = json_decode(file_get_contents($settingsPath), true) ?: [];
+        }
+
+        $namaKepsekResmi = !empty($appSettings['kepala_sekolah']) ? $appSettings['kepala_sekolah'] : 'H. ASEP SAEPULLOH, S. Ag';
+        $nipKepsekResmi = !empty($appSettings['nip_kepala_sekolah']) ? $appSettings['nip_kepala_sekolah'] : ($appSettings['nip_kepsek'] ?? ($appSettings['nip'] ?? ''));
+
         // Jika tidak ada ID spesifik dan bukan mode rekap, default ke supervisi terbaru jika ada
         if ($id <= 0 && $type !== 'rekap' && !empty($supervisiList)) {
             $id = (int)$supervisiList[0]['id'];
@@ -2190,7 +2200,9 @@ class GuruController {
             $nip = htmlspecialchars($supervisi['nip'] ?? '-');
             $mapel = htmlspecialchars($supervisi['nama_mapel'] ?? 'Semua Mata Pelajaran');
             $kelas = htmlspecialchars($supervisi['nama_kelas'] ?? 'Rombel Umum');
-            $penilai = htmlspecialchars($supervisi['nama_kepsek'] ?? 'Kepala Sekolah');
+            $penilai = (!empty($supervisi['nama_kepsek']) && $supervisi['nama_kepsek'] !== 'Kepala Sekolah')
+                ? htmlspecialchars($supervisi['nama_kepsek'])
+                : htmlspecialchars($namaKepsekResmi);
 
             $skorP = (float)$supervisi['skor_perencanaan'];
             $skorL = (float)$supervisi['skor_pelaksanaan'];
@@ -2305,6 +2317,7 @@ class GuruController {
             ";
 
             $dateNow = date('d F Y');
+            $nipKepsekHtml = !empty($nipKepsekResmi) ? "<small style='color:#555;'>NIP: " . htmlspecialchars($nipKepsekResmi) . "</small>" : "<small style='color:#555;'>Pimpinan Satuan Pendidikan</small>";
             $customFooter = "
             <table class='footer-table'>
                 <tr>
@@ -2316,7 +2329,7 @@ class GuruController {
                     <td style='width:50%; text-align:center; vertical-align:top;'>
                         <p style='margin-bottom:0;'>Cicalengka, {$dateNow}<br>Kepala Sekolah / Supervisor,</p>
                         <p style='margin-top:45px; margin-bottom:0;'><b><u>{$penilai}</u></b></p>
-                        <small style='color:#555;'>Pimpinan Satuan Pendidikan</small>
+                        {$nipKepsekHtml}
                     </td>
                 </tr>
             </table>
@@ -2354,7 +2367,9 @@ class GuruController {
                     $num = $i + 1;
                     $tgl = date('d/m/Y', strtotime($row['tanggal_supervisi']));
                     $mapelKls = htmlspecialchars(($row['nama_mapel'] ?? '-') . ' (' . ($row['nama_kelas'] ?? '-') . ')');
-                    $kepsekName = htmlspecialchars($row['nama_kepsek'] ?? 'Kepala Sekolah');
+                    $kepsekName = (!empty($row['nama_kepsek']) && $row['nama_kepsek'] !== 'Kepala Sekolah')
+                        ? htmlspecialchars($row['nama_kepsek'])
+                        : htmlspecialchars($namaKepsekResmi);
                     $pilar = "P:{$row['skor_perencanaan']} | L:{$row['skor_pelaksanaan']} | E:{$row['skor_evaluasi']} | D:{$row['skor_kedisiplinan']}";
                     $nilai = number_format((float)$row['nilai_akhir'], 1);
                     $predikat = htmlspecialchars($row['predikat'] ?? '-');
@@ -2375,6 +2390,7 @@ class GuruController {
             $table .= "</tbody></table>";
 
             $dateNow = date('d F Y');
+            $nipKepsekHtml = !empty($nipKepsekResmi) ? "<small style='color:#555;'>NIP: " . htmlspecialchars($nipKepsekResmi) . "</small>" : "<small style='color:#555;'>Pimpinan Satuan Pendidikan</small>";
             $customFooter = "
             <table class='footer-table'>
                 <tr>
@@ -2385,8 +2401,8 @@ class GuruController {
                     </td>
                     <td style='width:50%; text-align:center; vertical-align:top;'>
                         <p style='margin-bottom:0;'>Cicalengka, {$dateNow}<br>Kepala Sekolah,</p>
-                        <p style='margin-top:45px; margin-bottom:0;'><b><u>H. Supriyadi, M.M.</u></b></p>
-                        <small style='color:#555;'>Pimpinan Satuan Pendidikan</small>
+                        <p style='margin-top:45px; margin-bottom:0;'><b><u>" . htmlspecialchars($namaKepsekResmi) . "</u></b></p>
+                        {$nipKepsekHtml}
                     </td>
                 </tr>
             </table>

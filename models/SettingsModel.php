@@ -33,7 +33,7 @@ class SettingsModel {
         $defaults = [
             'nama_sekolah' => 'SMK Muthia Harapan Cicalengka',
             'npsn' => '20229871',
-            'kepala_sekolah' => 'H. Supriyadi, M.M.',
+            'kepala_sekolah' => 'H. ASEP SAEPULLOH, S. Ag',
             'telepon' => '(022) 7950123',
             'alamat' => 'Jl. Raya Cicalengka No. 45, Cicalengka, Kabupaten Bandung, Jawa Barat 40395',
             'logo' => '',
