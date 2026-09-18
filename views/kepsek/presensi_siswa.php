@@ -97,7 +97,7 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table table-hover align-middle datatable">
+                <table class="table table-hover align-middle <?= !empty($recap) ? 'datatable' : '' ?>">
                     <thead class="table-light">
                         <tr>
                             <th style="width:40px;">No</th>

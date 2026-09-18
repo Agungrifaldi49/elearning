@@ -805,18 +805,25 @@ class ReportModel extends BaseModel {
 
     public function getTodayTeacherAttendanceStats($tanggal = null) {
         $tgl = $tanggal ?: date('Y-m-d');
+        if (!class_exists('AbsensiModel') && defined('ROOT_PATH') && file_exists(ROOT_PATH . 'models/AbsensiModel.php')) {
+            require_once ROOT_PATH . 'models/AbsensiModel.php';
+        }
+        if (class_exists('AbsensiModel')) {
+            try { new AbsensiModel(); } catch (\Throwable $t) {}
+        }
+
         try {
-            $totalGuru = (int)$this->db->query("SELECT COUNT(*) FROM guru WHERE status = 'aktif'")->fetchColumn();
+            $totalGuru = (int)$this->db->query("SELECT COUNT(*) FROM guru g JOIN users u ON g.user_id = u.id WHERE (g.status IS NULL OR g.status = 'aktif' OR g.status = '')")->fetchColumn();
             
             $stmt = $this->db->prepare("
                 SELECT g.id as guru_id, g.nama_lengkap, g.nip, g.no_telepon, u.email, u.avatar,
                        ag.id as absensi_id, ag.tanggal, ag.waktu_masuk, ag.waktu_pulang,
-                       ag.status_kehadiran, ag.foto_masuk, ag.foto_pulang, ag.tipe_presensi,
+                       ag.status as status_kehadiran, ag.foto_masuk, ag.foto_pulang, ag.tipe_presensi,
                        ag.jarak_masuk_meter, ag.keterangan
                 FROM guru g
                 JOIN users u ON g.user_id = u.id
                 LEFT JOIN absensi_guru ag ON ag.guru_id = g.id AND ag.tanggal = ?
-                WHERE g.status = 'aktif'
+                WHERE (g.status IS NULL OR g.status = 'aktif' OR g.status = '')
                 ORDER BY (ag.waktu_masuk IS NOT NULL) DESC, ag.waktu_masuk ASC, g.nama_lengkap ASC
             ");
             $stmt->execute([$tgl]);
@@ -849,7 +856,8 @@ class ReportModel extends BaseModel {
                 'belum_hadir' => $belumHadir,
                 'list' => $rows
             ];
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+            error_log("ReportModel::getTodayTeacherAttendanceStats Error: " . $e->getMessage());
             return [
                 'total_guru' => 0,
                 'hadir' => 0,

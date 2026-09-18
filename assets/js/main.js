@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // DataTables Initialization (wrapped in responsive div)
     if (window.jQuery && $.fn.DataTable) {
+        $.fn.dataTable.ext.errMode = 'none';
         $('.datatable').DataTable({
             responsive: true,
             language: {
