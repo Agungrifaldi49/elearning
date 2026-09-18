@@ -168,6 +168,61 @@ class SiswaController {
         require_once ROOT_PATH . 'views/siswa/materi.php';
     }
 
+    /**
+     * Mobile-First Reader Screen: Membaca materi/modul pembelajaran secara optimal di HP & Desktop
+     */
+    public function bacaMateri() {
+        $siswa = $this->getSiswaInfo();
+        $siswaId = (int)($siswa['id'] ?? 0);
+        $kelasId = (int)($siswa['kelas_id'] ?? 0);
+
+        $materiId = (int)($_GET['id'] ?? 0);
+        if ($materiId <= 0) {
+            FlashHelper::setError('Materi pembelajaran tidak ditemukan.');
+            header('Location: ' . BASE_URL . 'index.php?url=siswa/materi');
+            exit();
+        }
+
+        $learningModel = new LearningModel();
+        $academicModel = new AcademicModel();
+
+        $materi = $learningModel->getMateriDetailById($materiId);
+        if (!$materi) {
+            FlashHelper::setError('Materi tidak ditemukan atau telah dihapus oleh pengajar.');
+            header('Location: ' . BASE_URL . 'index.php?url=siswa/materi');
+            exit();
+        }
+
+        // Verifikasi hak akses materi (berdasarkan kelas target & enrollment mapel)
+        $targetKelasIds = !empty($materi['kelas_ids']) ? array_map('intval', explode(',', $materi['kelas_ids'])) : [(int)$materi['kelas_id']];
+        $isClassTarget = empty($targetKelasIds) || in_array(0, $targetKelasIds) || in_array($kelasId, $targetKelasIds);
+
+        $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
+        $enrolledMapels = [];
+        foreach ($enrolledList as $em) {
+            $enrolledMapels[$em['mapel_id'] . '_' . $em['guru_id']] = true;
+            $enrolledMapels[$em['mapel_id']] = true;
+        }
+
+        $isEnrolled = empty($enrolledMapels) || isset($enrolledMapels[$materi['mapel_id'] . '_' . $materi['guru_id']]) || isset($enrolledMapels[$materi['mapel_id']]);
+        if (!$isEnrolled) {
+            FlashHelper::setError('Anda belum terdaftar pada mata pelajaran ini. Silakan masukkan Enrollment Key terlebih dahulu.');
+            header('Location: ' . BASE_URL . 'index.php?url=siswa/gabungKelas');
+            exit();
+        }
+
+        // Cek materi lain pada mapel yang sama untuk navigasi cepat
+        $allMateriKelas = $learningModel->getMateri($kelasId);
+        $materiTerkait = [];
+        foreach ($allMateriKelas as $mItem) {
+            if ((int)$mItem['mapel_id'] === (int)$materi['mapel_id'] && (int)$mItem['id'] !== $materiId) {
+                $materiTerkait[] = $mItem;
+            }
+        }
+
+        require_once ROOT_PATH . 'views/siswa/baca_materi.php';
+    }
+
     public function tugas() {
         $siswa = $this->getSiswaInfo();
         $siswaId = $siswa['id'];

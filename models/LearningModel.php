@@ -75,6 +75,21 @@ class LearningModel extends BaseModel {
         return $stmt->fetch();
     }
 
+    public function getMateriDetailById($id) {
+        $stmt = $this->db->prepare("
+            SELECT m.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, g.nama_lengkap as nama_guru, g.nip, u.email as email_guru
+            FROM materi m
+            JOIN mata_pelajaran map ON m.mapel_id = map.id
+            LEFT JOIN kelas k ON m.kelas_id = k.id
+            JOIN guru g ON m.guru_id = g.id
+            LEFT JOIN users u ON g.user_id = u.id
+            WHERE m.id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([(int)$id]);
+        return $stmt->fetch() ?: null;
+    }
+
     public function addMateri($guru_id, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url) {
         $kelasIdArray = is_array($kelas_ids) ? array_map('intval', $kelas_ids) : [(int)$kelas_ids];
         $kelasIdArray = array_values(array_filter($kelasIdArray, function($id) { return $id > 0; }));

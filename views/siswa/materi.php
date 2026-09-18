@@ -189,11 +189,9 @@ if (!function_exists('getYouTubeEmbedUrl')) {
                                         
                                         <?php if ($isEnrolled): ?>
                                             <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                                <?php if ($filePath): ?>
-                                                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalPreviewMateri<?= $m['id'] ?>">
-                                                        <i class="bi bi-eye-fill"></i> Baca Materi
-                                                    </button>
-                                                <?php endif; ?>
+                                                <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5">
+                                                    <i class="bi bi-book-half"></i> Baca Materi
+                                                </a>
                                                 <?php if (!empty($m['youtube_url'])): ?>
                                                     <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalPlayVideo<?= $m['id'] ?>">
                                                         <i class="bi bi-play-circle-fill"></i> Video
@@ -327,11 +325,16 @@ if (!function_exists('getYouTubeEmbedUrl')) {
                             <?php endif; ?>
                         </div>
                     </div>
-                    <div class="modal-footer border-0 pt-0 p-4 justify-content-between bg-white border-top">
+                    <div class="modal-footer border-0 pt-0 p-4 justify-content-between bg-white border-top flex-wrap gap-2">
                         <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Tutup</button>
-                        <a href="<?= $filePath ?>" download class="btn btn-outline-primary rounded-pill px-4 fw-bold shadow-xs">
-                            <i class="bi bi-download me-1.5"></i> Unduh File Modul
-                        </a>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-primary rounded-pill px-4 fw-bold shadow-xs">
+                                <i class="bi bi-phone-fill me-1.5"></i> Mode Pembaca Layar Penuh
+                            </a>
+                            <a href="<?= $filePath ?>" download class="btn btn-outline-secondary rounded-pill px-4 fw-bold shadow-xs">
+                                <i class="bi bi-download me-1.5"></i> Unduh File
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
