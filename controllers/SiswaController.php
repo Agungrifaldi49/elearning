@@ -165,6 +165,58 @@ class SiswaController {
             return isset($enrolledMapels[$v['mapel_id'] . '_' . $v['guru_id']]) || isset($enrolledMapels[$v['mapel_id']]);
         }));
 
+        // Ambil daftar unik mata pelajaran untuk filter dropdown
+        $mapelList = [];
+        foreach (array_merge($allMateri, $allVideos) as $item) {
+            if (!empty($item['mapel_id']) && !isset($mapelList[$item['mapel_id']])) {
+                $mapelList[$item['mapel_id']] = [
+                    'id' => (int)$item['mapel_id'],
+                    'nama_mapel' => $item['nama_mapel'] ?? 'Mata Pelajaran'
+                ];
+            }
+        }
+        $classMapels = $academicModel->getMapelByKelas($kelasId);
+        foreach ($classMapels as $cm) {
+            if (!isset($mapelList[$cm['id']])) {
+                $mapelList[$cm['id']] = [
+                    'id' => (int)$cm['id'],
+                    'nama_mapel' => $cm['nama_mapel']
+                ];
+            }
+        }
+        usort($mapelList, function($a, $b) {
+            return strcasecmp($a['nama_mapel'], $b['nama_mapel']);
+        });
+
+        $selectedMapelId = isset($_GET['mapel_id']) ? (int)$_GET['mapel_id'] : 0;
+        $searchKeyword = trim($_GET['q'] ?? '');
+
+        // Filter server-side jika parameter query tersedia
+        if ($selectedMapelId > 0) {
+            $materiList = array_values(array_filter($materiList, function($m) use ($selectedMapelId) {
+                return (int)$m['mapel_id'] === $selectedMapelId;
+            }));
+            $videoList = array_values(array_filter($videoList, function($v) use ($selectedMapelId) {
+                return (int)$v['mapel_id'] === $selectedMapelId;
+            }));
+        }
+
+        if (!empty($searchKeyword)) {
+            $kw = mb_strtolower($searchKeyword);
+            $materiList = array_values(array_filter($materiList, function($m) use ($kw) {
+                return strpos(mb_strtolower($m['judul'] ?? ''), $kw) !== false
+                    || strpos(mb_strtolower($m['deskripsi'] ?? ''), $kw) !== false
+                    || strpos(mb_strtolower($m['nama_guru'] ?? ''), $kw) !== false
+                    || strpos(mb_strtolower($m['nama_mapel'] ?? ''), $kw) !== false;
+            }));
+            $videoList = array_values(array_filter($videoList, function($v) use ($kw) {
+                return strpos(mb_strtolower($v['judul'] ?? ''), $kw) !== false
+                    || strpos(mb_strtolower($v['deskripsi'] ?? ''), $kw) !== false
+                    || strpos(mb_strtolower($v['nama_guru'] ?? ''), $kw) !== false
+                    || strpos(mb_strtolower($v['nama_mapel'] ?? ''), $kw) !== false;
+            }));
+        }
+
         require_once ROOT_PATH . 'views/siswa/materi.php';
     }
 

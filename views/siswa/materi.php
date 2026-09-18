@@ -16,6 +16,18 @@ if (!function_exists('getYouTubeEmbedUrl')) {
         return !empty($videoId) ? "https://www.youtube.com/embed/" . $videoId : $url;
     }
 }
+
+$mapelList = $mapelList ?? [];
+$selectedMapelId = (int)($selectedMapelId ?? ($_GET['mapel_id'] ?? 0));
+$searchKeyword = trim($searchKeyword ?? ($_GET['q'] ?? ''));
+
+$selectedMapelName = 'Semua Mata Pelajaran';
+foreach ($mapelList as $mp) {
+    if ((int)$mp['id'] === $selectedMapelId) {
+        $selectedMapelName = $mp['nama_mapel'];
+        break;
+    }
+}
 ?>
 
 <style>
@@ -105,6 +117,101 @@ if (!function_exists('getYouTubeEmbedUrl')) {
     height: 100%;
     border: 0;
 }
+
+/* 🔍 Modern Filter & Search Bar Styling */
+.filter-search-panel {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+    padding: 16px 20px;
+    margin-bottom: 22px;
+}
+[data-bs-theme="dark"] .filter-search-panel {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.search-box-wrapper {
+    position: relative;
+}
+.search-box-wrapper .search-icon {
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    pointer-events: none;
+    font-size: 1rem;
+}
+.search-box-wrapper .form-control {
+    padding-left: 44px;
+    padding-right: 42px;
+    height: 46px;
+    border-radius: 50rem;
+    font-size: 0.9rem;
+    border: 1.5px solid #cbd5e1;
+    transition: all 0.2s ease;
+}
+.search-box-wrapper .form-control:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.search-box-wrapper .btn-clear-q {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.search-box-wrapper .btn-clear-q:hover {
+    color: #334155;
+}
+
+.mapel-select-wrapper {
+    position: relative;
+}
+.mapel-select-wrapper .select-icon {
+    position: absolute;
+    top: 50%;
+    left: 16px;
+    transform: translateY(-50%);
+    color: #3b82f6;
+    pointer-events: none;
+    font-size: 1rem;
+}
+.mapel-select-wrapper .form-select {
+    padding-left: 44px;
+    height: 46px;
+    border-radius: 50rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1.5px solid #cbd5e1;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.mapel-select-wrapper .form-select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+[data-bs-theme="dark"] .mapel-select-wrapper .form-select {
+    background-color: #0f172a;
+    color: #f8fafc;
+    border-color: #334155;
+}
+[data-bs-theme="dark"] .search-box-wrapper .form-control {
+    background-color: #0f172a;
+    color: #f8fafc;
+    border-color: #334155;
+}
 </style>
 
 <main class="main-content px-3 px-md-4 materi-siswa-page-wrapper">
@@ -132,16 +239,81 @@ if (!function_exists('getYouTubeEmbedUrl')) {
             </div>
         </div>
 
+        <!-- 🔍 FILTER MATA PELAJARAN & PENCARIAN MATERI -->
+        <div class="filter-search-panel">
+            <form method="GET" action="<?= BASE_URL ?>index.php" id="formFilterMateri" class="m-0">
+                <input type="hidden" name="url" value="siswa/materi">
+
+                <div class="row g-2.5 align-items-center">
+                    <!-- 1. Kolom Pencarian Cepat -->
+                    <div class="col-12 col-md-6 col-lg-7">
+                        <div class="search-box-wrapper">
+                            <i class="bi bi-search search-icon"></i>
+                            <input type="text" 
+                                   name="q" 
+                                   id="inputSearchMateri" 
+                                   class="form-control" 
+                                   placeholder="Cari judul materi, topik bab, atau nama guru..." 
+                                   value="<?= htmlspecialchars($searchKeyword) ?>"
+                                   autocomplete="off">
+                            <button type="button" id="btnClearSearch" class="btn-clear-q <?= empty($searchKeyword) ? 'd-none' : '' ?>" title="Hapus Pencarian">
+                                <i class="bi bi-x-circle-fill fs-5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Dropdown Filter Mata Pelajaran -->
+                    <div class="col-12 col-sm-8 col-md-4 col-lg-3">
+                        <div class="mapel-select-wrapper">
+                            <i class="bi bi-journal-bookmark-fill select-icon"></i>
+                            <select name="mapel_id" id="selectFilterMapel" class="form-select">
+                                <option value="0">Semua Mata Pelajaran</option>
+                                <?php foreach ($mapelList as $mp): ?>
+                                    <option value="<?= $mp['id'] ?>" <?= ($selectedMapelId === (int)$mp['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($mp['nama_mapel']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 3. Tombol Reset Filter -->
+                    <div class="col-12 col-sm-4 col-md-2 col-lg-2">
+                        <a href="<?= BASE_URL ?>index.php?url=siswa/materi" class="btn btn-light border rounded-pill w-100 fw-bold d-inline-flex align-items-center justify-content-center gap-1.5 shadow-xs text-muted hover-scale" id="btnResetFilter" style="height:46px;" title="Reset Filter & Pencarian">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            <span>Reset</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Status Filter & Realtime Counter Bar -->
+                <div class="d-flex align-items-center gap-2 mt-3 pt-2.5 border-top flex-wrap" style="font-size:0.8rem;">
+                    <span class="text-muted fw-semibold">
+                        <i class="bi bi-funnel-fill text-primary me-1"></i>Filter Aktif:
+                    </span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-bold" id="chipMapelStatus">
+                        Mapel: <span id="chipMapelName"><?= htmlspecialchars($selectedMapelName) ?></span>
+                    </span>
+                    <span class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill px-3 py-1 fw-bold <?= empty($searchKeyword) ? 'd-none' : '' ?>" id="chipSearchStatus">
+                        Kata Kunci: "<span id="chipSearchKeyword"><?= htmlspecialchars($searchKeyword) ?></span>"
+                    </span>
+                    <span class="ms-auto text-muted fw-semibold small" id="matchingSummaryText">
+                        Menampilkan <b id="countSummaryModul"><?= count($materiList) ?></b> Modul &bull; <b id="countSummaryVideo"><?= count($videoList ?? []) ?></b> Video
+                    </span>
+                </div>
+            </form>
+        </div>
+
         <!-- 📑 TABBED NAVIGATION -->
         <ul class="nav nav-pills materi-nav-tabs gap-2 mb-4 p-1.5 bg-white rounded-4 border shadow-xs" id="materiSiswaTab" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active d-flex align-items-center gap-2" id="tab-modul-tab" data-bs-toggle="tab" data-bs-target="#tab-modul" type="button" role="tab">
-                    <i class="bi bi-file-earmark-text-fill"></i> Modul & Berkas Materi (<?= count($materiList) ?>)
+                    <i class="bi bi-file-earmark-text-fill"></i> Modul & Berkas Materi (<span id="badgeTabModul"><?= count($materiList) ?></span>)
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link d-flex align-items-center gap-2" id="tab-video-tab" data-bs-toggle="tab" data-bs-target="#tab-video" type="button" role="tab">
-                    <i class="bi bi-youtube text-danger"></i> Video Streaming YouTube (<?= count($videoList ?? []) ?>)
+                    <i class="bi bi-youtube text-danger"></i> Video Streaming YouTube (<span id="badgeTabVideo"><?= count($videoList ?? []) ?></span>)
                 </button>
             </li>
         </ul>
@@ -167,7 +339,7 @@ if (!function_exists('getYouTubeEmbedUrl')) {
                             $isVideoFile = in_array($ext, ['mp4', 'webm', 'ogg']);
                             $filePath = !empty($m['file_path']) ? BASE_URL . 'assets/uploads/materi/' . htmlspecialchars($m['file_path']) : null;
                         ?>
-                            <div class="col-12 col-md-6 col-lg-4">
+                            <div class="col-12 col-md-6 col-lg-4 materi-item-col" data-mapel-id="<?= $m['mapel_id'] ?>" data-search="<?= htmlspecialchars(mb_strtolower($m['judul'] . ' ' . $m['nama_mapel'] . ' ' . $m['nama_guru'] . ' ' . $m['deskripsi'])) ?>">
                                 <div class="materi-card-item p-4 border-top border-4 <?= $isEnrolled ? 'border-primary' : 'border-danger' ?>">
                                     <div class="d-flex align-items-center justify-content-between mb-3">
                                         <span class="badge bg-primary text-uppercase px-3 py-1.5 rounded-pill"><i class="bi bi-file-earmark me-1"></i><?= htmlspecialchars($m['jenis_file'] ?: 'MODUL') ?></span>
@@ -208,6 +380,18 @@ if (!function_exists('getYouTubeEmbedUrl')) {
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
+
+                    <!-- Empty State Hasil Pencarian Modul -->
+                    <div class="col-12 text-center py-5 bg-white rounded-4 border shadow-sm d-none" id="emptySearchModul">
+                        <div class="bg-primary-subtle text-primary p-3 rounded-circle d-inline-flex mb-3 shadow-xs" style="width:60px; height:60px; align-items:center; justify-content:center;">
+                            <i class="bi bi-search fs-3"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-1">Modul Materi Tidak Ditemukan</h5>
+                        <p class="text-muted small mb-3">Tidak ada modul materi yang cocok dengan filter atau kata kunci pencarian Anda.</p>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3.5 py-1.5 fw-bold" onclick="resetAllMateriFilters()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Pencarian & Filter
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -225,7 +409,7 @@ if (!function_exists('getYouTubeEmbedUrl')) {
                             $isEnrolled = isset($enrolledMapels[$v['mapel_id'] . '_' . $v['guru_id']]) || isset($enrolledMapels[$v['mapel_id']]);
                             $embedUrl = getYouTubeEmbedUrl($v['youtube_url'] ?? '');
                         ?>
-                            <div class="col-12 col-md-6 col-lg-4">
+                            <div class="col-12 col-md-6 col-lg-4 video-item-col" data-mapel-id="<?= $v['mapel_id'] ?>" data-search="<?= htmlspecialchars(mb_strtolower($v['judul'] . ' ' . $v['nama_mapel'] . ' ' . $v['nama_guru'] . ' ' . $v['deskripsi'])) ?>">
                                 <div class="materi-card-item p-4 border-top border-4 <?= $isEnrolled ? 'border-danger' : 'border-secondary' ?>">
                                     <div class="d-flex align-items-center justify-content-between mb-3">
                                         <span class="badge bg-danger px-3 py-1.5 rounded-pill"><i class="bi bi-play-btn-fill me-1"></i>STREAMING</span>
@@ -271,6 +455,18 @@ if (!function_exists('getYouTubeEmbedUrl')) {
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
+
+                    <!-- Empty State Hasil Pencarian Video -->
+                    <div class="col-12 text-center py-5 bg-white rounded-4 border shadow-sm d-none" id="emptySearchVideo">
+                        <div class="bg-danger-subtle text-danger p-3 rounded-circle d-inline-flex mb-3 shadow-xs" style="width:60px; height:60px; align-items:center; justify-content:center;">
+                            <i class="bi bi-youtube fs-3"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-1">Video Pembelajaran Tidak Ditemukan</h5>
+                        <p class="text-muted small mb-3">Tidak ada video streaming yang cocok dengan filter atau kata kunci pencarian Anda.</p>
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3.5 py-1.5 fw-bold" onclick="resetAllMateriFilters()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Pencarian & Filter
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -416,6 +612,7 @@ if (!function_exists('getYouTubeEmbedUrl')) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // 1. Lazy loading modal frames
     document.querySelectorAll('.modal[id^="modalPreviewMateri"]').forEach(function(modal) {
         modal.addEventListener('show.bs.modal', function() {
             modal.querySelectorAll('iframe.lazy-preview-frame[data-src]').forEach(function(ifr) {
@@ -428,6 +625,143 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+
+    // 2. Realtime Search & Filter Engine
+    const inputSearch = document.getElementById('inputSearchMateri');
+    const selectMapel = document.getElementById('selectFilterMapel');
+    const btnClearSearch = document.getElementById('btnClearSearch');
+    const chipMapelName = document.getElementById('chipMapelName');
+    const chipSearchStatus = document.getElementById('chipSearchStatus');
+    const chipSearchKeyword = document.getElementById('chipSearchKeyword');
+    const badgeTabModul = document.getElementById('badgeTabModul');
+    const badgeTabVideo = document.getElementById('badgeTabVideo');
+    const countSummaryModul = document.getElementById('countSummaryModul');
+    const countSummaryVideo = document.getElementById('countSummaryVideo');
+
+    const emptySearchModul = document.getElementById('emptySearchModul');
+    const emptySearchVideo = document.getElementById('emptySearchVideo');
+
+    let searchDebounceTimer = null;
+
+    function executeFilterRealtime() {
+        const query = (inputSearch ? inputSearch.value.trim().toLowerCase() : '');
+        const mapelId = (selectMapel ? selectMapel.value : '0');
+
+        // Toggle tombol clear search [x]
+        if (btnClearSearch) {
+            if (query.length > 0) {
+                btnClearSearch.classList.remove('d-none');
+            } else {
+                btnClearSearch.classList.add('d-none');
+            }
+        }
+
+        // Update Chip Status
+        if (chipMapelName && selectMapel) {
+            chipMapelName.textContent = selectMapel.options[selectMapel.selectedIndex].text;
+        }
+        if (chipSearchStatus && chipSearchKeyword) {
+            if (query.length > 0) {
+                chipSearchKeyword.textContent = inputSearch.value.trim();
+                chipSearchStatus.classList.remove('d-none');
+            } else {
+                chipSearchStatus.classList.add('d-none');
+            }
+        }
+
+        // Filter Modul Cards
+        let visibleModulCount = 0;
+        const modulCols = document.querySelectorAll('.materi-item-col');
+        modulCols.forEach(function(col) {
+            const cardMapelId = col.getAttribute('data-mapel-id') || '';
+            const cardSearchText = col.getAttribute('data-search') || '';
+
+            const matchMapel = (mapelId === '0' || cardMapelId === mapelId);
+            const matchSearch = (query === '' || cardSearchText.indexOf(query) !== -1);
+
+            if (matchMapel && matchSearch) {
+                col.classList.remove('d-none');
+                visibleModulCount++;
+            } else {
+                col.classList.add('d-none');
+            }
+        });
+
+        // Filter Video Cards
+        let visibleVideoCount = 0;
+        const videoCols = document.querySelectorAll('.video-item-col');
+        videoCols.forEach(function(col) {
+            const cardMapelId = col.getAttribute('data-mapel-id') || '';
+            const cardSearchText = col.getAttribute('data-search') || '';
+
+            const matchMapel = (mapelId === '0' || cardMapelId === mapelId);
+            const matchSearch = (query === '' || cardSearchText.indexOf(query) !== -1);
+
+            if (matchMapel && matchSearch) {
+                col.classList.remove('d-none');
+                visibleVideoCount++;
+            } else {
+                col.classList.add('d-none');
+            }
+        });
+
+        // Update Counter Badges
+        if (badgeTabModul) badgeTabModul.textContent = visibleModulCount;
+        if (badgeTabVideo) badgeTabVideo.textContent = visibleVideoCount;
+        if (countSummaryModul) countSummaryModul.textContent = visibleModulCount;
+        if (countSummaryVideo) countSummaryVideo.textContent = visibleVideoCount;
+
+        // Toggle Empty Search Alert
+        if (emptySearchModul) {
+            if (visibleModulCount === 0 && (modulCols.length > 0 || query.length > 0 || mapelId !== '0')) {
+                emptySearchModul.classList.remove('d-none');
+            } else {
+                emptySearchModul.classList.add('d-none');
+            }
+        }
+
+        if (emptySearchVideo) {
+            if (visibleVideoCount === 0 && (videoCols.length > 0 || query.length > 0 || mapelId !== '0')) {
+                emptySearchVideo.classList.remove('d-none');
+            } else {
+                emptySearchVideo.classList.add('d-none');
+            }
+        }
+    }
+
+    // Event Listener Input Pencarian dengan Debounce
+    if (inputSearch) {
+        inputSearch.addEventListener('input', function() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(executeFilterRealtime, 120);
+        });
+    }
+
+    // Event Listener Dropdown Mapel
+    if (selectMapel) {
+        selectMapel.addEventListener('change', executeFilterRealtime);
+    }
+
+    // Event Listener Clear Search Button [x]
+    if (btnClearSearch) {
+        btnClearSearch.addEventListener('click', function() {
+            if (inputSearch) inputSearch.value = '';
+            executeFilterRealtime();
+            if (inputSearch) inputSearch.focus();
+        });
+    }
+
+    // Global Reset Function
+    window.resetAllMateriFilters = function() {
+        if (inputSearch) inputSearch.value = '';
+        if (selectMapel) selectMapel.value = '0';
+        executeFilterRealtime();
+    };
+
+    // Jalankan filter awal jika ada parameter pencarian
+    if ((inputSearch && inputSearch.value.trim().length > 0) || (selectMapel && selectMapel.value !== '0')) {
+        executeFilterRealtime();
+    }
 });
 </script>
 
