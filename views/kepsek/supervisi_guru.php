@@ -15,7 +15,7 @@
                 <a href="<?= BASE_URL ?>index.php?url=kepsek/cetakLaporan&type=supervisi" target="_blank" class="btn btn-outline-primary shadow-sm fw-bold">
                     <i class="bi bi-printer me-1"></i> Cetak Lembar Supervisi PDF
                 </a>
-                <button type="button" id="btnInputSupervisi" class="btn btn-primary shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalSupervisi" onclick="openCreateModal()">
+                <button type="button" id="btnInputSupervisi" class="btn btn-primary shadow-sm fw-bold" onclick="openCreateModal(event)">
                     <i class="bi bi-plus-circle me-1"></i> Input Supervisi Baru
                 </button>
             </div>
@@ -98,7 +98,16 @@
                     </thead>
                     <tbody>
                         <?php if (empty($supervisiList)): ?>
-                            <tr><td colspan="9" class="text-center py-4 text-muted">Belum ada catatan supervisi akademik. Klik tombol <b>Input Supervisi Baru</b> untuk memulai.</td></tr>
+                            <tr>
+                                <td colspan="9" class="text-center py-5 text-muted">
+                                    <i class="bi bi-journal-check fs-1 d-block mb-2 text-primary opacity-50"></i>
+                                    <div class="fw-bold text-dark mb-1">Belum Ada Lembar Supervisi Akademik</div>
+                                    <p class="small text-muted mb-3">Mulai evaluasi berkala proses pembelajaran guru pengampu sekarang.</p>
+                                    <button type="button" class="btn btn-primary btn-sm px-3 py-2 rounded-pill fw-bold shadow-sm" onclick="openCreateModal(event)">
+                                        <i class="bi bi-plus-circle me-1"></i> Input Supervisi Baru
+                                    </button>
+                                </td>
+                            </tr>
                         <?php else: ?>
                             <?php foreach ($supervisiList as $i => $row): 
                                 $skor = (float)$row['nilai_akhir'];
@@ -187,7 +196,7 @@
                         <h5 class="modal-title fw-bold" id="modalFormTitle"><i class="bi bi-pencil-square text-primary me-2"></i>Instrumen Supervisi Akademik Guru</h5>
                         <small class="text-muted">Isi formulir penilaian pembelajaran dan pembinaan kinerja guru.</small>
                     </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeModalSupervisi()"></button>
                 </div>
 
                 <div class="modal-body p-4">
@@ -320,7 +329,7 @@
                 </div>
 
                 <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-secondary rounded-3 px-4" data-bs-dismiss="modal" onclick="closeModalSupervisi()">Batal</button>
                     <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold">
                         <i class="bi bi-check-circle me-1"></i> Simpan Hasil Supervisi
                     </button>
@@ -336,13 +345,13 @@
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header border-0 pb-0">
                 <h6 class="modal-title fw-bold"><i class="bi bi-file-earmark-person-fill text-primary me-2"></i>Rincian Lembar Supervisi Akademik</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closeModalDetailSupervisi()"></button>
             </div>
             <div class="modal-body p-4" id="modalDetailBody">
                 <!-- Injected via JavaScript -->
             </div>
             <div class="modal-footer border-0 pt-0 justify-content-center">
-                <button type="button" class="btn btn-secondary px-4 rounded-3" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-secondary px-4 rounded-3" data-bs-dismiss="modal" onclick="closeModalDetailSupervisi()">Tutup</button>
             </div>
         </div>
     </div>
@@ -350,10 +359,16 @@
 
 <script>
 function calcLiveScore() {
-    const s1 = parseFloat(document.getElementById('formSkor1').value);
-    const s2 = parseFloat(document.getElementById('formSkor2').value);
-    const s3 = parseFloat(document.getElementById('formSkor3').value);
-    const s4 = parseFloat(document.getElementById('formSkor4').value);
+    const s1El = document.getElementById('formSkor1');
+    const s2El = document.getElementById('formSkor2');
+    const s3El = document.getElementById('formSkor3');
+    const s4El = document.getElementById('formSkor4');
+    if (!s1El || !s2El || !s3El || !s4El) return;
+
+    const s1 = parseFloat(s1El.value);
+    const s2 = parseFloat(s2El.value);
+    const s3 = parseFloat(s3El.value);
+    const s4 = parseFloat(s4El.value);
 
     const hasInput = !isNaN(s1) || !isNaN(s2) || !isNaN(s3) || !isNaN(s4);
     const v1 = isNaN(s1) ? 0 : s1;
@@ -362,9 +377,14 @@ function calcLiveScore() {
     const v4 = isNaN(s4) ? 0 : s4;
 
     const total = (v1 * 0.25) + (v2 * 0.35) + (v3 * 0.25) + (v4 * 0.15);
-    document.getElementById('liveScorePreview').innerText = hasInput ? total.toFixed(1) : '0.0';
+    const scorePreview = document.getElementById('liveScorePreview');
+    if (scorePreview) {
+        scorePreview.innerText = hasInput ? total.toFixed(1) : '0.0';
+    }
 
     const predElem = document.getElementById('livePredikatPreview');
+    if (!predElem) return;
+
     if (!hasInput) {
         predElem.innerText = 'Belum Dinilai';
         predElem.className = 'badge ms-2 bg-secondary';
@@ -381,58 +401,189 @@ function calcLiveScore() {
     predElem.className = 'badge ms-2 ' + badgeClass;
 }
 
-function openCreateModal(guruId = null) {
-    document.getElementById('formSupervisiId').value = '';
-    const titleEl = document.getElementById('modalFormTitle');
-    if (titleEl) titleEl.innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i>Input Instrumen Supervisi Akademik Guru';
-    
-    document.getElementById('formTanggal').value = '<?= date('Y-m-d') ?>';
-    if (guruId) {
-        document.getElementById('formGuruId').value = guruId;
-    } else {
-        document.getElementById('formGuruId').value = '';
+function showModalElement(modalId) {
+    const modalEl = document.getElementById(modalId);
+    if (!modalEl) {
+        console.error('Element modal #' + modalId + ' tidak ditemukan!');
+        return;
     }
-    document.getElementById('formMapelId').value = '';
-    document.getElementById('formKelasId').value = '';
-    document.getElementById('formSkor1').value = '';
-    document.getElementById('formSkor2').value = '';
-    document.getElementById('formSkor3').value = '';
-    document.getElementById('formSkor4').value = '';
-    document.getElementById('formKekuatan').value = '';
-    document.getElementById('formPerbaikan').value = '';
-    document.getElementById('formRekomendasi').value = '';
-    calcLiveScore();
 
-    const modalEl = document.getElementById('modalSupervisi');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
+    // 1. Coba Bootstrap 5 API
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        try {
+            const instance = bootstrap.Modal.getOrCreateInstance(modalEl);
+            instance.show();
+            return;
+        } catch (e) {
+            console.warn('Bootstrap 5 show error, fallback ke jQuery/CSS:', e);
+        }
+    }
+
+    // 2. Coba jQuery Bootstrap API
+    if (window.jQuery && typeof window.jQuery(modalEl).modal === 'function') {
+        try {
+            window.jQuery(modalEl).modal('show');
+            return;
+        } catch (e) {
+            console.warn('jQuery modal show error, fallback ke CSS:', e);
+        }
+    }
+
+    // 3. Fallback Vanilla CSS
+    modalEl.classList.add('show');
+    modalEl.style.display = 'block';
+    modalEl.removeAttribute('aria-hidden');
+    modalEl.setAttribute('aria-modal', 'true');
+    document.body.classList.add('modal-open');
+    let backdrop = document.getElementById('manual-modal-backdrop');
+    if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.id = 'manual-modal-backdrop';
+        backdrop.className = 'modal-backdrop fade show';
+        document.body.appendChild(backdrop);
+        backdrop.addEventListener('click', closeModalSupervisi);
     }
 }
 
+function hideModalElement(modalId) {
+    const modalEl = document.getElementById(modalId);
+    if (!modalEl) return;
+
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        try {
+            const instance = bootstrap.Modal.getInstance(modalEl);
+            if (instance) instance.hide();
+        } catch (e) {}
+    }
+
+    if (window.jQuery && typeof window.jQuery(modalEl).modal === 'function') {
+        try {
+            window.jQuery(modalEl).modal('hide');
+        } catch (e) {}
+    }
+
+    modalEl.classList.remove('show');
+    modalEl.style.display = 'none';
+    modalEl.setAttribute('aria-hidden', 'true');
+    modalEl.removeAttribute('aria-modal');
+    document.body.classList.remove('modal-open');
+
+    const backdrop = document.getElementById('manual-modal-backdrop');
+    if (backdrop) backdrop.remove();
+
+    const bsBackdrops = document.querySelectorAll('.modal-backdrop');
+    bsBackdrops.forEach(b => b.remove());
+}
+
+function closeModalSupervisi() {
+    hideModalElement('modalSupervisi');
+}
+
+function closeModalDetailSupervisi() {
+    hideModalElement('modalDetailSupervisi');
+}
+
+function openCreateModal(arg1 = null, arg2 = null) {
+    let e = null;
+    let guruId = null;
+    if (arg1 && typeof arg1.preventDefault === 'function') {
+        e = arg1;
+        guruId = arg2;
+    } else if (typeof arg1 === 'number' || typeof arg1 === 'string') {
+        guruId = arg1;
+    }
+    if (e) {
+        try {
+            e.preventDefault();
+            e.stopPropagation();
+        } catch (err) {}
+    }
+
+    const formSupervisiId = document.getElementById('formSupervisiId');
+    if (formSupervisiId) formSupervisiId.value = '';
+
+    const titleEl = document.getElementById('modalFormTitle');
+    if (titleEl) titleEl.innerHTML = '<i class="bi bi-pencil-square text-primary me-2"></i>Input Instrumen Supervisi Akademik Guru';
+
+    const formTanggal = document.getElementById('formTanggal');
+    if (formTanggal) formTanggal.value = '<?= date('Y-m-d') ?>';
+
+    const formGuruId = document.getElementById('formGuruId');
+    if (formGuruId) formGuruId.value = guruId ? guruId : '';
+
+    const formMapelId = document.getElementById('formMapelId');
+    if (formMapelId) formMapelId.value = '';
+
+    const formKelasId = document.getElementById('formKelasId');
+    if (formKelasId) formKelasId.value = '';
+
+    const formSkor1 = document.getElementById('formSkor1');
+    if (formSkor1) formSkor1.value = '';
+
+    const formSkor2 = document.getElementById('formSkor2');
+    if (formSkor2) formSkor2.value = '';
+
+    const formSkor3 = document.getElementById('formSkor3');
+    if (formSkor3) formSkor3.value = '';
+
+    const formSkor4 = document.getElementById('formSkor4');
+    if (formSkor4) formSkor4.value = '';
+
+    const formKekuatan = document.getElementById('formKekuatan');
+    if (formKekuatan) formKekuatan.value = '';
+
+    const formPerbaikan = document.getElementById('formPerbaikan');
+    if (formPerbaikan) formPerbaikan.value = '';
+
+    const formRekomendasi = document.getElementById('formRekomendasi');
+    if (formRekomendasi) formRekomendasi.value = '';
+
+    calcLiveScore();
+    showModalElement('modalSupervisi');
+}
+
 function openEditModal(row) {
-    document.getElementById('formSupervisiId').value = row.id || '';
+    const formSupervisiId = document.getElementById('formSupervisiId');
+    if (formSupervisiId) formSupervisiId.value = row.id || '';
+
     const titleEl = document.getElementById('modalFormTitle');
     if (titleEl) titleEl.innerHTML = '<i class="bi bi-pencil-square text-warning me-2"></i>Edit Hasil Supervisi Akademik Guru';
-    
-    document.getElementById('formTanggal').value = row.tanggal_supervisi || '<?= date('Y-m-d') ?>';
-    document.getElementById('formGuruId').value = row.guru_id || '';
-    document.getElementById('formMapelId').value = row.mapel_id || '';
-    document.getElementById('formKelasId').value = row.kelas_id || '';
-    document.getElementById('formSkor1').value = row.skor_perencanaan ?? '';
-    document.getElementById('formSkor2').value = row.skor_pelaksanaan ?? '';
-    document.getElementById('formSkor3').value = row.skor_evaluasi ?? '';
-    document.getElementById('formSkor4').value = row.skor_kedisiplinan ?? '';
-    document.getElementById('formKekuatan').value = row.catatan_kekuatan || '';
-    document.getElementById('formPerbaikan').value = row.catatan_perbaikan || '';
-    document.getElementById('formRekomendasi').value = row.rekomendasi_tindak_lanjut || '';
-    calcLiveScore();
 
-    const modalEl = document.getElementById('modalSupervisi');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
-    }
+    const formTanggal = document.getElementById('formTanggal');
+    if (formTanggal) formTanggal.value = row.tanggal_supervisi || '<?= date('Y-m-d') ?>';
+
+    const formGuruId = document.getElementById('formGuruId');
+    if (formGuruId) formGuruId.value = row.guru_id || '';
+
+    const formMapelId = document.getElementById('formMapelId');
+    if (formMapelId) formMapelId.value = row.mapel_id || '';
+
+    const formKelasId = document.getElementById('formKelasId');
+    if (formKelasId) formKelasId.value = row.kelas_id || '';
+
+    const formSkor1 = document.getElementById('formSkor1');
+    if (formSkor1) formSkor1.value = row.skor_perencanaan ?? '';
+
+    const formSkor2 = document.getElementById('formSkor2');
+    if (formSkor2) formSkor2.value = row.skor_pelaksanaan ?? '';
+
+    const formSkor3 = document.getElementById('formSkor3');
+    if (formSkor3) formSkor3.value = row.skor_evaluasi ?? '';
+
+    const formSkor4 = document.getElementById('formSkor4');
+    if (formSkor4) formSkor4.value = row.skor_kedisiplinan ?? '';
+
+    const formKekuatan = document.getElementById('formKekuatan');
+    if (formKekuatan) formKekuatan.value = row.catatan_kekuatan || '';
+
+    const formPerbaikan = document.getElementById('formPerbaikan');
+    if (formPerbaikan) formPerbaikan.value = row.catatan_perbaikan || '';
+
+    const formRekomendasi = document.getElementById('formRekomendasi');
+    if (formRekomendasi) formRekomendasi.value = row.rekomendasi_tindak_lanjut || '';
+
+    calcLiveScore();
+    showModalElement('modalSupervisi');
 }
 
 function showDetailModal(row) {
@@ -482,15 +633,20 @@ function showDetailModal(row) {
             <p class="small text-dark bg-warning-subtle p-2 rounded-2 mb-0">${row.rekomendasi_tindak_lanjut || '-'}</p>
         </div>
     `;
-    document.getElementById('modalDetailBody').innerHTML = html;
-    const modalEl = document.getElementById('modalDetailSupervisi');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-        modal.show();
-    }
+    const detailBody = document.getElementById('modalDetailBody');
+    if (detailBody) detailBody.innerHTML = html;
+    showModalElement('modalDetailSupervisi');
 }
 
+// Pasang event listener saat DOM ready
 document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('btnInputSupervisi');
+    if (btn) {
+        btn.addEventListener('click', function(e) {
+            openCreateModal(e);
+        });
+    }
+
     <?php if (!empty($editData)): ?>
         openEditModal(<?= json_encode($editData) ?>);
     <?php elseif (!empty($selectedGuruId)): ?>
