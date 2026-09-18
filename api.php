@@ -94,18 +94,21 @@ if (!method_exists($controller, $method)) {
     } elseif (strpos($method, 'guru_') === 0) {
         $param = $method;
         $method = 'guru';
+    } elseif (strpos($method, 'kepsek_') === 0) {
+        $param = substr($method, 7);
+        $method = 'kepsek';
     }
 }
 
-// If method is 'siswa' but param is 'index', attempt fallback to POST/GET sub-action
-if ($method === 'siswa' && ($param === 'index' || $param === 'dashboard' || $param === '')) {
+// If method is 'siswa' or 'kepsek' but param is 'index', attempt fallback to POST/GET sub-action
+if (($method === 'siswa' || $method === 'kepsek') && ($param === 'index' || $param === 'dashboard' || $param === '')) {
     $subActionCandidate = $_POST['action'] ?? $jsonInput['action'] ?? $_GET['sub_action'] ?? $_GET['endpoint'] ?? $_POST['endpoint'] ?? $jsonInput['endpoint'] ?? '';
-    if (!empty($subActionCandidate) && strtolower($subActionCandidate) !== 'siswa') {
+    if (!empty($subActionCandidate) && strtolower($subActionCandidate) !== $method) {
         $cleanSub = strtolower(trim(explode('?', $subActionCandidate)[0], '/'));
-        if (strpos($cleanSub, 'siswa/') === 0) {
-            $cleanSub = substr($cleanSub, 6);
+        if (strpos($cleanSub, $method . '/') === 0) {
+            $cleanSub = substr($cleanSub, strlen($method) + 1);
         }
-        if (!empty($cleanSub) && $cleanSub !== 'siswa') {
+        if (!empty($cleanSub) && $cleanSub !== $method) {
             $param = $cleanSub;
         }
     }

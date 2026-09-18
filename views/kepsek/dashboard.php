@@ -62,6 +62,44 @@
             </div>
         </div>
 
+        <!-- Executive Quick Actions & Realtime Presence Banner -->
+        <div class="row g-3 mb-4">
+            <div class="col-12">
+                <div class="card card-custom p-3 shadow-sm border-0 rounded-4 bg-light">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary rounded-circle p-2"><i class="bi bi-grid-fill text-white fs-6"></i></span>
+                            <div>
+                                <h6 class="fw-bold text-dark mb-0">Pintasan Monitoring Eksekutif</h6>
+                                <small class="text-muted">Akses kilat pengawasan operasional sekolah secara langsung</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="<?= BASE_URL ?>index.php?url=kepsek/presensiGuru" class="btn btn-sm btn-white bg-white border shadow-xs fw-semibold">
+                                <i class="bi bi-camera-fill text-success me-1"></i> Presensi Selfie Guru
+                                <span class="badge bg-success ms-1"><?= ($todayAttendance['hadir'] ?? 0) + ($todayAttendance['terlambat'] ?? 0) ?> Hadir</span>
+                            </a>
+                            <a href="<?= BASE_URL ?>index.php?url=kepsek/supervisiGuru" class="btn btn-sm btn-white bg-white border shadow-xs fw-semibold">
+                                <i class="bi bi-award-fill text-warning me-1"></i> Supervisi Kinerja Guru
+                            </a>
+                            <a href="<?= BASE_URL ?>index.php?url=kepsek/monitoringTugas" class="btn btn-sm btn-white bg-white border shadow-xs fw-semibold">
+                                <i class="bi bi-card-checklist text-primary me-1"></i> Monitoring Tugas
+                            </a>
+                            <a href="<?= BASE_URL ?>index.php?url=kepsek/monitoringQuiz" class="btn btn-sm btn-white bg-white border shadow-xs fw-semibold">
+                                <i class="bi bi-patch-question-fill text-danger me-1"></i> Monitoring CBT
+                            </a>
+                            <a href="<?= BASE_URL ?>index.php?url=kepsek/monitoringNilai" class="btn btn-sm btn-white bg-white border shadow-xs fw-semibold">
+                                <i class="bi bi-journal-check text-info me-1"></i> Leger E-Rapor
+                            </a>
+                            <a href="<?= BASE_URL ?>index.php?url=kepsek/pengumuman" class="btn btn-sm btn-white bg-white border shadow-xs fw-semibold">
+                                <i class="bi bi-megaphone-fill text-danger me-1"></i> Maklumat Kepsek
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Real Dynamic Charts Section -->
         <div class="row g-4 mb-4">
             <!-- Chart 1: Keaktifan Guru dalam Memberikan Tugas & Materi -->

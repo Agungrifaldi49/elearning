@@ -6,6 +6,7 @@ import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../siswa/siswa_main_screen.dart';
 import '../guru/guru_main_screen.dart';
+import '../kepsek/kepsek_main_screen.dart';
 import 'onboarding_screen.dart';
 import 'widgets/splash_background_painter.dart';
 
@@ -56,6 +57,12 @@ class _LoginScreenState extends State<LoginScreen>
     "💡 Mengajar bukan sekadar memberikan materi, melainkan menyalakan api inspirasi dan semangat belajar di hati siswa.",
     "⭐ Setiap bimbingan dan kesabaran Anda adalah pondasi kokoh bagi masa depan para siswa. Tetap semangat!",
     "📚 Dedikasi Anda hari ini menciptakan para pemimpin dan profesional hebat di masa esok!"
+  ];
+
+  final List<String> _kepsekQuotes = [
+    "🏛️ Selamat datang, Bapak/Ibu Kepala Sekolah! Pengawasan mutu pendidikan dan pembinaan KBM adalah kunci keunggulan sekolah.",
+    "⭐ Pimpinan yang hebat menginspirasi para pengajar dan melahirkan generasi berprestasi. Selamat menjalankan supervisi eksekutif!",
+    "📊 Pantau perkembangan KBM, presensi guru & siswa, serta capaian pembelajaran dengan presisi di E-Learning Mobile.",
   ];
 
   void _showServerConfigDialog() {
@@ -401,10 +408,13 @@ class _LoginScreenState extends State<LoginScreen>
 
     if (success) {
       final user = authProvider.currentUser!;
+      final bool isKepsek = user.isKepsek;
       final bool isGuru = user.isGuru;
-      final String name = user.fullName.isNotEmpty ? user.fullName : (isGuru ? 'Bapak/Ibu Guru' : 'Siswa');
+      final String name = user.fullName.isNotEmpty
+          ? user.fullName
+          : (isKepsek ? 'Bapak/Ibu Kepala Sekolah' : (isGuru ? 'Bapak/Ibu Guru' : 'Siswa'));
 
-      final quotes = isGuru ? _guruQuotes : _siswaQuotes;
+      final quotes = isKepsek ? _kepsekQuotes : (isGuru ? _guruQuotes : _siswaQuotes);
       final String selectedQuote = (quotes..shuffle()).first;
 
       await showDialog(
@@ -526,59 +536,40 @@ class _LoginScreenState extends State<LoginScreen>
 
       if (!mounted) return;
 
-      if (user.isGuru) {
-        Navigator.of(context).pushAndRemoveUntil(
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 450),
-            pageBuilder: (context, animation, secondaryAnimation) => const GuruMainScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final fadeIn = Tween<double>(begin: 0.0, end: 1.0).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOut),
-              );
-              final slideUp = Tween<Offset>(
-                begin: const Offset(0.0, 0.08),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-              );
-              return FadeTransition(
-                opacity: fadeIn,
-                child: SlideTransition(
-                  position: slideUp,
-                  child: child,
-                ),
-              );
-            },
-          ),
-          (route) => false,
-        );
+      Widget targetScreen;
+      if (user.isKepsek) {
+        targetScreen = const KepsekMainScreen();
+      } else if (user.isGuru) {
+        targetScreen = const GuruMainScreen();
       } else {
-        Navigator.of(context).pushAndRemoveUntil(
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 450),
-            pageBuilder: (context, animation, secondaryAnimation) => const SiswaMainScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              final fadeIn = Tween<double>(begin: 0.0, end: 1.0).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOut),
-              );
-              final slideUp = Tween<Offset>(
-                begin: const Offset(0.0, 0.08),
-                end: Offset.zero,
-              ).animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-              );
-              return FadeTransition(
-                opacity: fadeIn,
-                child: SlideTransition(
-                  position: slideUp,
-                  child: child,
-                ),
-              );
-            },
-          ),
-          (route) => false,
-        );
+        targetScreen = const SiswaMainScreen();
       }
+
+      Navigator.of(context).pushAndRemoveUntil(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 450),
+          pageBuilder: (context, animation, secondaryAnimation) => targetScreen,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final fadeIn = Tween<double>(begin: 0.0, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            );
+            final slideUp = Tween<Offset>(
+              begin: const Offset(0.0, 0.08),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            );
+            return FadeTransition(
+              opacity: fadeIn,
+              child: SlideTransition(
+                position: slideUp,
+                child: child,
+              ),
+            );
+          },
+        ),
+        (route) => false,
+      );
     } else {
       _showModernErrorDialog(authProvider.errorMessage);
     }

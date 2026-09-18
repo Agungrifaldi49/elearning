@@ -303,7 +303,7 @@ if (!empty($sidebarRawLogo)) {
             </a></li>
 
         <!-- ====================================================================================
-             4. KEPALA SEKOLAH
+             4. KEPALA SEKOLAH (FULL SYSTEM EXECUTIVE MONITORING)
         ==================================================================================== -->
         <?php elseif ($role === 'kepala sekolah'): ?>
 
@@ -315,23 +315,88 @@ if (!empty($sidebarRawLogo)) {
                 <i class="bi bi-book-half text-warning me-1"></i> Panduan Pengguna Kepsek
             </a></li>
 
-            <li class="nav-section-title">Monitoring & Analitik</li>
+            <li class="nav-section-title">Supervisi & Kinerja Guru</li>
             <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringGuru') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringGuru">
-                <i class="bi bi-person-check-fill"></i> Monitoring Guru
+                <i class="bi bi-person-check-fill text-primary"></i> Monitoring Produktivitas Guru
             </a></li>
-            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringSiswa') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringSiswa">
-                <i class="bi bi-graph-up-arrow"></i> Monitoring Siswa & Progress
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/supervisiGuru') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/supervisiGuru">
+                <i class="bi bi-award-fill text-warning"></i> Supervisi Akademik & Kinerja
             </a></li>
-            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringPembelajaran') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringPembelajaran">
-                <i class="bi bi-display-fill"></i> Monitoring Pembelajaran Virtual
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/presensiGuru') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/presensiGuru">
+                <i class="bi bi-camera-fill text-success"></i> Presensi Selfie Guru Hari Ini
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/recapBulanan') && ($_GET['type'] ?? '') === 'guru' ? 'active' : '' ?>" href="<?= BASE_URL ?>index.php?url=kepsek/recapBulanan&type=guru">
+                <i class="bi bi-file-earmark-spreadsheet-fill text-success"></i> Rekap Presensi Bulanan Guru
             </a></li>
 
-            <li class="nav-section-title">Laporan & Profil</li>
-            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/cetakLaporan') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/cetakLaporan&type=guru" target="_blank">
-                <i class="bi bi-printer-fill"></i> Laporan Data Guru (PDF)
+            <li class="nav-section-title">Pembelajaran & Kurikulum</li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringPembelajaran') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringPembelajaran">
+                <i class="bi bi-display-fill text-primary"></i> Monitoring Rombel Virtual
             </a></li>
-            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/laporan') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/cetakLaporan&type=siswa" target="_blank">
-                <i class="bi bi-file-earmark-pdf-fill"></i> Laporan Data Siswa (PDF)
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringMateri') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringMateri">
+                <i class="bi bi-book-fill text-info"></i> Modul & Bahan Ajar Guru
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringTugas') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringTugas">
+                <i class="bi bi-card-checklist text-primary"></i> Monitoring Tugas & Evaluasi
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringQuiz') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringQuiz">
+                <i class="bi bi-patch-question-fill text-danger"></i> Monitoring Ujian CBT & Kuis
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringJadwal') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringJadwal">
+                <i class="bi bi-clock-history text-warning"></i> Jadwal Pelajaran Sekolah
+            </a></li>
+
+            <li class="nav-section-title">Kesiswaan, Presensi & Nilai</li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringSiswa') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringSiswa">
+                <i class="bi bi-people-fill text-info"></i> Monitoring Siswa & Progress
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/presensiSiswa') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/presensiSiswa">
+                <i class="bi bi-calendar-check-fill text-success"></i> Presensi Harian Siswa
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/recapBulanan') && ($_GET['type'] ?? '') === 'siswa' ? 'active' : '' ?>" href="<?= BASE_URL ?>index.php?url=kepsek/recapBulanan&type=siswa">
+                <i class="bi bi-file-earmark-spreadsheet-fill text-info"></i> Rekap Presensi Bulanan Siswa
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringNilai') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringNilai">
+                <i class="bi bi-journal-check text-primary"></i> Rekap Leger Nilai E-Rapor
+            </a></li>
+
+            <li class="nav-section-title">Komunikasi & Ruang Virtual</li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringLiveClass') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringLiveClass">
+                <i class="bi bi-camera-reels-fill text-danger"></i> Live Virtual Meeting Room
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'forum') ?>" href="<?= BASE_URL ?>index.php?url=forum">
+                <i class="bi bi-chat-square-quote-fill text-primary"></i> Forum Diskusi Akademik
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/pengumuman') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/pengumuman">
+                <i class="bi bi-megaphone-fill text-danger"></i> Maklumat & Pengumuman Sekolah
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/kalender') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/kalender">
+                <i class="bi bi-calendar3 text-info"></i> Kalender Akademik Sekolah
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'library') ?>" href="<?= BASE_URL ?>index.php?url=library">
+                <i class="bi bi-bookshelf text-success"></i> Perpustakaan Digital
+            </a></li>
+
+            <li class="nav-section-title">Audit & Keamanan Sistem</li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/logs') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/logs">
+                <i class="bi bi-shield-check text-danger"></i> Audit Log & Keamanan Sistem
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/backupStatus') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/backupStatus">
+                <i class="bi bi-database-fill-gear text-success"></i> Status Backup Database
+            </a></li>
+
+            <li class="nav-section-title">Pusat Laporan & Profil</li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/cetakLaporan') && ($_GET['type'] ?? '') === 'guru' ? 'active' : '' ?>" href="<?= BASE_URL ?>index.php?url=kepsek/cetakLaporan&type=guru" target="_blank">
+                <i class="bi bi-printer-fill text-primary"></i> Laporan Kinerja Guru (PDF)
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/cetakLaporan') && ($_GET['type'] ?? '') === 'siswa' ? 'active' : '' ?>" href="<?= BASE_URL ?>index.php?url=kepsek/cetakLaporan&type=siswa" target="_blank">
+                <i class="bi bi-file-earmark-pdf-fill text-success"></i> Laporan Data Siswa (PDF)
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/cetakLaporan') && ($_GET['type'] ?? '') === 'presensi_guru' ? 'active' : '' ?>" href="<?= BASE_URL ?>index.php?url=kepsek/cetakLaporan&type=presensi_guru" target="_blank">
+                <i class="bi bi-file-earmark-check-fill text-warning"></i> Laporan Presensi Guru (PDF)
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/cetakLaporan') && ($_GET['type'] ?? '') === 'supervisi' ? 'active' : '' ?>" href="<?= BASE_URL ?>index.php?url=kepsek/cetakLaporan&type=supervisi" target="_blank">
+                <i class="bi bi-award text-danger"></i> Laporan Hasil Supervisi (PDF)
             </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'kepsek/profil') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/profil">
                 <i class="bi bi-person-circle"></i> Profil Eksekutif

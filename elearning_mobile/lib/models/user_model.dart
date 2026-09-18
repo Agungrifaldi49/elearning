@@ -37,6 +37,7 @@ class UserModel {
 
   bool get isGuru => roleName.toLowerCase() == 'guru';
   bool get isSiswa => roleName.toLowerCase() == 'siswa';
+  bool get isKepsek => roleName.toLowerCase().contains('kepala') || roleName.toLowerCase().contains('kepsek');
 
   String get fullAvatarUrl {
     if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
@@ -58,10 +59,12 @@ class UserModel {
   String get namaJurusan => details?['nama_jurusan']?.toString() ?? 'Jurusan SMK';
 
   String get status => details?['status']?.toString() ?? 'aktif';
-  String get hakAkses => isSiswa ? 'Siswa (${status.toUpperCase()})' : (isGuru ? 'Guru Pengampu' : roleName);
+  String get hakAkses => isKepsek ? 'Kepala Sekolah (Executive)' : (isSiswa ? 'Siswa (${status.toUpperCase()})' : (isGuru ? 'Guru Pengampu' : roleName));
 
   String get subTitle {
-    if (isSiswa && details != null) {
+    if (isKepsek) {
+      return "Pimpinan Sekolah";
+    } else if (isSiswa && details != null) {
       return "$namaKelas - $namaJurusan";
     } else if (isGuru && details != null) {
       return "NIP: $nip";

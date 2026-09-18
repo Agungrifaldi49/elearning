@@ -26,14 +26,17 @@
                             <th class="text-center">Modul Materi</th>
                             <th class="text-center">Tugas Terbit</th>
                             <th class="text-center">Kuis CBT</th>
-                            <th class="text-center">Status</th>
+                            <th class="text-center">Skor Supervisi</th>
+                            <th class="text-center">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($guruList)): ?>
-                            <tr><td colspan="8" class="text-center py-4 text-muted">Belum ada data pengajar terdaftar.</td></tr>
+                            <tr><td colspan="9" class="text-center py-4 text-muted">Belum ada data pengajar terdaftar.</td></tr>
                         <?php else: ?>
-                            <?php foreach ($guruList as $i => $g): ?>
+                            <?php foreach ($guruList as $i => $g): 
+                                $skorSup = (float)($g['nilai_supervisi_terakhir'] ?? 0);
+                            ?>
                                 <tr>
                                     <td><?= $i + 1 ?></td>
                                     <td>
@@ -51,9 +54,16 @@
                                     <td class="text-center"><span class="badge bg-warning text-dark fs-6"><?= $g['total_tugas'] ?> Tugas</span></td>
                                     <td class="text-center"><span class="badge bg-success fs-6"><?= $g['total_quiz'] ?> Kuis</span></td>
                                     <td class="text-center">
-                                        <span class="badge bg-<?= ($g['status'] ?? 'aktif') === 'aktif' ? 'success' : 'secondary' ?>">
-                                            <?= ucfirst($g['status'] ?? 'aktif') ?>
-                                        </span>
+                                        <?php if ($skorSup > 0): ?>
+                                            <span class="badge bg-success px-2 py-1 fs-6"><?= number_format($skorSup, 1) ?></span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">Belum Supervisi</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="<?= BASE_URL ?>index.php?url=kepsek/supervisiGuru&guru_id=<?= $g['id'] ?>" class="btn btn-sm btn-outline-warning text-dark fw-semibold" title="Supervisi Kinerja Guru">
+                                            <i class="bi bi-award-fill me-1"></i> Supervisi
+                                        </a>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../siswa/siswa_main_screen.dart';
 import '../guru/guru_main_screen.dart';
+import '../kepsek/kepsek_main_screen.dart';
 import 'onboarding_screen.dart';
 import 'widgets/splash_background_painter.dart';
 
@@ -141,7 +142,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (authProvider.isAuthenticated) {
       final user = authProvider.currentUser!;
-      destination = user.isGuru ? const GuruMainScreen() : const SiswaMainScreen();
+      if (user.isKepsek) {
+        destination = const KepsekMainScreen();
+      } else if (user.isGuru) {
+        destination = const GuruMainScreen();
+      } else {
+        destination = const SiswaMainScreen();
+      }
     } else {
       destination = const OnboardingScreen();
     }

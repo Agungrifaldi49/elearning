@@ -644,4 +644,216 @@ class ReportModel extends BaseModel {
             'class_recap' => $classRecap
         ];
     }
+
+    public function ensureSupervisiTable() {
+        try {
+            $this->db->exec("
+                CREATE TABLE IF NOT EXISTS supervisi_guru (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    guru_id INT NOT NULL,
+                    kepsek_id INT NOT NULL,
+                    tanggal_supervisi DATE NOT NULL,
+                    mapel_id INT NULL,
+                    kelas_id INT NULL,
+                    skor_perencanaan DECIMAL(5,2) DEFAULT 0,
+                    skor_pelaksanaan DECIMAL(5,2) DEFAULT 0,
+                    skor_evaluasi DECIMAL(5,2) DEFAULT 0,
+                    skor_kedisiplinan DECIMAL(5,2) DEFAULT 0,
+                    nilai_akhir DECIMAL(5,2) DEFAULT 0,
+                    predikat VARCHAR(20) DEFAULT 'Baik',
+                    catatan_kekuatan TEXT NULL,
+                    catatan_perbaikan TEXT NULL,
+                    rekomendasi_tindak_lanjut TEXT NULL,
+                    status ENUM('draft', 'final') DEFAULT 'final',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_sup_guru (guru_id),
+                    INDEX idx_sup_tgl (tanggal_supervisi)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+        } catch (Exception $e) {}
+    }
+
+    public function getSupervisiList($guruId = null) {
+        $this->ensureSupervisiTable();
+        try {
+            $sql = "
+                SELECT sg.*, g.nama_lengkap as nama_guru, g.nip, u.email as email_guru,
+                       k.nama_kelas, mp.nama_mapel, uk.full_name as nama_kepsek
+                FROM supervisi_guru sg
+                JOIN guru g ON sg.guru_id = g.id
+                LEFT JOIN users u ON g.user_id = u.id
+                LEFT JOIN users uk ON sg.kepsek_id = uk.id
+                LEFT JOIN kelas k ON sg.kelas_id = k.id
+                LEFT JOIN mata_pelajaran mp ON sg.mapel_id = mp.id
+            ";
+            if ($guruId) {
+                $sql .= " WHERE sg.guru_id = " . (int)$guruId;
+            }
+            $sql .= " ORDER BY sg.tanggal_supervisi DESC, sg.id DESC";
+            return $this->db->query($sql)->fetchAll();
+        } catch (Exception $e) {
+            return [];
+        }
+    }
+
+    public function getSupervisiById($id) {
+        $this->ensureSupervisiTable();
+        try {
+            $stmt = $this->db->prepare("
+                SELECT sg.*, g.nama_lengkap as nama_guru, g.nip, u.email as email_guru,
+                       k.nama_kelas, mp.nama_mapel, uk.full_name as nama_kepsek
+                FROM supervisi_guru sg
+                JOIN guru g ON sg.guru_id = g.id
+                LEFT JOIN users u ON g.user_id = u.id
+                LEFT JOIN users uk ON sg.kepsek_id = uk.id
+                LEFT JOIN kelas k ON sg.kelas_id = k.id
+                LEFT JOIN mata_pelajaran mp ON sg.mapel_id = mp.id
+                WHERE sg.id = ?
+                LIMIT 1
+            ");
+            $stmt->execute([(int)$id]);
+            return $stmt->fetch() ?: null;
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    public function saveSupervisi($data) {
+        $this->ensureSupervisiTable();
+        try {
+            $guruId = (int)$data['guru_id'];
+            $kepsekId = (int)$data['kepsek_id'];
+            $tanggal = $data['tanggal_supervisi'] ?? date('Y-m-d');
+            $mapelId = !empty($data['mapel_id']) ? (int)$data['mapel_id'] : null;
+            $kelasId = !empty($data['kelas_id']) ? (int)$data['kelas_id'] : null;
+            
+            $skorPerencanaan = (float)($data['skor_perencanaan'] ?? 0);
+            $skorPelaksanaan = (float)($data['skor_pelaksanaan'] ?? 0);
+            $skorEvaluasi = (float)($data['skor_evaluasi'] ?? 0);
+            $skorKedisiplinan = (float)($data['skor_kedisiplinan'] ?? 0);
+
+            // Hitung nilai akhir berbobot
+            $nilaiAkhir = round(($skorPerencanaan * 0.25) + ($skorPelaksanaan * 0.35) + ($skorEvaluasi * 0.25) + ($skorKedisiplinan * 0.15), 2);
+            if ($nilaiAkhir >= 90) {
+                $predikat = 'Amat Baik (A)';
+            } elseif ($nilaiAkhir >= 80) {
+                $predikat = 'Baik (B)';
+            } elseif ($nilaiAkhir >= 70) {
+                $predikat = 'Cukup (C)';
+            } else {
+                $predikat = 'Kurang (D)';
+            }
+
+            $catatanKekuatan = $data['catatan_kekuatan'] ?? '';
+            $catatanPerbaikan = $data['catatan_perbaikan'] ?? '';
+            $rekomendasi = $data['rekomendasi_tindak_lanjut'] ?? '';
+            $status = $data['status'] ?? 'final';
+
+            if (!empty($data['id'])) {
+                $stmt = $this->db->prepare("
+                    UPDATE supervisi_guru SET
+                        guru_id = ?, tanggal_supervisi = ?, mapel_id = ?, kelas_id = ?,
+                        skor_perencanaan = ?, skor_pelaksanaan = ?, skor_evaluasi = ?, skor_kedisiplinan = ?,
+                        nilai_akhir = ?, predikat = ?, catatan_kekuatan = ?, catatan_perbaikan = ?,
+                        rekomendasi_tindak_lanjut = ?, status = ?
+                    WHERE id = ?
+                ");
+                $stmt->execute([
+                    $guruId, $tanggal, $mapelId, $kelasId,
+                    $skorPerencanaan, $skorPelaksanaan, $skorEvaluasi, $skorKedisiplinan,
+                    $nilaiAkhir, $predikat, $catatanKekuatan, $catatanPerbaikan,
+                    $rekomendasi, $status, (int)$data['id']
+                ]);
+                return (int)$data['id'];
+            } else {
+                $stmt = $this->db->prepare("
+                    INSERT INTO supervisi_guru (
+                        guru_id, kepsek_id, tanggal_supervisi, mapel_id, kelas_id,
+                        skor_perencanaan, skor_pelaksanaan, skor_evaluasi, skor_kedisiplinan,
+                        nilai_akhir, predikat, catatan_kekuatan, catatan_perbaikan,
+                        rekomendasi_tindak_lanjut, status
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([
+                    $guruId, $kepsekId, $tanggal, $mapelId, $kelasId,
+                    $skorPerencanaan, $skorPelaksanaan, $skorEvaluasi, $skorKedisiplinan,
+                    $nilaiAkhir, $predikat, $catatanKekuatan, $catatanPerbaikan,
+                    $rekomendasi, $status
+                ]);
+                return (int)$this->db->lastInsertId();
+            }
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    public function deleteSupervisi($id) {
+        $this->ensureSupervisiTable();
+        try {
+            $stmt = $this->db->prepare("DELETE FROM supervisi_guru WHERE id = ?");
+            return $stmt->execute([(int)$id]);
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    public function getTodayTeacherAttendanceStats($tanggal = null) {
+        $tgl = $tanggal ?: date('Y-m-d');
+        try {
+            $totalGuru = (int)$this->db->query("SELECT COUNT(*) FROM guru WHERE status = 'aktif'")->fetchColumn();
+            
+            $stmt = $this->db->prepare("
+                SELECT g.id as guru_id, g.nama_lengkap, g.nip, g.no_telepon, u.email, u.avatar,
+                       ag.id as absensi_id, ag.tanggal, ag.waktu_masuk, ag.waktu_pulang,
+                       ag.status_kehadiran, ag.foto_masuk, ag.foto_pulang, ag.tipe_presensi,
+                       ag.jarak_masuk_meter, ag.keterangan
+                FROM guru g
+                JOIN users u ON g.user_id = u.id
+                LEFT JOIN absensi_guru ag ON ag.guru_id = g.id AND ag.tanggal = ?
+                WHERE g.status = 'aktif'
+                ORDER BY (ag.waktu_masuk IS NOT NULL) DESC, ag.waktu_masuk ASC, g.nama_lengkap ASC
+            ");
+            $stmt->execute([$tgl]);
+            $rows = $stmt->fetchAll();
+
+            $hadir = 0;
+            $terlambat = 0;
+            $izin = 0;
+            $belumHadir = 0;
+
+            foreach ($rows as $r) {
+                if (!empty($r['waktu_masuk'])) {
+                    if (($r['status_kehadiran'] ?? '') === 'Terlambat') {
+                        $terlambat++;
+                    } else {
+                        $hadir++;
+                    }
+                } elseif (in_array(($r['status_kehadiran'] ?? ''), ['Izin', 'Sakit'])) {
+                    $izin++;
+                } else {
+                    $belumHadir++;
+                }
+            }
+
+            return [
+                'total_guru' => $totalGuru,
+                'hadir' => $hadir,
+                'terlambat' => $terlambat,
+                'izin' => $izin,
+                'belum_hadir' => $belumHadir,
+                'list' => $rows
+            ];
+        } catch (Exception $e) {
+            return [
+                'total_guru' => 0,
+                'hadir' => 0,
+                'terlambat' => 0,
+                'izin' => 0,
+                'belum_hadir' => 0,
+                'list' => []
+            ];
+        }
+    }
 }
+

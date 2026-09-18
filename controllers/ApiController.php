@@ -103,12 +103,21 @@ class ApiController {
             }
 
             $role = strtolower($user['role_name'] ?? $user['role'] ?? 'siswa');
-            if ($role !== 'guru' && $role !== 'siswa') {
-                $this->jsonResponse(false, 'Akses mobile hanya tersedia untuk Guru dan Siswa.', null, 403);
+            $isKepsek = strpos($role, 'kepala') !== false || $role === 'kepsek';
+            if ($role !== 'guru' && $role !== 'siswa' && !$isKepsek) {
+                $this->jsonResponse(false, 'Akses mobile hanya tersedia untuk Guru, Siswa, dan Kepala Sekolah.', null, 403);
             }
 
             $details = null;
-            if ($role === 'guru') {
+            if ($isKepsek) {
+                $role = 'kepala sekolah';
+                $details = [
+                    'nip' => 'KEPSEK-MHC',
+                    'jabatan' => 'Kepala Sekolah SMK Muthia Harapan Cicalengka',
+                    'nama_lengkap' => $user['full_name'],
+                    'status' => 'aktif'
+                ];
+            } else if ($role === 'guru') {
                 try {
                     $stmtG = $this->db->prepare("SELECT * FROM guru WHERE user_id = :uid LIMIT 1");
                     $stmtG->execute(['uid' => $user['id']]);
@@ -4250,6 +4259,125 @@ class ApiController {
             $this->jsonResponse(true, 'Pengecekan pengingat notifikasi berhasil diproses', $data);
         } catch (\Throwable $e) {
             $this->jsonResponse(false, 'Gagal memproses pengingat: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    public function kepsek($endpoint = 'dashboard') {
+        $endpoint = strtolower(trim(explode('?', $endpoint)[0], '/'));
+        $endpoint = str_replace('-', '_', $endpoint);
+        if (strpos($endpoint, 'kepsek/') === 0) {
+            $endpoint = substr($endpoint, 7);
+        } elseif (strpos($endpoint, 'kepsek_') === 0) {
+            $endpoint = substr($endpoint, 7);
+        }
+
+        require_once ROOT_PATH . 'models/ReportModel.php';
+        require_once ROOT_PATH . 'models/GuruModel.php';
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        $reportModel = new ReportModel();
+
+        if ($endpoint === 'dashboard' || empty($endpoint)) {
+            try {
+                $stats = $reportModel->getKepsekStats();
+                $todayAtt = $reportModel->getTodayTeacherAttendanceStats();
+
+                $this->jsonResponse(true, 'Executive Dashboard Kepsek', [
+                    'kpi' => $stats,
+                    'today_attendance' => $todayAtt,
+                    'last_updated' => date('Y-m-d H:i:s')
+                ]);
+            } catch (\Throwable $e) {
+                $this->jsonResponse(false, 'Gagal memuat dashboard kepsek: ' . $e->getMessage(), null, 500);
+            }
+        } elseif ($endpoint === 'guru') {
+            try {
+                $guruList = $this->db->query("
+                    SELECT g.*, u.username, u.email,
+                           (SELECT COUNT(*) FROM materi m WHERE m.guru_id = g.id) as total_materi,
+                           (SELECT COUNT(*) FROM tugas t WHERE t.guru_id = g.id) as total_tugas,
+                           (SELECT COUNT(*) FROM quiz q WHERE q.guru_id = g.id) as total_quiz,
+                           (SELECT nilai_akhir FROM supervisi_guru sg WHERE sg.guru_id = g.id ORDER BY tanggal_supervisi DESC LIMIT 1) as nilai_supervisi
+                    FROM guru g
+                    JOIN users u ON g.user_id = u.id
+                    ORDER BY g.nama_lengkap ASC
+                ")->fetchAll();
+
+                $this->jsonResponse(true, 'Daftar Monitoring Guru', [
+                    'teachers' => $guruList,
+                    'total' => count($guruList)
+                ]);
+            } catch (\Throwable $e) {
+                $this->jsonResponse(false, 'Gagal memuat data guru: ' . $e->getMessage(), null, 500);
+            }
+        } elseif ($endpoint === 'presensi') {
+            try {
+                $tanggal = $_GET['tanggal'] ?? date('Y-m-d');
+                $attStats = $reportModel->getTodayTeacherAttendanceStats($tanggal);
+
+                $this->jsonResponse(true, 'Monitoring Presensi Guru', $attStats);
+            } catch (\Throwable $e) {
+                $this->jsonResponse(false, 'Gagal memuat presensi: ' . $e->getMessage(), null, 500);
+            }
+        } elseif ($endpoint === 'supervisi') {
+            try {
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    $input = $this->getPostInput();
+                    $res = $reportModel->saveSupervisi($input);
+                    if ($res) {
+                        $this->jsonResponse(true, 'Lembar supervisi berhasil disimpan');
+                    } else {
+                        $this->jsonResponse(false, 'Gagal menyimpan supervisi');
+                    }
+                } else {
+                    $list = $reportModel->getSupervisiList();
+                    $this->jsonResponse(true, 'Riwayat Supervisi Guru', [
+                        'supervisi_list' => $list
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                $this->jsonResponse(false, 'Gagal memproses supervisi: ' . $e->getMessage(), null, 500);
+            }
+        } elseif ($endpoint === 'siswa') {
+            try {
+                $academicModel = new AcademicModel();
+                $kelasList = $academicModel->getKelas();
+                $stats = $reportModel->getKepsekStats();
+
+                $this->jsonResponse(true, 'Monitoring Kesiswaan', [
+                    'classes' => $kelasList,
+                    'rekap_rombel' => $stats['rekap_rombel'] ?? [],
+                    'total_siswa' => $stats['total_siswa'] ?? 0
+                ]);
+            } catch (\Throwable $e) {
+                $this->jsonResponse(false, 'Gagal memuat data kesiswaan: ' . $e->getMessage(), null, 500);
+            }
+        } elseif ($endpoint === 'pengumuman') {
+            try {
+                require_once ROOT_PATH . 'models/CommunicationModel.php';
+                $comm = new CommunicationModel();
+
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    $input = $this->getPostInput();
+                    $userId = (int)($input['user_id'] ?? 4);
+                    $judul = $input['judul'] ?? '';
+                    $isi = $input['isi'] ?? '';
+
+                    $comm->createPengumuman($userId, $judul, $isi, 'all', 1, null);
+                    require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                    FcmHelper::sendToAll('📢 Maklumat Kepala Sekolah: ' . $judul, $isi, ['type' => 'pengumuman']);
+
+                    $this->jsonResponse(true, 'Maklumat berhasil disiarkan ke seluruh guru dan siswa');
+                } else {
+                    $list = $comm->getPengumuman();
+                    $this->jsonResponse(true, 'Daftar Pengumuman', [
+                        'announcements' => $list
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                $this->jsonResponse(false, 'Gagal memproses pengumuman: ' . $e->getMessage(), null, 500);
+            }
+        } else {
+            $this->jsonResponse(false, 'Endpoint kepsek tidak dikenali: ' . $endpoint, null, 404);
         }
     }
 }
