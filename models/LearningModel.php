@@ -159,7 +159,9 @@ class LearningModel extends BaseModel {
     // --- TUGAS ---
     public function getTugas($kelas_id = null, $guru_id = null) {
         $sql = "
-            SELECT t.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, g.nama_lengkap as nama_guru
+            SELECT t.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, g.nama_lengkap as nama_guru,
+                   (SELECT COUNT(DISTINCT pt.siswa_id) FROM pengumpulan_tugas pt WHERE pt.tugas_id = t.id) as total_pengumpulan,
+                   (SELECT COUNT(DISTINCT pt.siswa_id) FROM pengumpulan_tugas pt WHERE pt.tugas_id = t.id AND (pt.nilai IS NOT NULL OR pt.graded_at IS NOT NULL)) as total_dinilai
             FROM tugas t
             JOIN mata_pelajaran map ON t.mapel_id = map.id
             LEFT JOIN kelas k ON t.kelas_id = k.id

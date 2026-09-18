@@ -116,7 +116,15 @@
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge bg-primary fs-6"><?= $kumpul ?> Siswa</span>
+                                        <?php if ($kumpul > 0): ?>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fs-6 fw-bold">
+                                                <i class="bi bi-check-circle-fill me-1"></i><?= $kumpul ?> Siswa
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-1.5 rounded-pill">
+                                                0 Siswa
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="text-center" style="min-width: 140px;">
                                         <div class="d-flex justify-content-between small mb-1">
