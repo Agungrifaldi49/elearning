@@ -31,6 +31,7 @@ if (!empty($jadwalList)) {
 ?>
 
 <style>
+/* Dashboard Styling Enhancements */
 .siswa-hero-card {
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #0f172a 100%);
     border-radius: 1rem;
@@ -51,18 +52,32 @@ if (!empty($jadwalList)) {
     pointer-events: none;
 }
 
+/* KPI Stat Cards: Pixel-Perfect Uniform Height */
 .stat-kpi-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 0.85rem;
-    padding: 1.25rem;
+    border-radius: 0.95rem;
+    padding: 1.15rem;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
     transition: all 0.25s ease;
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 125px;
 }
 .stat-kpi-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 20px -3px rgba(0, 0, 0, 0.08);
+}
+.stat-kpi-icon {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
 }
 
 /* Day Switcher Filter Buttons */
@@ -88,6 +103,47 @@ if (!empty($jadwalList)) {
     border-color: #0d6efd;
     box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2);
 }
+
+/* Quick Navigation Links */
+.quick-nav-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    text-decoration: none;
+    color: #1e293b;
+    font-weight: 600;
+    font-size: 0.84rem;
+    transition: all 0.2s ease;
+}
+.quick-nav-item:hover {
+    background-color: #ffffff;
+    border-color: #0d6efd;
+    color: #0d6efd;
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.08);
+}
+
+@media (max-width: 575.98px) {
+    .stat-kpi-card {
+        padding: 0.9rem;
+        min-height: 115px;
+    }
+    .stat-kpi-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem !important;
+    }
+    .stat-kpi-card h3 {
+        font-size: 1.35rem !important;
+    }
+    .stat-kpi-card span.stat-kpi-title {
+        font-size: 0.65rem !important;
+    }
+}
 </style>
 
 <main class="main-content px-3 px-md-4">
@@ -98,7 +154,6 @@ if (!empty($jadwalList)) {
         <div class="row align-items-center g-4">
             <div class="col-12 col-lg-8">
                 <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-                    <!-- Title Badge: Black/Dark High-Contrast Text on Solid White -->
                     <span class="badge bg-white text-dark px-3 py-1.5 rounded-pill fw-bold text-uppercase shadow-xs" style="font-size: 0.75rem;">
                         <i class="bi bi-person-workspace text-primary me-1.5"></i> Portal Pembelajaran Digital Siswa
                     </span>
@@ -107,10 +162,11 @@ if (!empty($jadwalList)) {
                     </span>
                 </div>
                 <h3 class="fw-bold mb-2 text-white">Selamat Datang, <?= htmlspecialchars($user['full_name']) ?>!</h3>
-                <p class="text-white text-opacity-90 mb-0 small" style="max-width: 650px;">
-                    Rombel Kelas Utama: <strong class="text-white"><?= htmlspecialchars($siswaProfile['nama_kelas'] ?? 'Rombel Kelas') ?></strong> 
-                    &nbsp;|&nbsp; Jurusan: <strong class="text-white"><?= htmlspecialchars($siswaProfile['nama_jurusan'] ?? 'Kejuruan') ?></strong>
-                </p>
+                <div class="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-3 bg-white bg-opacity-10 text-white small flex-wrap">
+                    <span><i class="bi bi-mortarboard me-1 text-warning"></i> Rombel: <strong class="text-white"><?= htmlspecialchars($siswaProfile['nama_kelas'] ?? 'Rombel Kelas') ?></strong></span>
+                    <span class="opacity-50">&bull;</span>
+                    <span><i class="bi bi-diagram-3 me-1 text-info"></i> Jurusan: <strong class="text-white"><?= htmlspecialchars($siswaProfile['nama_jurusan'] ?? 'Kejuruan') ?></strong></span>
+                </div>
             </div>
             
             <div class="col-12 col-lg-4 text-lg-end">
@@ -121,82 +177,108 @@ if (!empty($jadwalList)) {
         </div>
     </div>
 
-    <!-- 4 Real Database KPI Stats Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-sm-6 col-xl-3">
+    <!-- 4 Real Database KPI Stats Cards (2x2 on Mobile, 1x4 on Desktop) -->
+    <div class="row g-2 g-md-3 mb-4">
+        <!-- KPI 1: Materi -->
+        <div class="col-6 col-xl-3">
             <div class="stat-kpi-card border-start border-4 border-primary">
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-start justify-content-between mb-2">
                     <div>
-                        <span class="text-muted small fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Materi Siap Dibaca</span>
+                        <span class="stat-kpi-title text-muted fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Materi KBM</span>
                         <h3 class="fw-bold mb-0 text-primary"><?= count($materiList) ?></h3>
                     </div>
-                    <div class="bg-primary-subtle text-primary p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+                    <div class="stat-kpi-icon bg-primary-subtle text-primary fs-4">
                         <i class="bi bi-book-fill"></i>
                     </div>
                 </div>
-                <small class="text-muted d-block mt-2" style="font-size:0.78rem;"><i class="bi bi-check-circle me-1 text-primary"></i>Tersedia untuk Rombel Anda</small>
+                <div class="pt-2 border-top d-flex align-items-center justify-content-between">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 rounded-pill fw-semibold" style="font-size:0.7rem;">
+                        <i class="bi bi-journal-check me-1"></i>Siap Dibaca
+                    </span>
+                    <a href="<?= BASE_URL ?>index.php?url=siswa/materi" class="text-primary small fw-semibold text-decoration-none" style="font-size:0.72rem;">
+                        Buka <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
+        <!-- KPI 2: Tugas -->
+        <div class="col-6 col-xl-3">
             <div class="stat-kpi-card border-start border-4 border-warning">
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-start justify-content-between mb-2">
                     <div>
-                        <span class="text-muted small fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Tugas Aktif KBM</span>
+                        <span class="stat-kpi-title text-muted fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Tugas Aktif</span>
                         <h3 class="fw-bold mb-0 text-warning"><?= count($tugasList) ?></h3>
                     </div>
-                    <div class="bg-warning-subtle text-warning p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+                    <div class="stat-kpi-icon bg-warning-subtle text-warning fs-4">
                         <i class="bi bi-card-checklist"></i>
                     </div>
                 </div>
-                <small class="text-muted d-block mt-2" style="font-size:0.78rem;"><i class="bi bi-clock-history me-1 text-warning"></i>Perlu Dikumpulkan ke Guru</small>
+                <div class="pt-2 border-top d-flex align-items-center justify-content-between">
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-0.5 rounded-pill fw-semibold" style="font-size:0.7rem;">
+                        <i class="bi bi-clock-history me-1"></i>Penugasan
+                    </span>
+                    <a href="<?= BASE_URL ?>index.php?url=siswa/tugas" class="text-warning-emphasis small fw-semibold text-decoration-none" style="font-size:0.72rem;">
+                        Lihat <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
+        <!-- KPI 3: Kuis CBT -->
+        <div class="col-6 col-xl-3">
             <div class="stat-kpi-card border-start border-4 border-success">
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-start justify-content-between mb-2">
                     <div>
-                        <span class="text-muted small fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Kuis & Ujian CBT</span>
+                        <span class="stat-kpi-title text-muted fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Kuis & Ujian CBT</span>
                         <h3 class="fw-bold mb-0 text-success"><?= count($quizList) ?></h3>
                     </div>
-                    <div class="bg-success-subtle text-success p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+                    <div class="stat-kpi-icon bg-success-subtle text-success fs-4">
                         <i class="bi bi-patch-check-fill"></i>
                     </div>
                 </div>
-                <small class="text-muted d-block mt-2" style="font-size:0.78rem;"><i class="bi bi-shield-check me-1 text-success"></i>Evaluasi CBT Sekolah</small>
+                <div class="pt-2 border-top d-flex align-items-center justify-content-between">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5 rounded-pill fw-semibold" style="font-size:0.7rem;">
+                        <i class="bi bi-laptop me-1"></i>Evaluasi CBT
+                    </span>
+                    <a href="<?= BASE_URL ?>index.php?url=siswa/quiz" class="text-success small fw-semibold text-decoration-none" style="font-size:0.72rem;">
+                        Mulai <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
             </div>
         </div>
 
-        <div class="col-12 col-sm-6 col-xl-3">
+        <!-- KPI 4: Presensi Real -->
+        <div class="col-6 col-xl-3">
             <div class="stat-kpi-card border-start border-4 border-info">
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-start justify-content-between mb-2">
                     <div>
-                        <span class="text-muted small fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Presensi Log Real</span>
+                        <span class="stat-kpi-title text-muted fw-bold d-block text-uppercase mb-1" style="font-size: 0.72rem;">Presensi Real</span>
                         <h3 class="fw-bold mb-0 text-info"><?= htmlspecialchars($certStats['presensi_log'] ?? '0%') ?></h3>
                     </div>
-                    <div class="bg-info-subtle text-info p-3 rounded-circle fs-4 d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+                    <div class="stat-kpi-icon bg-info-subtle text-info fs-4">
                         <i class="bi bi-calendar-check-fill"></i>
                     </div>
                 </div>
-                <div class="d-flex align-items-center gap-1.5 mt-2 flex-wrap" style="font-size: 0.72rem;">
-                    <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5 rounded-pill fw-bold">H: <?= (int)($certStats['total_hadir'] ?? 0) ?></span>
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-1.5 py-0.5 rounded-pill fw-bold">I: <?= (int)($certStats['total_izin'] ?? 0) ?></span>
-                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-1.5 py-0.5 rounded-pill fw-bold">S: <?= (int)($certStats['total_sakit'] ?? 0) ?></span>
-                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-1.5 py-0.5 rounded-pill fw-bold">A: <?= (int)($certStats['total_alpa'] ?? 0) ?></span>
+                <div class="pt-2 border-top d-flex align-items-center justify-content-between">
+                    <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-0.5 rounded-pill fw-semibold" style="font-size:0.7rem;">
+                        <i class="bi bi-person-check me-1"></i><?= (int)($certStats['total_hadir'] ?? 0) ?> Hadir / <?= (int)($certStats['total_absensi'] ?? 0) ?> KBM
+                    </span>
+                    <a href="#presensiSection" class="text-info small fw-semibold text-decoration-none" style="font-size:0.72rem;">
+                        Detail <i class="bi bi-arrow-down"></i>
+                    </a>
                 </div>
-                <small class="text-muted d-block mt-1.5" style="font-size:0.75rem;"><i class="bi bi-database-check me-1 text-info"></i><?= (int)($certStats['total_absensi'] ?? 0) ?> Catatan Terverifikasi</small>
             </div>
         </div>
     </div>
 
-    <!-- Main Dashboard Grid -->
+    <!-- Main Balanced Dashboard Grid (8 Cols Left, 4 Cols Right) -->
     <div class="row g-4">
         
         <!-- Left Column (8 Columns) -->
         <div class="col-12 col-lg-8">
 
-            <!-- Chart.js Real Database Student Performance -->
+            <!-- 1. Chart.js Real Database Student Performance -->
             <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2.5 border-bottom">
@@ -212,14 +294,14 @@ if (!empty($jadwalList)) {
                         </span>
                     </div>
 
-                    <!-- Canvas Chart Always Rendered -->
-                    <div style="position: relative; height: 270px; width: 100%;">
+                    <!-- Canvas Chart Container -->
+                    <div style="position: relative; height: 260px; width: 100%;">
                         <canvas id="siswaPerformanceChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Countdown Tenggat Tugas Nearest -->
+            <!-- 2. Countdown Tenggat Tugas Nearest (If Exists) -->
             <?php if (!empty($tugasList)): ?>
             <div class="card border-0 p-4 mb-4 border-start border-4 border-warning shadow-sm bg-white rounded-4">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -235,20 +317,20 @@ if (!empty($jadwalList)) {
             </div>
             <?php endif; ?>
 
-            <!-- 📅 JADWAL PELAJARAN KBM ROMBEL (TODAY DEFAULT & DAY SWITCHER) -->
+            <!-- 3. JADWAL PELAJARAN KBM ROMBEL (TODAY DEFAULT & DAY SWITCHER) -->
             <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2.5 border-bottom">
                         <div>
                             <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
                                 <i class="bi bi-calendar3 text-primary fs-4"></i>
-                                <span>Jadwal Pelajaran KBM Rombel Hari Ini</span>
+                                <span>Jadwal Pelajaran KBM Rombel</span>
                             </h5>
                             <small class="text-muted">Menampilkan agenda pelajaran KBM aktif untuk rombel Anda secara realtime.</small>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-primary text-white px-3 py-2 rounded-pill fw-bold" style="font-size: 0.78rem;">
-                                <i class="bi bi-calendar-check me-1"></i><?= $hariIniIndo ?>, <?= date('d F Y') ?>
+                                <i class="bi bi-calendar-check me-1"></i><?= $hariIniIndo ?>, <?= date('d M Y') ?>
                             </span>
                         </div>
                     </div>
@@ -274,7 +356,7 @@ if (!empty($jadwalList)) {
                         <div class="d-flex align-items-center gap-2">
                             <i class="bi bi-info-circle-fill fs-5 text-info"></i>
                             <span class="small fw-semibold text-dark">
-                                Tidak ada agenda jadwal KBM untuk hari ini (<strong><?= $hariIniIndo ?></strong>). Klik tab hari lain di atas atau 'Semua Jadwal' untuk melihat jadwal mingguan.
+                                Tidak ada agenda jadwal KBM untuk hari ini (<strong><?= $hariIniIndo ?></strong>). Klik tab hari lain di atas atau 'Semua Jadwal' untuk melihat jadwal mingguan rombel Anda.
                             </span>
                         </div>
                     </div>
@@ -310,38 +392,174 @@ if (!empty($jadwalList)) {
                 </div>
             </div>
 
+            <!-- 4. PRESENSI LOG & RIWAYAT KEHADIRAN REAL SISWA (Full Width in Left Col) -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white" id="presensiSection">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 pb-2.5 border-bottom">
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                                <i class="bi bi-calendar-check-fill text-info fs-4"></i>
+                                <span>Presensi Log & Riwayat Kehadiran Real Siswa</span>
+                            </h5>
+                            <small class="text-muted">Catatan presensi harian otomatis terintegrasi langsung dari database KBM dan absensi guru.</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-1.5 rounded-pill fw-bold" style="font-size: 0.75rem;">
+                                <i class="bi bi-percent me-1"></i>Tingkat Kehadiran: <?= htmlspecialchars($certStats['presensi_log'] ?? '0%') ?>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Metric Pill Bar -->
+                    <div class="row g-2 mb-3 text-center">
+                        <div class="col-6 col-md-3">
+                            <div class="p-2.5 rounded-3 border bg-success-subtle text-success d-flex align-items-center justify-content-between">
+                                <div class="text-start">
+                                    <small class="fw-semibold text-success d-block" style="font-size:0.72rem;">HADIR</small>
+                                    <div class="fw-bold fs-4 lh-1 mt-1"><?= (int)($certStats['total_hadir'] ?? 0) ?></div>
+                                </div>
+                                <i class="bi bi-check-circle-fill fs-3 text-success opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2.5 rounded-3 border bg-primary-subtle text-primary d-flex align-items-center justify-content-between">
+                                <div class="text-start">
+                                    <small class="fw-semibold text-primary d-block" style="font-size:0.72rem;">IZIN</small>
+                                    <div class="fw-bold fs-4 lh-1 mt-1"><?= (int)($certStats['total_izin'] ?? 0) ?></div>
+                                </div>
+                                <i class="bi bi-info-circle-fill fs-3 text-primary opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2.5 rounded-3 border bg-warning-subtle text-warning-emphasis d-flex align-items-center justify-content-between">
+                                <div class="text-start">
+                                    <small class="fw-semibold text-warning-emphasis d-block" style="font-size:0.72rem;">SAKIT</small>
+                                    <div class="fw-bold fs-4 lh-1 mt-1"><?= (int)($certStats['total_sakit'] ?? 0) ?></div>
+                                </div>
+                                <i class="bi bi-hospital-fill fs-3 text-warning-emphasis opacity-75"></i>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2.5 rounded-3 border bg-danger-subtle text-danger d-flex align-items-center justify-content-between">
+                                <div class="text-start">
+                                    <small class="fw-semibold text-danger d-block" style="font-size:0.72rem;">ALPA</small>
+                                    <div class="fw-bold fs-4 lh-1 mt-1"><?= (int)($certStats['total_alpa'] ?? 0) ?></div>
+                                </div>
+                                <i class="bi bi-x-circle-fill fs-3 text-danger opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Attendance Log Responsive Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr style="font-size: 0.83rem;">
+                                    <th style="width: 22%;">Tanggal & Waktu</th>
+                                    <th style="width: 32%;">Mata Pelajaran</th>
+                                    <th style="width: 24%;">Guru Pengampu</th>
+                                    <th style="width: 12%; text-align: center;">Status</th>
+                                    <th style="width: 10%;">Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (empty($presensiLogs)): ?>
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted small">
+                                            <i class="bi bi-calendar-x text-muted fs-3 d-block mb-1"></i>
+                                            Belum ada log presensi tercatat di database sekolah.
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php foreach ($presensiLogs as $log): 
+                                        $st = strtolower($log['status'] ?? 'hadir');
+                                        $badgeCls = 'bg-success text-white';
+                                        $iconCls = 'bi-check-circle-fill';
+                                        if ($st === 'izin') {
+                                            $badgeCls = 'bg-primary text-white';
+                                            $iconCls = 'bi-info-circle-fill';
+                                        } elseif ($st === 'sakit') {
+                                            $badgeCls = 'bg-warning text-dark';
+                                            $iconCls = 'bi-hospital-fill';
+                                        } elseif ($st === 'alpa') {
+                                            $badgeCls = 'bg-danger text-white';
+                                            $iconCls = 'bi-x-circle-fill';
+                                        }
+                                        $tglIndo = date('d M Y', strtotime($log['tanggal']));
+                                        $jamHadir = !empty($log['waktu_masuk']) ? date('H:i', strtotime($log['waktu_masuk'])) . ' WIB' : (!empty($log['waktu_hadir']) ? date('H:i', strtotime($log['waktu_hadir'])) . ' WIB' : 'Tercatat');
+                                    ?>
+                                        <tr>
+                                            <td>
+                                                <div class="fw-bold text-dark small"><?= $tglIndo ?></div>
+                                                <small class="text-muted" style="font-size:0.72rem;"><i class="bi bi-clock me-1 text-primary"></i><?= $jamHadir ?></small>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold text-dark" style="font-size:0.86rem;">
+                                                    <?= htmlspecialchars($log['nama_mapel'] ?? 'Kegiatan KBM Harian') ?>
+                                                </div>
+                                            </td>
+                                            <td class="small text-secondary">
+                                                <i class="bi bi-person-circle me-1 text-primary"></i><?= htmlspecialchars($log['nama_guru'] ?? 'Guru Pengampu') ?>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge <?= $badgeCls ?> rounded-pill px-2.5 py-1 fw-bold" style="font-size: 0.72rem;">
+                                                    <i class="bi <?= $iconCls ?> me-1"></i><?= htmlspecialchars(ucfirst($log['status'])) ?>
+                                                </span>
+                                            </td>
+                                            <td class="small text-muted fst-italic" style="font-size:0.75rem;">
+                                                <?= !empty($log['keterangan']) ? htmlspecialchars($log['keterangan']) : '-' ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Footer Details -->
+                    <div class="d-flex justify-content-between align-items-center pt-3 mt-2 border-top flex-wrap gap-2">
+                        <small class="text-muted" style="font-size: 0.75rem;">
+                            <i class="bi bi-shield-check text-success me-1"></i>Total: <strong><?= (int)($certStats['total_absensi'] ?? 0) ?> Pertemuan</strong> tercatat otomatis di sistem sekolah.
+                        </small>
+                        <a href="<?= BASE_URL ?>index.php?url=siswa/kartuPelajar" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" style="font-size: 0.78rem;">
+                            <i class="bi bi-qr-code me-1"></i> Buka QR Presensi
+                        </a>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <!-- Right Column (4 Columns) -->
         <div class="col-12 col-lg-4">
 
-            <!-- REAL DATABASE EVALUASI & PREDIKAT BELAJAR CARD -->
+            <!-- 1. REAL DATABASE EVALUASI & PREDIKAT BELAJAR CARD -->
             <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden border-start border-4 <?= $certStats['border_class'] ?? 'border-success' ?>">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
                             <i class="bi bi-award-fill text-warning fs-5"></i>
-                            <span>Evaluasi & Predikat Belajar Real</span>
+                            <span>Evaluasi & Predikat Belajar</span>
                         </h6>
                         <span class="badge bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-pill small fw-bold" style="font-size:0.7rem;">
-                            <i class="bi bi-shield-check text-success me-1"></i>Akademik Terverifikasi
+                            <i class="bi bi-shield-check text-success me-1"></i>Terverifikasi
                         </span>
                     </div>
 
                     <!-- Hero Grade & Score Banner -->
                     <div class="p-3.5 rounded-4 mb-3 text-center position-relative overflow-hidden" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1.5px solid #e2e8f0;">
                         <div class="d-flex justify-content-center align-items-baseline gap-2 mb-1">
-                            <span class="badge <?= $certStats['predikat_class'] ?? 'bg-success text-white' ?> px-3 py-1.5 rounded-pill fw-black fs-5 shadow-xs" style="letter-spacing: 0.5px;">
+                            <span class="badge <?= $certStats['predikat_class'] ?? 'bg-success text-white' ?> px-3.5 py-1.5 rounded-pill fw-black fs-5 shadow-xs" style="letter-spacing: 0.5px;">
                                 Predikat <?= htmlspecialchars($certStats['predikat_grade'] ?? 'D') ?>
                             </span>
                         </div>
-                        <div class="fw-bold text-slate-800 mb-1" style="font-size: 1rem;">
+                        <div class="fw-bold text-slate-800 mb-2" style="font-size: 0.95rem;">
                             <?= htmlspecialchars($certStats['predikat_label'] ?? 'Belum Ada Data') ?>
                         </div>
 
                         <div class="d-flex justify-content-center align-items-center gap-2 mb-2 flex-wrap">
                             <span class="badge bg-white text-dark border px-2.5 py-1 rounded-pill fw-bold small shadow-2xs">
-                                <i class="bi bi-graph-up text-primary me-1"></i>Rerata Nilai: <strong class="text-primary"><?= number_format($certStats['evaluasi_nilai'] ?? 0, 1) ?></strong> / 100
+                                <i class="bi bi-graph-up text-primary me-1"></i>Rerata: <strong class="text-primary"><?= number_format($certStats['evaluasi_nilai'] ?? 0, 1) ?></strong> / 100
                             </span>
                             <?php if (!empty($certStats['is_tuntas'])): ?>
                                 <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill fw-bold small">
@@ -349,7 +567,7 @@ if (!empty($jadwalList)) {
                                 </span>
                             <?php else: ?>
                                 <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1 rounded-pill fw-bold small">
-                                    <i class="bi bi-exclamation-circle-fill me-1"></i>Perlu Bimbingan (< 75)
+                                    <i class="bi bi-exclamation-circle-fill me-1"></i>Perlu Bimbingan (&lt; 75)
                                 </span>
                             <?php endif; ?>
                         </div>
@@ -371,7 +589,7 @@ if (!empty($jadwalList)) {
                     <!-- 3 Academic Evaluation Pillars Breakdown -->
                     <div class="row g-2 mb-3 text-center">
                         <div class="col-4">
-                            <div class="p-2 rounded-3 border bg-slate-50 text-start" style="background-color: #f8fafc;">
+                            <div class="p-2 rounded-3 border text-start" style="background-color: #f8fafc;">
                                 <div class="d-flex align-items-center gap-1 mb-1">
                                     <i class="bi bi-card-checklist text-warning" style="font-size: 0.8rem;"></i>
                                     <small class="text-muted fw-bold" style="font-size:0.68rem;">TUGAS</small>
@@ -381,7 +599,7 @@ if (!empty($jadwalList)) {
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="p-2 rounded-3 border bg-slate-50 text-start" style="background-color: #f8fafc;">
+                            <div class="p-2 rounded-3 border text-start" style="background-color: #f8fafc;">
                                 <div class="d-flex align-items-center gap-1 mb-1">
                                     <i class="bi bi-laptop text-primary" style="font-size: 0.8rem;"></i>
                                     <small class="text-muted fw-bold" style="font-size:0.68rem;">KUIS CBT</small>
@@ -391,7 +609,7 @@ if (!empty($jadwalList)) {
                             </div>
                         </div>
                         <div class="col-4">
-                            <div class="p-2 rounded-3 border bg-slate-50 text-start" style="background-color: #f8fafc;">
+                            <div class="p-2 rounded-3 border text-start" style="background-color: #f8fafc;">
                                 <div class="d-flex align-items-center gap-1 mb-1">
                                     <i class="bi bi-journal-bookmark-fill text-success" style="font-size: 0.8rem;"></i>
                                     <small class="text-muted fw-bold" style="font-size:0.68rem;">E-RAPOR</small>
@@ -416,125 +634,22 @@ if (!empty($jadwalList)) {
                 </div>
             </div>
 
-            <!-- REAL DATABASE PRESENSI LOG SISWA CARD -->
-            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden border-start border-4 border-info">
+            <!-- 2. Pengumuman Resmi Sekolah -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
                 <div class="card-body p-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
-                            <i class="bi bi-calendar-check-fill text-info fs-5"></i>
-                            <span>Presensi Log Real Siswa</span>
+                            <i class="bi bi-megaphone-fill text-danger fs-5"></i>
+                            <span>Pengumuman Resmi</span>
                         </h6>
-                        <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1 rounded-pill small fw-bold" style="font-size:0.7rem;">
-                            <?= htmlspecialchars($certStats['presensi_log'] ?? '0%') ?> Kehadiran
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1 rounded-pill small fw-bold" style="font-size:0.7rem;">
+                            <?= count($pengumumanList ?? []) ?> Informasi
                         </span>
                     </div>
 
-                    <!-- 4 Quick Presensi Counter Matrix -->
-                    <div class="row g-2 mb-3 text-center">
-                        <div class="col-3">
-                            <div class="p-2 rounded-3 border bg-success-subtle text-success">
-                                <div class="fw-bold fs-5 lh-1"><?= (int)($certStats['total_hadir'] ?? 0) ?></div>
-                                <small class="fw-semibold" style="font-size:0.65rem;">Hadir</small>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="p-2 rounded-3 border bg-primary-subtle text-primary">
-                                <div class="fw-bold fs-5 lh-1"><?= (int)($certStats['total_izin'] ?? 0) ?></div>
-                                <small class="fw-semibold" style="font-size:0.65rem;">Izin</small>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="p-2 rounded-3 border bg-warning-subtle text-warning-emphasis">
-                                <div class="fw-bold fs-5 lh-1"><?= (int)($certStats['total_sakit'] ?? 0) ?></div>
-                                <small class="fw-semibold" style="font-size:0.65rem;">Sakit</small>
-                            </div>
-                        </div>
-                        <div class="col-3">
-                            <div class="p-2 rounded-3 border bg-danger-subtle text-danger">
-                                <div class="fw-bold fs-5 lh-1"><?= (int)($certStats['total_alpa'] ?? 0) ?></div>
-                                <small class="fw-semibold" style="font-size:0.65rem;">Alpa</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Real Attendance Logs Timeline -->
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-slate-500 fw-bold" style="font-size: 0.75rem;">Riwayat Presensi Terbaru:</small>
-                        <small class="text-muted" style="font-size: 0.7rem;">Total: <?= (int)($certStats['total_absensi'] ?? 0) ?> Pertemuan</small>
-                    </div>
-
-                    <?php if (empty($presensiLogs)): ?>
-                        <div class="text-center py-4 bg-light rounded-4 border">
-                            <i class="bi bi-calendar-x text-muted fs-3 d-block mb-1"></i>
-                            <span class="small text-muted fw-medium">Belum ada log presensi tercatat di database sekolah.</span>
-                        </div>
-                    <?php else: ?>
-                        <div class="d-flex flex-column gap-2 mb-3">
-                            <?php foreach ($presensiLogs as $log): 
-                                $st = strtolower($log['status'] ?? 'hadir');
-                                $badgeCls = 'bg-success text-white';
-                                $iconCls = 'bi-check-circle-fill text-success';
-                                if ($st === 'izin') {
-                                    $badgeCls = 'bg-primary text-white';
-                                    $iconCls = 'bi-info-circle-fill text-primary';
-                                } elseif ($st === 'sakit') {
-                                    $badgeCls = 'bg-warning text-dark';
-                                    $iconCls = 'bi-hospital-fill text-warning';
-                                } elseif ($st === 'alpa') {
-                                    $badgeCls = 'bg-danger text-white';
-                                    $iconCls = 'bi-x-circle-fill text-danger';
-                                }
-                                $tglIndo = date('d M Y', strtotime($log['tanggal']));
-                                $jamHadir = !empty($log['waktu_masuk']) ? date('H:i', strtotime($log['waktu_masuk'])) . ' WIB' : (!empty($log['waktu_hadir']) ? date('H:i', strtotime($log['waktu_hadir'])) . ' WIB' : 'Tercatat');
-                            ?>
-                                <div class="p-2.5 rounded-3 border bg-light shadow-2xs d-flex justify-content-between align-items-start gap-2">
-                                    <div class="d-flex align-items-start gap-2 overflow-hidden">
-                                        <i class="bi <?= $iconCls ?> fs-5 mt-0.5"></i>
-                                        <div class="text-truncate">
-                                            <div class="fw-bold text-dark text-truncate" style="font-size: 0.82rem;">
-                                                <?= htmlspecialchars($log['nama_mapel'] ?? 'Kegiatan KBM Harian') ?>
-                                            </div>
-                                            <small class="text-muted d-block text-truncate" style="font-size: 0.72rem;">
-                                                <i class="bi bi-person me-1"></i><?= htmlspecialchars($log['nama_guru'] ?? 'Guru Pengampu') ?>
-                                                <?php if (!empty($log['keterangan'])): ?>
-                                                    &bull; <span class="fst-italic"><?= htmlspecialchars($log['keterangan']) ?></span>
-                                                <?php endif; ?>
-                                            </small>
-                                        </div>
-                                    </div>
-                                    <div class="text-end text-nowrap">
-                                        <span class="badge <?= $badgeCls ?> rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.68rem;">
-                                            <?= htmlspecialchars($log['status']) ?>
-                                        </span>
-                                        <div class="text-muted mt-0.5" style="font-size: 0.68rem;">
-                                            <?= $tglIndo ?> &bull; <?= $jamHadir ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                        <small class="text-muted" style="font-size: 0.72rem;"><i class="bi bi-qr-code me-1"></i>Presensi via QR / Manual Guru</small>
-                        <a href="<?= BASE_URL ?>index.php?url=siswa/kartuPelajar" class="small fw-bold text-primary text-decoration-none" style="font-size: 0.75rem;">
-                            Buka QR Presensi <i class="bi bi-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pengumuman Resmi Sekolah -->
-            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
-                <div class="card-body p-4">
-                    <h6 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
-                        <i class="bi bi-megaphone-fill text-danger fs-5"></i>
-                        <span>Pengumuman Resmi Sekolah</span>
-                    </h6>
-
                     <?php if (empty($pengumumanList)): ?>
                         <div class="text-center py-4 text-muted small">
-                            <i class="bi bi-chat-left-dots fs-3 d-block mb-1 text-secondary"></i>
+                            <i class="bi bi-chat-left-dots fs-3 d-block mb-1 text-secondary opacity-50"></i>
                             Belum ada pengumuman terbaru dari Sekolah.
                         </div>
                     <?php else: ?>
@@ -543,15 +658,59 @@ if (!empty($jadwalList)) {
                                 <div class="p-3 bg-light rounded-3 border-start border-3 border-danger shadow-xs">
                                     <?php if (!empty($p['banner'])): ?>
                                         <div class="mb-2.5 overflow-hidden rounded-3 border">
-                                            <img src="<?= BASE_URL . htmlspecialchars($p['banner']) ?>" class="w-100" style="max-height: 160px; object-fit: cover;" alt="Banner">
+                                            <img src="<?= BASE_URL . htmlspecialchars($p['banner']) ?>" class="w-100" style="max-height: 140px; object-fit: cover;" alt="Banner">
                                         </div>
                                     <?php endif; ?>
-                                    <h6 class="fw-bold text-primary mb-1 fs-6"><?= htmlspecialchars($p['judul']) ?></h6>
-                                    <p class="small text-secondary mb-0 lh-base" style="font-size:0.82rem;"><?= htmlspecialchars($p['isi']) ?></p>
+                                    <h6 class="fw-bold text-primary mb-1" style="font-size:0.88rem;"><?= htmlspecialchars($p['judul']) ?></h6>
+                                    <p class="small text-secondary mb-0 lh-base" style="font-size:0.8rem;"><?= htmlspecialchars($p['isi']) ?></p>
                                 </div>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- 3. Akses Cepat Pembelajaran Siswa (Symmetrical Balance Card) -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
+                        <i class="bi bi-grid-fill text-primary fs-5"></i>
+                        <span>Akses Cepat Belajar</span>
+                    </h6>
+
+                    <div class="d-flex flex-column gap-2">
+                        <a href="<?= BASE_URL ?>index.php?url=siswa/materi" class="quick-nav-item">
+                            <span class="d-flex align-items-center gap-2">
+                                <i class="bi bi-book-half text-primary fs-5"></i>
+                                <span>Materi Pelajaran</span>
+                            </span>
+                            <span class="badge bg-primary-subtle text-primary rounded-pill px-2.5 py-1"><?= count($materiList) ?></span>
+                        </a>
+
+                        <a href="<?= BASE_URL ?>index.php?url=siswa/tugas" class="quick-nav-item">
+                            <span class="d-flex align-items-center gap-2">
+                                <i class="bi bi-journal-check text-warning fs-5"></i>
+                                <span>Kerjakan Tugas KBM</span>
+                            </span>
+                            <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-2.5 py-1"><?= count($tugasList) ?></span>
+                        </a>
+
+                        <a href="<?= BASE_URL ?>index.php?url=siswa/quiz" class="quick-nav-item">
+                            <span class="d-flex align-items-center gap-2">
+                                <i class="bi bi-laptop text-success fs-5"></i>
+                                <span>Kuis & Ujian CBT</span>
+                            </span>
+                            <span class="badge bg-success-subtle text-success rounded-pill px-2.5 py-1"><?= count($quizList) ?></span>
+                        </a>
+
+                        <a href="<?= BASE_URL ?>index.php?url=siswa/panduan" class="quick-nav-item">
+                            <span class="d-flex align-items-center gap-2">
+                                <i class="bi bi-question-circle-fill text-info fs-5"></i>
+                                <span>Panduan Siswa & LMS</span>
+                            </span>
+                            <i class="bi bi-chevron-right text-muted small"></i>
+                        </a>
+                    </div>
                 </div>
             </div>
 
