@@ -22,15 +22,15 @@
         </div>
 
         <!-- Alert Notifikasi Flash -->
-        <?php if (FlashHelper::hasSuccess()): ?>
+        <?php if ($msgSuccess = FlashHelper::getSuccess()): ?>
             <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm" role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i><?= FlashHelper::getSuccess() ?>
+                <i class="bi bi-check-circle-fill me-2"></i><?= htmlspecialchars($msgSuccess) ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
-        <?php if (FlashHelper::hasError()): ?>
+        <?php if ($msgError = FlashHelper::getError()): ?>
             <div class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i><?= FlashHelper::getError() ?>
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><?= htmlspecialchars($msgError) ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
