@@ -1,7 +1,7 @@
 <?php
 /**
- * Halaman Khusus Pembaca Materi & Modul Siswa (Mobile-First Reader Mode)
- * Dioptimalkan khusus agar tidak ngebug, lancar, dan nyaman dibaca di smartphone (HP) maupun Desktop.
+ * Halaman Khusus Pembaca Materi & Modul Pembelajaran Siswa (Modern Studio E-Reader)
+ * Desain Responsif, Profesional, High-DPI Canvas, dan Dioptimalkan Sempurna untuk Smartphone (HP) & Desktop.
  */
 require_once ROOT_PATH . 'views/layouts/header.php';
 require_once ROOT_PATH . 'views/layouts/navbar.php';
@@ -29,351 +29,589 @@ $fileUrl = !empty($materi['file_path']) ? BASE_URL . 'assets/uploads/materi/' . 
 $embedUrl = $isYouTube ? getYouTubeEmbedUrlReader($materi['youtube_url'] ?? '') : '';
 ?>
 
-<!-- Include PDF.js Library (Mozilla Open Source) for Bulletproof Mobile PDF Rendering -->
+<!-- Include PDF.js Library (Mozilla Open Source) for High-Quality Mobile PDF Rendering -->
 <?php if ($isPdf && $fileUrl): ?>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <?php endif; ?>
 
 <style>
-/* Mobile-First Reader Screen Styles */
-.materi-reader-container {
-    max-width: 1060px;
+/* ══════════════════════════════════════════════════════════════════
+   🎨 MODERN E-LEARNING STUDIO READER STYLING (RESPONSIVE & MOBILE FIRST)
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+    --reader-bg-dark: #0f172a;
+    --reader-bg-sepia: #fbf7ee;
+    --reader-bg-light: #f1f5f9;
+}
+
+.reader-page-wrapper {
+    max-width: 1440px;
     margin: 0 auto;
 }
 
-/* Sticky Reader Top Bar */
-.reader-topbar {
-    position: sticky;
-    top: 68px;
-    z-index: 1020;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+/* 1. Header Breadcrumb & Quick Actions Bar */
+.reader-header-bar {
+    background: #ffffff;
     border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
     border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+    padding: 12px 18px;
 }
 
-/* Mobile responsive adjustments */
-@media (max-width: 767.98px) {
-    .reader-topbar {
-        top: 60px;
-        padding: 10px 12px !important;
-        border-radius: 12px;
-    }
-    .reader-title-header {
-        font-size: 1.1rem !important;
-    }
-    .btn-reader-action span {
-        display: none;
-    }
-    .btn-reader-action {
-        padding: 6px 10px !important;
-    }
+[data-bs-theme="dark"] .reader-header-bar {
+    background: #1e293b;
+    border-color: #334155;
 }
 
-/* Document Canvas Container */
-.pdf-viewport-wrapper {
-    background-color: #334155;
-    border-radius: 16px;
-    padding: 12px;
-    box-shadow: inset 0 2px 10px rgba(0,0,0,0.2);
-    min-height: 400px;
+/* 2. Reader Stage (The Main Stage) */
+.reader-stage-card {
+    background: #ffffff;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    position: relative;
+    transition: all 0.3s ease;
 }
 
-@media (max-width: 767.98px) {
-    .pdf-viewport-wrapper {
-        padding: 6px;
-        border-radius: 12px;
-    }
+[data-bs-theme="dark"] .reader-stage-card {
+    background: #1e293b;
+    border-color: #334155;
 }
 
-.pdf-page-canvas {
+/* Reader Toolbar Top */
+.reader-toolbar-top {
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 10px 16px;
+}
+
+[data-bs-theme="dark"] .reader-toolbar-top {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+/* Viewport Area */
+.pdf-viewport-stage {
+    background-color: var(--reader-bg-dark);
+    padding: 16px;
+    min-height: 480px;
+    max-height: 82vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: background-color 0.25s ease;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.2) transparent;
+}
+
+/* Theme Variations for Viewport */
+.pdf-viewport-stage.theme-sepia {
+    background-color: var(--reader-bg-sepia) !important;
+}
+.pdf-viewport-stage.theme-light {
+    background-color: var(--reader-bg-light) !important;
+}
+
+/* Canvas Styling - High Quality & Sharp Rendering */
+.pdf-canvas-item {
     display: block;
-    margin: 0 auto 14px auto;
+    margin: 0 auto 16px auto;
     background-color: #ffffff;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
     border-radius: 6px;
-    max-width: 100%;
+    max-width: 100% !important;
     height: auto !important;
+    user-select: none;
 }
 
-/* Floating / Sticky Zoom Controls */
-.pdf-floating-toolbar {
+/* Floating Bottom Thumb Navigation Bar (Mobile & Desktop Friendly) */
+.reader-floating-dock {
+    position: sticky;
+    bottom: 14px;
+    z-index: 100;
+    margin-top: -54px;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.reader-dock-pill {
+    pointer-events: auto;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border-radius: 50rem;
+    padding: 6px 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    background: #0f172a;
-    color: #ffffff;
-    padding: 6px 14px;
-    border-radius: 50rem;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    gap: 8px;
+    font-size: 0.85rem;
 }
 
-.video-responsive-container {
+.reader-dock-btn {
+    background: transparent;
+    border: none;
+    color: #f8fafc;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+.reader-dock-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    transform: scale(1.08);
+}
+.reader-dock-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* Sidebar Info Cards */
+.companion-card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+[data-bs-theme="dark"] .companion-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.teacher-avatar-badge {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+}
+
+/* Video Responsive Aspect Ratio */
+.video-stage-wrapper {
     position: relative;
-    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    padding-bottom: 56.25%; /* 16:9 */
     height: 0;
     overflow: hidden;
-    border-radius: 16px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    background: #000;
 }
-
-.video-responsive-container iframe,
-.video-responsive-container video {
+.video-stage-wrapper iframe,
+.video-stage-wrapper video {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    border: none;
+    border: 0;
+}
+
+/* Mobile Adjustments */
+@media (max-width: 991.98px) {
+    .reader-header-bar {
+        padding: 10px 14px;
+        border-radius: 12px;
+    }
+    .reader-stage-card {
+        border-radius: 16px;
+    }
+    .pdf-viewport-stage {
+        padding: 8px 4px;
+        max-height: 76vh;
+        min-height: 380px;
+    }
+    .reader-dock-pill {
+        padding: 5px 10px;
+        gap: 5px;
+        font-size: 0.78rem;
+    }
+    .reader-dock-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 0.82rem;
+    }
+    .reader-hide-mobile {
+        display: none !important;
+    }
+    .btn-mobile-icon-only span {
+        display: none;
+    }
+    .btn-mobile-icon-only {
+        padding: 6px 10px !important;
+    }
 }
 </style>
 
-<main class="main-content px-2 px-md-4 py-3">
-    <div class="container-fluid materi-reader-container">
+<main class="main-content px-2 px-md-3 px-lg-4 py-2 py-md-3">
+    <div class="container-fluid reader-page-wrapper p-0">
 
-        <!-- 1. STICKY MOBILE-FIRST TOPBAR NAVIGASI -->
-        <div class="reader-topbar p-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <a href="<?= BASE_URL ?>index.php?url=siswa/materi" class="btn btn-light rounded-pill border fw-bold text-dark px-3 py-1.5 shadow-xs d-inline-flex align-items-center gap-1" title="Kembali ke Daftar Materi">
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- 🧭 1. MODERN APP BAR (NAVIGASI & AKSI CEPAT) -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <div class="reader-header-bar mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a href="<?= BASE_URL ?>index.php?url=siswa/materi" class="btn btn-sm btn-light rounded-pill border fw-bold text-dark px-3 py-1.5 shadow-xs d-inline-flex align-items-center gap-1.5 hover-scale" title="Kembali ke Daftar Materi">
                     <i class="bi bi-arrow-left"></i>
                     <span class="d-none d-sm-inline">Daftar Materi</span>
                 </a>
-                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold small">
+                
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold" style="font-size:0.8rem;">
                     <i class="bi bi-journal-bookmark-fill me-1"></i><?= htmlspecialchars($materi['nama_mapel']) ?>
+                </span>
+
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-1.5 fw-semibold d-none d-md-inline-block" style="font-size:0.75rem;">
+                    <i class="bi bi-mortarboard me-1"></i><?= htmlspecialchars($materi['nama_kelas'] ?? 'Rombel Anda') ?>
                 </span>
             </div>
 
-            <!-- Quick Action Toolbar -->
-            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+            <!-- Action Toolbar Kanan -->
+            <div class="d-flex align-items-center gap-1.5">
                 <?php if ($fileUrl): ?>
-                    <!-- Buka Langsung di PDF Viewer Bawaan HP (Full Experience) -->
-                    <a href="<?= $fileUrl ?>" target="_blank" class="btn btn-warning text-dark rounded-pill fw-bold btn-reader-action px-3 py-1.5 shadow-xs d-inline-flex align-items-center gap-1.5" title="Buka dengan Aplikasi Pembaca PDF di HP Anda (Google Drive / Adobe / Safari)">
+                    <!-- Buka di Aplikasi HP Langsung (Native App Viewer) -->
+                    <a href="<?= $fileUrl ?>" target="_blank" class="btn btn-sm btn-warning text-dark rounded-pill fw-bold px-3 py-1.5 shadow-xs d-inline-flex align-items-center gap-1.5 btn-mobile-icon-only" title="Buka dengan Aplikasi Pembaca PDF / Dokumen di HP">
                         <i class="bi bi-phone-fill"></i>
                         <span>Buka di HP</span>
                     </a>
 
-                    <!-- Tombol Unduh Offline -->
-                    <a href="<?= $fileUrl ?>" download class="btn btn-outline-primary rounded-pill fw-bold btn-reader-action px-3 py-1.5 shadow-xs d-inline-flex align-items-center gap-1.5" title="Unduh Berkas ke Memori HP untuk Dibaca Tanpa Kuota">
+                    <!-- Unduh Modul untuk Belajar Offline -->
+                    <a href="<?= $fileUrl ?>" download class="btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 py-1.5 shadow-xs d-inline-flex align-items-center gap-1.5 btn-mobile-icon-only" title="Unduh Modul Belajar ke Memori Perangkat">
                         <i class="bi bi-download"></i>
                         <span>Unduh</span>
                     </a>
                 <?php endif; ?>
 
                 <?php if ($isYouTube && !empty($materi['youtube_url'])): ?>
-                    <a href="<?= htmlspecialchars($materi['youtube_url']) ?>" target="_blank" class="btn btn-danger rounded-pill fw-bold btn-reader-action px-3 py-1.5 shadow-xs d-inline-flex align-items-center gap-1.5" title="Buka di Aplikasi YouTube">
+                    <a href="<?= htmlspecialchars($materi['youtube_url']) ?>" target="_blank" class="btn btn-sm btn-danger rounded-pill fw-bold px-3 py-1.5 shadow-xs d-inline-flex align-items-center gap-1.5 btn-mobile-icon-only" title="Tonton di Aplikasi YouTube">
                         <i class="bi bi-youtube"></i>
-                        <span>Buka YouTube</span>
+                        <span>YouTube</span>
                     </a>
                 <?php endif; ?>
+
+                <!-- Tombol Info Petunjuk Guru di HP (Scroll Halus ke Bawah) -->
+                <a href="#petunjukGuruMobile" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1.5 d-lg-none" title="Lihat Petunjuk Guru">
+                    <i class="bi bi-info-circle-fill"></i>
+                </a>
             </div>
         </div>
 
-        <!-- 2. KARTU INFORMASI MATERI & GURU PENGAMPU -->
-        <div class="card card-custom border-0 rounded-4 shadow-sm p-4 mb-4" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);">
-            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-                <div>
-                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                        <span class="badge bg-primary text-uppercase px-3 py-1 rounded-pill">
-                            <i class="bi bi-tag-fill me-1"></i><?= htmlspecialchars($materi['jenis_file'] ?: 'MODUL') ?>
-                        </span>
-                        <span class="badge bg-light text-muted border rounded-pill px-3 py-1">
-                            <i class="bi bi-people-fill me-1"></i><?= htmlspecialchars($materi['nama_kelas'] ?? 'Rombel Anda') ?>
-                        </span>
-                        <span class="badge bg-light text-muted border rounded-pill px-3 py-1">
-                            <i class="bi bi-calendar3 me-1"></i><?= date('d M Y, H:i', strtotime($materi['created_at'])) ?> WIB
-                        </span>
-                    </div>
-                    <h3 class="fw-bold text-dark mb-1 reader-title-header"><?= htmlspecialchars($materi['judul']) ?></h3>
-                    <p class="small text-muted mb-0">
-                        Pengampu: <b><?= htmlspecialchars($materi['nama_guru'] ?? 'Guru Mata Pelajaran') ?></b>
-                        <?= !empty($materi['nip']) ? " (NIP: <code>" . htmlspecialchars($materi['nip']) . "</code>)" : "" ?>
-                    </p>
-                </div>
-            </div>
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- 📐 2. GRID 2-COLUMN STUDIO (RESPONSIF DESKTOP & MOBILE) -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <div class="row g-3 g-lg-4">
 
-            <!-- Petunjuk / Deskripsi Pembelajaran Guru -->
-            <?php if (!empty($materi['deskripsi'])): ?>
-                <div class="mt-3 p-3 bg-white rounded-3 border-start border-4 border-primary shadow-xs">
-                    <b class="small text-primary d-block mb-1"><i class="bi bi-chat-quote-fill me-1"></i>Petunjuk Pembelajaran dari Guru:</b>
-                    <p class="small text-dark mb-0 lh-base"><?= nl2br(htmlspecialchars($materi['deskripsi'])) ?></p>
-                </div>
-            <?php endif; ?>
-        </div>
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <!-- 🌟 KOLOM UTAMA (KIRI): PANGGUNG PEMBACA MODUL (STAGE) -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <div class="col-12 col-lg-8 col-xl-8 col-xxl-9">
+                <div class="reader-stage-card" id="readerStageCard">
 
-        <!-- 3. MOBILE-OPTIMIZED READER & VIEWER CANVAS -->
-        <div class="card card-custom border-0 rounded-4 shadow-sm p-3 p-md-4 mb-4">
-
-            <?php if ($isPdf && $fileUrl): ?>
-                <!-- 📄 MODE BACA PDF LENGKAP (BERBASIS HTML5 CANVAS PDF.JS - 100% LANCAR DI HP) -->
-                <div>
-                    <!-- Toolbar Kontrol PDF Mobile-First -->
-                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 bg-light p-2.5 rounded-4 border">
-                        <div class="d-flex align-items-center gap-1.5">
-                            <button type="button" class="btn btn-sm btn-white border rounded-pill px-2.5 py-1 fw-bold shadow-xs" id="btnPdfPrev" title="Halaman Sebelumnya">
-                                <i class="bi bi-chevron-left"></i>
-                            </button>
-                            <span class="small fw-bold text-dark px-2" id="pdfPageInfo">Memuat Dokumen...</span>
-                            <button type="button" class="btn btn-sm btn-white border rounded-pill px-2.5 py-1 fw-bold shadow-xs" id="btnPdfNext" title="Halaman Selanjutnya">
-                                <i class="bi bi-chevron-right"></i>
-                            </button>
+                    <!-- Header Panggung Modul -->
+                    <div class="reader-toolbar-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2 overflow-hidden">
+                            <span class="badge bg-primary text-uppercase px-2.5 py-1 rounded-pill" style="font-size:0.7rem;">
+                                <?= htmlspecialchars($materi['jenis_file'] ?: ($isPdf ? 'PDF' : 'MODUL')) ?>
+                            </span>
+                            <h6 class="fw-bold text-dark mb-0 text-truncate" style="max-width: 320px;" title="<?= htmlspecialchars($materi['judul']) ?>">
+                                <?= htmlspecialchars($materi['judul']) ?>
+                            </h6>
                         </div>
 
-                        <div class="d-flex align-items-center gap-1.5">
-                            <button type="button" class="btn btn-sm btn-white border rounded-pill px-2.5 py-1 fw-bold shadow-xs" id="btnPdfZoomOut" title="Perkecil Tampilan">
-                                <i class="bi bi-zoom-out"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-white border rounded-pill px-2.5 py-1 fw-bold shadow-xs" id="btnPdfZoomIn" title="Perbesar Tampilan">
-                                <i class="bi bi-zoom-in"></i>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-bold shadow-xs" id="btnPdfFitWidth" title="Sesuaikan dengan Lebar Layar Ponsel">
-                                <i class="bi bi-arrows-expand me-1"></i> <span class="d-none d-sm-inline">Pas Layar</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Loading State Spinner -->
-                    <div id="pdfLoadingSpinner" class="text-center py-5">
-                        <div class="spinner-border text-primary mb-2" role="status" style="width: 2.5rem; height: 2.5rem;">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                        <div class="fw-bold text-dark small">Menyiapkan Modul PDF...</div>
-                        <small class="text-muted">Dokumen dioptimalkan agar ringan dan pas di layar smartphone Anda.</small>
-                    </div>
-
-                    <!-- Tempat Canvas Halaman PDF Dirender -->
-                    <div class="pdf-viewport-wrapper" id="pdfViewportWrapper">
-                        <div id="pdfCanvasContainer"></div>
-                    </div>
-
-                    <!-- Tips Membaca Ramah Ponsel -->
-                    <div class="alert alert-light border rounded-4 p-3 mt-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2 small text-muted">
-                            <i class="bi bi-lightbulb-fill text-warning fs-5"></i>
-                            <span><b>Tips Layar HP:</b> Gulir ke bawah dengan jari untuk membaca seluruh halaman secara berurutan. Klik tombol <b>Buka di HP</b> di kanan atas jika ingin membaca di aplikasi PDF bawaan ponsel Anda.</span>
-                        </div>
-                        <a href="<?= $fileUrl ?>" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
-                            <i class="bi bi-box-arrow-up-right me-1"></i> Buka Fullscreen
-                        </a>
-                    </div>
-                </div>
-
-            <?php elseif ($isYouTube && !empty($embedUrl)): ?>
-                <!-- 📺 MODE PEMUTAR VIDEO YOUTUBE RESPONSIVE -->
-                <div>
-                    <div class="video-responsive-container">
-                        <iframe src="<?= htmlspecialchars($embedUrl) ?>?rel=0&autoplay=0" title="<?= htmlspecialchars($materi['judul']) ?>" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                    </div>
-                    <div class="p-3 bg-light rounded-4 border mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <small class="text-muted"><i class="bi bi-shield-check text-success me-1"></i>Video pembelajaran diputar resmi via server YouTube Studio.</small>
-                        <a href="<?= htmlspecialchars($materi['youtube_url']) ?>" target="_blank" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold">
-                            <i class="bi bi-youtube me-1"></i> Buka di Aplikasi YouTube
-                        </a>
-                    </div>
-                </div>
-
-            <?php elseif ($isVideoMp4 && $fileUrl): ?>
-                <!-- 🎥 MODE PEMUTAR VIDEO MP4 LOKAL -->
-                <div>
-                    <div class="video-responsive-container bg-dark rounded-4">
-                        <video src="<?= $fileUrl ?>" controls class="w-100 h-100 rounded-4" style="object-fit: contain;">
-                            Browser Anda tidak mendukung pemutar video HTML5.
-                        </video>
-                    </div>
-                    <div class="p-3 bg-light rounded-4 border mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <small class="text-muted"><i class="bi bi-film text-primary me-1"></i>Video MP4 interaktif KBM sekolah.</small>
-                        <a href="<?= $fileUrl ?>" download class="btn btn-sm btn-primary rounded-pill px-3 fw-bold">
-                            <i class="bi bi-download me-1"></i> Unduh Video (MP4)
-                        </a>
-                    </div>
-                </div>
-
-            <?php elseif ($isImage && $fileUrl): ?>
-                <!-- 🖼️ MODE PENAMPIL GAMBAR / INFOGRAFIS -->
-                <div class="text-center py-2">
-                    <img src="<?= $fileUrl ?>" alt="<?= htmlspecialchars($materi['judul']) ?>" class="img-fluid rounded-4 shadow-sm border mx-auto d-block" style="max-height: 680px; object-fit: contain;">
-                    <div class="mt-3">
-                        <a href="<?= $fileUrl ?>" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-4 fw-bold">
-                            <i class="bi bi-zoom-in me-1"></i> Lihat Gambar Ukuran Asli
-                        </a>
-                    </div>
-                </div>
-
-            <?php elseif ($isOfficeDoc && $fileUrl): ?>
-                <!-- 📑 MODE DOKUMEN OFFICE (WORD / PPT / EXCEL) -->
-                <div class="text-center py-5 bg-light rounded-4 border">
-                    <div class="bg-primary-subtle text-primary p-4 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                        <i class="bi bi-file-earmark-word-fill fs-1"></i>
-                    </div>
-                    <h5 class="fw-bold text-dark mb-1"><?= htmlspecialchars($materi['judul']) ?></h5>
-                    <p class="text-muted small mb-4" style="max-width: 500px; margin: 0 auto;">
-                        Dokumen Microsoft Office (<?= strtoupper($ext) ?>) dapat dibuka langsung menggunakan aplikasi pembaca dokumen di HP Anda atau diunduh untuk disimpan.
-                    </p>
-                    <div class="d-flex justify-content-center gap-2 flex-wrap">
-                        <a href="<?= $fileUrl ?>" download class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm">
-                            <i class="bi bi-download me-1.5"></i> Unduh File (<?= strtoupper($ext) ?>)
-                        </a>
-                        <a href="<?= $fileUrl ?>" target="_blank" class="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold">
-                            <i class="bi bi-box-arrow-up-right me-1.5"></i> Buka File di HP
-                        </a>
-                    </div>
-                </div>
-
-            <?php else: ?>
-                <!-- FALLBACK VIEW -->
-                <div class="text-center py-5 text-muted">
-                    <i class="bi bi-folder2-open fs-1 d-block mb-2 text-secondary opacity-50"></i>
-                    <h6 class="fw-bold text-dark">Informasi Materi Pembelajaran</h6>
-                    <p class="small text-muted mb-3">Tidak ada berkas media terlampir pada materi ini. Silakan periksa petunjuk guru di atas.</p>
-                </div>
-            <?php endif; ?>
-
-        </div>
-
-        <!-- 4. MATERI TERKAIT PADA MATA PELAJARAN INI (NAVIGASI TOPIK LAIN) -->
-        <?php if (!empty($materiTerkait)): ?>
-            <div class="card card-custom border-0 rounded-4 shadow-sm p-4 mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold text-dark mb-0"><i class="bi bi-collection-play-fill text-primary me-2"></i>Materi Lain pada Mapel <?= htmlspecialchars($materi['nama_mapel']) ?></h6>
-                    <span class="badge bg-light text-muted border rounded-pill px-3 py-1.5"><?= count($materiTerkait) ?> Modul Lain</span>
-                </div>
-                <div class="row g-3">
-                    <?php foreach ($materiTerkait as $mt): ?>
-                        <div class="col-12 col-md-6 col-lg-4">
-                            <div class="p-3 bg-light rounded-4 border h-100 d-flex flex-column justify-content-between shadow-xs">
-                                <div>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <span class="badge bg-primary text-uppercase" style="font-size:0.7rem;"><?= htmlspecialchars($mt['jenis_file'] ?: 'MODUL') ?></span>
-                                        <small class="text-muted" style="font-size:0.75rem;"><?= date('d/m/Y', strtotime($mt['created_at'])) ?></small>
-                                    </div>
-                                    <h6 class="fw-bold text-dark mb-1 text-truncate" title="<?= htmlspecialchars($mt['judul']) ?>"><?= htmlspecialchars($mt['judul']) ?></h6>
-                                    <small class="text-muted d-block text-truncate"><?= htmlspecialchars($mt['deskripsi'] ?: 'Modul pembelajaran KBM') ?></small>
+                        <!-- Kontrol Panggung Khusus PDF -->
+                        <?php if ($isPdf && $fileUrl): ?>
+                            <div class="d-flex align-items-center gap-1.5">
+                                <!-- Mode Tampilan (Per Halaman vs Gulir Terus) -->
+                                <div class="btn-group btn-group-sm rounded-pill border p-0.5 bg-white shadow-xs" role="group">
+                                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-2.5 py-0.5 fw-bold" id="btnModeSingle" title="Mode Baca Per Halaman (Ringan & Cepat)">
+                                        <i class="bi bi-file-earmark me-1"></i><span class="reader-hide-mobile">Per Hal</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-white rounded-pill px-2.5 py-0.5 fw-semibold text-muted" id="btnModeScroll" title="Mode Gulir Berkelanjutan">
+                                        <i class="bi bi-view-stacked me-1"></i><span class="reader-hide-mobile">Gulir</span>
+                                    </button>
                                 </div>
-                                <div class="mt-3 pt-2 border-top">
-                                    <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $mt['id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill w-100 fw-bold">
-                                        <i class="bi bi-book-half me-1"></i> Baca Materi Ini
-                                    </a>
+
+                                <!-- Pengganti Tema Latar Belakang (Dark, Light, Sepia) -->
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-white border rounded-pill px-2 py-1 shadow-xs" type="button" data-bs-toggle="dropdown" title="Ganti Warna Latar Belakang">
+                                        <i class="bi bi-circle-half text-primary"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-4 py-1" style="font-size:0.82rem;">
+                                        <li><a class="dropdown-item py-1.5 active" href="javascript:void(0)" onclick="setReaderTheme('dark', this)"><i class="bi bi-moon-fill text-indigo me-2"></i>Dark Studio (Fokus)</a></li>
+                                        <li><a class="dropdown-item py-1.5" href="javascript:void(0)" onclick="setReaderTheme('sepia', this)"><i class="bi bi-sun-fill text-warning me-2"></i>Warm Sepia (Nyaman)</a></li>
+                                        <li><a class="dropdown-item py-1.5" href="javascript:void(0)" onclick="setReaderTheme('light', this)"><i class="bi bi-brightness-high-fill text-secondary me-2"></i>Clean Light (Terang)</a></li>
+                                    </ul>
                                 </div>
+
+                                <!-- Layar Penuh (Fullscreen Stage) -->
+                                <button type="button" class="btn btn-sm btn-white border rounded-pill px-2 py-1 shadow-xs" id="btnFullscreenStage" title="Mode Layar Penuh">
+                                    <i class="bi bi-fullscreen text-dark"></i>
+                                </button>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- ═══════════════════════════════════════════════════ -->
+                    <!-- 📄 KONTEN SESUAI TIPE MATERI -->
+                    <!-- ═══════════════════════════════════════════════════ -->
+                    <?php if ($isPdf && $fileUrl): ?>
+                        <!-- 1. PDF VIEWER ENGINE (HIGH-DPI CANVAS) -->
+                        <div class="pdf-viewport-stage" id="pdfViewportStage">
+                            <!-- Spinner Animasi Memuat Dokumen -->
+                            <div id="pdfLoadingSpinner" class="text-center my-auto py-5 text-white">
+                                <div class="spinner-border text-primary mb-3" role="status" style="width: 2.75rem; height: 2.75rem;">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <h6 class="fw-bold text-white mb-1">Menyiapkan Lembar Modul...</h6>
+                                <p class="text-white text-opacity-75 small mb-0">Merender teks vektor berkualitas tinggi khusus layar Anda.</p>
+                            </div>
+
+                            <!-- Kontainer Tempat Canvas Dirender -->
+                            <div id="pdfCanvasContainer" class="w-100 text-center" style="display:none;"></div>
+                        </div>
+
+                        <!-- 🕹️ FLOATING BOTTOM NAVIGATION DOCK (THUMB-FRIENDLY DI HP) -->
+                        <div class="reader-floating-dock" id="readerFloatingDock" style="display:none;">
+                            <div class="reader-dock-pill">
+                                <!-- Tombol Prev -->
+                                <button type="button" class="reader-dock-btn" id="dockBtnPrev" title="Halaman Sebelumnya">
+                                    <i class="bi bi-chevron-left"></i>
+                                </button>
+
+                                <!-- Info Halaman Aktif -->
+                                <span class="fw-bold px-1" id="dockPageIndicator" style="letter-spacing:0.3px;">1 / 1</span>
+
+                                <!-- Tombol Next -->
+                                <button type="button" class="reader-dock-btn" id="dockBtnNext" title="Halaman Selanjutnya">
+                                    <i class="bi bi-chevron-right"></i>
+                                </button>
+
+                                <div class="vr bg-white opacity-25 mx-1" style="height:18px;"></div>
+
+                                <!-- Zoom Out (-) -->
+                                <button type="button" class="reader-dock-btn" id="dockBtnZoomOut" title="Perkecil">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+
+                                <!-- Fit Width (Pas Layar) -->
+                                <button type="button" class="reader-dock-btn" id="dockBtnFit" title="Pas Lebar Layar Ponsel" style="width:auto; border-radius:12px; padding:0 8px; font-size:0.75rem; font-weight:700;">
+                                    FIT
+                                </button>
+
+                                <!-- Zoom In (+) -->
+                                <button type="button" class="reader-dock-btn" id="dockBtnZoomIn" title="Perbesar">
+                                    <i class="bi bi-plus"></i>
+                                </button>
                             </div>
                         </div>
-                    <?php endforeach; ?>
+
+                    <?php elseif ($isYouTube && !empty($embedUrl)): ?>
+                        <!-- 2. PEMUTAR VIDEO YOUTUBE RESPONSIVE -->
+                        <div class="video-stage-wrapper">
+                            <iframe src="<?= htmlspecialchars($embedUrl) ?>?rel=0&autoplay=0&enablejsapi=1" title="<?= htmlspecialchars($materi['judul']) ?>" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                        <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <small class="text-muted"><i class="bi bi-shield-check text-success me-1"></i>Streaming video resmi disajikan via YouTube Studio.</small>
+                            <a href="<?= htmlspecialchars($materi['youtube_url']) ?>" target="_blank" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold">
+                                <i class="bi bi-youtube me-1"></i> Buka di Aplikasi YouTube
+                            </a>
+                        </div>
+
+                    <?php elseif ($isVideoMp4 && $fileUrl): ?>
+                        <!-- 3. PEMUTAR VIDEO MP4 LOKAL -->
+                        <div class="video-stage-wrapper">
+                            <video src="<?= $fileUrl ?>" controls class="w-100 h-100" style="object-fit: contain;">
+                                Browser Anda tidak mendukung pemutar video HTML5 bawaan.
+                            </video>
+                        </div>
+                        <div class="p-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <small class="text-muted"><i class="bi bi-film text-primary me-1"></i>Video pembelajaran MP4 interaktif.</small>
+                            <a href="<?= $fileUrl ?>" download class="btn btn-sm btn-primary rounded-pill px-3 fw-bold">
+                                <i class="bi bi-download me-1"></i> Unduh File Video
+                            </a>
+                        </div>
+
+                    <?php elseif ($isImage && $fileUrl): ?>
+                        <!-- 4. PENAMPIL GAMBAR / INFOGRAFIS -->
+                        <div class="p-3 p-md-4 text-center bg-dark" style="min-height: 450px; display:flex; align-items:center; justify-content:center;">
+                            <img src="<?= $fileUrl ?>" alt="<?= htmlspecialchars($materi['judul']) ?>" class="img-fluid rounded-3 shadow-lg" style="max-height: 75vh; object-fit: contain;">
+                        </div>
+                        <div class="p-3 bg-light border-top text-center">
+                            <a href="<?= $fileUrl ?>" target="_blank" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold">
+                                <i class="bi bi-zoom-in me-1"></i> Buka Gambar Resolusi Penuh
+                            </a>
+                        </div>
+
+                    <?php elseif ($isOfficeDoc && $fileUrl): ?>
+                        <!-- 5. DOKUMEN OFFICE (WORD, PPT, EXCEL) -->
+                        <div class="p-5 text-center bg-light">
+                            <div class="bg-primary-subtle text-primary p-4 rounded-4 d-inline-flex align-items-center justify-content-center mb-3 shadow-xs" style="width: 80px; height: 80px;">
+                                <i class="bi bi-file-earmark-word-fill fs-1"></i>
+                            </div>
+                            <h5 class="fw-bold text-dark mb-1"><?= htmlspecialchars($materi['judul']) ?></h5>
+                            <p class="text-muted small mb-4" style="max-width: 480px; margin: 0 auto;">
+                                Berkas Microsoft Office (<?= strtoupper($ext) ?>) dapat dibuka langsung di smartphone Anda menggunakan aplikasi Microsoft 365, Google Docs, atau WPS Office.
+                            </p>
+                            <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                <a href="<?= $fileUrl ?>" download class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm">
+                                    <i class="bi bi-download me-1.5"></i> Unduh Berkas (<?= strtoupper($ext) ?>)
+                                </a>
+                                <a href="<?= $fileUrl ?>" target="_blank" class="btn btn-outline-primary rounded-pill px-4 py-2 fw-bold">
+                                    <i class="bi bi-box-arrow-up-right me-1.5"></i> Buka di HP
+                                </a>
+                            </div>
+                        </div>
+
+                    <?php else: ?>
+                        <!-- 6. MATERI BERUPA TEKS / TANPA LAMPIRAN -->
+                        <div class="p-5 text-center text-muted">
+                            <i class="bi bi-journal-text fs-1 d-block mb-2 text-primary opacity-75"></i>
+                            <h5 class="fw-bold text-dark">Informasi Pembelajaran</h5>
+                            <p class="small text-muted mb-0">Materi ini disajikan berbasis instruksi dan penugasan guru tanpa berkas eksternal.</p>
+                        </div>
+                    <?php endif; ?>
+
                 </div>
             </div>
-        <?php endif; ?>
+
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <!-- 📚 KOLOM KANAN (SIDEBAR): GURU, PETUNJUK & MATERI LAIN -->
+            <!-- ═══════════════════════════════════════════════════════════ -->
+            <div class="col-12 col-lg-4 col-xl-4 col-xxl-3" id="petunjukGuruMobile">
+
+                <!-- 1. Kartu Profil Guru Pengampu -->
+                <div class="companion-card">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="teacher-avatar-badge">
+                            <?= strtoupper(substr($materi['nama_guru'] ?? 'G', 0, 1)) ?>
+                        </div>
+                        <div class="overflow-hidden">
+                            <small class="text-muted text-uppercase fw-bold" style="font-size:0.7rem; letter-spacing:0.5px;">Guru Pengampu</small>
+                            <h6 class="fw-bold text-dark mb-0 text-truncate" title="<?= htmlspecialchars($materi['nama_guru']) ?>">
+                                <?= htmlspecialchars($materi['nama_guru'] ?? 'Guru Pengampu') ?>
+                            </h6>
+                            <?php if (!empty($materi['nip'])): ?>
+                                <small class="text-muted" style="font-size:0.74rem;">NIP: <?= htmlspecialchars($materi['nip']) ?></small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-2.5">
+                        <div class="d-flex justify-content-between py-1 small">
+                            <span class="text-muted">Mata Pelajaran:</span>
+                            <span class="fw-bold text-dark text-end"><?= htmlspecialchars($materi['nama_mapel']) ?></span>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 small">
+                            <span class="text-muted">Diterbitkan:</span>
+                            <span class="fw-semibold text-dark text-end"><?= date('d M Y, H:i', strtotime($materi['created_at'])) ?></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Kartu Petunjuk & Deskripsi Guru -->
+                <?php if (!empty($materi['deskripsi'])): ?>
+                    <div class="companion-card border-start border-4 border-primary">
+                        <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
+                            <i class="bi bi-chat-quote-fill text-primary"></i>
+                            <span>Petunjuk Pembelajaran</span>
+                        </h6>
+                        <div class="text-slate-700 small lh-base" style="color: #334155;">
+                            <?= nl2br(htmlspecialchars($materi['deskripsi'])) ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- 3. Kartu Materi Lain pada Mapel Ini (Navigasi Cepat) -->
+                <?php if (!empty($materiTerkait)): ?>
+                    <div class="companion-card p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="fw-bold text-dark mb-0" style="font-size:0.9rem;">
+                                <i class="bi bi-collection-play-fill text-primary me-1.5"></i>Materi Lain Mapel Ini
+                            </h6>
+                            <span class="badge bg-light text-muted border rounded-pill px-2.5 py-1" style="font-size:0.7rem;"><?= count($materiTerkait) ?> Modul</span>
+                        </div>
+
+                        <div class="d-flex flex-column gap-2">
+                            <?php foreach ($materiTerkait as $mt): ?>
+                                <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $mt['id'] ?>" class="p-2.5 rounded-3 border bg-light text-decoration-none d-block transition-all hover-shadow" style="transition: all 0.2s;">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="badge bg-primary-subtle text-primary text-uppercase" style="font-size:0.65rem;">
+                                            <?= htmlspecialchars($mt['jenis_file'] ?: 'MODUL') ?>
+                                        </span>
+                                        <small class="text-muted" style="font-size:0.7rem;"><?= date('d/m/Y', strtotime($mt['created_at'])) ?></small>
+                                    </div>
+                                    <div class="fw-bold text-dark text-truncate small" title="<?= htmlspecialchars($mt['judul']) ?>">
+                                        <?= htmlspecialchars($mt['judul']) ?>
+                                    </div>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Tips Pintar Baca di HP -->
+                <div class="alert alert-info border-0 rounded-4 p-3 shadow-xs" style="background:#eff6ff; color:#1e40af;">
+                    <div class="d-flex gap-2">
+                        <i class="bi bi-lightbulb-fill text-primary fs-5 mt-0.5"></i>
+                        <div class="small">
+                            <b>Tips Belajar Nyaman di HP:</b><br>
+                            Gunakan tombol <b>FIT</b> di bawah untuk menyesuaikan dokumen dengan lebar layar ponsel Anda. Putar layar ke posisi mendatar (*Landscape*) jika teks terasa kecil.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
 
     </div>
 </main>
 
-<!-- SCRIPT PENGATURAN PDF.JS VIEWER UNTUK HP DAN DESKTOP -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- ⚙️ SCRIPT ENGINE PDF.JS HIGH-DPI & INTERAKSI RESPONSIF -->
+<!-- ════════════════════════════════════════════════════════════════ -->
 <?php if ($isPdf && $fileUrl): ?>
 <script>
+// Fungsi Pengganti Tema Viewport (Dark, Sepia, Light)
+function setReaderTheme(theme, element) {
+    const stage = document.getElementById('pdfViewportStage');
+    stage.classList.remove('theme-sepia', 'theme-light');
+    if (theme === 'sepia') stage.classList.add('theme-sepia');
+    if (theme === 'light') stage.classList.add('theme-light');
+
+    if (element) {
+        document.querySelectorAll('.dropdown-menu .dropdown-item').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof pdfjsLib === 'undefined') {
-        document.getElementById('pdfLoadingSpinner').innerHTML = `
-            <div class="alert alert-warning p-3 rounded-3 small">
-                Pustaka PDF tidak dapat dimuat secara online. Silakan klik tombol <b>Buka di HP</b> atau <b>Unduh</b> di bagian atas untuk membaca modul ini langsung di ponsel Anda.
-            </div>
-        `;
+        const spinner = document.getElementById('pdfLoadingSpinner');
+        if (spinner) {
+            spinner.innerHTML = `
+                <div class="alert alert-warning p-3 rounded-3 small text-dark">
+                    Pustaka pembaca PDF tidak dapat dimuat secara online. Silakan klik tombol <b>Buka di HP</b> di bagian atas untuk membuka berkas secara langsung di aplikasi ponsel Anda.
+                </div>
+            `;
+        }
         return;
     }
 
@@ -382,136 +620,307 @@ document.addEventListener('DOMContentLoaded', function() {
     const pdfUrl = '<?= $fileUrl ?>';
     const container = document.getElementById('pdfCanvasContainer');
     const spinner = document.getElementById('pdfLoadingSpinner');
-    const pageInfo = document.getElementById('pdfPageInfo');
-    const wrapper = document.getElementById('pdfViewportWrapper');
+    const stage = document.getElementById('pdfViewportStage');
+    const dock = document.getElementById('readerFloatingDock');
+    const pageIndicator = document.getElementById('dockPageIndicator');
+    
+    // Buttons
+    const btnPrev = document.getElementById('dockBtnPrev');
+    const btnNext = document.getElementById('dockBtnNext');
+    const btnZoomIn = document.getElementById('dockBtnZoomIn');
+    const btnZoomOut = document.getElementById('dockBtnZoomOut');
+    const btnFit = document.getElementById('dockBtnFit');
+    const btnModeSingle = document.getElementById('btnModeSingle');
+    const btnModeScroll = document.getElementById('btnModeScroll');
+    const btnFullscreen = document.getElementById('btnFullscreenStage');
 
     let pdfDoc = null;
-    let currentRenderScale = 1.0;
-    let basePageWidth = 595; // Standar A4 width points
+    let currentPage = 1;
+    let totalPages = 1;
+    let renderMode = 'single'; // 'single' atau 'scroll'
+    let currentScale = 1.0;
+    let isFitWidth = true;
+    let basePageWidth = 595;
+    let renderTasks = {};
 
-    // Hitung skala otomatis agar pas dengan lebar layar HP (Fit Width)
-    function calculateFitWidthScale() {
-        const availableWidth = wrapper.clientWidth - (window.innerWidth < 768 ? 16 : 30);
-        return Math.min(2.5, Math.max(0.65, availableWidth / basePageWidth));
+    // Hitung Skala Fit Width yang Presisi Tanpa Terpotong di HP
+    function getFitWidthScale(pageWidth) {
+        // Ambil lebar kontainer yang tersedia secara real-time
+        const availableWidth = stage.clientWidth - (window.innerWidth < 768 ? 12 : 24);
+        const w = pageWidth || basePageWidth;
+        // Skala fleksibel dari layar kecil (260px) hingga layar lebar (2000px)
+        return Math.max(0.35, Math.min(3.0, availableWidth / w));
     }
 
-    currentRenderScale = calculateFitWidthScale();
-
-    // Muat Dokumen PDF
+    // Muat Berkas PDF
     const loadingTask = pdfjsLib.getDocument(pdfUrl);
     loadingTask.promise.then(function(pdf) {
         pdfDoc = pdf;
+        totalPages = pdf.numPages;
+        
+        // Sembunyikan spinner, tampilkan dock & container
         spinner.style.display = 'none';
-        pageInfo.textContent = `Total: ${pdf.numPages} Halaman`;
+        container.style.display = 'block';
+        dock.style.display = 'flex';
 
-        // Render semua halaman secara kontinu (Scroll Mode - Sangat Alami di HP)
-        renderAllPages();
-    }).catch(function(error) {
-        console.error('Error memuat PDF:', error);
+        // Baca halaman pertama untuk acuan rasio
+        pdfDoc.getPage(1).then(function(firstPage) {
+            const vp = firstPage.getViewport({ scale: 1.0 });
+            basePageWidth = vp.width;
+            currentScale = getFitWidthScale(basePageWidth);
+
+            updatePageIndicator();
+            renderCurrentView();
+        });
+    }).catch(function(err) {
+        console.error('Error membuka PDF:', err);
         spinner.innerHTML = `
-            <div class="alert alert-danger p-3 rounded-4 small">
-                <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                Tidak dapat menampilkan pratinjau PDF di dalam browser.
-                <div class="mt-2">
+            <div class="alert alert-danger p-3 rounded-4 small text-dark text-start">
+                <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>
+                <b>Gagal Menampilkan Pratinjau Dokumen.</b><br>
+                Format dokumen tidak mendukung pratinjau browser langsung atau koneksi terputus.
+                <div class="mt-2.5">
                     <a href="${pdfUrl}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold">
-                        <i class="bi bi-phone me-1"></i> Buka dengan Pembaca PDF HP
+                        <i class="bi bi-phone me-1"></i> Buka dengan Aplikasi HP
                     </a>
                 </div>
             </div>
         `;
     });
 
-    function renderAllPages() {
+    // Update Indikator Halaman & Status Tombol
+    function updatePageIndicator() {
+        if (pageIndicator) {
+            pageIndicator.textContent = `${currentPage} / ${totalPages}`;
+        }
+        if (btnPrev) btnPrev.disabled = (currentPage <= 1);
+        if (btnNext) btnNext.disabled = (currentPage >= totalPages);
+    }
+
+    // Render Tampilan Sesuai Mode (Single Page vs Scroll Continuous)
+    function renderCurrentView() {
         if (!pdfDoc) return;
-        container.innerHTML = ''; // Bersihkan canvas lama
 
-        // Dapatkan halaman pertama untuk mengukur rasio lebar standar
-        pdfDoc.getPage(1).then(function(firstPage) {
-            const viewport = firstPage.getViewport({ scale: 1.0 });
-            basePageWidth = viewport.width;
-            currentRenderScale = calculateFitWidthScale();
+        if (renderMode === 'single') {
+            renderSinglePageMode();
+        } else {
+            renderScrollMode();
+        }
+    }
 
-            for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-                renderSinglePage(pageNum);
+    // MODE 1: SINGLE PAGE (Halaman Tunggal - Paling Cepat & Ringan di HP)
+    function renderSinglePageMode() {
+        container.innerHTML = '';
+        renderPageToContainer(currentPage);
+        updatePageIndicator();
+    }
+
+    // MODE 2: SCROLL MODE (Semua Halaman Berurutan)
+    function renderScrollMode() {
+        container.innerHTML = '';
+        for (let p = 1; p <= totalPages; p++) {
+            renderPageToContainer(p);
+        }
+        updatePageIndicator();
+    }
+
+    // Render Satu Halaman dengan High-DPI Canvas (Teks Tajam & Jernih di Retina/AMOLED)
+    function renderPageToContainer(pageNum) {
+        pdfDoc.getPage(pageNum).then(function(page) {
+            const scale = isFitWidth ? getFitWidthScale(page.getViewport({ scale: 1.0 }).width) : currentScale;
+            const viewport = page.getViewport({ scale: scale });
+
+            // High-DPI Retina/OLED devicePixelRatio handling
+            const dpr = Math.min(window.devicePixelRatio || 1, 2.5); // Batasi di 2.5 agar hemat RAM di ponsel
+
+            let canvas = document.getElementById('pdf-canvas-' + pageNum);
+            if (!canvas) {
+                canvas = document.createElement('canvas');
+                canvas.className = 'pdf-canvas-item';
+                canvas.id = 'pdf-canvas-' + pageNum;
+                container.appendChild(canvas);
+            }
+
+            // Atur ukuran bitmap (resolusi tajam)
+            canvas.width = Math.floor(viewport.width * dpr);
+            canvas.height = Math.floor(viewport.height * dpr);
+
+            // Atur ukuran tampilan CSS (sesuai layar)
+            canvas.style.width = Math.floor(viewport.width) + 'px';
+            canvas.style.height = Math.floor(viewport.height) + 'px';
+
+            const ctx = canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            // Batalkan render sebelumnya jika masih berjalan
+            if (renderTasks[pageNum]) {
+                renderTasks[pageNum].cancel();
+            }
+
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: viewport
+            };
+
+            const task = page.render(renderContext);
+            renderTasks[pageNum] = task;
+
+            task.promise.then(function() {
+                delete renderTasks[pageNum];
+            }).catch(function(err) {
+                if (err && err.name !== 'RenderingCancelledException') {
+                    console.error('Render error page ' + pageNum, err);
+                }
+            });
+        });
+    }
+
+    // Navigasi Next & Prev
+    if (btnNext) {
+        btnNext.addEventListener('click', function() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                if (renderMode === 'single') {
+                    renderSinglePageMode();
+                    stage.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    scrollToPage(currentPage);
+                }
             }
         });
     }
 
-    function renderSinglePage(pageNum) {
-        pdfDoc.getPage(pageNum).then(function(page) {
-            const viewport = page.getViewport({ scale: currentRenderScale });
-            const canvas = document.createElement('canvas');
-            canvas.className = 'pdf-page-canvas';
-            canvas.id = 'pdf-page-' + pageNum;
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            container.appendChild(canvas);
-
-            const renderContext = {
-                canvasContext: canvas.getContext('2d'),
-                viewport: viewport
-            };
-            page.render(renderContext);
+    if (btnPrev) {
+        btnPrev.addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                if (renderMode === 'single') {
+                    renderSinglePageMode();
+                    stage.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    scrollToPage(currentPage);
+                }
+            }
         });
     }
 
-    // Tombol Zoom In (+)
-    document.getElementById('btnPdfZoomIn').addEventListener('click', function() {
-        if (currentRenderScale < 2.5) {
-            currentRenderScale += 0.2;
-            renderAllPages();
-        }
-    });
-
-    // Tombol Zoom Out (-)
-    document.getElementById('btnPdfZoomOut').addEventListener('click', function() {
-        if (currentRenderScale > 0.6) {
-            currentRenderScale -= 0.2;
-            renderAllPages();
-        }
-    });
-
-    // Tombol Fit Width (Pas Lebar Layar Ponsel)
-    document.getElementById('btnPdfFitWidth').addEventListener('click', function() {
-        currentRenderScale = calculateFitWidthScale();
-        renderAllPages();
-    });
-
-    // Navigasi Cepat Halaman (Scroll Halus ke Halaman Tersebut)
-    let activePage = 1;
-    document.getElementById('btnPdfNext').addEventListener('click', function() {
-        if (pdfDoc && activePage < pdfDoc.numPages) {
-            activePage++;
-            scrollToPage(activePage);
-        }
-    });
-
-    document.getElementById('btnPdfPrev').addEventListener('click', function() {
-        if (activePage > 1) {
-            activePage--;
-            scrollToPage(activePage);
-        }
-    });
-
     function scrollToPage(num) {
-        const targetCanvas = document.getElementById('pdf-page-' + num);
-        if (targetCanvas) {
-            targetCanvas.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            pageInfo.textContent = `Halaman ${num} dari ${pdfDoc.numPages}`;
+        const target = document.getElementById('pdf-canvas-' + num);
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            updatePageIndicator();
         }
     }
 
-    // Tangani perubahan orientasi layar HP (Portrait <-> Landscape)
+    // Zoom Controls
+    if (btnZoomIn) {
+        btnZoomIn.addEventListener('click', function() {
+            isFitWidth = false;
+            currentScale = Math.min(3.0, currentScale + 0.2);
+            renderCurrentView();
+        });
+    }
+
+    if (btnZoomOut) {
+        btnZoomOut.addEventListener('click', function() {
+            isFitWidth = false;
+            currentScale = Math.max(0.4, currentScale - 0.2);
+            renderCurrentView();
+        });
+    }
+
+    if (btnFit) {
+        btnFit.addEventListener('click', function() {
+            isFitWidth = true;
+            currentScale = getFitWidthScale();
+            renderCurrentView();
+        });
+    }
+
+    // Switch Mode Baca
+    if (btnModeSingle) {
+        btnModeSingle.addEventListener('click', function() {
+            if (renderMode === 'single') return;
+            renderMode = 'single';
+            btnModeSingle.className = 'btn btn-sm btn-primary rounded-pill px-2.5 py-0.5 fw-bold';
+            btnModeScroll.className = 'btn btn-sm btn-white rounded-pill px-2.5 py-0.5 fw-semibold text-muted';
+            renderCurrentView();
+        });
+    }
+
+    if (btnModeScroll) {
+        btnModeScroll.addEventListener('click', function() {
+            if (renderMode === 'scroll') return;
+            renderMode = 'scroll';
+            btnModeScroll.className = 'btn btn-sm btn-primary rounded-pill px-2.5 py-0.5 fw-bold';
+            btnModeSingle.className = 'btn btn-sm btn-white rounded-pill px-2.5 py-0.5 fw-semibold text-muted';
+            renderCurrentView();
+        });
+    }
+
+    // Toggle Layar Penuh (Fullscreen API)
+    if (btnFullscreen) {
+        btnFullscreen.addEventListener('click', function() {
+            const card = document.getElementById('readerStageCard');
+            if (!document.fullscreenElement) {
+                if (card.requestFullscreen) {
+                    card.requestFullscreen();
+                } else if (card.webkitRequestFullscreen) {
+                    card.webkitRequestFullscreen();
+                }
+                btnFullscreen.innerHTML = '<i class="bi bi-fullscreen-exit text-primary"></i>';
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+                btnFullscreen.innerHTML = '<i class="bi bi-fullscreen text-dark"></i>';
+            }
+        });
+    }
+
+    // Deteksi Pergantian Orientasi Layar Smartphone (Portrait <-> Landscape)
     window.addEventListener('resize', function() {
         clearTimeout(window.pdfResizeTimer);
         window.pdfResizeTimer = setTimeout(function() {
-            if (pdfDoc) {
-                currentRenderScale = calculateFitWidthScale();
-                renderAllPages();
+            if (pdfDoc && isFitWidth) {
+                currentScale = getFitWidthScale();
+                renderCurrentView();
             }
-        }, 300);
+        }, 250);
     });
+
+    // Dukungan Gestur Geser Jari di Layar Sentuh HP (Touch Swipe Left/Right di Mode Single Page)
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    stage.addEventListener('touchstart', function(e) {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    stage.addEventListener('touchend', function(e) {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipeGesture();
+    }, { passive: true });
+
+    function handleSwipeGesture() {
+        if (renderMode !== 'single') return;
+        const diff = touchEndX - touchStartX;
+        if (diff > 50) {
+            // Geser ke Kanan: Halaman Sebelumnya
+            if (currentPage > 1) {
+                currentPage--;
+                renderSinglePageMode();
+                stage.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        } else if (diff < -50) {
+            // Geser ke Kiri: Halaman Selanjutnya
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderSinglePageMode();
+                stage.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+    }
 });
 </script>
 <?php endif; ?>

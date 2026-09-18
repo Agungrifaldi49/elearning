@@ -253,9 +253,14 @@ if (!function_exists('getYouTubeEmbedUrl')) {
                                         <small class="fw-semibold text-muted"><i class="bi bi-person-circle text-primary me-1"></i><?= htmlspecialchars($v['nama_guru']) ?></small>
                                         
                                         <?php if ($isEnrolled): ?>
-                                            <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalPlayVideo<?= $v['id'] ?>">
-                                                <i class="bi bi-fullscreen"></i> Layar Penuh
-                                            </button>
+                                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                                <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $v['id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5">
+                                                    <i class="bi bi-book-half"></i> Detail & Catatan
+                                                </a>
+                                                <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalPlayVideo<?= $v['id'] ?>">
+                                                    <i class="bi bi-fullscreen"></i> Layar Penuh
+                                                </button>
+                                            </div>
                                         <?php else: ?>
                                             <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-sm btn-warning text-dark rounded-pill px-3 fw-bold">
                                                 <i class="bi bi-key-fill me-1"></i> Input Key Mapel
