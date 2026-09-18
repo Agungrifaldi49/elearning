@@ -218,6 +218,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'guru/scanQr') ?>" href="<?= BASE_URL ?>index.php?url=guru/scanQr">
                 <i class="bi bi-qr-code-scan"></i> Scan QR Code Hadir
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'guru/supervisi') ?>" href="<?= BASE_URL ?>index.php?url=guru/supervisi">
+                <i class="bi bi-award-fill text-warning"></i> Hasil Supervisi Akademik
+            </a></li>
 
             <li class="nav-section-title">Komunikasi & Virtual Meeting</li>
             <li><a class="nav-link <?= isActive($currentUrl,'forum') ?>" href="<?= BASE_URL ?>index.php?url=forum">

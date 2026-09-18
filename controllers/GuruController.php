@@ -81,6 +81,11 @@ class GuruController {
             $mapelDistribution[$mName]++;
         }
 
+        require_once ROOT_PATH . 'models/ReportModel.php';
+        $reportModel = new ReportModel();
+        $mySupervisiList = $reportModel->getSupervisiList($guruId);
+        $supervisiTerbaru = !empty($mySupervisiList) ? $mySupervisiList[0] : null;
+
         require_once ROOT_PATH . 'views/guru/dashboard.php';
     }
 
@@ -2124,5 +2129,27 @@ class GuruController {
     }
     public function susulan_requests() {
         $this->tugas();
+    }
+
+    /**
+     * Hasil Supervisi Akademik & Penilaian Kinerja Guru oleh Kepala Sekolah
+     */
+    public function supervisi() {
+        require_once ROOT_PATH . 'models/ReportModel.php';
+        $guru = $this->getGuruInfo();
+        $guruId = (int)($guru['id'] ?? 0);
+
+        $reportModel = new ReportModel();
+        $supervisiList = $reportModel->getSupervisiList($guruId);
+
+        $totalSupervisi = count($supervisiList);
+        $avgSupervisi = $totalSupervisi > 0 ? round(array_sum(array_column($supervisiList, 'nilai_akhir')) / $totalSupervisi, 1) : 0;
+        $supervisiTerbaru = !empty($supervisiList) ? $supervisiList[0] : null;
+
+        require_once ROOT_PATH . 'views/guru/supervisi.php';
+    }
+
+    public function supervisiAkademik() {
+        $this->supervisi();
     }
 }

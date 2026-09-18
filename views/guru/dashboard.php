@@ -74,6 +74,30 @@
             </div>
         </div>
 
+        <?php if (!empty($supervisiTerbaru)): ?>
+            <!-- Notifikasi Hasil Supervisi Akademik Terbaru -->
+            <div class="alert alert-light border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3" style="background: linear-gradient(90deg, #f0f7ff 0%, #ffffff 100%); border-left: 5px solid #0d6efd !important;">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px; min-width: 46px;">
+                        <i class="bi bi-award-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="badge bg-primary px-2.5 py-1 rounded-pill">Hasil Supervisi Akademik Guru</span>
+                            <span class="badge bg-success px-2.5 py-1 rounded-pill">Nilai Akhir: <?= number_format((float)$supervisiTerbaru['nilai_akhir'], 1) ?> (Predikat: <?= htmlspecialchars($supervisiTerbaru['predikat'] ?? '-') ?>)</span>
+                            <small class="text-muted"><i class="bi bi-calendar3 me-1"></i><?= date('d M Y', strtotime($supervisiTerbaru['tanggal_supervisi'])) ?></small>
+                        </div>
+                        <div class="fw-bold text-dark mt-1">Catatan Kepala Sekolah: <span class="fw-normal text-secondary"><?= htmlspecialchars(mb_strimwidth($supervisiTerbaru['rekomendasi_tindak_lanjut'] ?? 'Pertahankan kualitas pembelajaran', 0, 110, '...')) ?></span></div>
+                    </div>
+                </div>
+                <div>
+                    <a href="<?= BASE_URL ?>index.php?url=guru/supervisi" class="btn btn-primary fw-bold rounded-pill px-3 py-1.5 btn-sm shadow-sm">
+                        <i class="bi bi-arrow-right-circle me-1"></i> Buka Lembar Lengkap
+                    </a>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <!-- 3. Main Balanced 2-Column Layout -->
         <div class="row g-4 mb-4">
             
