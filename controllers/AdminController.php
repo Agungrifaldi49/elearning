@@ -1617,4 +1617,51 @@ class AdminController {
         ]);
         exit();
     }
+
+    public function pembayaran() {
+        require_once ROOT_PATH . 'models/PembayaranModel.php';
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+
+        $pembayaranModel = new PembayaranModel();
+        $academicModel = new AcademicModel();
+
+        $filters = [
+            'kelas_id' => $_GET['kelas_id'] ?? '',
+            'jurusan_id' => $_GET['jurusan_id'] ?? '',
+            'status' => $_GET['status'] ?? '',
+            'search' => $_GET['search'] ?? ''
+        ];
+
+        $globalStats = $pembayaranModel->getAdminGlobalStats();
+        $studentsPaymentList = $pembayaranModel->getAllStudentPayments($filters);
+
+        $kelasList = $academicModel->getKelas();
+        $jurusanList = $academicModel->getJurusan();
+
+        require_once ROOT_PATH . 'views/admin/pembayaran.php';
+    }
+
+    public function syncPembayaran() {
+        require_once ROOT_PATH . 'models/PembayaranModel.php';
+        $pembayaranModel = new PembayaranModel();
+
+        // If POST with payload data
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = json_decode(file_get_contents('php://input'), true) ?: $_POST;
+            if (!empty($input['items'])) {
+                $res = $pembayaranModel->syncExternalPaymentData($input['items']);
+                FlashHelper::setSuccess($res['message']);
+            } else {
+                // Re-seed / refresh sample data
+                $pembayaranModel->seedInitialDataIfEmpty();
+                FlashHelper::setSuccess('Data sinkronisasi jembatan pembayaran berhasil diperbarui.');
+            }
+        } else {
+            $pembayaranModel->seedInitialDataIfEmpty();
+            FlashHelper::setSuccess('Data pembayaran siswa berhasil disinkronkan.');
+        }
+
+        header('Location: ' . BASE_URL . 'index.php?url=admin/pembayaran');
+        exit();
+    }
 }

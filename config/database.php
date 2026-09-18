@@ -195,6 +195,47 @@ class Database {
                     INDEX idx_sup_guru (guru_id),
                     INDEX idx_sup_tgl (tanggal_supervisi)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS pembayaran_tagihan (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    siswa_id INT NOT NULL,
+                    nis VARCHAR(30) NULL,
+                    nisn VARCHAR(30) NULL,
+                    jenis_pembayaran VARCHAR(50) NOT NULL DEFAULT 'SPP',
+                    kode_tagihan VARCHAR(50) NOT NULL UNIQUE,
+                    judul VARCHAR(150) NOT NULL,
+                    nominal DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    nominal_terbayar DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    sisa_tagihan DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    periode_bulan VARCHAR(30) NULL,
+                    tahun_ajaran VARCHAR(20) NOT NULL DEFAULT '2025/2026',
+                    tanggal_jatuh_tempo DATE NULL,
+                    status ENUM('lunas', 'belum_lunas', 'sebagian') NOT NULL DEFAULT 'belum_lunas',
+                    keterangan TEXT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_tagihan_siswa (siswa_id),
+                    INDEX idx_tagihan_nisn (nisn),
+                    INDEX idx_tagihan_status (status),
+                    INDEX idx_tagihan_jenis (jenis_pembayaran)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS pembayaran_riwayat (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    tagihan_id INT NOT NULL,
+                    siswa_id INT NOT NULL,
+                    nomor_transaksi VARCHAR(50) NOT NULL UNIQUE,
+                    nominal_bayar DECIMAL(12,2) NOT NULL DEFAULT 0,
+                    tanggal_bayar DATETIME NOT NULL,
+                    metode_pembayaran VARCHAR(50) NOT NULL DEFAULT 'Transfer Bank',
+                    channel VARCHAR(50) NULL,
+                    status ENUM('berhasil', 'pending', 'batal') NOT NULL DEFAULT 'berhasil',
+                    catatan TEXT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_riwayat_tagihan (tagihan_id),
+                    INDEX idx_riwayat_siswa (siswa_id),
+                    INDEX idx_riwayat_tgl (tanggal_bayar)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
         } catch (\Throwable $e) {
             // Silently ignore if table already exists or DDL restricted

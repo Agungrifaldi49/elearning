@@ -1028,7 +1028,43 @@ class SiswaController {
         $this->tugas();
     }
 
-    public function ajukan_susulan() {
-        $this->tugas();
+    public function pembayaran() {
+        $user = AuthHelper::user();
+        $siswa = $this->getSiswaInfo();
+        $siswaId = $siswa['id'];
+
+        require_once ROOT_PATH . 'models/PembayaranModel.php';
+        $pembayaranModel = new PembayaranModel();
+
+        $bills = $pembayaranModel->getSiswaBills($siswaId);
+        $summary = $pembayaranModel->getSiswaPaymentSummary($siswaId);
+        $riwayat = $pembayaranModel->getSiswaRiwayatPembayaran($siswaId);
+
+        $unpaidBills = array_values(array_filter($bills, function($b) {
+            return $b['status'] !== 'lunas';
+        }));
+        $paidBills = array_values(array_filter($bills, function($b) {
+            return $b['status'] === 'lunas';
+        }));
+
+        require_once ROOT_PATH . 'views/siswa/pembayaran.php';
+    }
+
+    public function cetakSlip() {
+        $siswa = $this->getSiswaInfo();
+        $siswaId = $siswa['id'];
+        $riwayatId = (int)($_GET['id'] ?? 0);
+
+        require_once ROOT_PATH . 'models/PembayaranModel.php';
+        $pembayaranModel = new PembayaranModel();
+        $slip = $pembayaranModel->getSlipPembayaran($riwayatId, $siswaId);
+
+        if (!$slip) {
+            FlashHelper::setError('Slip bukti pembayaran tidak ditemukan.');
+            header('Location: ' . BASE_URL . 'index.php?url=siswa/pembayaran');
+            exit();
+        }
+
+        require_once ROOT_PATH . 'views/siswa/slip_pembayaran.php';
     }
 }

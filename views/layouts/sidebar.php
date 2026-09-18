@@ -118,6 +118,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'admin/scanQr') ?>" href="<?= BASE_URL ?>index.php?url=admin/scanQr">
                 <i class="bi bi-qr-code-scan text-success"></i> Scan QR Code Hadir
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'admin/pembayaran') ?>" href="<?= BASE_URL ?>index.php?url=admin/pembayaran">
+                <i class="bi bi-wallet2 text-success"></i> Portal & Rekap Pembayaran
+            </a></li>
 
             <li class="nav-section-title">Konten & Komunikasi</li>
             <li><a class="nav-link <?= isActive($currentUrl,'admin/landingPage') ?>" href="<?= BASE_URL ?>index.php?url=admin/landingPage">
@@ -290,6 +293,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'siswa/kartuPelajar') ?>" href="<?= BASE_URL ?>index.php?url=siswa/kartuPelajar">
                 <i class="bi bi-credit-card-fill"></i> Kartu Pelajar Digital
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'siswa/pembayaran') ?>" href="<?= BASE_URL ?>index.php?url=siswa/pembayaran">
+                <i class="bi bi-wallet2 text-success"></i> Portal Pembayaran SPP
+            </a></li>
 
             <li class="nav-section-title">Komunikasi & Virtual Meeting</li>
             <li><a class="nav-link <?= isActive($currentUrl,'forum') ?>" href="<?= BASE_URL ?>index.php?url=forum">
@@ -361,6 +367,9 @@ if (!empty($sidebarRawLogo)) {
             </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringNilai') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringNilai">
                 <i class="bi bi-journal-check text-primary"></i> Rekap Leger Nilai E-Rapor
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/pembayaran') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/pembayaran">
+                <i class="bi bi-pie-chart-fill text-warning"></i> Monitoring Keuangan & SPP
             </a></li>
 
             <li class="nav-section-title">Komunikasi & Ruang Virtual</li>

@@ -726,4 +726,34 @@ class KepsekController {
     public function panduan() {
         require_once ROOT_PATH . 'views/kepsek/panduan.php';
     }
+
+    /**
+     * 22. Monitoring & Dashboard Keuangan Eksekutif (Portal Pembayaran)
+     */
+    public function pembayaran() {
+        require_once ROOT_PATH . 'models/PembayaranModel.php';
+        $pembayaranModel = new PembayaranModel();
+
+        $data = $pembayaranModel->getKepsekExecutiveStats();
+        $global = $data['global'];
+        $breakdownKategori = $data['breakdown_kategori'];
+        $breakdownKelas = $data['breakdown_kelas'];
+
+        require_once ROOT_PATH . 'views/kepsek/pembayaran.php';
+    }
+
+    /**
+     * 23. Cetak Laporan Keuangan Eksekutif (PDF Print Ready)
+     */
+    public function cetakLaporanPembayaran() {
+        require_once ROOT_PATH . 'models/PembayaranModel.php';
+        $pembayaranModel = new PembayaranModel();
+
+        $data = $pembayaranModel->getKepsekExecutiveStats();
+        $global = $data['global'];
+        $breakdownKategori = $data['breakdown_kategori'];
+        $breakdownKelas = $data['breakdown_kelas'];
+
+        require_once ROOT_PATH . 'views/kepsek/cetak_laporan_keuangan.php';
+    }
 }

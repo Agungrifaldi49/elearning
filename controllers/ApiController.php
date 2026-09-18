@@ -4391,6 +4391,42 @@ class ApiController {
             $this->jsonResponse(false, 'Endpoint kepsek tidak dikenali: ' . $endpoint, null, 404);
         }
     }
+
+    /**
+     * Endpoint Integrasi Portal Pembayaran (Webhook / API Sync)
+     */
+    public function pembayaran($endpoint = 'index') {
+        require_once ROOT_PATH . 'models/PembayaranModel.php';
+        $pembayaranModel = new PembayaranModel();
+
+        if ($endpoint === 'sync') {
+            if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+                $this->jsonResponse(false, 'Method harus POST untuk sinkronisasi tagihan pembayaran', null, 405);
+            }
+
+            $input = $this->getPostInput();
+            $items = $input['data'] ?? $input['items'] ?? $input;
+
+            if (!is_array($items) || empty($items)) {
+                $this->jsonResponse(false, 'Payload data tagihan tidak valid atau kosong', null, 400);
+            }
+
+            // If single item posted, wrap into array
+            if (isset($items['nisn']) || isset($items['kode_tagihan'])) {
+                $items = [$items];
+            }
+
+            $res = $pembayaranModel->syncExternalPaymentData($items);
+            $this->jsonResponse($res['status'], $res['message'], $res, $res['status'] ? 200 : 400);
+        }
+
+        $this->jsonResponse(true, 'Payment Bridge API Endpoint Ready', [
+            'service' => 'Portal Pembayaran E-Learning SMK Muthia Harapan',
+            'supported_endpoints' => [
+                'POST index.php?url=api/pembayaran/sync' => 'Sinkronisasi / Push Data Tagihan & Pembayaran'
+            ]
+        ]);
+    }
 }
 
 
