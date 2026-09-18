@@ -14,10 +14,19 @@
     color: #ffffff;
     box-shadow: 0 12px 30px -8px rgba(15, 23, 42, 0.35);
     position: relative;
-    overflow: hidden;
+    overflow: visible; /* Prevents dropdown menu from being cut off */
     border: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 5;
 }
-.admin-payment-hero::before {
+.hero-bg-shapes {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+}
+.hero-bg-shapes::before {
     content: "";
     position: absolute;
     top: -50%;
@@ -28,7 +37,7 @@
     border-radius: 50%;
     pointer-events: none;
 }
-.admin-payment-hero::after {
+.hero-bg-shapes::after {
     content: "";
     position: absolute;
     bottom: -30%;
@@ -242,88 +251,94 @@
     <?php endif; ?>
 
     <!-- 1. Executive Modern Header Banner -->
-    <div class="admin-payment-hero p-4 p-md-5 mb-4 shadow-sm">
-        <div class="row align-items-center g-4">
-            <div class="col-12 col-xl-7">
-                <!-- Breadcrumb & Badges -->
-                <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-                    <span class="badge bg-white text-dark px-3 py-1.5 rounded-pill fw-bold text-uppercase shadow-xs" style="font-size: 0.74rem; letter-spacing: 0.5px; color: #000000 !important;">
-                        <i class="bi bi-shield-check text-primary me-1.5"></i> <span style="color: #000000 !important;">Finance & Billing Bridge</span>
-                    </span>
-                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-1.5 rounded-pill fw-bold" style="font-size: 0.72rem;">
-                        <span class="pulse-dot-live me-1.5"></span> Arsitektur Lintas Server (Cross-Server)
-                    </span>
-                    <span class="badge bg-light text-dark px-2.5 py-1.5 rounded-pill fw-semibold" style="font-size: 0.72rem;">
-                        T.A. 2025/2026
-                    </span>
+    <div class="admin-payment-hero p-4 p-md-5 mb-4 shadow-sm position-relative">
+        <div class="hero-bg-shapes"></div>
+        <div class="position-relative" style="z-index: 2;">
+            <div class="row align-items-center g-4">
+                <div class="col-12 col-xl-5">
+                    <!-- Breadcrumb & Badges -->
+                    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                        <span class="badge bg-white text-dark px-3 py-1.5 rounded-pill fw-bold text-uppercase shadow-xs" style="font-size: 0.74rem; letter-spacing: 0.5px; color: #000000 !important;">
+                            <i class="bi bi-shield-check text-primary me-1.5"></i> <span style="color: #000000 !important;">Finance & Billing Bridge</span>
+                        </span>
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-1.5 rounded-pill fw-bold" style="font-size: 0.72rem;">
+                            <span class="pulse-dot-live me-1.5"></span> Arsitektur Lintas Server (Cross-Server)
+                        </span>
+                        <span class="badge bg-light text-dark px-2.5 py-1.5 rounded-pill fw-semibold" style="font-size: 0.72rem;">
+                            T.A. 2025/2026
+                        </span>
+                    </div>
+
+                    <h2 class="fw-bold mb-2 text-white d-flex align-items-center gap-2 flex-wrap">
+                        <span>Portal & Rekapitulasi Pembayaran Siswa</span>
+                    </h2>
+                    <p class="text-white text-opacity-85 mb-0 small" style="max-width: 640px; line-height: 1.65;">
+                        Pusat kendali administrasi iuran siswa (SPP, DSP, CBT Ujian) SMK Muthia Harapan Cicalengka. Dilengkapi jembatan sinkronisasi data langsung dengan server eksternal sistem kasir/keuangan sekolah.
+                    </p>
                 </div>
-
-                <h2 class="fw-bold mb-2 text-white d-flex align-items-center gap-2 flex-wrap">
-                    <span>Portal & Rekapitulasi Pembayaran Siswa</span>
-                </h2>
-                <p class="text-white text-opacity-85 mb-0 small" style="max-width: 640px; line-height: 1.65;">
-                    Pusat kendali administrasi iuran siswa (SPP, DSP, CBT Ujian) SMK Muthia Harapan Cicalengka. Dilengkapi jembatan sinkronisasi data langsung dengan server eksternal sistem kasir/keuangan sekolah.
-                </p>
-            </div>
-            
-            <div class="col-12 col-xl-5 text-xl-end">
-                <div class="d-flex align-items-center justify-content-xl-end gap-2 flex-wrap">
-                    <!-- Tarik Data Button -->
-                    <button type="button" class="btn btn-warning text-dark fw-bold px-3.5 py-2.5 rounded-3 shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalTarikData">
-                        <i class="bi bi-cloud-arrow-down-fill fs-5"></i>
-                        <span>Tarik Data API</span>
-                    </button>
-
-                    <!-- Import CSV Button -->
-                    <button type="button" class="btn btn-outline-light fw-bold px-3.5 py-2.5 rounded-3 shadow-sm d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalImportCsv">
-                        <i class="bi bi-file-earmark-spreadsheet-fill fs-5 text-success"></i>
-                        <span>Import CSV</span>
-                    </button>
-
-                    <!-- Panduan Beda Server Button -->
-                    <button type="button" class="btn btn-outline-light fw-bold px-3 py-2.5 rounded-3 shadow-sm d-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalPanduanBedaServer" title="Buka Panduan Beda Server">
-                        <i class="bi bi-journal-code fs-5 text-info"></i>
-                        <span class="d-none d-md-inline small">Panduan</span>
-                    </button>
-
-                    <!-- Atur Rekening Sekolah Button -->
-                    <button type="button" class="btn btn-outline-light fw-bold px-3 py-2.5 rounded-3 shadow-sm d-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalKelolaRekening" title="Atur Rekening Bank & Prosedur Pembayaran Siswa">
-                        <i class="bi bi-bank2 fs-5 text-warning"></i>
-                        <span class="d-none d-md-inline small">Rekening Sekolah</span>
-                    </button>
-
-                    <!-- Dropdown Tindakan Lanjutan (Maintenance / Reset) -->
-                    <div class="dropdown d-inline">
-                        <button class="btn btn-outline-light px-2.5 py-2.5 rounded-3 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Menu Opsi Lainnya">
-                            <i class="bi bi-three-dots-vertical"></i>
+                
+                <div class="col-12 col-xl-7 text-xl-end">
+                    <div class="d-flex align-items-center justify-content-xl-end gap-2 flex-wrap">
+                        <!-- 1. Tarik Data Button -->
+                        <button type="button" class="btn btn-warning text-dark fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalTarikData" title="Tarik Data dari Server Pembayaran Eksternal">
+                            <i class="bi bi-cloud-arrow-down-fill fs-5"></i>
+                            <span>Tarik Data API</span>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3 border-0 py-2">
-                            <li>
-                                <a class="dropdown-item small d-flex align-items-center gap-2 py-2" href="#" data-bs-toggle="modal" data-bs-target="#modalKelolaRekening">
-                                    <i class="bi bi-bank2 text-warning"></i> Atur Rekening Bank &amp; Prosedur Siswa
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item small d-flex align-items-center gap-2 py-2" href="<?= BASE_URL ?>assets/template_import_pembayaran.csv" download>
-                                    <i class="bi bi-download text-success"></i> Unduh Format Template CSV
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item small d-flex align-items-center gap-2 py-2" href="<?= BASE_URL ?>bridge_server_pembayaran.php" target="_blank" download>
-                                    <i class="bi bi-code-slash text-primary"></i> Unduh File Bridge PHP
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form method="POST" action="<?= BASE_URL ?>index.php?url=admin/syncPembayaran" onsubmit="return confirm('PERINGATAN RESIKO TINGGI: Seluruh data tagihan dan riwayat pembayaran di LMS akan DIKOSONGKAN (dihapus permanen). Lanjutkan?');">
-                                    <input type="hidden" name="action" value="clear_data">
-                                    <button type="submit" class="dropdown-item small text-danger d-flex align-items-center gap-2 py-2">
-                                        <i class="bi bi-trash3-fill"></i> Kosongkan Semua Data Tagihan
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
+
+                        <!-- 2. Import CSV Button -->
+                        <button type="button" class="btn btn-outline-light fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalImportCsv" title="Unggah Berkas Rekap Tagihan CSV">
+                            <i class="bi bi-file-earmark-spreadsheet-fill fs-5 text-success"></i>
+                            <span>Import CSV</span>
+                        </button>
+
+                        <!-- 3. Atur Rekening Sekolah Button -->
+                        <button type="button" class="btn btn-outline-light fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalKelolaRekening" title="Atur Nomor Rekening & Prosedur Pembayaran Siswa">
+                            <i class="bi bi-bank2 fs-5 text-warning"></i>
+                            <span>Rekening Sekolah</span>
+                        </button>
+
+                        <!-- 4. Panduan Beda Server Button -->
+                        <button type="button" class="btn btn-outline-light fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalPanduanBedaServer" title="Buka Panduan Integrasi Lintas Server">
+                            <i class="bi bi-journal-code fs-5 text-info"></i>
+                            <span>Panduan</span>
+                        </button>
+
+                        <!-- 5. Dropdown Titik 3 (Khusus File Unduhan & Tindakan Pemeliharaan) -->
+                        <div class="dropdown d-inline-block">
+                            <button class="btn btn-outline-light px-2.5 py-2 rounded-3 shadow-sm d-inline-flex align-items-center justify-content-center" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Menu Opsi Lainnya">
+                                <i class="bi bi-three-dots-vertical fs-5"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-lg rounded-3 border-0 py-2 mt-2" style="z-index: 1060; min-width: 250px;">
+                                <li class="dropdown-header text-uppercase fw-bold text-muted" style="font-size: 0.68rem; letter-spacing: 0.5px;">
+                                    Berkas &amp; Ekspor
+                                </li>
+                                <li>
+                                    <a class="dropdown-item small d-flex align-items-center gap-2 py-2" href="<?= BASE_URL ?>assets/template_import_pembayaran.csv" download>
+                                        <i class="bi bi-download text-success fs-6"></i>
+                                        <span>Unduh Format Template CSV</span>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item small d-flex align-items-center gap-2 py-2" href="<?= BASE_URL ?>bridge_server_pembayaran.php" target="_blank" download>
+                                        <i class="bi bi-code-slash text-primary fs-6"></i>
+                                        <span>Unduh Skrip Bridge PHP</span>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider my-1.5"></li>
+                                <li class="dropdown-header text-uppercase fw-bold text-danger" style="font-size: 0.68rem; letter-spacing: 0.5px;">
+                                    Pemeliharaan Data
+                                </li>
+                                <li>
+                                    <form method="POST" action="<?= BASE_URL ?>index.php?url=admin/syncPembayaran" onsubmit="return confirm('PERINGATAN RESIKO TINGGI: Seluruh data tagihan dan riwayat pembayaran di LMS akan DIKOSONGKAN (dihapus permanen). Lanjutkan?');">
+                                        <input type="hidden" name="action" value="clear_data">
+                                        <button type="submit" class="dropdown-item small text-danger d-flex align-items-center gap-2 py-2">
+                                            <i class="bi bi-trash3-fill fs-6"></i>
+                                            <span>Kosongkan Semua Data Tagihan</span>
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
