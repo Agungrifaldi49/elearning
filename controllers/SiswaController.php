@@ -1039,6 +1039,7 @@ class SiswaController {
         $bills = $pembayaranModel->getSiswaBills($siswaId);
         $summary = $pembayaranModel->getSiswaPaymentSummary($siswaId);
         $riwayat = $pembayaranModel->getSiswaRiwayatPembayaran($siswaId);
+        $rekeningConfig = $pembayaranModel->getRekeningConfig();
 
         $unpaidBills = array_values(array_filter($bills, function($b) {
             return $b['status'] !== 'lunas';

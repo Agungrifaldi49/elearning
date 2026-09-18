@@ -1635,6 +1635,7 @@ class AdminController {
         $globalStats = $pembayaranModel->getAdminGlobalStats();
         $studentsPaymentList = $pembayaranModel->getAllStudentPayments($filters);
         $bridgeConfig = $pembayaranModel->getBridgeConfig();
+        $rekeningConfig = $pembayaranModel->getRekeningConfig();
 
         $kelasList = $academicModel->getKelas();
         $jurusanList = $academicModel->getJurusan();
@@ -1676,6 +1677,46 @@ class AdminController {
                 } else {
                     FlashHelper::setError($res['message']);
                 }
+            } elseif ($action === 'save_rekening') {
+                $namaSekolah = trim($_POST['nama_sekolah'] ?? 'SMK Muthia Harapan Cicalengka');
+                $kontakKonfirmasi = trim($_POST['kontak_konfirmasi'] ?? '');
+                $catatanTambahan = trim($_POST['catatan_tambahan'] ?? '');
+
+                // Parse Prosedur lines
+                $rawProsedur = $_POST['prosedur'] ?? '';
+                $prosedurLines = array_values(array_filter(array_map('trim', explode("\n", $rawProsedur))));
+
+                // Parse Bank accounts
+                $banksInput = $_POST['banks'] ?? [];
+                $bankAccounts = [];
+                if (is_array($banksInput)) {
+                    foreach ($banksInput as $b) {
+                        $bankName = trim($b['bank'] ?? '');
+                        $rekNum = trim($b['nomor_rekening'] ?? '');
+                        $atasNama = trim($b['atas_nama'] ?? '');
+                        $color = trim($b['warna_badge'] ?? 'primary');
+
+                        if (!empty($bankName) && !empty($rekNum)) {
+                            $bankAccounts[] = [
+                                'bank' => $bankName,
+                                'nomor_rekening' => $rekNum,
+                                'atas_nama' => $atasNama ?: $namaSekolah,
+                                'warna_badge' => in_array($color, ['primary', 'info', 'success', 'warning', 'dark', 'secondary']) ? $color : 'primary'
+                            ];
+                        }
+                    }
+                }
+
+                $newRekeningData = [
+                    'nama_sekolah' => $namaSekolah,
+                    'bank_accounts' => $bankAccounts,
+                    'prosedur' => $prosedurLines,
+                    'kontak_konfirmasi' => $kontakKonfirmasi,
+                    'catatan_tambahan' => $catatanTambahan
+                ];
+
+                $pembayaranModel->saveRekeningConfig($newRekeningData);
+                FlashHelper::setSuccess('Informasi rekening bank dan prosedur pembayaran sekolah berhasil disimpan dan disinkronkan ke akun Siswa.');
             }
         }
 

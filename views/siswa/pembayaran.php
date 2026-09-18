@@ -359,43 +359,62 @@
             </div>
             <div class="modal-body p-4">
                 <p class="small text-muted mb-3">
-                    Pembayaran SPP dan administrasi sekolah dapat dilakukan melalui transfer bank ke rekening resmi <strong>SMK Muthia Harapan Cicalengka</strong> berikut:
+                    Pembayaran SPP dan administrasi sekolah dapat dilakukan melalui transfer bank ke rekening resmi <strong><?= htmlspecialchars($rekeningConfig['nama_sekolah'] ?? 'SMK Muthia Harapan Cicalengka') ?></strong> berikut:
                 </p>
 
                 <!-- Bank Accounts List -->
                 <div class="d-flex flex-column gap-2.5 mb-3">
-                    <div class="p-3 rounded-3 border bg-white shadow-2xs d-flex align-items-center justify-content-between">
-                        <div>
-                            <span class="badge bg-primary px-2 py-0.5 rounded text-white fw-bold mb-1" style="font-size:0.68rem;">BANK BCA</span>
-                            <div class="fw-bold font-monospace fs-6 text-dark">7780 9182 34</div>
-                            <small class="text-muted" style="font-size:0.75rem;">a.n SMK Muthia Harapan Cicalengka</small>
+                    <?php if (!empty($rekeningConfig['bank_accounts'])): ?>
+                        <?php foreach ($rekeningConfig['bank_accounts'] as $acc): 
+                            $badgeColor = htmlspecialchars($acc['warna_badge'] ?? 'primary');
+                            $cleanNum = preg_replace('/[^0-9]/', '', $acc['nomor_rekening']);
+                        ?>
+                            <div class="p-3 rounded-3 border bg-white shadow-2xs d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="badge bg-<?= $badgeColor ?> px-2 py-0.5 rounded text-white fw-bold mb-1" style="font-size:0.68rem;">
+                                        <?= htmlspecialchars(strtoupper($acc['bank'])) ?>
+                                    </span>
+                                    <div class="fw-bold font-monospace fs-6 text-dark"><?= htmlspecialchars($acc['nomor_rekening']) ?></div>
+                                    <small class="text-muted" style="font-size:0.75rem;">a.n <?= htmlspecialchars($acc['atas_nama']) ?></small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-secondary rounded-pill px-2.5" onclick="navigator.clipboard.writeText('<?= $cleanNum ?>'); alert('Nomor Rekening <?= addslashes(htmlspecialchars($acc['bank'])) ?> (<?= $cleanNum ?>) berhasil disalin!');">
+                                    <i class="bi bi-copy me-1"></i> Salin
+                                </button>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="alert alert-light border small text-muted text-center py-3">
+                            Informasi rekening belum dikonfigurasi oleh Admin. Silakan hubungi bagian Keuangan / TU.
                         </div>
-                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-2.5" onclick="navigator.clipboard.writeText('7780918234'); alert('Nomor Rekening BCA berhasil disalin!');">
-                            <i class="bi bi-copy me-1"></i> Salin
-                        </button>
-                    </div>
-
-                    <div class="p-3 rounded-3 border bg-white shadow-2xs d-flex align-items-center justify-content-between">
-                        <div>
-                            <span class="badge bg-info px-2 py-0.5 rounded text-dark fw-bold mb-1" style="font-size:0.68rem;">BANK MANDIRI</span>
-                            <div class="fw-bold font-monospace fs-6 text-dark">131 00 1982 7721</div>
-                            <small class="text-muted" style="font-size:0.75rem;">a.n SMK Muthia Harapan Cicalengka</small>
-                        </div>
-                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-2.5" onclick="navigator.clipboard.writeText('1310019827721'); alert('Nomor Rekening Mandiri berhasil disalin!');">
-                            <i class="bi bi-copy me-1"></i> Salin
-                        </button>
-                    </div>
+                    <?php endif; ?>
                 </div>
 
                 <div class="p-3 bg-warning-subtle rounded-3 border border-warning-subtle text-dark small">
                     <div class="fw-bold mb-1 d-flex align-items-center gap-1.5 text-warning-emphasis">
                         <i class="bi bi-exclamation-circle-fill"></i> Prosedur Konfirmasi Pembayaran:
                     </div>
-                    <ol class="mb-0 ps-3">
-                        <li>Cantumkan <strong>NISN / Nama Siswa</strong> pada berita transfer.</li>
-                        <li>Kirimkan bukti transfer ke Bagian Keuangan / Tata Usaha (Loket TU Sekolah atau WhatsApp Keuangan: 0812-xxxx-xxxx).</li>
-                        <li>Status pembayaran di portal ini akan terbarui otomatis secara realtime setelah divalidasi oleh sistem keuangan.</li>
-                    </ol>
+                    <?php if (!empty($rekeningConfig['prosedur']) && is_array($rekeningConfig['prosedur'])): ?>
+                        <ol class="mb-2 ps-3">
+                            <?php foreach ($rekeningConfig['prosedur'] as $step): ?>
+                                <li><?= htmlspecialchars($step) ?></li>
+                            <?php endforeach; ?>
+                        </ol>
+                    <?php else: ?>
+                        <p class="mb-2"><?= nl2br(htmlspecialchars($rekeningConfig['prosedur'] ?? 'Silakan konfirmasi bukti transfer ke loket TU / Keuangan sekolah.')) ?></p>
+                    <?php endif; ?>
+
+                    <?php if (!empty($rekeningConfig['kontak_konfirmasi'])): ?>
+                        <div class="pt-2 border-top border-warning-subtle d-flex align-items-center gap-1.5 fw-semibold text-dark" style="font-size: 0.78rem;">
+                            <i class="bi bi-whatsapp text-success fs-6"></i>
+                            <span>Kontak Keuangan: <?= htmlspecialchars($rekeningConfig['kontak_konfirmasi']) ?></span>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($rekeningConfig['catatan_tambahan'])): ?>
+                        <div class="mt-1 text-muted" style="font-size: 0.72rem;">
+                            * <?= htmlspecialchars($rekeningConfig['catatan_tambahan']) ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
             <div class="modal-footer border-top p-3 bg-light rounded-bottom-4">

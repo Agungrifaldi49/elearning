@@ -501,6 +501,52 @@ class PembayaranModel {
     }
 
     /**
+     * Get School Bank Accounts & Payment Procedure Config
+     */
+    public function getRekeningConfig() {
+        $path = ROOT_PATH . 'config/payment_rekening.json';
+        if (file_exists($path)) {
+            $data = json_decode(file_get_contents($path), true);
+            if (is_array($data)) {
+                return $data;
+            }
+        }
+        return [
+            'nama_sekolah' => 'SMK Muthia Harapan Cicalengka',
+            'bank_accounts' => [
+                [
+                    'bank' => 'BANK BCA',
+                    'nomor_rekening' => '7780918234',
+                    'atas_nama' => 'SMK Muthia Harapan Cicalengka',
+                    'warna_badge' => 'primary'
+                ],
+                [
+                    'bank' => 'BANK MANDIRI',
+                    'nomor_rekening' => '1310019827721',
+                    'atas_nama' => 'SMK Muthia Harapan Cicalengka',
+                    'warna_badge' => 'info'
+                ]
+            ],
+            'prosedur' => [
+                'Cantumkan NISN / Nama Siswa pada berita transfer.',
+                'Kirimkan bukti transfer ke Bagian Keuangan / Tata Usaha (Loket TU Sekolah atau WhatsApp Keuangan).',
+                'Status pembayaran di portal ini akan terbarui otomatis setelah divalidasi oleh sistem keuangan.'
+            ],
+            'kontak_konfirmasi' => '0812-xxxx-xxxx (Bagian Keuangan TU)',
+            'catatan_tambahan' => 'Pastikan nomor rekening dan nama penerima sesuai sebelum menyelesaikan transaksi transfer.'
+        ];
+    }
+
+    /**
+     * Save School Bank Accounts & Payment Procedure Config
+     */
+    public function saveRekeningConfig($data) {
+        $path = ROOT_PATH . 'config/payment_rekening.json';
+        file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+        return $data;
+    }
+
+    /**
      * Pull data from Remote Payment Server via cURL / REST API
      */
     public function pullFromRemoteServer($remoteUrl, $secretToken = '') {

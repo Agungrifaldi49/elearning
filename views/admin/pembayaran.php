@@ -286,12 +286,24 @@
                         <span class="d-none d-md-inline small">Panduan</span>
                     </button>
 
+                    <!-- Atur Rekening Sekolah Button -->
+                    <button type="button" class="btn btn-outline-light fw-bold px-3 py-2.5 rounded-3 shadow-sm d-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalKelolaRekening" title="Atur Rekening Bank & Prosedur Pembayaran Siswa">
+                        <i class="bi bi-bank2 fs-5 text-warning"></i>
+                        <span class="d-none d-md-inline small">Rekening Sekolah</span>
+                    </button>
+
                     <!-- Dropdown Tindakan Lanjutan (Maintenance / Reset) -->
                     <div class="dropdown d-inline">
                         <button class="btn btn-outline-light px-2.5 py-2.5 rounded-3 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Menu Opsi Lainnya">
                             <i class="bi bi-three-dots-vertical"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow-sm rounded-3 border-0 py-2">
+                            <li>
+                                <a class="dropdown-item small d-flex align-items-center gap-2 py-2" href="#" data-bs-toggle="modal" data-bs-target="#modalKelolaRekening">
+                                    <i class="bi bi-bank2 text-warning"></i> Atur Rekening Bank &amp; Prosedur Siswa
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item small d-flex align-items-center gap-2 py-2" href="<?= BASE_URL ?>assets/template_import_pembayaran.csv" download>
                                     <i class="bi bi-download text-success"></i> Unduh Format Template CSV
@@ -1030,6 +1042,122 @@ $secret_token = 'SMKMH_PAYMENT_SECRET_KEY_2026';</pre>
             <div class="modal-footer border-top p-3 bg-light rounded-bottom-4">
                 <button type="button" class="btn btn-secondary rounded-pill px-4 btn-sm" data-bs-dismiss="modal">Tutup</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 5: PENGATURAN REKENING BANK & PROSEDUR PEMBAYARAN SEKOLAH -->
+<div class="modal fade" id="modalKelolaRekening" tabindex="-1" aria-labelledby="modalKelolaRekeningLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <form method="POST" action="<?= BASE_URL ?>index.php?url=admin/syncPembayaran">
+                <input type="hidden" name="action" value="save_rekening">
+
+                <div class="modal-header border-bottom p-3.5 bg-light rounded-top-4">
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="modalKelolaRekeningLabel">
+                        <i class="bi bi-bank2 text-warning fs-4"></i>
+                        <span>Kelola Rekening Bank & Prosedur Pembayaran Sekolah</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto;">
+                    <div class="alert alert-primary rounded-3 p-3 mb-3 border-0 small d-flex align-items-start gap-2.5">
+                        <i class="bi bi-info-circle-fill text-primary fs-5 mt-0.5"></i>
+                        <div class="text-dark">
+                            Data rekening dan prosedur yang Anda konfigurasikan di sini akan <strong>langsung tampil pada akun Siswa</strong> ketika mereka membuka popup <em>"Prosedur & Rekening Sekolah"</em> di portal pembayaran mereka.
+                        </div>
+                    </div>
+
+                    <!-- Identitas Lembaga -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Nama Lembaga / Pemilik Rekening Sekolah <span class="text-danger">*</span></label>
+                        <input type="text" name="nama_sekolah" class="form-control rounded-3" value="<?= htmlspecialchars($rekeningConfig['nama_sekolah'] ?? 'SMK Muthia Harapan Cicalengka') ?>" required>
+                    </div>
+
+                    <!-- Daftar Rekening Bank Sekolah -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label small fw-bold text-dark mb-0">Daftar Rekening Bank Resmi Sekolah</label>
+                            <span class="text-muted small" style="font-size:0.75rem;">Mendukung hingga 3 rekening aktif</span>
+                        </div>
+
+                        <?php 
+                        $banks = $rekeningConfig['bank_accounts'] ?? [];
+                        for ($i = 0; $i < 3; $i++): 
+                            $b = $banks[$i] ?? ['bank' => '', 'nomor_rekening' => '', 'atas_nama' => '', 'warna_badge' => 'primary'];
+                            $isReq = ($i === 0);
+                        ?>
+                            <div class="p-3 bg-light rounded-3 border mb-2.5">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge bg-secondary rounded-pill small">Rekening Bank #<?= $i + 1 ?><?= $isReq ? ' (Utama)' : ' (Opsional)' ?></span>
+                                    <?php if ($i > 0): ?>
+                                        <small class="text-muted" style="font-size:0.7rem;">Kosongkan jika hanya memakai <?= $i ?> rekening</small>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label text-muted small mb-1" style="font-size:0.72rem;">Nama Bank</label>
+                                        <input type="text" name="banks[<?= $i ?>][bank]" class="form-control form-control-sm rounded-3 fw-semibold" placeholder="Contoh: BANK BCA, BJB..." value="<?= htmlspecialchars($b['bank']) ?>" <?= $isReq ? 'required' : '' ?>>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <label class="form-label text-muted small mb-1" style="font-size:0.72rem;">Nomor Rekening</label>
+                                        <input type="text" name="banks[<?= $i ?>][nomor_rekening]" class="form-control form-control-sm rounded-3 font-monospace" placeholder="Contoh: 7780918234" value="<?= htmlspecialchars($b['nomor_rekening']) ?>" <?= $isReq ? 'required' : '' ?>>
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        <label class="form-label text-muted small mb-1" style="font-size:0.72rem;">Atas Nama (A/N)</label>
+                                        <input type="text" name="banks[<?= $i ?>][atas_nama]" class="form-control form-control-sm rounded-3" placeholder="Contoh: SMK Muthia Harapan" value="<?= htmlspecialchars($b['atas_nama']) ?>">
+                                    </div>
+                                    <div class="col-12 col-md-2">
+                                        <label class="form-label text-muted small mb-1" style="font-size:0.72rem;">Warna Badge</label>
+                                        <select name="banks[<?= $i ?>][warna_badge]" class="form-select form-select-sm rounded-3">
+                                            <option value="primary" <?= ($b['warna_badge'] === 'primary') ? 'selected' : '' ?>>Biru (BCA/Mandiri)</option>
+                                            <option value="info" <?= ($b['warna_badge'] === 'info') ? 'selected' : '' ?>>Cyan (BNI/BJB)</option>
+                                            <option value="success" <?= ($b['warna_badge'] === 'success') ? 'selected' : '' ?>>Hijau (BSI/BRI)</option>
+                                            <option value="warning" <?= ($b['warna_badge'] === 'warning') ? 'selected' : '' ?>>Kuning</option>
+                                            <option value="dark" <?= ($b['warna_badge'] === 'dark') ? 'selected' : '' ?>>Hitam</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endfor; ?>
+                    </div>
+
+                    <!-- Prosedur Pembayaran -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark d-flex justify-content-between">
+                            <span>Langkah / Prosedur Pembayaran Siswa</span>
+                            <span class="text-muted fw-normal" style="font-size:0.75rem;">1 baris per langkah</span>
+                        </label>
+                        <?php 
+                        $prosedurText = is_array($rekeningConfig['prosedur'] ?? null) 
+                            ? implode("\n", $rekeningConfig['prosedur']) 
+                            : ($rekeningConfig['prosedur'] ?? "Cantumkan NISN / Nama Siswa pada berita transfer.\nKirimkan bukti transfer ke Bagian Keuangan / Tata Usaha.\nStatus pembayaran di portal ini akan terbarui otomatis setelah divalidasi sistem keuangan.");
+                        ?>
+                        <textarea name="prosedur" class="form-control rounded-3 small" rows="4" placeholder="Tuliskan petunjuk pembayaran per baris..."><?= htmlspecialchars($prosedurText) ?></textarea>
+                        <small class="text-muted" style="font-size:0.75rem;">Tiap baris baru akan ditampilkan sebagai urutan langkah nomor di popup siswa.</small>
+                    </div>
+
+                    <!-- Kontak Konfirmasi & Catatan -->
+                    <div class="row g-2.5">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-dark">Kontak Konfirmasi / WhatsApp Keuangan</label>
+                            <input type="text" name="kontak_konfirmasi" class="form-control rounded-3" placeholder="Contoh: WhatsApp: 0812-3456-7890 (Ibu Siti - TU)" value="<?= htmlspecialchars($rekeningConfig['kontak_konfirmasi'] ?? '') ?>">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-dark">Catatan Tambahan untuk Siswa</label>
+                            <input type="text" name="catatan_tambahan" class="form-control rounded-3" placeholder="Contoh: Simpan bukti transfer fisik untuk arsip." value="<?= htmlspecialchars($rekeningConfig['catatan_tambahan'] ?? '') ?>">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top p-3 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-3.5 btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning text-dark rounded-pill px-4 btn-sm fw-bold shadow-xs">
+                        <i class="bi bi-check2-circle me-1.5"></i> Simpan & Terapkan ke Akun Siswa
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
