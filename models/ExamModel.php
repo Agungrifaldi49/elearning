@@ -106,7 +106,13 @@ class ExamModel extends BaseModel {
     // --- QUIZ ---
     public function getQuizList($kelas_id = null, $guru_id = null) {
         $sql = "
-            SELECT q.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, g.nama_lengkap as nama_guru
+            SELECT q.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas, g.nama_lengkap as nama_guru,
+                   (SELECT COUNT(DISTINCT s.id) FROM soal s WHERE s.quiz_id = q.id) as total_soal,
+                   GREATEST(
+                       COALESCE((SELECT COUNT(DISTINCT hq.siswa_id) FROM hasil_quiz hq WHERE hq.quiz_id = q.id), 0),
+                       COALESCE((SELECT COUNT(DISTINCT js.siswa_id) FROM jawaban_siswa js WHERE js.quiz_id = q.id), 0),
+                       COALESCE((SELECT COUNT(DISTINCT hqh.siswa_id) FROM hasil_quiz_history hqh WHERE hqh.quiz_id = q.id), 0)
+                   ) as total_peserta
             FROM quiz q
             LEFT JOIN mata_pelajaran map ON q.mapel_id = map.id
             LEFT JOIN kelas k ON q.kelas_id = k.id

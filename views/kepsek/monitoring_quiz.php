@@ -115,7 +115,16 @@
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge bg-primary fs-6"><?= (int)($q['total_peserta'] ?? 0) ?> Siswa</span>
+                                        <?php $pesertaSelesai = (int)($q['total_peserta'] ?? 0); ?>
+                                        <?php if ($pesertaSelesai > 0): ?>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fs-6 fw-bold">
+                                                <i class="bi bi-check-circle-fill me-1"></i><?= $pesertaSelesai ?> Siswa
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-1.5 rounded-pill">
+                                                0 Siswa
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="text-center">
                                         <span class="badge <?= $badgeSt ?> px-3 py-2 rounded-pill">
