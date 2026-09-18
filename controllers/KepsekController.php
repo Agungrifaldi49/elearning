@@ -166,7 +166,12 @@ class KepsekController {
      */
     public function monitoringSiswa() {
         $db = Database::getConnection();
-        $siswaList = $db->query("
+        $academicModel = new AcademicModel();
+
+        $kelasList = $academicModel->getKelas();
+        $selectedKelasId = (int)($_GET['kelas_id'] ?? 0);
+
+        $sql = "
             SELECT s.*, k.nama_kelas, j.nama_jurusan, u.username, u.email,
                    ROUND(COALESCE((SELECT AVG(n.nilai_akhir) FROM nilai_rapor n WHERE n.siswa_id = s.id), 0), 1) as avg_rapor,
                    ROUND(COALESCE((SELECT AVG(hq.total_nilai) FROM hasil_quiz hq WHERE hq.siswa_id = s.id), 0), 1) as avg_quiz,
@@ -175,8 +180,17 @@ class KepsekController {
             JOIN users u ON s.user_id = u.id
             LEFT JOIN kelas k ON s.kelas_id = k.id
             LEFT JOIN jurusan j ON s.jurusan_id = j.id
-            ORDER BY k.tingkat ASC, k.nama_kelas ASC, s.nama_lengkap ASC
-        ")->fetchAll();
+        ";
+
+        if ($selectedKelasId > 0) {
+            $sql .= " WHERE s.kelas_id = ? ORDER BY s.nama_lengkap ASC";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$selectedKelasId]);
+            $siswaList = $stmt->fetchAll();
+        } else {
+            $sql .= " ORDER BY k.tingkat ASC, k.nama_kelas ASC, s.nama_lengkap ASC";
+            $siswaList = $db->query($sql)->fetchAll();
+        }
 
         require_once ROOT_PATH . 'views/kepsek/monitoring_siswa.php';
     }
@@ -555,16 +569,34 @@ class KepsekController {
             $table .= "</tbody></table>";
 
         } else {
-            $title = "Laporan Resmi Monitoring Siswa & Progress Belajar";
-            $data = $db->query("
+            $kelasId = (int)($_GET['kelas_id'] ?? 0);
+            $namaKelasFiltered = '';
+            if ($kelasId > 0) {
+                $stmtKls = $db->prepare("SELECT nama_kelas FROM kelas WHERE id = ?");
+                $stmtKls->execute([$kelasId]);
+                $namaKelasFiltered = $stmtKls->fetchColumn() ?: '';
+            }
+
+            $title = "Laporan Resmi Monitoring Siswa & Progress Belajar" . ($namaKelasFiltered ? " - Kelas " . $namaKelasFiltered : "");
+
+            $sqlSiswa = "
                 SELECT s.*, k.nama_kelas, j.nama_jurusan,
                        ROUND(COALESCE((SELECT AVG(n.nilai_akhir) FROM nilai_rapor n WHERE n.siswa_id = s.id), 0), 1) as avg_rapor,
                        (SELECT COUNT(*) FROM pengumpulan_tugas pt WHERE pt.siswa_id = s.id) as total_tugas_dikumpul
                 FROM siswa s
                 LEFT JOIN kelas k ON s.kelas_id = k.id
                 LEFT JOIN jurusan j ON s.jurusan_id = j.id
-                ORDER BY k.tingkat ASC, k.nama_kelas ASC, s.nama_lengkap ASC
-            ")->fetchAll();
+            ";
+
+            if ($kelasId > 0) {
+                $sqlSiswa .= " WHERE s.kelas_id = ? ORDER BY s.nama_lengkap ASC";
+                $stmtS = $db->prepare($sqlSiswa);
+                $stmtS->execute([$kelasId]);
+                $data = $stmtS->fetchAll();
+            } else {
+                $sqlSiswa .= " ORDER BY k.tingkat ASC, k.nama_kelas ASC, s.nama_lengkap ASC";
+                $data = $db->query($sqlSiswa)->fetchAll();
+            }
 
             $table = "<table border='1' cellpadding='8' cellspacing='0' style='width:100%; border-collapse:collapse;'>
                 <thead>
