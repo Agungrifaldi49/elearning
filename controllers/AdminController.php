@@ -1682,4 +1682,28 @@ class AdminController {
         header('Location: ' . BASE_URL . 'index.php?url=admin/pembayaran');
         exit();
     }
+
+    public function pembayaranDetailAjax() {
+        header('Content-Type: application/json');
+        require_once ROOT_PATH . 'models/PembayaranModel.php';
+        $pembayaranModel = new PembayaranModel();
+
+        $siswaId = (int)($_GET['siswa_id'] ?? 0);
+        if ($siswaId <= 0) {
+            echo json_encode(['status' => false, 'message' => 'ID Siswa tidak valid']);
+            exit();
+        }
+
+        $bills = $pembayaranModel->getSiswaBills($siswaId);
+        $history = $pembayaranModel->getSiswaRiwayatPembayaran($siswaId);
+        $summary = $pembayaranModel->getSiswaPaymentSummary($siswaId);
+
+        echo json_encode([
+            'status' => true,
+            'summary' => $summary,
+            'bills' => $bills,
+            'history' => $history
+        ]);
+        exit();
+    }
 }
