@@ -297,13 +297,13 @@ $fileSizeFormatted = $fileSizeBytes ? round($fileSizeBytes / (1024 * 1024), 1) .
                         <!-- Kontrol Pemirsa untuk Dokumen PDF -->
                         <?php if ($isPdf && $fileUrl): ?>
                             <div class="d-flex align-items-center gap-1.5">
-                                <!-- Engine Mode Switcher (Tampilan Langsung vs Google Cloud) -->
+                                <!-- Engine Mode Switcher (Google Cloud vs Browser Native) -->
                                 <div class="btn-group btn-group-sm rounded-pill border p-0.5 bg-white shadow-xs" role="group">
-                                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-2.5 py-0.5 fw-bold" id="btnEngineNative" onclick="setViewerEngine('native')" title="Tampilan Bawaan Browser (Kualitas Tertinggi & Cepat)">
-                                        <i class="bi bi-file-earmark-pdf-fill me-1"></i><span class="d-none d-sm-inline">Standar</span>
+                                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-2.5 py-0.5 fw-bold" id="btnEngineGoogle" onclick="setViewerEngine('google')" title="Mode Tampilan Ringan Tanpa Unduhan Otomatis">
+                                        <i class="bi bi-cloud-check-fill me-1"></i><span>Mode Baca Web</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-white rounded-pill px-2.5 py-0.5 fw-semibold text-muted" id="btnEngineGoogle" onclick="setViewerEngine('google')" title="Mode Google Cloud Viewer (Sangat Ringan di HP)">
-                                        <i class="bi bi-cloud-check-fill me-1"></i><span class="d-none d-sm-inline">Cloud View</span>
+                                    <button type="button" class="btn btn-sm btn-white rounded-pill px-2.5 py-0.5 fw-semibold text-muted" id="btnEngineNative" onclick="setViewerEngine('native')" title="Beralih ke Engine Browser Asli">
+                                        <i class="bi bi-file-earmark-pdf me-1"></i><span class="d-none d-sm-inline">Browser Asli</span>
                                     </button>
                                 </div>
 
@@ -326,11 +326,20 @@ $fileSizeFormatted = $fileSizeBytes ? round($fileSizeBytes / (1024 * 1024), 1) .
                     <div class="reader-stage-body">
 
                         <?php if ($isPdf && $fileUrl): ?>
-                            <!-- 1. PDF EMBEDDED VIEWER (NATIVE & CLOUD SWITCHABLE - 100% RELIABLE) -->
+                            <!-- 1. PDF EMBEDDED VIEWER (DEFAULT GOOGLE CLOUD VIEWER - BEBAS AUTO-DOWNLOAD) -->
+                            <div id="readerLoadingOverlay" class="position-absolute top-50 start-50 translate-middle text-center p-4" style="z-index: 1; pointer-events: none;">
+                                <div class="spinner-border text-primary mb-2" role="status" style="width: 2.25rem; height: 2.25rem;">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <div class="fw-bold text-dark small">Menyiapkan Tampilan Modul...</div>
+                                <small class="text-muted">Dokumen dibuka langsung tanpa mengunduh ke memori perangkat Anda.</small>
+                            </div>
                             <iframe 
                                 id="readerIframe" 
-                                src="<?= $fileUrl ?>#toolbar=1&navpanes=0" 
-                                class="reader-iframe-element" 
+                                src="https://docs.google.com/gview?embedded=true&url=<?= urlencode($fileUrl) ?>" 
+                                class="reader-iframe-element position-relative" 
+                                style="z-index: 2;"
+                                onload="var ov = document.getElementById('readerLoadingOverlay'); if(ov) ov.style.display='none';"
                                 allowfullscreen 
                                 title="<?= htmlspecialchars($materi['judul']) ?>">
                             </iframe>
@@ -489,13 +498,15 @@ $fileSizeFormatted = $fileSizeBytes ? round($fileSizeBytes / (1024 * 1024), 1) .
 const nativePdfUrl = '<?= $fileUrl ?>#toolbar=1&navpanes=0';
 const googleCloudPdfUrl = 'https://docs.google.com/gview?embedded=true&url=<?= urlencode($fileUrl ?? '') ?>';
 
-// Pengganti Engine Pemirsa Dokumen (Standar Native vs Google Cloud Viewer)
+// Pengganti Engine Pemirsa Dokumen (Google Cloud Viewer vs Standar Native)
 function setViewerEngine(engine) {
     const iframe = document.getElementById('readerIframe');
     const btnNative = document.getElementById('btnEngineNative');
     const btnGoogle = document.getElementById('btnEngineGoogle');
+    const overlay = document.getElementById('readerLoadingOverlay');
 
     if (!iframe) return;
+    if (overlay) overlay.style.display = 'block';
 
     if (engine === 'native') {
         iframe.src = nativePdfUrl;
