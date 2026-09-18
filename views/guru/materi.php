@@ -78,7 +78,16 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                     <td class="text-center">
                                         <div class="d-inline-flex gap-1 flex-wrap justify-content-center">
                                             <!-- Button Preview (Lihat Tanpa Unduh) -->
-                                            <button class="btn btn-sm btn-info text-white px-2" style="font-size:0.75rem;" data-bs-toggle="modal" data-bs-target="#modalPreviewMateri<?= $m['id'] ?>" title="Preview / Lihat Langsung">
+                                            <button type="button" class="btn btn-sm btn-info text-white px-2" style="font-size:0.75rem;" onclick="openPreviewModal(<?= htmlspecialchars(json_encode([
+                                                'id' => $m['id'],
+                                                'judul' => $m['judul'],
+                                                'nama_mapel' => $m['nama_mapel'],
+                                                'nama_kelas' => $m['nama_kelas'] ?? '',
+                                                'jenis_file' => $m['jenis_file'],
+                                                'file_path' => !empty($m['file_path']) ? BASE_URL . 'assets/uploads/materi/' . $m['file_path'] : '',
+                                                'youtube_url' => $m['youtube_url'] ?? '',
+                                                'deskripsi' => $m['deskripsi'] ?? ''
+                                            ])) ?>)" title="Preview / Lihat Langsung">
                                                 <i class="bi bi-eye me-1"></i> Preview
                                             </button>
 
@@ -206,68 +215,39 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
     </div>
 </div>
 
-<!-- Modals Preview & Edit Materi -->
-<?php foreach ($materiList as $m): ?>
-    <!-- Modal Preview Materi (Melihat tanpa unduh) -->
-    <div class="modal fade" id="modalPreviewMateri<?= $m['id'] ?>" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
-            <div class="modal-content rounded-4 border-0 shadow">
-                <div class="modal-header border-0 pb-0">
-                    <div>
-                        <h5 class="fw-bold modal-title"><i class="bi bi-eye text-info me-2"></i>Pratinjau Materi: <?= htmlspecialchars($m['judul']) ?></h5>
-                        <small class="text-muted">Mapel: <?= htmlspecialchars($m['nama_mapel']) ?> | Kelas: <?= htmlspecialchars($m['nama_kelas']) ?></small>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Single Shared Dynamic Modal Preview Materi (Mencegah Auto-Download Saat Halaman Dimuat) -->
+<div class="modal fade" id="modalPreviewMateri" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h5 class="fw-bold modal-title" id="previewModalTitle"><i class="bi bi-eye text-info me-2"></i>Pratinjau Materi</h5>
+                    <small class="text-muted" id="previewModalSubtitle"></small>
                 </div>
-                <div class="modal-body">
-                    <?php if (!empty($m['deskripsi'])): ?>
-                        <div class="p-3 bg-light rounded-3 mb-3 small border">
-                            <strong>Keterangan Guru:</strong> <?= htmlspecialchars($m['deskripsi']) ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="ratio-container text-center bg-dark rounded-3 overflow-hidden p-2">
-                        <?php if ($m['jenis_file'] === 'youtube' && !empty($m['youtube_url'])): ?>
-                            <?php
-                            preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/', $m['youtube_url'], $matches);
-                            $ytId = $matches[1] ?? '';
-                            ?>
-                            <?php if ($ytId): ?>
-                                <iframe width="100%" height="520" src="https://www.youtube.com/embed/<?= $ytId ?>?autoplay=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius:8px;"></iframe>
-                            <?php else: ?>
-                                <a href="<?= htmlspecialchars($m['youtube_url']) ?>" target="_blank" class="btn btn-danger my-5"><i class="bi bi-youtube me-2"></i> Tonton di Youtube</a>
-                            <?php endif; ?>
-
-                        <?php elseif ($m['jenis_file'] === 'video' && !empty($m['file_path'])): ?>
-                            <video src="<?= BASE_URL ?>assets/uploads/materi/<?= htmlspecialchars($m['file_path']) ?>" controls width="100%" style="max-height:520px; border-radius:8px;"></video>
-
-                        <?php elseif ($m['jenis_file'] === 'pdf' && !empty($m['file_path'])): ?>
-                            <iframe src="<?= BASE_URL ?>assets/uploads/materi/<?= htmlspecialchars($m['file_path']) ?>" width="100%" height="540px" style="border:none; border-radius:8px;"></iframe>
-
-                        <?php elseif (!empty($m['file_path'])): ?>
-                            <div class="py-5 text-white">
-                                <i class="bi bi-file-earmark-word fs-1 text-warning mb-2 d-block"></i>
-                                <h6 class="fw-bold mb-2"><?= htmlspecialchars($m['judul']) ?></h6>
-                                <p class="small text-white-50">Pratinjau dokumen Microsoft Office / PPT dapat diakses melalui tombol di bawah.</p>
-                                <a href="<?= BASE_URL ?>assets/uploads/materi/<?= htmlspecialchars($m['file_path']) ?>" target="_blank" class="btn btn-primary px-4 fw-bold">
-                                    <i class="bi bi-box-arrow-up-right me-1"></i> Buka File Dokumen
-                                </a>
-                            </div>
-                        <?php endif; ?>
-                    </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="closePreviewModal()"></button>
+            </div>
+            <div class="modal-body">
+                <div id="previewModalDescBox" class="p-3 bg-light rounded-3 mb-3 small border d-none">
+                    <strong>Keterangan Guru:</strong> <span id="previewModalDesc"></span>
                 </div>
-                <div class="modal-footer border-0 pt-0 justify-content-between">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup Pratinjau</button>
-                    <?php if (!empty($m['file_path'])): ?>
-                        <a href="<?= BASE_URL ?>assets/uploads/materi/<?= htmlspecialchars($m['file_path']) ?>" class="btn btn-success fw-bold" download>
-                            <i class="bi bi-download me-1"></i> Unduh File
-                        </a>
-                    <?php endif; ?>
+
+                <div id="previewMediaContainer" class="ratio-container text-center bg-dark rounded-3 overflow-hidden p-2">
+                    <!-- Konten berkas / media HANYA dimuat secara dinamis saat tombol Preview diklik -->
                 </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 justify-content-between">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closePreviewModal()">Tutup Pratinjau</button>
+                <a href="#" id="previewModalDownloadBtn" class="btn btn-success fw-bold d-none" download>
+                    <i class="bi bi-download me-1"></i> Unduh File
+                </a>
             </div>
         </div>
     </div>
+</div>
 
+<!-- Modals Edit Materi -->
+<?php foreach ($materiList as $m): ?>
+    <?php if (!$isAdminMonitoring): ?>
     <!-- Modal Edit Materi -->
     <div class="modal fade" id="modalEditMateri<?= $m['id'] ?>" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -359,6 +339,7 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
             </div>
         </div>
     </div>
+    <?php endif; ?>
 <?php endforeach; ?>
 
 <script>
@@ -424,7 +405,98 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+
+    // Cleanup preview container when modal is dismissed
+    const previewModalEl = document.getElementById('modalPreviewMateri');
+    if (previewModalEl) {
+        previewModalEl.addEventListener('hidden.bs.modal', function () {
+            closePreviewModal();
+        });
+    }
 });
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+function openPreviewModal(item) {
+    document.getElementById('previewModalTitle').innerHTML = '<i class="bi bi-eye text-info me-2"></i>Pratinjau Materi: ' + escapeHtml(item.judul);
+    document.getElementById('previewModalSubtitle').textContent = 'Mapel: ' + (item.nama_mapel || '-') + (item.nama_kelas ? ' | Kelas: ' + item.nama_kelas : '');
+
+    const descBox = document.getElementById('previewModalDescBox');
+    const descEl = document.getElementById('previewModalDesc');
+    if (item.deskripsi && item.deskripsi.trim() !== '') {
+        descEl.textContent = item.deskripsi;
+        descBox.classList.remove('d-none');
+    } else {
+        descBox.classList.add('d-none');
+    }
+
+    const container = document.getElementById('previewMediaContainer');
+    container.innerHTML = '';
+
+    const downloadBtn = document.getElementById('previewModalDownloadBtn');
+    if (item.file_path) {
+        downloadBtn.href = item.file_path;
+        downloadBtn.classList.remove('d-none');
+    } else {
+        downloadBtn.classList.add('d-none');
+    }
+
+    if (item.jenis_file === 'youtube' && item.youtube_url) {
+        let ytId = '';
+        const match = item.youtube_url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+        if (match && match[1]) ytId = match[1];
+
+        if (ytId) {
+            container.innerHTML = `<iframe width="100%" height="520" src="https://www.youtube.com/embed/${ytId}?autoplay=1" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius:8px;"></iframe>`;
+        } else {
+            container.innerHTML = `<div class="py-5"><a href="${escapeHtml(item.youtube_url)}" target="_blank" class="btn btn-danger my-4"><i class="bi bi-youtube me-2"></i> Tonton di Youtube</a></div>`;
+        }
+    } else if (item.jenis_file === 'video' && item.file_path) {
+        container.innerHTML = `<video src="${escapeHtml(item.file_path)}" controls autoplay width="100%" style="max-height:520px; border-radius:8px;"></video>`;
+    } else if (item.jenis_file === 'pdf' && item.file_path) {
+        container.innerHTML = `<iframe src="${escapeHtml(item.file_path)}#toolbar=1" width="100%" height="540px" style="border:none; border-radius:8px; background:#fff;"></iframe>`;
+    } else if (item.file_path) {
+        const ext = item.file_path.split('.').pop().toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+            container.innerHTML = `<img src="${escapeHtml(item.file_path)}" class="img-fluid rounded-3 mx-auto d-block" style="max-height:520px;">`;
+        } else {
+            container.innerHTML = `
+                <div class="py-5 text-white">
+                    <i class="bi bi-file-earmark-word fs-1 text-warning mb-2 d-block"></i>
+                    <h6 class="fw-bold mb-2">${escapeHtml(item.judul)}</h6>
+                    <p class="small text-white-50">Pratinjau dokumen Microsoft Office / PPT dapat diakses melalui tombol di bawah.</p>
+                    <a href="${escapeHtml(item.file_path)}" target="_blank" class="btn btn-primary px-4 fw-bold">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Buka File Dokumen
+                    </a>
+                </div>`;
+        }
+    } else {
+        container.innerHTML = `<div class="py-5 text-white"><p class="mb-0">Tidak ada berkas yang dapat ditampilkan.</p></div>`;
+    }
+
+    const modalEl = document.getElementById('modalPreviewMateri');
+    if (modalEl) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        } else if (window.jQuery) {
+            window.jQuery(modalEl).modal('show');
+        }
+    }
+}
+
+function closePreviewModal() {
+    const container = document.getElementById('previewMediaContainer');
+    if (container) container.innerHTML = '';
+    const modalEl = document.getElementById('modalPreviewMateri');
+    if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) inst.hide();
+    }
+}
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>

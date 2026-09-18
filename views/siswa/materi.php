@@ -313,7 +313,7 @@ if (!function_exists('getYouTubeEmbedUrl')) {
                         <!-- Document & Media Viewer Frame -->
                         <div class="border rounded-4 bg-white p-2 shadow-sm overflow-hidden text-center">
                             <?php if ($isPdf): ?>
-                                <iframe src="<?= $filePath ?>#toolbar=0" style="width:100%; height:580px; border:none;" class="rounded-3"></iframe>
+                                <iframe data-src="<?= $filePath ?>#toolbar=0" style="width:100%; height:580px; border:none;" class="rounded-3 lazy-preview-frame"></iframe>
                             <?php elseif ($isImage): ?>
                                 <img src="<?= $filePath ?>" alt="Preview" class="img-fluid rounded-3 mx-auto d-block shadow-sm" style="max-height:550px; object-fit:contain;">
                             <?php elseif ($isVideoFile): ?>
@@ -323,7 +323,7 @@ if (!function_exists('getYouTubeEmbedUrl')) {
                                 </video>
                             <?php else: ?>
                                 <!-- Office documents / fallback Google Viewer -->
-                                <iframe src="https://docs.google.com/gview?url=<?= urlencode($filePath) ?>&embedded=true" style="width:100%; height:580px; border:none;" class="rounded-3"></iframe>
+                                <iframe data-src="https://docs.google.com/gview?url=<?= urlencode($filePath) ?>&embedded=true" style="width:100%; height:580px; border:none;" class="rounded-3 lazy-preview-frame"></iframe>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -405,5 +405,22 @@ if (!function_exists('getYouTubeEmbedUrl')) {
         <?php endif; ?>
     <?php endforeach; ?>
 <?php endif; ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.modal[id^="modalPreviewMateri"]').forEach(function(modal) {
+        modal.addEventListener('show.bs.modal', function() {
+            modal.querySelectorAll('iframe.lazy-preview-frame[data-src]').forEach(function(ifr) {
+                ifr.src = ifr.getAttribute('data-src');
+            });
+        });
+        modal.addEventListener('hidden.bs.modal', function() {
+            modal.querySelectorAll('iframe.lazy-preview-frame[data-src]').forEach(function(ifr) {
+                ifr.src = 'about:blank';
+            });
+        });
+    });
+});
+</script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
