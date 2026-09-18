@@ -507,3 +507,27 @@ CREATE INDEX idx_hasil_quiz_siswa_quiz ON hasil_quiz (siswa_id, quiz_id);
 CREATE INDEX idx_notifikasi_user_read ON notifikasi (user_id, is_read);
 CREATE INDEX idx_chat_sender_receiver ON chat (sender_id, receiver_id, is_read);
 
+-- Supervisi Guru
+CREATE TABLE IF NOT EXISTS supervisi_guru (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    guru_id INT NOT NULL,
+    kepsek_id INT NOT NULL,
+    tanggal_supervisi DATE NOT NULL,
+    mapel_id INT NULL,
+    kelas_id INT NULL,
+    skor_perencanaan DECIMAL(5,2) DEFAULT 0,
+    skor_pelaksanaan DECIMAL(5,2) DEFAULT 0,
+    skor_evaluasi DECIMAL(5,2) DEFAULT 0,
+    skor_kedisiplinan DECIMAL(5,2) DEFAULT 0,
+    nilai_akhir DECIMAL(5,2) DEFAULT 0,
+    predikat VARCHAR(20) DEFAULT 'Baik',
+    catatan_kekuatan TEXT NULL,
+    catatan_perbaikan TEXT NULL,
+    rekomendasi_tindak_lanjut TEXT NULL,
+    status ENUM('draft', 'final') DEFAULT 'final',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_sup_guru (guru_id),
+    INDEX idx_sup_tgl (tanggal_supervisi)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

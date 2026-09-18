@@ -6,6 +6,11 @@ require_once ROOT_PATH . 'models/BaseModel.php';
 
 class ReportModel extends BaseModel {
 
+    public function __construct() {
+        parent::__construct();
+        $this->ensureSupervisiTable();
+    }
+
     public function getAdminStats() {
         $count = function($sql) {
             try {
@@ -671,7 +676,7 @@ class ReportModel extends BaseModel {
                     INDEX idx_sup_tgl (tanggal_supervisi)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
-        } catch (Exception $e) {}
+        } catch (\Throwable $e) {}
     }
 
     public function getSupervisiList($guruId = null) {

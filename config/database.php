@@ -88,6 +88,10 @@ class Database {
             }
         }
 
+        if (self::$conn !== null) {
+            self::ensureCustomTables();
+        }
+
         return self::$conn;
     }
 
@@ -158,6 +162,42 @@ class Database {
             } catch (\Throwable $e) {
                 // Index may already exist or table missing, ignore safely
             }
+        }
+    }
+
+    public static function ensureCustomTables() {
+        if (self::$conn === null) return;
+        static $tablesEnsured = false;
+        if ($tablesEnsured) return;
+        $tablesEnsured = true;
+
+        try {
+            self::$conn->exec("
+                CREATE TABLE IF NOT EXISTS supervisi_guru (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    guru_id INT NOT NULL,
+                    kepsek_id INT NOT NULL,
+                    tanggal_supervisi DATE NOT NULL,
+                    mapel_id INT NULL,
+                    kelas_id INT NULL,
+                    skor_perencanaan DECIMAL(5,2) DEFAULT 0,
+                    skor_pelaksanaan DECIMAL(5,2) DEFAULT 0,
+                    skor_evaluasi DECIMAL(5,2) DEFAULT 0,
+                    skor_kedisiplinan DECIMAL(5,2) DEFAULT 0,
+                    nilai_akhir DECIMAL(5,2) DEFAULT 0,
+                    predikat VARCHAR(20) DEFAULT 'Baik',
+                    catatan_kekuatan TEXT NULL,
+                    catatan_perbaikan TEXT NULL,
+                    rekomendasi_tindak_lanjut TEXT NULL,
+                    status ENUM('draft', 'final') DEFAULT 'final',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_sup_guru (guru_id),
+                    INDEX idx_sup_tgl (tanggal_supervisi)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+        } catch (\Throwable $e) {
+            // Silently ignore if table already exists or DDL restricted
         }
     }
 }

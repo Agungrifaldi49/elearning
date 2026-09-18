@@ -4291,12 +4291,23 @@ class ApiController {
             }
         } elseif ($endpoint === 'guru') {
             try {
+                $reportModel->ensureSupervisiTable();
+                $hasSupervisi = false;
+                try {
+                    $check = $this->db->query("SHOW TABLES LIKE 'supervisi_guru'")->fetch();
+                    $hasSupervisi = !empty($check);
+                } catch (\Throwable $e) {
+                    $hasSupervisi = false;
+                }
+
+                $supervisiNilaiSql = $hasSupervisi ? "(SELECT nilai_akhir FROM supervisi_guru sg WHERE sg.guru_id = g.id ORDER BY tanggal_supervisi DESC LIMIT 1)" : "NULL";
+
                 $guruList = $this->db->query("
                     SELECT g.*, u.username, u.email,
                            (SELECT COUNT(*) FROM materi m WHERE m.guru_id = g.id) as total_materi,
                            (SELECT COUNT(*) FROM tugas t WHERE t.guru_id = g.id) as total_tugas,
                            (SELECT COUNT(*) FROM quiz q WHERE q.guru_id = g.id) as total_quiz,
-                           (SELECT nilai_akhir FROM supervisi_guru sg WHERE sg.guru_id = g.id ORDER BY tanggal_supervisi DESC LIMIT 1) as nilai_supervisi
+                           {$supervisiNilaiSql} as nilai_supervisi
                     FROM guru g
                     JOIN users u ON g.user_id = u.id
                     ORDER BY g.nama_lengkap ASC

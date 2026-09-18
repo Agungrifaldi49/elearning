@@ -23,6 +23,10 @@ class KepsekController {
 
     public function __construct() {
         AuthHelper::requireRole(['Kepala Sekolah', 'Administrator']);
+        try {
+            $reportModel = new ReportModel();
+            $reportModel->ensureSupervisiTable();
+        } catch (\Throwable $e) {}
     }
 
     /**
@@ -45,14 +49,28 @@ class KepsekController {
      * 2. Monitoring Guru & Produktivitas
      */
     public function monitoringGuru() {
+        $reportModel = new ReportModel();
+        $reportModel->ensureSupervisiTable();
         $db = Database::getConnection();
+
+        $hasSupervisi = false;
+        try {
+            $check = $db->query("SHOW TABLES LIKE 'supervisi_guru'")->fetch();
+            $hasSupervisi = !empty($check);
+        } catch (\Throwable $e) {
+            $hasSupervisi = false;
+        }
+
+        $supervisiCountSql = $hasSupervisi ? "(SELECT COUNT(*) FROM supervisi_guru sg WHERE sg.guru_id = g.id)" : "0";
+        $supervisiNilaiSql = $hasSupervisi ? "(SELECT nilai_akhir FROM supervisi_guru sg WHERE sg.guru_id = g.id ORDER BY tanggal_supervisi DESC LIMIT 1)" : "NULL";
+
         $guruList = $db->query("
             SELECT g.*, u.username, u.email,
                    (SELECT COUNT(*) FROM materi m WHERE m.guru_id = g.id) as total_materi,
                    (SELECT COUNT(*) FROM tugas t WHERE t.guru_id = g.id) as total_tugas,
                    (SELECT COUNT(*) FROM quiz q WHERE q.guru_id = g.id) as total_quiz,
-                   (SELECT COUNT(*) FROM supervisi_guru sg WHERE sg.guru_id = g.id) as total_supervisi,
-                   (SELECT nilai_akhir FROM supervisi_guru sg WHERE sg.guru_id = g.id ORDER BY tanggal_supervisi DESC LIMIT 1) as nilai_supervisi_terakhir,
+                   {$supervisiCountSql} as total_supervisi,
+                   {$supervisiNilaiSql} as nilai_supervisi_terakhir,
                    (SELECT GROUP_CONCAT(DISTINCT k.nama_kelas SEPARATOR ', ') 
                     FROM jadwal j JOIN kelas k ON j.kelas_id = k.id WHERE j.guru_id = g.id) as kelas_ajar
             FROM guru g
