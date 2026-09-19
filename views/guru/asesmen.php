@@ -291,6 +291,7 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                     </table>
                 </div>
             </div>
+        </div>
     <?php endif; ?>
 
     <!-- ======================================================================= -->

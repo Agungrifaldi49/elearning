@@ -12,31 +12,68 @@ error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_WARNING);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
-// Global Exception Handler to prevent raw HTTP 500 error screens
+// Global Exception Handler to prevent raw HTTP 500 error screens and LiteSpeed error overrides
 set_exception_handler(function($exception) {
-    error_log("Uncaught Exception: " . $exception->getMessage() . " in " . $exception->getFile() . ":" . $exception->getLine());
-    if (headers_sent() === false) {
-        http_response_code(500);
-    }
+    error_log("Uncaught Exception: " . $exception->getMessage() . " in " . $exception->getFile() . ":" . $exception->getLine() . "\n" . $exception->getTraceAsString());
+    
     $isJson = isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false;
     if ($isJson || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
-        header('Content-Type: application/json; charset=utf-8');
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(200);
+        }
         echo json_encode([
             'status' => false,
             'message' => 'Terjadi kendala pada sistem: ' . $exception->getMessage()
         ]);
         exit();
     }
+
+    if (!headers_sent()) {
+        header('Content-Type: text/html; charset=utf-8');
+        http_response_code(200); // Send 200 so LiteSpeed does NOT swallow the error page with generic HTTP 500
+    }
     $detailMsg = htmlspecialchars($exception->getMessage());
-    echo "<div style='font-family:sans-serif; padding:30px; max-width:640px; margin:50px auto; background:#fff3cd; color:#856404; border:1px solid #ffeeba; border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.05); text-align:center;'>
+    $fileInfo = htmlspecialchars(basename($exception->getFile()) . ':' . $exception->getLine());
+    echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Pemberitahuan Sistem</title><meta name='viewport' content='width=device-width, initial-scale=1'></head><body style='background:#f8fafc; margin:0; padding:20px;'>
+    <div style='font-family:sans-serif; padding:30px; max-width:640px; margin:40px auto; background:#fff3cd; color:#856404; border:1px solid #ffeeba; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); text-align:center;'>
         <h2 style='margin-top:0; color:#856404;'>Permintaan Sedang Diproses / Kendala Sementara</h2>
-        <p>Sistem sedang melayani lalu lintas yang padat atau terdapat penyesuaian layanan.</p>
-        <div style='background:#fff; border:1px solid #f5c6cb; padding:10px; border-radius:6px; margin:15px 0; text-align:left; font-size:13px; color:#721c24; word-break:break-all;'>
-            <strong>Detail Pesan:</strong> {$detailMsg}
+        <p style='color:#666;'>Sistem sedang melayani lalu lintas yang padat atau terdapat penyesuaian layanan.</p>
+        <div style='background:#fff; border:1px solid #f5c6cb; padding:12px; border-radius:8px; margin:18px 0; text-align:left; font-size:13px; color:#721c24; word-break:break-all;'>
+            <strong>Detail Pesan:</strong> {$detailMsg} ({$fileInfo})
         </div>
-        <button onclick='window.location.reload()' style='background:#4f46e5; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer; margin-top:10px;'>Muat Ulang Halaman</button>
-    </div>";
+        <div style='display:flex; justify-content:center; gap:10px;'>
+            <button onclick='window.location.reload()' style='background:#4f46e5; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer;'>Muat Ulang Halaman</button>
+            <a href='javascript:history.back()' style='background:#6b7280; color:white; text-decoration:none; padding:10px 20px; border-radius:6px; font-weight:600; display:inline-block;'>Kembali</a>
+        </div>
+    </div></body></html>";
     exit();
+});
+
+// Catch fatal shutdown errors (E_ERROR, E_PARSE, etc.)
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        error_log("Fatal Error: " . $error['message'] . " in " . $error['file'] . ":" . $error['line']);
+        if (!headers_sent()) {
+            header('Content-Type: text/html; charset=utf-8');
+            http_response_code(200);
+        }
+        $detailMsg = htmlspecialchars($error['message'] . ' on line ' . $error['line'] . ' in ' . basename($error['file']));
+        echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Pemberitahuan Sistem</title><meta name='viewport' content='width=device-width, initial-scale=1'></head><body style='background:#f8fafc; margin:0; padding:20px;'>
+        <div style='font-family:sans-serif; padding:30px; max-width:640px; margin:40px auto; background:#fff3cd; color:#856404; border:1px solid #ffeeba; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.08); text-align:center;'>
+            <h2 style='margin-top:0; color:#856404;'>Permintaan Sedang Diproses / Kendala Sementara</h2>
+            <p style='color:#666;'>Terjadi penyesuaian teknis pada sistem.</p>
+            <div style='background:#fff; border:1px solid #f5c6cb; padding:12px; border-radius:8px; margin:18px 0; text-align:left; font-size:13px; color:#721c24; word-break:break-all;'>
+                <strong>Detail Pesan:</strong> {$detailMsg}
+            </div>
+            <div style='display:flex; justify-content:center; gap:10px;'>
+                <button onclick='window.location.reload()' style='background:#4f46e5; color:white; border:none; padding:10px 20px; border-radius:6px; font-weight:600; cursor:pointer;'>Muat Ulang Halaman</button>
+                <a href='javascript:history.back()' style='background:#6b7280; color:white; text-decoration:none; padding:10px 20px; border-radius:6px; font-weight:600; display:inline-block;'>Kembali</a>
+            </div>
+        </div></body></html>";
+        exit();
+    }
 });
 
 // Session Security & Configuration (Extended 8 hours lifetime for exams & LMS activity)
