@@ -1,0 +1,930 @@
+<?php
+/**
+ * AssessmentModel
+ * Mengelola arsitektur CP -> TP -> KKTP -> ASESMEN -> NILAI -> STATUS KETERCAPAIAN (1/0)
+ * Mendukung Multi-TP, Remedial dengan histori nilai, Rekap Kelas & Siswa, serta Integrasi E-Rapor.
+ */
+
+require_once ROOT_PATH . 'models/BaseModel.php';
+
+class AssessmentModel extends BaseModel {
+
+    // =========================================================================
+    // 1. KKTP (KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN)
+    // =========================================================================
+
+    /**
+     * Ambil data KKTP aktif untuk suatu TP
+     */
+    public function getKktpByTp($tpId) {
+        $tpId = (int)$tpId;
+        $stmt = $this->db->prepare("
+            SELECT * FROM kktp 
+            WHERE tp_id = ? AND status = 'aktif' 
+            ORDER BY versi DESC, id DESC LIMIT 1
+        ");
+        $stmt->execute([$tpId]);
+        $kktp = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$kktp) {
+            // Default KKTP fallback: Interval Nilai standar 75.00
+            return [
+                'id' => null,
+                'tp_id' => $tpId,
+                'metode' => 'interval_nilai',
+                'nilai_minimum' => 75.00,
+                'target_indikator_count' => 0,
+                'deskripsi_kriteria' => 'Batas Ketercapaian Minimum 75.00',
+                'versi' => 1,
+                'status' => 'aktif',
+                'indikator' => []
+            ];
+        }
+
+        // Ambil indikator jika ada
+        $stmtInd = $this->db->prepare("
+            SELECT * FROM kktp_indikator 
+            WHERE kktp_id = ? 
+            ORDER BY urutan ASC, id ASC
+        ");
+        $stmtInd->execute([(int)$kktp['id']]);
+        $kktp['indikator'] = $stmtInd->fetchAll(PDO::FETCH_ASSOC);
+
+        return $kktp;
+    }
+
+    /**
+     * Ambil data KKTP berdasarkan ID langsung (bisa versi lama/arsip untuk histori)
+     */
+    public function getKktpById($kktpId) {
+        $stmt = $this->db->prepare("SELECT * FROM kktp WHERE id = ?");
+        $stmt->execute([(int)$kktpId]);
+        $kktp = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$kktp) return null;
+
+        $stmtInd = $this->db->prepare("SELECT * FROM kktp_indikator WHERE kktp_id = ? ORDER BY urutan ASC, id ASC");
+        $stmtInd->execute([(int)$kktp['id']]);
+        $kktp['indikator'] = $stmtInd->fetchAll(PDO::FETCH_ASSOC);
+
+        return $kktp;
+    }
+
+    /**
+     * Simpan / Perbarui KKTP untuk suatu TP
+     * Jika KKTP sudah digunakan dalam asesmen/nilai yang tersimpan, buat versi baru (arsip versi lama)
+     * untuk menjaga integritas data histori pembelajaran.
+     */
+    public function saveKktp($tpId, $data) {
+        $tpId = (int)$tpId;
+        $metode = in_array($data['metode'] ?? '', ['interval_nilai', 'skala_nilai', 'rubrik', 'checklist']) ? $data['metode'] : 'interval_nilai';
+        $nilaiMinimum = floatval($data['nilai_minimum'] ?? 75.00);
+        $targetIndikator = (int)($data['target_indikator_count'] ?? 0);
+        $deskripsi = trim($data['deskripsi_kriteria'] ?? '');
+        $indikatorList = $data['indikator'] ?? [];
+
+        // Cek KKTP aktif saat ini
+        $stmtCur = $this->db->prepare("SELECT * FROM kktp WHERE tp_id = ? AND status = 'aktif' ORDER BY versi DESC LIMIT 1");
+        $stmtCur->execute([$tpId]);
+        $current = $stmtCur->fetch(PDO::FETCH_ASSOC);
+
+        $kktpId = null;
+        if ($current) {
+            // Cek apakah KKTP ini sudah pernah dipakai di asesmen atau nilai_asesmen_tp
+            $chkUsage = $this->db->prepare("
+                SELECT COUNT(*) FROM nilai_asesmen_tp WHERE kktp_id = ? 
+                UNION ALL 
+                SELECT COUNT(*) FROM asesmen_tp WHERE kktp_id = ?
+            ");
+            $chkUsage->execute([(int)$current['id'], (int)$current['id']]);
+            $counts = $chkUsage->fetchAll(PDO::FETCH_COLUMN);
+            $isUsed = array_sum($counts) > 0;
+
+            if ($isUsed) {
+                // Arsipkan KKTP lama untuk melindungi histori penilaian
+                $this->db->prepare("UPDATE kktp SET status = 'arsip' WHERE id = ?")->execute([(int)$current['id']]);
+                
+                // Buat versi baru
+                $newVersi = (int)$current['versi'] + 1;
+                $stmtIns = $this->db->prepare("
+                    INSERT INTO kktp (tp_id, metode, nilai_minimum, target_indikator_count, deskripsi_kriteria, versi, status)
+                    VALUES (?, ?, ?, ?, ?, ?, 'aktif')
+                ");
+                $stmtIns->execute([$tpId, $metode, $nilaiMinimum, $targetIndikator, $deskripsi, $newVersi]);
+                $kktpId = (int)$this->db->lastInsertId();
+            } else {
+                // Belum pernah dipakai penilaian, update langsung
+                $stmtUpd = $this->db->prepare("
+                    UPDATE kktp 
+                    SET metode = ?, nilai_minimum = ?, target_indikator_count = ?, deskripsi_kriteria = ?
+                    WHERE id = ?
+                ");
+                $stmtUpd->execute([$metode, $nilaiMinimum, $targetIndikator, $deskripsi, (int)$current['id']]);
+                $kktpId = (int)$current['id'];
+
+                // Hapus indikator lama sebelum simpan ulang
+                $this->db->prepare("DELETE FROM kktp_indikator WHERE kktp_id = ?")->execute([$kktpId]);
+            }
+        } else {
+            // Belum ada, insert baru
+            $stmtIns = $this->db->prepare("
+                INSERT INTO kktp (tp_id, metode, nilai_minimum, target_indikator_count, deskripsi_kriteria, versi, status)
+                VALUES (?, ?, ?, ?, ?, 1, 'aktif')
+            ");
+            $stmtIns->execute([$tpId, $metode, $nilaiMinimum, $targetIndikator, $deskripsi]);
+            $kktpId = (int)$this->db->lastInsertId();
+        }
+
+        // Simpan indikator jika ada (terutama untuk checklist / rubrik)
+        if ($kktpId && !empty($indikatorList) && is_array($indikatorList)) {
+            $stmtInd = $this->db->prepare("
+                INSERT INTO kktp_indikator (kktp_id, nama_indikator, deskripsi_kriteria, bobot, urutan)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            $urutan = 1;
+            foreach ($indikatorList as $ind) {
+                $nama = trim(is_array($ind) ? ($ind['nama_indikator'] ?? '') : (string)$ind);
+                if (!empty($nama)) {
+                    $desc = is_array($ind) ? trim($ind['deskripsi_kriteria'] ?? '') : '';
+                    $bobot = is_array($ind) ? floatval($ind['bobot'] ?? 1.00) : 1.00;
+                    $stmtInd->execute([$kktpId, $nama, $desc, $bobot, $urutan++]);
+                }
+            }
+        }
+
+        return [
+            'status' => true,
+            'kktp_id' => $kktpId,
+            'message' => 'Konfigurasi KKTP berhasil disimpan.'
+        ];
+    }
+
+    /**
+     * Evaluasi ketercapaian secara dinamis berdasarkan konfigurasi KKTP
+     * TIDAK BOLEH hardcoded ($nilai >= 75)!
+     * Mengembalikan status_code (1 atau 0) dan status_ketercapaian ('Tercapai' / 'Belum Tercapai')
+     */
+    public function evaluateKetercapaian($kktp, $scoreOrInput) {
+        $metode = $kktp['metode'] ?? 'interval_nilai';
+        if ($metode === 'skala_nilai') $metode = 'interval_nilai';
+        $status = 0;
+        $keterangan = '';
+
+        if ($metode === 'interval_nilai') {
+            $score = floatval(is_array($scoreOrInput) ? ($scoreOrInput['nilai'] ?? 0) : $scoreOrInput);
+            $minScore = floatval($kktp['nilai_minimum'] ?? 75.00);
+            $status = ($score >= $minScore) ? 1 : 0;
+            $keterangan = $status ? "Nilai {$score} memenuhi ambang batas ({$minScore})" : "Nilai {$score} di bawah ambang batas ({$minScore})";
+        } 
+        elseif ($metode === 'rubrik') {
+            // Rubrik berjenjang: skor angka atau bobot jenjang
+            $score = floatval(is_array($scoreOrInput) ? ($scoreOrInput['nilai'] ?? 0) : $scoreOrInput);
+            $minScore = floatval($kktp['nilai_minimum'] ?? 75.00);
+            $status = ($score >= $minScore) ? 1 : 0;
+            $keterangan = $status ? "Skor rubrik {$score} mencapai kriteria tuntas (min {$minScore})" : "Skor rubrik {$score} belum mencapai kriteria tuntas (min {$minScore})";
+        } 
+        elseif ($metode === 'checklist') {
+            // Checklist indikator: menghitung jumlah indikator yang dicentang
+            $targetCount = (int)($kktp['target_indikator_count'] ?? 0);
+            if ($targetCount <= 0 && !empty($kktp['indikator'])) {
+                $targetCount = count($kktp['indikator']);
+            }
+            if ($targetCount <= 0) $targetCount = 1;
+
+            $checkedList = [];
+            if (is_array($scoreOrInput) && isset($scoreOrInput['checked_indicators'])) {
+                $checkedList = (array)$scoreOrInput['checked_indicators'];
+            } elseif (is_numeric($scoreOrInput)) {
+                // Jika input berupa skor persentase/indikator
+                $score = floatval($scoreOrInput);
+                $minScore = floatval($kktp['nilai_minimum'] ?? 75.00);
+                $status = ($score >= $minScore) ? 1 : 0;
+                $keterangan = $status ? "Tercapai berdasarkan checklist ({$score}%)" : "Belum tercapai ({$score}%)";
+                return [
+                    'status_code' => $status,
+                    'status_ketercapaian' => $status ? 'Tercapai' : 'Belum Tercapai',
+                    'keterangan' => $keterangan,
+                    'metode' => $metode
+                ];
+            }
+
+            $countAchieved = count($checkedList);
+            $status = ($countAchieved >= $targetCount) ? 1 : 0;
+            $keterangan = "Tercapai {$countAchieved} dari target {$targetCount} indikator";
+        }
+
+        return [
+            'status_code' => $status,
+            'status_ketercapaian' => $status ? 'Tercapai' : 'Belum Tercapai',
+            'keterangan' => $keterangan,
+            'metode' => $metode
+        ];
+    }
+
+    // =========================================================================
+    // 2. CP & TP LIFECYCLE (ARSIP & BANK TP / COPY)
+    // =========================================================================
+
+    /**
+     * Arsipkan Capaian Pembelajaran (CP) - aman untuk histori nilai
+     */
+    public function archiveCp($cpId) {
+        $stmt = $this->db->prepare("UPDATE capaian_pembelajaran SET status = 'arsip' WHERE id = ?");
+        $res = $stmt->execute([(int)$cpId]);
+        return ['status' => (bool)$res, 'message' => 'Capaian Pembelajaran (CP) berhasil diarsipkan.'];
+    }
+
+    /**
+     * Arsipkan Tujuan Pembelajaran (TP)
+     */
+    public function archiveTp($tpId) {
+        $stmt = $this->db->prepare("UPDATE tujuan_pembelajaran SET status = 'arsip' WHERE id = ?");
+        $res = $stmt->execute([(int)$tpId]);
+        return ['status' => (bool)$res, 'message' => 'Tujuan Pembelajaran (TP) berhasil diarsipkan.'];
+    }
+
+    /**
+     * Salin TP dari CP Sumber ke CP Tujuan (misal antar tahun ajaran / kelas)
+     */
+    public function copyTp($sourceCpId, $targetCpId, $guruId = null, $tahunAjaranId = null) {
+        $sourceCpId = (int)$sourceCpId;
+        $targetCpId = (int)$targetCpId;
+
+        // Ambil TP dari source CP yang aktif
+        $stmt = $this->db->prepare("
+            SELECT * FROM tujuan_pembelajaran 
+            WHERE cp_id = ? AND status != 'arsip'
+            ORDER BY urutan ASC, kode_tp ASC
+        ");
+        $stmt->execute([$sourceCpId]);
+        $tps = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($tps)) {
+            return ['status' => false, 'message' => 'Tidak ada Tujuan Pembelajaran pada CP sumber yang dapat disalin.'];
+        }
+
+        $insertedCount = 0;
+        $stmtChk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ?");
+        $stmtIns = $this->db->prepare("
+            INSERT INTO tujuan_pembelajaran (cp_id, guru_id, kode_tp, materi_pokok, deskripsi, urutan, status, tahun_ajaran_id)
+            VALUES (?, ?, ?, ?, ?, ?, 'aktif', ?)
+        ");
+
+        foreach ($tps as $tp) {
+            $stmtChk->execute([$targetCpId, $tp['kode_tp']]);
+            if (!$stmtChk->fetch()) {
+                $targetGuru = $guruId ?: $tp['guru_id'];
+                $stmtIns->execute([
+                    $targetCpId,
+                    $targetGuru,
+                    $tp['kode_tp'],
+                    $tp['materi_pokok'],
+                    $tp['deskripsi'],
+                    $tp['urutan'] ?? 1,
+                    $tahunAjaranId
+                ]);
+                $newTpId = (int)$this->db->lastInsertId();
+                $insertedCount++;
+
+                // Duplikasi KKTP juga jika ada
+                $kktp = $this->getKktpByTp($tp['id']);
+                if ($kktp && !empty($kktp['id'])) {
+                    $this->saveKktp($newTpId, $kktp);
+                }
+            }
+        }
+
+        return [
+            'status' => true,
+            'count' => $insertedCount,
+            'message' => "Berhasil menyalin {$insertedCount} Tujuan Pembelajaran ke CP target."
+        ];
+    }
+
+    // =========================================================================
+    // 3. ASESMEN MULTI-TP (1 Asesmen Mengukur Banyak TP)
+    // =========================================================================
+
+    /**
+     * Buat Asesmen Pembelajaran yang dapat mengukur satu atau beberapa TP sekaligus
+     */
+    public function createAsesmenMultiTp($data, $tpIds = [], $tpWeights = []) {
+        $rombelId = (int)($data['rombel_id'] ?? 0);
+        $mapelId = (int)($data['mapel_id'] ?? 0);
+        $guruId = (int)($data['guru_id'] ?? 0);
+        $kurikulumId = (int)($data['kurikulum_id'] ?? 0);
+        $tahunAjaranId = (int)($data['tahun_ajaran_id'] ?? 0);
+        $semester = (int)($data['semester'] ?? 1);
+        $namaAsesmen = trim($data['nama_asesmen'] ?? '');
+        $jenisAsesmen = trim($data['jenis_asesmen'] ?? 'formatif');
+        $tanggal = !empty($data['tanggal']) ? $data['tanggal'] : date('Y-m-d');
+        $nilaiMaks = floatval($data['nilai_maksimum'] ?? 100.00);
+        $bobot = floatval($data['bobot'] ?? 1.00);
+
+        if (empty($namaAsesmen)) {
+            return ['status' => false, 'message' => 'Nama asesmen wajib diisi.'];
+        }
+        if (empty($tpIds) || !is_array($tpIds)) {
+            return ['status' => false, 'message' => 'Minimal 1 Tujuan Pembelajaran (TP) harus dipilih.'];
+        }
+
+        // Cari CP ID dari TP pertama
+        $primaryTpId = (int)$tpIds[0];
+        $stmtCp = $this->db->prepare("SELECT cp_id FROM tujuan_pembelajaran WHERE id = ?");
+        $stmtCp->execute([$primaryTpId]);
+        $primaryCpId = (int)$stmtCp->fetchColumn();
+
+        // 1. Simpan ke tabel asesmen utama
+        $stmt = $this->db->prepare("
+            INSERT INTO asesmen (tahun_ajaran_id, semester, rombel_id, mapel_id, kurikulum_id, guru_id, cp_id, tp_id, jenis_asesmen, nama_asesmen, tanggal, nilai_maksimum, bobot)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([
+            $tahunAjaranId,
+            $semester,
+            $rombelId,
+            $mapelId,
+            $kurikulumId,
+            $guruId,
+            $primaryCpId ?: null,
+            $primaryTpId,
+            $jenisAsesmen,
+            $namaAsesmen,
+            $tanggal,
+            $nilaiMaks,
+            $bobot
+        ]);
+        $asesmenId = (int)$this->db->lastInsertId();
+
+        // 2. Hubungkan ke asesmen_tp untuk setiap TP yang diukur beserta snapshot kktp_id
+        $stmtAtp = $this->db->prepare("
+            INSERT INTO asesmen_tp (asesmen_id, tp_id, kktp_id, bobot_tp, nilai_maksimum)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+
+        foreach ($tpIds as $tId) {
+            $tId = (int)$tId;
+            if ($tId <= 0) continue;
+
+            $kktp = $this->getKktpByTp($tId);
+            $kktpId = !empty($kktp['id']) ? (int)$kktp['id'] : null;
+            $bTp = isset($tpWeights[$tId]) ? floatval($tpWeights[$tId]) : 100.00;
+
+            $stmtAtp->execute([$asesmenId, $tId, $kktpId, $bTp, $nilaiMaks]);
+        }
+
+        return [
+            'status' => true,
+            'asesmen_id' => $asesmenId,
+            'message' => "Asesmen '{$namaAsesmen}' berhasil dibuat dengan " . count($tpIds) . " Tujuan Pembelajaran."
+        ];
+    }
+
+    /**
+     * Ambil data asesmen beserta seluruh TP yang diukurnya
+     */
+    public function getAsesmenById($id) {
+        $id = (int)$id;
+        $stmt = $this->db->prepare("
+            SELECT a.*, k.nama_kelas, k.nama_kelas as nama_rombel, k.tingkat, m.nama_mapel, g.nama_lengkap as nama_guru,
+                   kur.nama as nama_kurikulum, kur.kode as kode_kurikulum
+            FROM asesmen a
+            JOIN kelas k ON a.rombel_id = k.id
+            JOIN mata_pelajaran m ON a.mapel_id = m.id
+            LEFT JOIN guru g ON a.guru_id = g.id
+            LEFT JOIN kurikulum kur ON a.kurikulum_id = kur.id
+            WHERE a.id = ?
+        ");
+        $stmt->execute([$id]);
+        $asesmen = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$asesmen) return null;
+
+        // Ambil daftar TP yang diukur
+        $stmtTp = $this->db->prepare("
+            SELECT atp.*, tp.kode_tp, tp.deskripsi as deskripsi_tp, tp.materi_pokok,
+                   k.metode as kktp_metode, k.nilai_minimum as kktp_nilai_min, 
+                   k.target_indikator_count as kktp_target_ind, k.deskripsi_kriteria as kktp_kriteria
+            FROM asesmen_tp atp
+            JOIN tujuan_pembelajaran tp ON atp.tp_id = tp.id
+            LEFT JOIN kktp k ON atp.kktp_id = k.id
+            WHERE atp.asesmen_id = ?
+            ORDER BY tp.urutan ASC, tp.kode_tp ASC
+        ");
+        $stmtTp->execute([$id]);
+        $tps = $stmtTp->fetchAll(PDO::FETCH_ASSOC);
+
+        // Jika tidak ada di asesmen_tp (legacy single TP), buatkan mapping dari a.tp_id
+        if (empty($tps) && !empty($asesmen['tp_id'])) {
+            $kktp = $this->getKktpByTp($asesmen['tp_id']);
+            $stmtSingle = $this->db->prepare("SELECT kode_tp, deskripsi as deskripsi_tp, materi_pokok FROM tujuan_pembelajaran WHERE id = ?");
+            $stmtSingle->execute([(int)$asesmen['tp_id']]);
+            $singleTp = $stmtSingle->fetch(PDO::FETCH_ASSOC);
+            if ($singleTp) {
+                $tps[] = [
+                    'id' => null,
+                    'asesmen_id' => $id,
+                    'tp_id' => (int)$asesmen['tp_id'],
+                    'kktp_id' => $kktp['id'] ?? null,
+                    'bobot_tp' => 100.00,
+                    'nilai_maksimum' => $asesmen['nilai_maksimum'],
+                    'kode_tp' => $singleTp['kode_tp'],
+                    'deskripsi_tp' => $singleTp['deskripsi_tp'],
+                    'materi_pokok' => $singleTp['materi_pokok'],
+                    'kktp_metode' => $kktp['metode'] ?? 'interval_nilai',
+                    'kktp_nilai_min' => $kktp['nilai_minimum'] ?? 75.00,
+                    'kktp_target_ind' => $kktp['target_indikator_count'] ?? 0,
+                    'kktp_kriteria' => $kktp['deskripsi_kriteria'] ?? ''
+                ];
+            }
+        }
+
+        $asesmen['tujuan_pembelajaran'] = $tps;
+        return $asesmen;
+    }
+
+    /**
+     * Ambil daftar asesmen dengan filter
+     */
+    public function getAsesmenList($filters = []) {
+        $sql = "
+            SELECT a.*, k.nama_kelas, k.nama_kelas as nama_rombel, k.tingkat, m.nama_mapel, g.nama_lengkap as nama_guru,
+                   (SELECT COUNT(*) FROM asesmen_tp atp WHERE atp.asesmen_id = a.id) as total_tp,
+                   (SELECT COUNT(DISTINCT siswa_id) FROM nilai_asesmen_tp natp WHERE natp.asesmen_id = a.id) as total_siswa_dinilai
+            FROM asesmen a
+            JOIN kelas k ON a.rombel_id = k.id
+            JOIN mata_pelajaran m ON a.mapel_id = m.id
+            LEFT JOIN guru g ON a.guru_id = g.id
+            WHERE 1=1
+        ";
+        $params = [];
+
+        if (!empty($filters['guru_id'])) {
+            $sql .= " AND a.guru_id = ?";
+            $params[] = (int)$filters['guru_id'];
+        }
+        if (!empty($filters['rombel_id'])) {
+            $sql .= " AND a.rombel_id = ?";
+            $params[] = (int)$filters['rombel_id'];
+        }
+        if (!empty($filters['mapel_id'])) {
+            $sql .= " AND a.mapel_id = ?";
+            $params[] = (int)$filters['mapel_id'];
+        }
+        if (!empty($filters['tahun_ajaran_id'])) {
+            $sql .= " AND a.tahun_ajaran_id = ?";
+            $params[] = (int)$filters['tahun_ajaran_id'];
+        }
+        if (!empty($filters['semester'])) {
+            $sql .= " AND a.semester = ?";
+            $params[] = (int)$filters['semester'];
+        }
+
+        $sql .= " ORDER BY a.tanggal DESC, a.id DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // =========================================================================
+    // 4. PENILAIAN SISWA BERBASIS TP & STATUS KETERCAPAIAN (1/0) + REMEDIAL
+    // =========================================================================
+
+    /**
+     * Input atau update nilai siswa per TP untuk asesmen tertentu
+     * Menyimpan nilai asli dan status ketercapaian (1 atau 0)
+     * Mendukung REMEDIAL: mempertahankan nilai_awal dan menandai is_remedial = 1
+     */
+    public function inputNilaiSiswaPerTp($asesmenId, $tpId, $siswaId, $nilaiAsli, $isRemedial = false, $catatan = '', $extra = []) {
+        $asesmenId = (int)$asesmenId;
+        $tpId = (int)$tpId;
+        $siswaId = (int)$siswaId;
+        $nilaiAsli = floatval($nilaiAsli);
+
+        // Ambil asesmen_tp row
+        $stmtAtp = $this->db->prepare("SELECT id, kktp_id, nilai_maksimum FROM asesmen_tp WHERE asesmen_id = ? AND tp_id = ? LIMIT 1");
+        $stmtAtp->execute([$asesmenId, $tpId]);
+        $atp = $stmtAtp->fetch(PDO::FETCH_ASSOC);
+
+        $asesmenTpId = $atp ? (int)$atp['id'] : null;
+        $kktpId = $atp && !empty($atp['kktp_id']) ? (int)$atp['kktp_id'] : null;
+        $nilaiMaks = $atp ? floatval($atp['nilai_maksimum']) : 100.00;
+
+        // Ambil data KKTP untuk evaluasi
+        $kktp = null;
+        if ($kktpId) {
+            $kktp = $this->getKktpById($kktpId);
+        }
+        if (!$kktp) {
+            $kktp = $this->getKktpByTp($tpId);
+            $kktpId = $kktp['id'] ?? null;
+        }
+
+        // Evaluasi status ketercapaian secara dinamis
+        $evalInput = $nilaiAsli;
+        if (!empty($extra['checked_indicators'])) {
+            $evalInput = ['checked_indicators' => (array)$extra['checked_indicators'], 'nilai' => $nilaiAsli];
+        }
+        $eval = $this->evaluateKetercapaian($kktp, $evalInput);
+
+        $statusCode = (int)$eval['status_code']; // 1 (tercapai) atau 0 (belum tercapai)
+        $statusKetercapaian = $eval['status_ketercapaian']; // 'Tercapai' atau 'Belum Tercapai'
+        $indikatorIdsStr = !empty($extra['checked_indicators']) ? implode(',', (array)$extra['checked_indicators']) : null;
+
+        // Cek record nilai yang sudah ada
+        $stmtCur = $this->db->prepare("
+            SELECT id, nilai_asli, nilai_awal, is_remedial 
+            FROM nilai_asesmen_tp 
+            WHERE asesmen_id = ? AND tp_id = ? AND siswa_id = ?
+            LIMIT 1
+        ");
+        $stmtCur->execute([$asesmenId, $tpId, $siswaId]);
+        $current = $stmtCur->fetch(PDO::FETCH_ASSOC);
+
+        if ($current) {
+            $recordId = (int)$current['id'];
+            if ($isRemedial) {
+                // Preservasi nilai awal jika belum pernah tercatat
+                $nilaiAwal = ($current['nilai_awal'] !== null) ? floatval($current['nilai_awal']) : floatval($current['nilai_asli']);
+                $stmtUpd = $this->db->prepare("
+                    UPDATE nilai_asesmen_tp
+                    SET nilai_asli = ?, nilai_awal = ?, is_remedial = 1, 
+                        status_code = ?, status_ketercapaian = ?, 
+                        kktp_id = ?, indikator_tercapai_ids = ?, catatan = ?
+                    WHERE id = ?
+                ");
+                $stmtUpd->execute([$nilaiAsli, $nilaiAwal, $statusCode, $statusKetercapaian, $kktpId, $indikatorIdsStr, $catatan, $recordId]);
+            } else {
+                // Update nilai normal biasa
+                $stmtUpd = $this->db->prepare("
+                    UPDATE nilai_asesmen_tp
+                    SET nilai_asli = ?, nilai_awal = ?, is_remedial = 0, 
+                        status_code = ?, status_ketercapaian = ?, 
+                        kktp_id = ?, indikator_tercapai_ids = ?, catatan = ?
+                    WHERE id = ?
+                ");
+                $stmtUpd->execute([$nilaiAsli, $nilaiAsli, $statusCode, $statusKetercapaian, $kktpId, $indikatorIdsStr, $catatan, $recordId]);
+            }
+        } else {
+            // Insert baru
+            $nilaiAwal = $isRemedial ? floatval($extra['nilai_awal'] ?? $nilaiAsli) : $nilaiAsli;
+            $remedialFlag = $isRemedial ? 1 : 0;
+
+            $stmtIns = $this->db->prepare("
+                INSERT INTO nilai_asesmen_tp (
+                    asesmen_id, asesmen_tp_id, tp_id, siswa_id, kktp_id, 
+                    nilai_asli, nilai_maksimum, status_code, status_ketercapaian, 
+                    indikator_tercapai_ids, is_remedial, nilai_awal, catatan
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmtIns->execute([
+                $asesmenId,
+                $asesmenTpId,
+                $tpId,
+                $siswaId,
+                $kktpId,
+                $nilaiAsli,
+                $nilaiMaks,
+                $statusCode,
+                $statusKetercapaian,
+                $indikatorIdsStr,
+                $remedialFlag,
+                $nilaiAwal,
+                $catatan
+            ]);
+        }
+
+        // Sinkronisasi ke tabel nilai_asesmen_siswa legacy (composite average)
+        $this->syncLegacyNilaiAsesmen($asesmenId, $siswaId);
+
+        return [
+            'status' => true,
+            'status_code' => $statusCode,
+            'status_ketercapaian' => $statusKetercapaian,
+            'nilai_asli' => $nilaiAsli,
+            'is_remedial' => (bool)$isRemedial,
+            'message' => "Nilai TP berhasil disimpan. Status: {$statusKetercapaian} ({$statusCode})"
+        ];
+    }
+
+    /**
+     * Sinkronkan rata-rata nilai per TP ke tabel legacy nilai_asesmen_siswa
+     */
+    private function syncLegacyNilaiAsesmen($asesmenId, $siswaId) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT AVG(nilai_asli) as rata_nilai 
+                FROM nilai_asesmen_tp 
+                WHERE asesmen_id = ? AND siswa_id = ?
+            ");
+            $stmt->execute([(int)$asesmenId, (int)$siswaId]);
+            $avgScore = $stmt->fetchColumn();
+
+            if ($avgScore !== false && $avgScore !== null) {
+                $chk = $this->db->prepare("SELECT id FROM nilai_asesmen_siswa WHERE asesmen_id = ? AND siswa_id = ?");
+                $chk->execute([(int)$asesmenId, (int)$siswaId]);
+                if ($chk->fetch()) {
+                    $this->db->prepare("UPDATE nilai_asesmen_siswa SET nilai = ? WHERE asesmen_id = ? AND siswa_id = ?")
+                             ->execute([round($avgScore, 2), (int)$asesmenId, (int)$siswaId]);
+                } else {
+                    $this->db->prepare("INSERT INTO nilai_asesmen_siswa (asesmen_id, siswa_id, nilai) VALUES (?, ?, ?)")
+                             ->execute([(int)$asesmenId, (int)$siswaId, round($avgScore, 2)]);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Silently pass sync if legacy table behaves differently
+        }
+    }
+
+    /**
+     * Ambil matriks nilai seluruh siswa dalam suatu asesmen (berdasarkan daftar TP yang diukur)
+     */
+    public function getNilaiMatrixByAsesmen($asesmenId) {
+        $asesmen = $this->getAsesmenById($asesmenId);
+        if (!$asesmen) return null;
+
+        $rombelId = (int)$asesmen['rombel_id'];
+
+        // Ambil daftar siswa dalam rombel/kelas
+        $stmtSiswa = $this->db->prepare("
+            SELECT s.id as siswa_id, s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin
+            FROM siswa s
+            WHERE s.kelas_id = ?
+            ORDER BY s.nama_lengkap ASC
+        ");
+        $stmtSiswa->execute([$rombelId]);
+        $siswaList = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
+
+        // Ambil semua skor TP yang sudah tersimpan untuk asesmen ini
+        $stmtScores = $this->db->prepare("
+            SELECT * FROM nilai_asesmen_tp 
+            WHERE asesmen_id = ?
+        ");
+        $stmtScores->execute([$asesmenId]);
+        $rawScores = $stmtScores->fetchAll(PDO::FETCH_ASSOC);
+
+        // Petakan ke format [siswa_id][tp_id] => data
+        $scoreMap = [];
+        foreach ($rawScores as $sc) {
+            $scoreMap[$sc['siswa_id']][$sc['tp_id']] = $sc;
+        }
+
+        return [
+            'asesmen' => $asesmen,
+            'tujuan_pembelajaran' => $asesmen['tujuan_pembelajaran'],
+            'siswa_list' => $siswaList,
+            'scores' => $scoreMap
+        ];
+    }
+
+    // =========================================================================
+    // 5. REKAPITULASI KETERCAPAIAN SISWA & KELAS (DENGAN IDENTIFIKASI TP BERMASALAH)
+    // =========================================================================
+
+    /**
+     * Rekap Ketercapaian TP Per Siswa pada suatu Mapel
+     * Menampilkan daftar TP, nilai asli, nilai awal (jika remedial), dan status ketercapaian (1/0)
+     */
+    public function getRekapKetercapaianSiswa($siswaId, $mapelId, $tahunAjaranId, $semester = null) {
+        $siswaId = (int)$siswaId;
+        $mapelId = (int)$mapelId;
+        $tahunAjaranId = (int)$tahunAjaranId;
+
+        $sql = "
+            SELECT natp.*, a.nama_asesmen, a.jenis_asesmen, a.tanggal,
+                   tp.kode_tp, tp.deskripsi as deskripsi_tp, tp.materi_pokok,
+                   k.metode as kktp_metode, k.nilai_minimum as kktp_nilai_min,
+                   k.target_indikator_count as kktp_target_ind, k.deskripsi_kriteria as kktp_kriteria
+            FROM nilai_asesmen_tp natp
+            JOIN asesmen a ON natp.asesmen_id = a.id
+            JOIN tujuan_pembelajaran tp ON natp.tp_id = tp.id
+            LEFT JOIN kktp k ON natp.kktp_id = k.id
+            WHERE natp.siswa_id = ?
+              AND a.mapel_id = ?
+              AND a.tahun_ajaran_id = ?
+        ";
+        $params = [$siswaId, $mapelId, $tahunAjaranId];
+
+        if ($semester !== null) {
+            $sql .= " AND a.semester = ?";
+            $params[] = (int)$semester;
+        }
+
+        $sql .= " ORDER BY a.tanggal ASC, tp.urutan ASC, tp.kode_tp ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $totalEvaluated = count($records);
+        $totalTercapai = 0;
+        $totalBelumTercapai = 0;
+
+        foreach ($records as $r) {
+            if ((int)$r['status_code'] === 1) {
+                $totalTercapai++;
+            } else {
+                $totalBelumTercapai++;
+            }
+        }
+
+        $persentase = ($totalEvaluated > 0) ? round(($totalTercapai / $totalEvaluated) * 100, 1) : 0;
+
+        // Rangkum status unik per TP (mengambil capaian terbaru per TP)
+        $tpSummary = [];
+        foreach ($records as $r) {
+            $tpSummary[$r['tp_id']] = [
+                'tp_id' => (int)$r['tp_id'],
+                'kode_tp' => $r['kode_tp'],
+                'deskripsi_tp' => $r['deskripsi_tp'],
+                'materi_pokok' => $r['materi_pokok'],
+                'nilai_asli' => (float)$r['nilai_asli'],
+                'nilai_awal' => ($r['nilai_awal'] !== null) ? (float)$r['nilai_awal'] : null,
+                'is_remedial' => (int)$r['is_remedial'],
+                'status_code' => (int)$r['status_code'],
+                'status_ketercapaian' => $r['status_ketercapaian'],
+                'nama_asesmen' => $r['nama_asesmen'],
+                'tanggal' => $r['tanggal']
+            ];
+        }
+
+        $uniqueTotal = count($tpSummary);
+        $uniqueTercapai = 0;
+        $uniqueBelum = 0;
+        foreach ($tpSummary as $u) {
+            if ($u['status_code'] === 1) $uniqueTercapai++;
+            else $uniqueBelum++;
+        }
+        $uniquePct = ($uniqueTotal > 0) ? round(($uniqueTercapai / $uniqueTotal) * 100, 1) : 0;
+
+        return [
+            'siswa_id' => $siswaId,
+            'mapel_id' => $mapelId,
+            'total_tp_dinilai' => $uniqueTotal,
+            'total_tercapai' => $uniqueTercapai,
+            'total_belum_tercapai' => $uniqueBelum,
+            'persentase_ketercapaian' => $uniquePct,
+            'tp_summary' => array_values($tpSummary),
+            'total_event_asesmen' => $totalEvaluated,
+            'records' => $records
+        ];
+    }
+
+    /**
+     * Rekap Ketercapaian Kelas Per TP
+     * Mengidentifikasi TP mana saja yang persentase ketercapaiannya rendah (< 70%)
+     * sehingga guru dapat mengambil tindakan penguatan / remidial klasikal
+     */
+    public function getRekapKetercapaianKelas($rombelId, $mapelId, $tahunAjaranId, $semester = null) {
+        $rombelId = (int)$rombelId;
+        $mapelId = (int)$mapelId;
+        $tahunAjaranId = (int)$tahunAjaranId;
+
+        // Ambil total siswa dalam kelas
+        $stmtCount = $this->db->prepare("SELECT COUNT(*) FROM siswa WHERE kelas_id = ?");
+        $stmtCount->execute([$rombelId]);
+        $totalSiswaKelas = (int)$stmtCount->fetchColumn();
+
+        $sql = "
+            SELECT tp.id as tp_id, tp.kode_tp, tp.deskripsi as deskripsi_tp, tp.materi_pokok,
+                   COUNT(natp.id) as total_asesmen_siswa,
+                   SUM(CASE WHEN natp.status_code = 1 THEN 1 ELSE 0 END) as total_tercapai,
+                   SUM(CASE WHEN natp.status_code = 0 THEN 1 ELSE 0 END) as total_belum_tercapai,
+                   AVG(natp.nilai_asli) as rata_nilai_tp,
+                   k.metode as kktp_metode, k.nilai_minimum as kktp_nilai_min,
+                   k.deskripsi_kriteria as kktp_kriteria
+            FROM tujuan_pembelajaran tp
+            JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id
+            JOIN asesmen_tp atp ON atp.tp_id = tp.id
+            JOIN asesmen a ON atp.asesmen_id = a.id
+            LEFT JOIN kktp k ON atp.kktp_id = k.id
+            LEFT JOIN nilai_asesmen_tp natp ON (natp.asesmen_id = a.id AND natp.tp_id = tp.id)
+            WHERE a.rombel_id = ?
+              AND a.mapel_id = ?
+              AND a.tahun_ajaran_id = ?
+        ";
+        $params = [$rombelId, $mapelId, $tahunAjaranId];
+
+        if ($semester !== null) {
+            $sql .= " AND a.semester = ?";
+            $params[] = (int)$semester;
+        }
+
+        $sql .= " GROUP BY tp.id ORDER BY tp.urutan ASC, tp.kode_tp ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $tpRecap = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $resultList = [];
+        foreach ($tpRecap as $row) {
+            $totalAssessed = (int)($row['total_asesmen_siswa'] ?? 0);
+            $tercapai = (int)($row['total_tercapai'] ?? 0);
+            $belumTercapai = (int)($row['total_belum_tercapai'] ?? 0);
+            $pct = ($totalAssessed > 0) ? round(($tercapai / $totalAssessed) * 100, 1) : 0;
+
+            // Kategori tindak lanjut rekomendasi Kurikulum Merdeka
+            $kategori = 'Tuntas';
+            $badgeColor = 'success';
+            if ($pct < 50) {
+                $kategori = 'Perlu Remedial Klasikal / Pengajaran Ulang';
+                $badgeColor = 'danger';
+            } elseif ($pct < 75) {
+                $kategori = 'Perlu Penguatan & Pendampingan Kelompok';
+                $badgeColor = 'warning';
+            } else {
+                $kategori = 'Sangat Baik / Pengayaan';
+                $badgeColor = 'success';
+            }
+
+            $row['persentase_ketercapaian'] = $pct;
+            $row['kategori_tindak_lanjut'] = $kategori;
+            $row['badge_color'] = $badgeColor;
+            $row['rata_nilai_tp'] = round((float)($row['rata_nilai_tp'] ?? 0), 2);
+            $resultList[] = $row;
+        }
+
+        return [
+            'rombel_id' => $rombelId,
+            'mapel_id' => $mapelId,
+            'total_siswa_kelas' => $totalSiswaKelas,
+            'tp_list' => $resultList
+        ];
+    }
+
+    // =========================================================================
+    // 6. INTEGRASI DENGAN E-RAPOR: GENERATOR DESKRIPSI CAPAIAN KOMPETENSI
+    // =========================================================================
+
+    /**
+     * Membantu guru menghasilkan draf deskripsi capaian kompetensi E-Rapor
+     * berdasarkan riwayat pencapaian TP siswa (TP mana yang tercapai & yang perlu bimbingan).
+     */
+    public function generateDeskripsiRaporFromTp($siswaId, $mapelId, $tahunAjaranId, $semester = null) {
+        $rekap = $this->getRekapKetercapaianSiswa($siswaId, $mapelId, $tahunAjaranId, $semester);
+        $records = $rekap['tp_summary'] ?? ($rekap['records'] ?? []);
+
+        $tercapaiTps = [];
+        $belumTercapaiTps = [];
+
+        foreach ($records as $r) {
+            $desc = trim($r['deskripsi_tp']);
+            if (empty($desc)) $desc = trim($r['materi_pokok'] ?? $r['kode_tp']);
+            $desc = rtrim($desc, '. ');
+
+            if ((int)$r['status_code'] === 1) {
+                $tercapaiTps[] = [
+                    'kode' => $r['kode_tp'],
+                    'deskripsi' => $desc,
+                    'nilai' => (float)$r['nilai_asli']
+                ];
+            } else {
+                $belumTercapaiTps[] = [
+                    'kode' => $r['kode_tp'],
+                    'deskripsi' => $desc,
+                    'nilai' => (float)$r['nilai_asli']
+                ];
+            }
+        }
+
+        // Urutkan yang tercapai berdasarkan nilai tertinggi
+        usort($tercapaiTps, function($a, $b) {
+            return $b['nilai'] <=> $a['nilai'];
+        });
+
+        // Buat kalimat deskripsi tercapai
+        $deskripsiTercapai = '';
+        if (!empty($tercapaiTps)) {
+            $sampleTercapai = array_slice($tercapaiTps, 0, 2); // Ambil 2 TP terbaik
+            $parts = [];
+            foreach ($sampleTercapai as $st) {
+                $parts[] = lcfirst($st['deskripsi']);
+            }
+            $deskripsiTercapai = "Menunjukkan penguasaan yang sangat baik dalam hal " . implode(' serta ', $parts) . ".";
+        } else {
+            $deskripsiTercapai = "Menunjukkan pemahaman dasar pada materi yang diajarkan.";
+        }
+
+        // Buat kalimat deskripsi perlu bimbingan
+        $deskripsiPerluBimbingan = '';
+        if (!empty($belumTercapaiTps)) {
+            $sampleBelum = array_slice($belumTercapaiTps, 0, 2); // Ambil 2 TP yang belum tuntas
+            $parts = [];
+            foreach ($sampleBelum as $sb) {
+                $parts[] = lcfirst($sb['deskripsi']);
+            }
+            $deskripsiPerluBimbingan = "Perlu bimbingan dan pendampingan lebih lanjut dalam hal " . implode(' serta ', $parts) . ".";
+        }
+
+        // Gabungan utuh untuk kolom capaian_kompetensi rapor
+        $fullDeskripsi = $deskripsiTercapai;
+        if (!empty($deskripsiPerluBimbingan)) {
+            $fullDeskripsi .= " " . $deskripsiPerluBimbingan;
+        }
+
+        return [
+            'deskripsi_tercapai' => $deskripsiTercapai,
+            'deskripsi_perlu_bimbingan' => $deskripsiPerluBimbingan,
+            'capaian_kompetensi' => trim($fullDeskripsi),
+            'total_tp' => count($records),
+            'total_tercapai' => count($tercapaiTps),
+            'total_belum_tercapai' => count($belumTercapaiTps)
+        ];
+    }
+}

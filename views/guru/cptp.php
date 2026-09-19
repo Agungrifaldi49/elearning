@@ -141,6 +141,10 @@ if (!function_exists('formatTpDescriptionHtml')) {
             <p class="text-muted small mb-0">Kelola dan rumuskan Capaian Pembelajaran (CP) serta Tujuan Pembelajaran (TP) untuk mata pelajaran yang Anda ampu secara terstruktur.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-success shadow-sm fw-semibold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCopyTP" title="Salin Tujuan Pembelajaran dari CP lain / Tahun Ajaran Sebelumnya">
+                <i class="bi bi-box-arrow-in-down fs-5"></i>
+                <span>Salin dari Bank TP</span>
+            </button>
             <button type="button" class="btn btn-outline-primary shadow-sm fw-semibold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalAddTP">
                 <i class="bi bi-plus-circle fs-5"></i>
                 <span>+ Tambah TP Baru</span>
@@ -440,12 +444,47 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                                                     <i class="bi bi-tag-fill text-primary me-1"></i><?= htmlspecialchars($tp['materi_pokok']) ?>
                                                                 </span>
                                                             <?php endif; ?>
+
+                                                            <!-- KKTP Status Badge -->
+                                                            <?php 
+                                                                $kMetode = $tp['kktp_metode'] ?? 'interval_nilai';
+                                                                $kMin = $tp['kktp_nilai_min'] ?? 75.00;
+                                                                $kTarget = (int)($tp['kktp_target_ind'] ?? 0);
+                                                            ?>
+                                                            <?php if ($kMetode === 'checklist'): ?>
+                                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1 rounded fw-semibold" style="font-size: 0.75rem;" title="KKTP Checklist: Target minimal <?= $kTarget ?> indikator">
+                                                                    <i class="bi bi-check2-square me-1"></i>KKTP: Checklist (Target <?= $kTarget ?> Indikator)
+                                                                </span>
+                                                            <?php elseif ($kMetode === 'rubrik'): ?>
+                                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2.5 py-1 rounded fw-semibold" style="font-size: 0.75rem;" title="KKTP Rubrik: Ambang batas skor <?= $kMin ?>">
+                                                                    <i class="bi bi-ui-checks-grid me-1"></i>KKTP: Rubrik (Min <?= number_format($kMin, 0) ?>)
+                                                                </span>
+                                                            <?php else: ?>
+                                                                <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2.5 py-1 rounded fw-semibold" style="font-size: 0.75rem;" title="KKTP Interval Nilai: Ambang batas minimal <?= $kMin ?>">
+                                                                    <i class="bi bi-bullseye me-1"></i>KKTP: Batas Nilai (Min <?= number_format($kMin, 0) ?>)
+                                                                </span>
+                                                            <?php endif; ?>
                                                         </div>
                                                         <div class="tp-deskripsi-wrapper">
                                                             <?= formatTpDescriptionHtml($tp['deskripsi']) ?>
                                                         </div>
                                                     </div>
                                                     <div class="d-flex gap-1.5 flex-shrink-0 align-items-center pt-0.5">
+                                                        <!-- Tombol Atur KKTP -->
+                                                        <button type="button" class="btn btn-sm btn-outline-info rounded-2 p-1.5 px-2.5 btn-kktp fw-semibold d-inline-flex align-items-center gap-1"
+                                                            title="Atur Kriteria Ketercapaian Tujuan Pembelajaran (KKTP)"
+                                                            data-bs-toggle="modal" data-bs-target="#modalKktp"
+                                                            data-id="<?= $tp['id'] ?>"
+                                                            data-kode="<?= htmlspecialchars($tp['kode_tp']) ?>"
+                                                            data-deskripsi="<?= htmlspecialchars($tp['deskripsi']) ?>"
+                                                            data-metode="<?= $kMetode ?>"
+                                                            data-nilai-min="<?= $kMin ?>"
+                                                            data-target-ind="<?= $kTarget ?>"
+                                                            data-kriteria="<?= htmlspecialchars($tp['kktp_kriteria'] ?? '') ?>">
+                                                            <i class="bi bi-sliders text-info" style="font-size: 0.85rem;"></i>
+                                                            <span style="font-size: 0.78rem;">KKTP</span>
+                                                        </button>
+
                                                         <button type="button" class="btn btn-sm btn-outline-warning rounded-2 p-1.5 px-2 btn-edit-tp" 
                                                             title="Edit TP"
                                                             data-bs-toggle="modal" data-bs-target="#modalEditTP"
@@ -456,14 +495,14 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                                             data-deskripsi="<?= htmlspecialchars($tp['deskripsi']) ?>">
                                                             <i class="bi bi-pencil-fill" style="font-size: 0.82rem;"></i>
                                                         </button>
-                                                        <form action="<?= BASE_URL ?>index.php?url=guru/cptp" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Tujuan Pembelajaran (TP) ini?');">
+                                                        <form action="<?= BASE_URL ?>index.php?url=guru/cptp" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus / mengarsipkan Tujuan Pembelajaran (TP) ini?');">
                                                             <?= Security::csrfField() ?>
                                                             <input type="hidden" name="action" value="delete_tp">
                                                             <input type="hidden" name="filter_kurikulum_id" value="<?= $filterKurId ?? '' ?>">
                                                             <input type="hidden" name="filter_mapel_id" value="<?= $filterMapelId ?? '' ?>">
                                                             <input type="hidden" name="filter_fase_id" value="<?= $filterFaseId ?? '' ?>">
                                                             <input type="hidden" name="id" value="<?= $tp['id'] ?>">
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 p-1.5 px-2" title="Hapus TP">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 p-1.5 px-2" title="Hapus / Arsipkan TP">
                                                                 <i class="bi bi-trash-fill" style="font-size: 0.82rem;"></i>
                                                             </button>
                                                         </form>
@@ -1082,6 +1121,255 @@ if (!function_exists('formatTpDescriptionHtml')) {
     </div>
 </div>
 
+<!-- =========================================================================== -->
+<!-- MODAL ATUR KKTP (KRITERIA KETERCAPAIAN TUJUAN PEMBELAJARAN) -->
+<!-- =========================================================================== -->
+<div class="modal fade" id="modalKktp" tabindex="-1" aria-labelledby="modalKktpLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 820px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form action="<?= BASE_URL ?>index.php?url=guru/cptp" method="POST" id="formKktp">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="save_kktp">
+                <input type="hidden" name="tp_id" id="kktp_tp_id" value="">
+                <input type="hidden" name="filter_kurikulum_id" value="<?= $filterKurId ?? '' ?>">
+                <input type="hidden" name="filter_mapel_id" value="<?= $filterMapelId ?? '' ?>">
+                <input type="hidden" name="filter_fase_id" value="<?= $filterFaseId ?? '' ?>">
+
+                <!-- Modal Header -->
+                <div class="modal-header bg-info bg-opacity-10 py-3.5 px-4 border-bottom border-info-subtle">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 bg-info text-white p-2.5 d-flex align-items-center justify-content-center shadow-xs" style="width: 44px; height: 44px;">
+                            <i class="bi bi-sliders fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="modalKktpLabel">Konfigurasi KKTP (Kriteria Ketercapaian TP)</h5>
+                            <p class="text-muted small mb-0">Tentukan kriteria ketercapaian secara terukur (Batas Nilai, Rubrik, atau Checklist Indikator).</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4 bg-light">
+                    <!-- TP Summary Header Card -->
+                    <div class="card border border-info border-opacity-25 rounded-3 mb-3 bg-white shadow-xs">
+                        <div class="card-body p-3">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="badge bg-info text-dark font-monospace fw-bold" id="kktp_preview_tp_kode">TP-...</span>
+                                <span class="text-muted small fw-semibold">Tujuan Pembelajaran yang Dikonfigurasi</span>
+                            </div>
+                            <div class="text-dark small fw-medium" id="kktp_preview_tp_desc" style="line-height: 1.6;">
+                                Memuat ringkasan TP...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pilihan Metode KKTP -->
+                    <div class="card border-0 rounded-3 shadow-xs mb-3 bg-white p-3">
+                        <label class="form-label small fw-bold text-secondary mb-2 d-flex align-items-center gap-1.5">
+                            <i class="bi bi-diagram-3-fill text-info"></i> Pilih Pendekatan / Metode KKTP:
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4">
+                                <label class="card h-100 p-2.5 border rounded-3 cursor-pointer kktp-method-card active" for="metode_interval" id="card_metode_interval" style="cursor: pointer;">
+                                    <div class="d-flex align-items-start gap-2">
+                                        <input class="form-check-input mt-1" type="radio" name="metode" id="metode_interval" value="interval_nilai" checked>
+                                        <div>
+                                            <div class="fw-bold small text-dark">A. Interval Nilai</div>
+                                            <div class="text-muted" style="font-size: 0.72rem; line-height: 1.4;">Batas angka minimum (misal: 75.00). Nilai di atas batas = Tercapai (1).</div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="card h-100 p-2.5 border rounded-3 cursor-pointer kktp-method-card" for="metode_rubrik" id="card_metode_rubrik" style="cursor: pointer;">
+                                    <div class="d-flex align-items-start gap-2">
+                                        <input class="form-check-input mt-1" type="radio" name="metode" id="metode_rubrik" value="rubrik">
+                                        <div>
+                                            <div class="fw-bold small text-dark">B. Rubrik Kriteria</div>
+                                            <div class="text-muted" style="font-size: 0.72rem; line-height: 1.4;">Rubrik berjenjang (Mahir, Cakap, Layak, Baru Berkembang).</div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="card h-100 p-2.5 border rounded-3 cursor-pointer kktp-method-card" for="metode_checklist" id="card_metode_checklist" style="cursor: pointer;">
+                                    <div class="d-flex align-items-start gap-2">
+                                        <input class="form-check-input mt-1" type="radio" name="metode" id="metode_checklist" value="checklist">
+                                        <div>
+                                            <div class="fw-bold small text-dark">C. Checklist Indikator</div>
+                                            <div class="text-muted" style="font-size: 0.72rem; line-height: 1.4;">Target jumlah indikator tercapai (misal: min 3 dari 4 indikator).</div>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Config Section: Interval Nilai -->
+                    <div id="section_interval_nilai" class="card border-0 rounded-3 shadow-xs mb-3 bg-white p-3">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-secondary mb-1">
+                                    <i class="bi bi-bullseye text-success me-1"></i>Nilai Batas Minimum Ketuntasan (0 - 100) <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" step="0.5" min="0" max="100" name="nilai_minimum" id="kktp_nilai_minimum" class="form-control fw-bold font-monospace text-primary fs-5 py-2" value="75.00">
+                                <div class="form-text text-muted small">Siswa dengan nilai &ge; ambang ini otomatis tercapai (Status: 1).</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-secondary mb-1">Deskripsi Kriteria Ketuntasan</label>
+                                <input type="text" name="deskripsi_kriteria" id="kktp_deskripsi_kriteria_interval" class="form-control py-2" placeholder="Contoh: Memahami konsep dasar minimal 75%">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Config Section: Rubrik -->
+                    <div id="section_rubrik" class="card border-0 rounded-3 shadow-xs mb-3 bg-white p-3" style="display: none;">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-secondary mb-1">
+                                    <i class="bi bi-ui-checks-grid text-info me-1"></i>Skor Minimal Kriteria Tuntas <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" step="1" min="0" max="100" name="rubrik_nilai_min" id="kktp_rubrik_nilai_min" class="form-control fw-bold font-monospace text-info fs-5 py-2" value="75">
+                                <div class="form-text text-muted small">Ambang batas skor akumulasi rubrik untuk predikat minimal Layak/Cakap.</div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-secondary mb-1">Deskripsi Kriteria Jenjang Rubrik</label>
+                                <textarea name="rubrik_deskripsi" id="kktp_rubrik_deskripsi" class="form-control" rows="3" placeholder="Contoh:&#10;- Mahir (&ge;85): Mampu menjelaskan dan mempraktikkan secara mandiri&#10;- Cakap (75-84): Mampu menjelaskan dengan baik&#10;- Perlu Bimbingan (<75): Masih membutuhkan arahan intensif"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Config Section: Checklist Indikator -->
+                    <div id="section_checklist" class="card border-0 rounded-3 shadow-xs mb-3 bg-white p-3" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                            <div>
+                                <label class="form-label small fw-bold text-secondary mb-0">
+                                    <i class="bi bi-check2-square text-warning-emphasis me-1"></i>Target Minimal Indikator yang Wajib Tercapai <span class="text-danger">*</span>
+                                </label>
+                                <div class="text-muted small">Berapa banyak indikator yang harus dicapai siswa agar TP dinyatakan tuntas (1)?</div>
+                            </div>
+                            <div style="width: 120px;">
+                                <input type="number" min="1" max="20" name="target_indikator_count" id="kktp_target_indikator_count" class="form-control text-center fw-bold font-monospace" value="3">
+                            </div>
+                        </div>
+
+                        <hr class="my-2.5">
+
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small fw-bold text-secondary">Rincian Indikator Ketercapaian TP:</span>
+                            <button type="button" class="btn btn-xs btn-outline-primary py-1 px-2.5 rounded-pill d-flex align-items-center gap-1" id="btnTambahIndikator">
+                                <i class="bi bi-plus-circle"></i> + Tambah Indikator
+                            </button>
+                        </div>
+
+                        <div id="indikatorListWrapper" class="d-flex flex-column gap-2">
+                            <!-- Dynamic Indicator Rows will be appended here -->
+                        </div>
+                    </div>
+
+                    <!-- Historical Stability Notice -->
+                    <div class="alert alert-light border border-info-subtle rounded-3 py-2 px-3 small text-muted d-flex align-items-center gap-2 mb-0">
+                        <i class="bi bi-shield-check text-info fs-5 flex-shrink-0"></i>
+                        <div>
+                            <strong>Perlindungan Histori Penilaian:</strong> Jika KKTP ini diubah di kemudian hari sementara sudah ada asesmen terdahulu yang dinilai, sistem otomatis membuat <em>versi baru</em> sehingga nilai siswa di semester/tahun lalu tetap aman dan tidak berubah.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer bg-white py-3 px-4 border-top">
+                    <button type="button" class="btn btn-light border px-4 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-info text-dark fw-bold px-4 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-check-circle-fill"></i> Simpan Konfigurasi KKTP
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================== -->
+<!-- MODAL SALIN TP DARI BANK TP (COPY TP FROM PREVIOUS CP) -->
+<!-- =========================================================================== -->
+<div class="modal fade" id="modalCopyTP" tabindex="-1" aria-labelledby="modalCopyTPLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 760px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form action="<?= BASE_URL ?>index.php?url=guru/cptp" method="POST">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="copy_tp">
+                <input type="hidden" name="filter_kurikulum_id" value="<?= $filterKurId ?? '' ?>">
+                <input type="hidden" name="filter_mapel_id" value="<?= $filterMapelId ?? '' ?>">
+                <input type="hidden" name="filter_fase_id" value="<?= $filterFaseId ?? '' ?>">
+
+                <!-- Modal Header -->
+                <div class="modal-header bg-success bg-opacity-10 py-3.5 px-4 border-bottom border-success-subtle">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 bg-success text-white p-2.5 d-flex align-items-center justify-content-center shadow-xs" style="width: 44px; height: 44px;">
+                            <i class="bi bi-box-arrow-in-down fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="modalCopyTPLabel">Salin Tujuan Pembelajaran (Bank TP)</h5>
+                            <p class="text-muted small mb-0">Duplikasi rumusan TP beserta konfigurasi KKTP dari CP sumber ke CP target pembelajaran.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4 bg-light">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                <i class="bi bi-box-arrow-up-right text-primary me-1"></i>Pilih Capaian Pembelajaran (CP) Sumber <span class="text-danger">*</span>
+                            </label>
+                            <select name="source_cp_id" id="copy_source_cp_id" class="form-select rounded-3 py-2" required>
+                                <option value="">-- Pilih CP Sumber yang memiliki TP --</option>
+                                <?php foreach (($allCpForDropdown ?? $cpList) as $c): ?>
+                                    <option value="<?= $c['id'] ?>">
+                                        [<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel']) ?> - <?= htmlspecialchars($c['elemen'] ?? 'Umum') ?> (<?= $c['total_tp'] ?? 0 ?> TP)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text text-muted small">Pilih CP acuan yang sudah memiliki rumusan Tujuan Pembelajaran terstruktur.</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                <i class="bi bi-box-arrow-in-down text-success me-1"></i>Pilih Capaian Pembelajaran (CP) Target <span class="text-danger">*</span>
+                            </label>
+                            <select name="target_cp_id" id="copy_target_cp_id" class="form-select rounded-3 py-2" required>
+                                <option value="">-- Pilih CP Tujuan Penerima TP --</option>
+                                <?php foreach ($cpList as $c): ?>
+                                    <option value="<?= $c['id'] ?>">
+                                        [<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel']) ?> - <?= htmlspecialchars($c['elemen'] ?? 'Umum') ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text text-muted small">Tujuan Pembelajaran akan disalin ke CP ini tanpa menimpa kode TP yang sudah ada.</div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border border-success-subtle rounded-3 p-3 small text-muted mt-3 mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle-fill text-success fs-5 flex-shrink-0"></i>
+                        <div>
+                            Fitur ini memudahkan Bapak/Ibu Guru menggunakan kembali rumusan TP dan KKTP yang telah teruji pada tahun ajaran/semester sebelumnya secara instan.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer bg-white py-3 px-4 border-top">
+                    <button type="button" class="btn btn-light border px-4 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-clipboard-check-fill"></i> Salin Tujuan Pembelajaran
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <?php
 // Build compact lookup maps for JS: keyed by ID
 $cpDataForJs = [];
@@ -1609,6 +1897,128 @@ document.addEventListener('DOMContentLoaded', () => {
         const tpBtn = e.target.closest('.btn-edit-tp');
         if (tpBtn) {
             populateEditTpModal(tpBtn);
+        }
+    });
+
+    // KKTP Modal Handling
+    const modalKktpEl = document.getElementById('modalKktp');
+    const metodeRadios = document.querySelectorAll('input[name="metode"]');
+    const secInterval = document.getElementById('section_interval_nilai');
+    const secRubrik = document.getElementById('section_rubrik');
+    const secChecklist = document.getElementById('section_checklist');
+    const indListWrapper = document.getElementById('indikatorListWrapper');
+    const btnTambahInd = document.getElementById('btnTambahIndikator');
+
+    function switchKktpMetode(metode) {
+        document.querySelectorAll('.kktp-method-card').forEach(card => card.classList.remove('active', 'border-primary', 'border-info', 'border-warning'));
+        
+        if (metode === 'rubrik') {
+            secInterval.style.display = 'none';
+            secRubrik.style.display = 'block';
+            secChecklist.style.display = 'none';
+            document.getElementById('card_metode_rubrik').classList.add('active', 'border-info');
+        } else if (metode === 'checklist') {
+            secInterval.style.display = 'none';
+            secRubrik.style.display = 'none';
+            secChecklist.style.display = 'block';
+            document.getElementById('card_metode_checklist').classList.add('active', 'border-warning');
+        } else {
+            secInterval.style.display = 'block';
+            secRubrik.style.display = 'none';
+            secChecklist.style.display = 'none';
+            document.getElementById('card_metode_interval').classList.add('active', 'border-primary');
+        }
+    }
+
+    metodeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            switchKktpMetode(this.value);
+        });
+    });
+
+    function addIndikatorRow(nama = '', desc = '', bobot = 1.0) {
+        if (!indListWrapper) return;
+        const rowId = 'ind_row_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+        const html = `
+            <div class="card border rounded-3 p-2.5 bg-light position-relative" id="${rowId}">
+                <div class="row g-2 align-items-center">
+                    <div class="col-12 col-md-5">
+                        <input type="text" name="indikator_nama[]" class="form-control form-control-sm fw-semibold" placeholder="Nama Indikator (wajib)" value="${nama.replace(/"/g, '&quot;')}" required>
+                    </div>
+                    <div class="col-12 col-md-5">
+                        <input type="text" name="indikator_desc[]" class="form-control form-control-sm" placeholder="Kriteria / Bukti Ketercapaian" value="${desc.replace(/"/g, '&quot;')}">
+                    </div>
+                    <div class="col-8 col-md-1">
+                        <input type="number" step="0.5" min="1" name="indikator_bobot[]" class="form-control form-control-sm text-center" value="${bobot}" title="Bobot">
+                    </div>
+                    <div class="col-4 col-md-1 text-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger p-1 px-2 rounded-2" onclick="document.getElementById('${rowId}').remove()" title="Hapus Indikator">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        indListWrapper.insertAdjacentHTML('beforeend', html);
+    }
+
+    if (btnTambahInd) {
+        btnTambahInd.addEventListener('click', function() {
+            addIndikatorRow();
+        });
+    }
+
+    function populateKktpModal(btn) {
+        if (!btn) return;
+        const tpId = btn.dataset.id;
+        const tpKode = btn.dataset.kode || '';
+        const tpDesc = btn.dataset.deskripsi || '';
+        const metode = btn.dataset.metode || 'interval_nilai';
+        const nilaiMin = btn.dataset.nilaiMin || '75.00';
+        const targetInd = btn.dataset.targetInd || '0';
+        const kriteria = btn.dataset.kriteria || '';
+
+        document.getElementById('kktp_tp_id').value = tpId;
+        document.getElementById('kktp_preview_tp_kode').textContent = tpKode;
+        document.getElementById('kktp_preview_tp_desc').textContent = tpDesc;
+
+        // Set radio
+        const radio = document.querySelector(`input[name="metode"][value="${metode}"]`);
+        if (radio) radio.checked = true;
+        switchKktpMetode(metode);
+
+        // Populate fields
+        document.getElementById('kktp_nilai_minimum').value = parseFloat(nilaiMin) || 75;
+        document.getElementById('kktp_rubrik_nilai_min').value = parseFloat(nilaiMin) || 75;
+        document.getElementById('kktp_deskripsi_kriteria_interval').value = kriteria;
+        document.getElementById('kktp_rubrik_deskripsi').value = kriteria;
+        document.getElementById('kktp_target_indikator_count').value = parseInt(targetInd) || 3;
+
+        // Fetch detail indicator via AJAX if available
+        if (indListWrapper) indListWrapper.innerHTML = '';
+        fetch(`<?= BASE_URL ?>index.php?url=guru/asesmen&ajax_action=get_kktp_info&tp_id=${tpId}`)
+            .then(r => r.json())
+            .then(res => {
+                if (res.status && res.data && res.data.indikator && res.data.indikator.length > 0) {
+                    res.data.indikator.forEach(ind => {
+                        addIndikatorRow(ind.nama_indikator, ind.deskripsi_kriteria, ind.bobot);
+                    });
+                } else {
+                    // Provide 2 default indicator templates if empty
+                    addIndikatorRow('Indikator 1: Mampu mengidentifikasi konsep dasar', '', 1);
+                    addIndikatorRow('Indikator 2: Mampu menerapkan prosedur secara benar', '', 1);
+                }
+            })
+            .catch(() => {
+                addIndikatorRow('Indikator 1', '', 1);
+                addIndikatorRow('Indikator 2', '', 1);
+            });
+    }
+
+    document.addEventListener('click', function(e) {
+        const btnKktp = e.target.closest('.btn-kktp');
+        if (btnKktp) {
+            populateKktpModal(btnKktp);
         }
     });
 

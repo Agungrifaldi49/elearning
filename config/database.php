@@ -493,6 +493,77 @@ class Database {
                     }
                 }
             }
+
+            // Ensure KKTP & Multi-TP Assessment Tables
+            self::$conn->exec("
+                CREATE TABLE IF NOT EXISTS `kktp` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `tp_id` INT NOT NULL,
+                    `metode` ENUM('interval_nilai', 'rubrik', 'checklist') NOT NULL DEFAULT 'interval_nilai',
+                    `nilai_minimum` DECIMAL(5,2) DEFAULT 75.00,
+                    `target_indikator_count` INT DEFAULT 0,
+                    `deskripsi_kriteria` TEXT NULL,
+                    `versi` INT DEFAULT 1,
+                    `status` ENUM('aktif', 'arsip') NOT NULL DEFAULT 'aktif',
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX `idx_kktp_tp` (`tp_id`),
+                    INDEX `idx_kktp_status` (`status`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+
+            self::$conn->exec("
+                CREATE TABLE IF NOT EXISTS `kktp_indikator` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `kktp_id` INT NOT NULL,
+                    `nama_indikator` VARCHAR(255) NOT NULL,
+                    `deskripsi_kriteria` TEXT NULL,
+                    `bobot` DECIMAL(5,2) DEFAULT 1.00,
+                    `urutan` INT DEFAULT 1,
+                    INDEX `idx_kktp_ind_kktp` (`kktp_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+
+            self::$conn->exec("
+                CREATE TABLE IF NOT EXISTS `asesmen_tp` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `asesmen_id` INT NOT NULL,
+                    `tp_id` INT NOT NULL,
+                    `kktp_id` INT NULL,
+                    `bobot_tp` DECIMAL(5,2) DEFAULT 100.00,
+                    `nilai_maksimum` DECIMAL(5,2) DEFAULT 100.00,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX `idx_atp_asesmen` (`asesmen_id`),
+                    INDEX `idx_atp_tp` (`tp_id`),
+                    INDEX `idx_atp_kktp` (`kktp_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
+
+            self::$conn->exec("
+                CREATE TABLE IF NOT EXISTS `nilai_asesmen_tp` (
+                    `id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `asesmen_id` INT NOT NULL,
+                    `asesmen_tp_id` INT NULL,
+                    `tp_id` INT NOT NULL,
+                    `siswa_id` INT NOT NULL,
+                    `kktp_id` INT NULL,
+                    `nilai_asli` DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+                    `nilai_maksimum` DECIMAL(5,2) NOT NULL DEFAULT 100.00,
+                    `status_code` TINYINT(1) NOT NULL DEFAULT 0,
+                    `status_ketercapaian` ENUM('Tercapai', 'Belum Tercapai') NOT NULL DEFAULT 'Belum Tercapai',
+                    `indikator_tercapai_ids` TEXT NULL,
+                    `is_remedial` TINYINT(1) NOT NULL DEFAULT 0,
+                    `nilai_awal` DECIMAL(5,2) NULL,
+                    `catatan` TEXT NULL,
+                    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX `idx_natp_asesmen` (`asesmen_id`),
+                    INDEX `idx_natp_tp` (`tp_id`),
+                    INDEX `idx_natp_siswa` (`siswa_id`),
+                    INDEX `idx_natp_kktp` (`kktp_id`),
+                    INDEX `idx_natp_status` (`status_code`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ");
         } catch (\Throwable $e) {
             // Silently ignore if table already exists or DDL restricted
         }

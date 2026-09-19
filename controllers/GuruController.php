@@ -14,6 +14,7 @@ require_once ROOT_PATH . 'models/GuruModel.php';
 require_once ROOT_PATH . 'models/SiswaModel.php';
 require_once ROOT_PATH . 'models/NilaiModel.php';
 require_once ROOT_PATH . 'models/CurriculumModel.php';
+require_once ROOT_PATH . 'models/AssessmentModel.php';
 require_once ROOT_PATH . 'models/CommunicationModel.php';
 
 class GuruController {
@@ -2507,6 +2508,61 @@ class GuruController {
                 $res = $currModel->deleteTP($id);
                 if ($res['status']) FlashHelper::setSuccess($res['message']);
                 else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'archive_tp') {
+                $id = (int)$_POST['id'];
+                $assessModel = new AssessmentModel();
+                $res = $assessModel->archiveTp($id);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'archive_cp') {
+                $id = (int)$_POST['id'];
+                $assessModel = new AssessmentModel();
+                $res = $assessModel->archiveCp($id);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'save_kktp') {
+                $tpId = (int)$_POST['tp_id'];
+                $metode = Security::sanitize($_POST['metode'] ?? 'interval_nilai');
+                $nilaiMin = floatval($_POST['nilai_minimum'] ?? 75.00);
+                $targetInd = (int)($_POST['target_indikator_count'] ?? 0);
+                $deskripsiKriteria = Security::sanitize($_POST['deskripsi_kriteria'] ?? '');
+
+                // Parse indikator jika ada
+                $indikatorList = [];
+                if (!empty($_POST['indikator_nama']) && is_array($_POST['indikator_nama'])) {
+                    foreach ($_POST['indikator_nama'] as $idx => $nama) {
+                        $nama = trim($nama);
+                        if (!empty($nama)) {
+                            $indikatorList[] = [
+                                'nama_indikator' => Security::sanitize($nama),
+                                'deskripsi_kriteria' => Security::sanitize($_POST['indikator_desc'][$idx] ?? ''),
+                                'bobot' => floatval($_POST['indikator_bobot'][$idx] ?? 1.00)
+                            ];
+                        }
+                    }
+                }
+
+                $assessModel = new AssessmentModel();
+                $res = $assessModel->saveKktp($tpId, [
+                    'metode' => $metode,
+                    'nilai_minimum' => $nilaiMin,
+                    'target_indikator_count' => $targetInd,
+                    'deskripsi_kriteria' => $deskripsiKriteria,
+                    'indikator' => $indikatorList
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'copy_tp') {
+                $sourceCpId = (int)$_POST['source_cp_id'];
+                $targetCpId = (int)$_POST['target_cp_id'];
+                $assessModel = new AssessmentModel();
+                $res = $assessModel->copyTp($sourceCpId, $targetCpId, $guruId);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
             }
 
             $extra = '';
@@ -2517,6 +2573,8 @@ class GuruController {
             header('Location: ' . BASE_URL . 'index.php?url=guru/cptp' . $extra);
             exit();
         }
+
+        $assessmentModel = new AssessmentModel();
 
         // Mata Pelajaran yang diampu guru ini
         $teacherMapelList = $academicModel->getMapelByGuru($guruId);
@@ -2543,7 +2601,7 @@ class GuruController {
         // CP & TP data
         $cpList = $currModel->getCPList($filterKurId, $effectiveMapelFilter, $filterFaseId);
         $allCpForDropdown = $currModel->getCPList($filterKurId, $teacherMapelIds ?: null);
-        $tpList = $currModel->getTPList();
+        $tpList = $currModel->getTPList(null, null, false);
 
         // Precompute auto-code maps for instant preview in modals
         $nextCpCodeMap = [];
@@ -2560,4 +2618,242 @@ class GuruController {
 
         require_once ROOT_PATH . 'views/guru/cptp.php';
     }
+
+    /**
+     * Modul Asesmen Pembelajaran, Penilaian Siswa Per-TP, Remedial, dan Rekapitulasi KKTP
+     * Alur: CP -> TP -> KKTP -> ASESMEN -> NILAI -> STATUS KETERCAPAIAN (1/0)
+     */
+    public function asesmen() {
+        $guru = $this->getGuruInfo();
+        $guruId = (int)($guru['id'] ?? 0);
+        $assessModel = new AssessmentModel();
+        $currModel = new CurriculumModel();
+        $academicModel = new AcademicModel();
+
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $activeTaId = (int)($activeTa['id'] ?? 1);
+        $activeSemester = ($activeTa['semester'] === 'Genap') ? 2 : 1;
+
+        // AJAX handlers
+        $ajaxAction = $_GET['ajax_action'] ?? ($_POST['ajax_action'] ?? '');
+        if (!empty($ajaxAction)) {
+            header('Content-Type: application/json; charset=utf-8');
+
+            if ($ajaxAction === 'get_tp_by_mapel') {
+                $mapelId = (int)($_GET['mapel_id'] ?? 0);
+                $kurId = (int)($_GET['kurikulum_id'] ?? 0);
+                $cpList = $currModel->getCPList($kurId ?: null, $mapelId ?: null);
+                $cpIds = array_column($cpList, 'id');
+                $tps = [];
+                if (!empty($cpIds)) {
+                    foreach ($cpIds as $cpId) {
+                        $tpsForCp = $currModel->getTPList($cpId, null, false);
+                        foreach ($tpsForCp as $t) {
+                            $tps[] = [
+                                'id' => $t['id'],
+                                'kode_tp' => $t['kode_tp'],
+                                'deskripsi' => $t['deskripsi'],
+                                'materi_pokok' => $t['materi_pokok'],
+                                'kode_cp' => $t['kode_cp'],
+                                'kktp_metode' => $t['kktp_metode'] ?? 'interval_nilai',
+                                'kktp_nilai_min' => $t['kktp_nilai_min'] ?? 75.00
+                            ];
+                        }
+                    }
+                }
+                echo json_encode(['status' => true, 'data' => $tps]);
+                exit();
+            }
+
+            if ($ajaxAction === 'get_kktp_info') {
+                $tpId = (int)($_GET['tp_id'] ?? 0);
+                $kktp = $assessModel->getKktpByTp($tpId);
+                echo json_encode(['status' => true, 'data' => $kktp]);
+                exit();
+            }
+
+            if ($ajaxAction === 'generate_rapor_desc') {
+                $siswaId = (int)($_GET['siswa_id'] ?? 0);
+                $mapelId = (int)($_GET['mapel_id'] ?? 0);
+                $desc = $assessModel->generateDeskripsiRaporFromTp($siswaId, $mapelId, $activeTaId, $activeSemester);
+                echo json_encode(['status' => true, 'data' => $desc]);
+                exit();
+            }
+
+            if ($ajaxAction === 'save_single_nilai') {
+                if (!Security::verifyCsrfToken()) {
+                    echo json_encode(['status' => false, 'message' => 'Token CSRF tidak valid.']);
+                    exit();
+                }
+                $asesmenId = (int)($_POST['asesmen_id'] ?? 0);
+                $tpId = (int)($_POST['tp_id'] ?? 0);
+                $siswaId = (int)($_POST['siswa_id'] ?? 0);
+                $nilaiAsli = floatval($_POST['nilai_asli'] ?? 0);
+                $isRemedial = !empty($_POST['is_remedial']) && (int)$_POST['is_remedial'] === 1;
+                $catatan = Security::sanitize($_POST['catatan'] ?? '');
+
+                $extra = [];
+                if (!empty($_POST['checked_indicators'])) {
+                    $extra['checked_indicators'] = (array)$_POST['checked_indicators'];
+                }
+
+                $res = $assessModel->inputNilaiSiswaPerTp($asesmenId, $tpId, $siswaId, $nilaiAsli, $isRemedial, $catatan, $extra);
+                echo json_encode($res);
+                exit();
+            }
+
+            echo json_encode(['status' => false, 'message' => 'Action tidak dikenali.']);
+            exit();
+        }
+
+        // Handle POST Requests
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('Sesi keamanan tidak valid (CSRF). Silakan coba lagi.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/asesmen');
+                exit();
+            }
+
+            $action = $_POST['action'] ?? '';
+
+            if ($action === 'create_asesmen') {
+                $rombelId = (int)$_POST['rombel_id'];
+                $mapelId = (int)$_POST['mapel_id'];
+                $namaAsesmen = Security::sanitize($_POST['nama_asesmen'] ?? '');
+                $jenisAsesmen = Security::sanitize($_POST['jenis_asesmen'] ?? 'formatif');
+                $tanggal = !empty($_POST['tanggal']) ? Security::sanitize($_POST['tanggal']) : date('Y-m-d');
+                $nilaiMaks = floatval($_POST['nilai_maksimum'] ?? 100.00);
+                $bobot = floatval($_POST['bobot'] ?? 1.00);
+                $tpIds = !empty($_POST['tp_ids']) && is_array($_POST['tp_ids']) ? array_map('intval', $_POST['tp_ids']) : [];
+
+                // Cari kurikulum_id aktif dari rombel/kelas terpilih
+                $kurikulumInfo = $currModel->getActiveKurikulumForRombel($rombelId);
+                $kurikulumId = (int)($kurikulumInfo['kurikulum_id'] ?? 1);
+
+                $res = $assessModel->createAsesmenMultiTp([
+                    'rombel_id' => $rombelId,
+                    'mapel_id' => $mapelId,
+                    'guru_id' => $guruId,
+                    'kurikulum_id' => $kurikulumId,
+                    'tahun_ajaran_id' => $activeTaId,
+                    'semester' => $activeSemester,
+                    'nama_asesmen' => $namaAsesmen,
+                    'jenis_asesmen' => $jenisAsesmen,
+                    'tanggal' => $tanggal,
+                    'nilai_maksimum' => $nilaiMaks,
+                    'bobot' => $bobot
+                ], $tpIds);
+
+                if ($res['status']) {
+                    FlashHelper::setSuccess($res['message']);
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/asesmen&tab=penilaian&asesmen_id=' . (int)$res['asesmen_id']);
+                    exit();
+                } else {
+                    FlashHelper::setError($res['message']);
+                }
+
+            } elseif ($action === 'save_batch_nilai') {
+                $asesmenId = (int)$_POST['asesmen_id'];
+                $scores = $_POST['nilai'] ?? []; // [siswa_id][tp_id] => value
+                $savedCount = 0;
+
+                foreach ($scores as $sId => $tps) {
+                    $sId = (int)$sId;
+                    foreach ($tps as $tId => $val) {
+                        $tId = (int)$tId;
+                        if ($val !== '' && $val !== null) {
+                            $nilaiAsli = floatval($val);
+                            $isRemedial = !empty($_POST['is_remedial'][$sId][$tId]);
+                            $catatan = Security::sanitize($_POST['catatan'][$sId][$tId] ?? '');
+                            $assessModel->inputNilaiSiswaPerTp($asesmenId, $tId, $sId, $nilaiAsli, $isRemedial, $catatan);
+                            $savedCount++;
+                        }
+                    }
+                }
+
+                FlashHelper::setSuccess("Berhasil menyimpan {$savedCount} rekaman penilaian siswa.");
+                header('Location: ' . BASE_URL . 'index.php?url=guru/asesmen&tab=penilaian&asesmen_id=' . $asesmenId);
+                exit();
+
+            } elseif ($action === 'save_remedial_modal') {
+                $asesmenId = (int)$_POST['asesmen_id'];
+                $tpId = (int)$_POST['tp_id'];
+                $siswaId = (int)$_POST['siswa_id'];
+                $nilaiRemedial = floatval($_POST['nilai_remedial']);
+                $catatan = Security::sanitize($_POST['catatan'] ?? 'Remedial perbaikan ketercapaian');
+
+                $res = $assessModel->inputNilaiSiswaPerTp($asesmenId, $tpId, $siswaId, $nilaiRemedial, true, $catatan);
+                if ($res['status']) {
+                    FlashHelper::setSuccess("Nilai remedial berhasil disimpan! Status saat ini: {$res['status_ketercapaian']} (Kode: {$res['status_code']})");
+                } else {
+                    FlashHelper::setError($res['message']);
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=guru/asesmen&tab=penilaian&asesmen_id=' . $asesmenId);
+                exit();
+            }
+
+            header('Location: ' . BASE_URL . 'index.php?url=guru/asesmen');
+            exit();
+        }
+
+        // Active Tab: 'asesmen' | 'penilaian' | 'rekap_kelas' | 'rekap_siswa'
+        $activeTab = $_GET['tab'] ?? 'asesmen';
+
+        // Master Data
+        $teacherMapelList = $academicModel->getMapelByGuru($guruId) ?: $academicModel->getMapel();
+        $teacherKelasList = $academicModel->getKelasByGuru($guruId);
+        $rombelList = $academicModel->getKelas();
+
+        // Filter Param
+        $filterRombelId = !empty($_GET['rombel_id']) ? (int)$_GET['rombel_id'] : (!empty($rombelList[0]['id']) ? (int)$rombelList[0]['id'] : 0);
+        $filterMapelId = !empty($_GET['mapel_id']) ? (int)$_GET['mapel_id'] : (!empty($teacherMapelList[0]['id']) ? (int)$teacherMapelList[0]['id'] : 0);
+        $selectedAsesmenId = !empty($_GET['asesmen_id']) ? (int)$_GET['asesmen_id'] : 0;
+        $selectedSiswaId = !empty($_GET['siswa_id']) ? (int)$_GET['siswa_id'] : 0;
+
+        // Data for Tab 1: Asesmen List
+        $asesmenList = $assessModel->getAsesmenList([
+            'guru_id' => $guruId,
+            'rombel_id' => $filterRombelId ?: null,
+            'mapel_id' => $filterMapelId ?: null,
+            'tahun_ajaran_id' => $activeTaId
+        ]);
+
+        // Data for Tab 2: Penilaian Matrix
+        $matrixData = null;
+        if ($selectedAsesmenId > 0) {
+            $matrixData = $assessModel->getNilaiMatrixByAsesmen($selectedAsesmenId);
+        } elseif (!empty($asesmenList)) {
+            $selectedAsesmenId = (int)$asesmenList[0]['id'];
+            $matrixData = $assessModel->getNilaiMatrixByAsesmen($selectedAsesmenId);
+        }
+
+        // Data for Tab 3: Rekap Ketercapaian Kelas
+        $rekapKelas = null;
+        if ($activeTab === 'rekap_kelas' || $filterRombelId) {
+            $rekapKelas = $assessModel->getRekapKetercapaianKelas($filterRombelId, $filterMapelId, $activeTaId, $activeSemester);
+        }
+
+        // Data for Tab 4: Rekap Ketercapaian Siswa
+        $rekapSiswa = null;
+        $siswaInRombel = [];
+        if ($filterRombelId > 0) {
+            $stmtS = Database::getConnection()->prepare("
+                SELECT s.id, s.nis, s.nama_lengkap 
+                FROM siswa s 
+                WHERE s.kelas_id = ? ORDER BY s.nama_lengkap ASC
+            ");
+            $stmtS->execute([$filterRombelId]);
+            $siswaInRombel = $stmtS->fetchAll(PDO::FETCH_ASSOC);
+
+            if ($selectedSiswaId <= 0 && !empty($siswaInRombel)) {
+                $selectedSiswaId = (int)$siswaInRombel[0]['id'];
+            }
+        }
+        if ($selectedSiswaId > 0) {
+            $rekapSiswa = $assessModel->getRekapKetercapaianSiswa($selectedSiswaId, $filterMapelId, $activeTaId, $activeSemester);
+        }
+
+        require_once ROOT_PATH . 'views/guru/asesmen.php';
+    }
 }
+

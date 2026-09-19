@@ -215,6 +215,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'guru/cptp') ?>" href="<?= BASE_URL ?>index.php?url=guru/cptp">
                 <i class="bi bi-card-checklist text-primary"></i> Penyusunan CP & TP
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'guru/asesmen') ?>" href="<?= BASE_URL ?>index.php?url=guru/asesmen">
+                <i class="bi bi-bullseye text-danger"></i> Asesmen & KKTP Siswa
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'guru/inputNilai') ?>" href="<?= BASE_URL ?>index.php?url=guru/inputNilai">
                 <i class="bi bi-pencil-fill"></i> Input Nilai E-Rapor
             </a></li>

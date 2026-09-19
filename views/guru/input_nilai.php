@@ -39,11 +39,15 @@ foreach ($kompList as $kp) {
             <h4 class="fw-bold mb-1"><i class="bi bi-journal-check text-primary me-2"></i><?= $isReadOnly ? 'Rekap Leger & Nilai E-Rapor Siswa' : 'Input & Edit Nilai E-Rapor Siswa' ?></h4>
             <p class="text-muted small mb-0"><?= $isReadOnly ? 'Pemantauan rekap leger nilai E-Rapor siswa per-rombel kelas & mata pelajaran.' : 'Pengisian dan pengeditan nilai E-Rapor per-rombel kelas & mata pelajaran ajar secara presisi.' ?></p>
         </div>
-        <?php if (!$isReadOnly): ?>
-            <button class="btn btn-primary shadow-sm rounded-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalSingleSave">
-                <i class="bi bi-person-plus-fill me-1"></i> Input Nilai 1 Siswa
-            </button>
-        <?php else: ?>
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="<?= BASE_URL ?>index.php?url=guru/asesmen" class="btn btn-outline-danger shadow-sm rounded-3 fw-bold d-flex align-items-center gap-1.5">
+                <i class="bi bi-bullseye"></i> Rekap Ketercapaian TP & KKTP
+            </a>
+            <?php if (!$isReadOnly): ?>
+                <button class="btn btn-primary shadow-sm rounded-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalSingleSave">
+                    <i class="bi bi-person-plus-fill me-1"></i> Input Nilai 1 Siswa
+                </button>
+            <?php else: ?>
             <span class="badge bg-secondary rounded-pill px-3 py-2 shadow-sm fs-6">
                 <i class="bi bi-eye-fill me-1"></i> Mode Lihat Saja (Kepala Sekolah)
             </span>

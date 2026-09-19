@@ -931,6 +931,23 @@ class CurriculumModel extends BaseModel {
 
     public function deleteCP($id) {
         $id = (int)$id;
+        // Check if CP or its TPs have assessment/scoring history
+        $chkAsesmen = $this->db->prepare("
+            SELECT COUNT(*) FROM asesmen WHERE cp_id = ? 
+            UNION ALL 
+            SELECT COUNT(*) FROM nilai_asesmen_tp natp JOIN tujuan_pembelajaran tp ON natp.tp_id = tp.id WHERE tp.cp_id = ?
+        ");
+        $chkAsesmen->execute([$id, $id]);
+        $counts = $chkAsesmen->fetchAll(PDO::FETCH_COLUMN);
+        $totalUsed = array_sum($counts);
+
+        if ($totalUsed > 0) {
+            // Protect history: Soft-archive CP and its TPs instead of permanently deleting
+            $this->db->prepare("UPDATE capaian_pembelajaran SET status = 'arsip' WHERE id = ?")->execute([$id]);
+            $this->db->prepare("UPDATE tujuan_pembelajaran SET status = 'arsip' WHERE cp_id = ?")->execute([$id]);
+            return ['status' => true, 'message' => 'Capaian Pembelajaran (CP) dan TP terkait telah diarsipkan karena memiliki riwayat penilaian asesmen.'];
+        }
+
         // Clean up references in asesmen and child TPs first to maintain database integrity
         $this->db->prepare("UPDATE asesmen SET cp_id = NULL, tp_id = NULL WHERE cp_id = ?")->execute([$id]);
         $this->db->prepare("DELETE FROM tujuan_pembelajaran WHERE cp_id = ?")->execute([$id]);
@@ -939,18 +956,24 @@ class CurriculumModel extends BaseModel {
         return ['status' => (bool)$res, 'message' => 'Capaian Pembelajaran beserta TP turunannya berhasil dihapus.'];
     }
 
-    public function getTPList($cpId = null, $guruId = null) {
+    public function getTPList($cpId = null, $guruId = null, $includeArchived = false) {
         $sql = "
             SELECT tp.*, cp.kode_cp, cp.elemen, cp.kurikulum_id, cp.mapel_id, mp.nama_mapel, kur.kode as kode_kurikulum,
-                   g.nama_lengkap as nama_guru, g.nip as nip_guru
+                   g.nama_lengkap as nama_guru, g.nip as nip_guru,
+                   k.id as kktp_id, k.metode as kktp_metode, k.nilai_minimum as kktp_nilai_min, 
+                   k.target_indikator_count as kktp_target_ind, k.deskripsi_kriteria as kktp_kriteria
             FROM tujuan_pembelajaran tp
             JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id
             JOIN kurikulum kur ON cp.kurikulum_id = kur.id
             JOIN mata_pelajaran mp ON cp.mapel_id = mp.id
             LEFT JOIN guru g ON tp.guru_id = g.id
+            LEFT JOIN kktp k ON (k.tp_id = tp.id AND k.status = 'aktif')
             WHERE 1=1
         ";
         $params = [];
+        if (!$includeArchived) {
+            $sql .= " AND (tp.status != 'arsip' OR tp.status IS NULL)";
+        }
         if ($cpId) {
             $sql .= " AND tp.cp_id = ?";
             $params[] = (int)$cpId;
@@ -959,7 +982,7 @@ class CurriculumModel extends BaseModel {
             $sql .= " AND tp.guru_id = ?";
             $params[] = (int)$guruId;
         }
-        $sql .= " ORDER BY tp.kode_tp ASC";
+        $sql .= " ORDER BY tp.urutan ASC, tp.kode_tp ASC";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -969,11 +992,14 @@ class CurriculumModel extends BaseModel {
     public function getTPById($id) {
         $stmt = $this->db->prepare("
             SELECT tp.*, cp.kode_cp, cp.elemen, cp.kurikulum_id, cp.mapel_id, mp.nama_mapel,
-                   g.nama_lengkap as nama_guru
+                   g.nama_lengkap as nama_guru,
+                   k.id as kktp_id, k.metode as kktp_metode, k.nilai_minimum as kktp_nilai_min,
+                   k.target_indikator_count as kktp_target_ind, k.deskripsi_kriteria as kktp_kriteria
             FROM tujuan_pembelajaran tp
             JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id
             JOIN mata_pelajaran mp ON cp.mapel_id = mp.id
             LEFT JOIN guru g ON tp.guru_id = g.id
+            LEFT JOIN kktp k ON (k.tp_id = tp.id AND k.status = 'aktif')
             WHERE tp.id = ?
         ");
         $stmt->execute([(int)$id]);
@@ -986,6 +1012,8 @@ class CurriculumModel extends BaseModel {
         $materiPokok = trim($data['materi_pokok'] ?? '');
         $deskripsi = trim($data['deskripsi'] ?? '');
         $guruId = !empty($data['guru_id']) ? (int)$data['guru_id'] : null;
+        $urutan = !empty($data['urutan']) ? (int)$data['urutan'] : 1;
+        $tahunAjaranId = !empty($data['tahun_ajaran_id']) ? (int)$data['tahun_ajaran_id'] : null;
 
         if ($cpId <= 0) {
             return ['status' => false, 'message' => 'Induk Capaian Pembelajaran (CP) wajib dipilih.'];
@@ -1000,18 +1028,31 @@ class CurriculumModel extends BaseModel {
             return ['status' => false, 'message' => 'Deskripsi Tujuan Pembelajaran wajib diisi.'];
         }
 
-        $chk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ?");
+        $chk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ? AND status != 'arsip'");
         $chk->execute([$cpId, $kodeTp]);
         if ($chk->fetch()) {
             return ['status' => false, 'message' => "Kode TP '{$kodeTp}' sudah ada untuk Capaian Pembelajaran ini."];
         }
 
         $stmt = $this->db->prepare("
-            INSERT INTO tujuan_pembelajaran (cp_id, guru_id, kode_tp, materi_pokok, deskripsi)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO tujuan_pembelajaran (cp_id, guru_id, kode_tp, materi_pokok, deskripsi, urutan, status, tahun_ajaran_id)
+            VALUES (?, ?, ?, ?, ?, ?, 'aktif', ?)
         ");
-        $res = $stmt->execute([$cpId, $guruId, $kodeTp, $materiPokok, $deskripsi]);
-        return ['status' => (bool)$res, 'message' => "Tujuan Pembelajaran (TP) '{$kodeTp}' berhasil ditambahkan."];
+        $res = $stmt->execute([$cpId, $guruId, $kodeTp, $materiPokok, $deskripsi, $urutan, $tahunAjaranId]);
+        $newTpId = (int)$this->db->lastInsertId();
+
+        // Buat KKTP default (Interval Nilai min 75.00)
+        if ($res && $newTpId) {
+            try {
+                $stmtKktp = $this->db->prepare("
+                    INSERT INTO kktp (tp_id, metode, nilai_minimum, target_indikator_count, deskripsi_kriteria, versi, status)
+                    VALUES (?, 'interval_nilai', 75.00, 0, 'Batas Ketuntasan Minimum 75.00', 1, 'aktif')
+                ");
+                $stmtKktp->execute([$newTpId]);
+            } catch (\Throwable $e) {}
+        }
+
+        return ['status' => (bool)$res, 'id' => $newTpId, 'message' => "Tujuan Pembelajaran (TP) '{$kodeTp}' berhasil ditambahkan."];
     }
 
     public function updateTP($id, $data) {
@@ -1020,12 +1061,13 @@ class CurriculumModel extends BaseModel {
         $materiPokok = trim($data['materi_pokok'] ?? '');
         $deskripsi = trim($data['deskripsi'] ?? '');
         $guruId = !empty($data['guru_id']) ? (int)$data['guru_id'] : null;
+        $urutan = isset($data['urutan']) ? (int)$data['urutan'] : null;
 
         if (empty($kodeTp) || empty($deskripsi)) {
             return ['status' => false, 'message' => 'Kode TP dan Deskripsi Tujuan Pembelajaran tidak boleh kosong.'];
         }
 
-        $stmtCurrent = $this->db->prepare("SELECT cp_id, guru_id FROM tujuan_pembelajaran WHERE id = ?");
+        $stmtCurrent = $this->db->prepare("SELECT cp_id, guru_id, urutan FROM tujuan_pembelajaran WHERE id = ?");
         $stmtCurrent->execute([$id]);
         $current = $stmtCurrent->fetch(PDO::FETCH_ASSOC);
         if (!$current) {
@@ -1034,8 +1076,9 @@ class CurriculumModel extends BaseModel {
 
         $targetCpId = !empty($data['cp_id']) ? (int)$data['cp_id'] : (int)$current['cp_id'];
         $targetGuruId = $guruId ?: (!empty($current['guru_id']) ? (int)$current['guru_id'] : null);
+        $targetUrutan = ($urutan !== null) ? $urutan : (int)$current['urutan'];
 
-        $chk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ? AND id != ?");
+        $chk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ? AND id != ? AND status != 'arsip'");
         $chk->execute([$targetCpId, $kodeTp, $id]);
         if ($chk->fetch()) {
             return ['status' => false, 'message' => "Kode TP '{$kodeTp}' sudah terdaftar untuk Capaian Pembelajaran ini."];
@@ -1043,16 +1086,35 @@ class CurriculumModel extends BaseModel {
 
         $stmt = $this->db->prepare("
             UPDATE tujuan_pembelajaran
-            SET cp_id = ?, kode_tp = ?, materi_pokok = ?, deskripsi = ?, guru_id = ?
+            SET cp_id = ?, kode_tp = ?, materi_pokok = ?, deskripsi = ?, guru_id = ?, urutan = ?
             WHERE id = ?
         ");
-        $res = $stmt->execute([$targetCpId, $kodeTp, $materiPokok, $deskripsi, $targetGuruId, $id]);
+        $res = $stmt->execute([$targetCpId, $kodeTp, $materiPokok, $deskripsi, $targetGuruId, $targetUrutan, $id]);
         return ['status' => (bool)$res, 'message' => 'Tujuan Pembelajaran (TP) berhasil diperbarui.'];
     }
 
     public function deleteTP($id) {
         $id = (int)$id;
+        // Check if TP has assessment or scoring history
+        $chkScore = $this->db->prepare("
+            SELECT COUNT(*) FROM nilai_asesmen_tp WHERE tp_id = ?
+            UNION ALL
+            SELECT COUNT(*) FROM asesmen_tp WHERE tp_id = ?
+            UNION ALL
+            SELECT COUNT(*) FROM asesmen WHERE tp_id = ?
+        ");
+        $chkScore->execute([$id, $id, $id]);
+        $counts = $chkScore->fetchAll(PDO::FETCH_COLUMN);
+        $totalUsed = array_sum($counts);
+
+        if ($totalUsed > 0) {
+            // Protect history: Soft-archive TP instead of permanently deleting
+            $this->db->prepare("UPDATE tujuan_pembelajaran SET status = 'arsip' WHERE id = ?")->execute([$id]);
+            return ['status' => true, 'message' => 'Tujuan Pembelajaran (TP) berhasil diarsipkan karena memiliki riwayat penilaian.'];
+        }
+
         $this->db->prepare("UPDATE asesmen SET tp_id = NULL WHERE tp_id = ?")->execute([$id]);
+        $this->db->prepare("DELETE FROM kktp WHERE tp_id = ?")->execute([$id]);
         $stmt = $this->db->prepare("DELETE FROM tujuan_pembelajaran WHERE id = ?");
         $res = $stmt->execute([$id]);
         return ['status' => (bool)$res, 'message' => 'Tujuan Pembelajaran berhasil dihapus.'];
