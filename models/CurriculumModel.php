@@ -1084,15 +1084,21 @@ class CurriculumModel extends BaseModel {
         $res = $stmt->execute($values);
         $newTpId = (int)$this->db->lastInsertId();
 
-        // Buat KKTP default (Interval Nilai min 75.00)
+        // Otomatis buat KKTP & indikator turunan dari CP & TP
         if ($res && $newTpId) {
             try {
-                $stmtKktp = $this->db->prepare("
-                    INSERT INTO kktp (tp_id, metode, nilai_minimum, target_indikator_count, deskripsi_kriteria, versi, status)
-                    VALUES (?, 'interval_nilai', 75.00, 0, 'Batas Ketuntasan Minimum 75.00', 1, 'aktif')
-                ");
-                $stmtKktp->execute([$newTpId]);
-            } catch (\Throwable $e) {}
+                require_once ROOT_PATH . 'models/AssessmentModel.php';
+                $assessModel = new AssessmentModel();
+                $assessModel->autoSeedKktpForTp($newTpId);
+            } catch (\Throwable $e) {
+                try {
+                    $stmtKktp = $this->db->prepare("
+                        INSERT INTO kktp (tp_id, metode, nilai_minimum, target_indikator_count, deskripsi_kriteria, versi, status)
+                        VALUES (?, 'interval_nilai', 75.00, 0, 'Batas Ketuntasan Minimum 75.00', 1, 'aktif')
+                    ");
+                    $stmtKktp->execute([$newTpId]);
+                } catch (\Throwable $e2) {}
+            }
         }
 
         return ['status' => (bool)$res, 'id' => $newTpId, 'message' => "Tujuan Pembelajaran (TP) '{$kodeTp}' berhasil ditambahkan."];

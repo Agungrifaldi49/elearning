@@ -2526,9 +2526,15 @@ class GuruController {
             } elseif ($action === 'save_kktp') {
                 $tpId = (int)$_POST['tp_id'];
                 $metode = Security::sanitize($_POST['metode'] ?? 'interval_nilai');
-                $nilaiMin = floatval($_POST['nilai_minimum'] ?? 75.00);
+                
+                if ($metode === 'rubrik') {
+                    $nilaiMin = floatval(!empty($_POST['rubrik_nilai_min']) ? $_POST['rubrik_nilai_min'] : ($_POST['nilai_minimum'] ?? 75.00));
+                    $deskripsiKriteria = Security::sanitize(!empty($_POST['rubrik_deskripsi']) ? $_POST['rubrik_deskripsi'] : ($_POST['deskripsi_kriteria'] ?? ''));
+                } else {
+                    $nilaiMin = floatval($_POST['nilai_minimum'] ?? 75.00);
+                    $deskripsiKriteria = Security::sanitize($_POST['deskripsi_kriteria'] ?? '');
+                }
                 $targetInd = (int)($_POST['target_indikator_count'] ?? 0);
-                $deskripsiKriteria = Security::sanitize($_POST['deskripsi_kriteria'] ?? '');
 
                 // Parse indikator jika ada
                 $indikatorList = [];
@@ -2669,6 +2675,13 @@ class GuruController {
                 $tpId = (int)($_GET['tp_id'] ?? 0);
                 $kktp = $assessModel->getKktpByTp($tpId);
                 echo json_encode(['status' => true, 'data' => $kktp]);
+                exit();
+            }
+
+            if ($ajaxAction === 'generate_kktp_auto') {
+                $tpId = (int)($_GET['tp_id'] ?? 0);
+                $autoKktp = $assessModel->generateDefaultKktpDataFromTp($tpId);
+                echo json_encode(['status' => true, 'data' => $autoKktp]);
                 exit();
             }
 

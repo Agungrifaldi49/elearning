@@ -14,7 +14,177 @@ class AssessmentModel extends BaseModel {
     // =========================================================================
 
     /**
+     * Ekstrak indikator KKTP secara otomatis dari rumusan deskripsi TP
+     * Membaca format butir: angka (1., 2.), huruf (a., b.), tanda hubung (-), bullet (•), centang (✓), panah (→),
+     * atau merumuskan tahapan kompetensi dari materi pokok dan elemen CP jika berupa teks paragraf.
+     */
+    public function parseIndicatorsFromTpDescription($tpDesc, $materiPokok = '', $cpElemen = '') {
+        $indicators = [];
+        $lines = preg_split('/\r\n|\r|\n/', trim((string)$tpDesc));
+        $idx = 1;
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') continue;
+
+            // Pattern: 1. or 1) or a. or A. or - or • or * or ✓ or → or +
+            if (preg_match('/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓✔☑▪▫►▶→➔➢+~–—\x{2022}\x{25AA}\x{2713}\x{2714}])\s*(.*)$/u', $line, $m)) {
+                $content = trim($m[2]);
+                if (!empty($content)) {
+                    $namaPendek = mb_strlen($content) > 65 ? mb_substr($content, 0, 62) . '...' : $content;
+                    $indicators[] = [
+                        'nama_indikator' => "Indikator {$idx}: {$namaPendek}",
+                        'deskripsi_kriteria' => $content,
+                        'bobot' => 1.00,
+                        'urutan' => $idx
+                    ];
+                    $idx++;
+                }
+            }
+        }
+
+        // Jika tidak ditemukan butir-butir bernomor/bullet, coba pisahkan berdasarkan titik koma (;) atau titik (.)
+        if (empty($indicators)) {
+            $sentences = preg_split('/(?<=[;])\s*|(?<=[.])\s+(?=[A-Z0-9])/', trim((string)$tpDesc));
+            $validSentences = [];
+            foreach ($sentences as $s) {
+                $s = trim($s, " \t\n\r\0\x0B;.");
+                if (mb_strlen($s) >= 12) {
+                    $validSentences[] = $s;
+                }
+            }
+
+            if (count($validSentences) >= 2) {
+                foreach ($validSentences as $s) {
+                    $namaPendek = mb_strlen($s) > 65 ? mb_substr($s, 0, 62) . '...' : $s;
+                    $indicators[] = [
+                        'nama_indikator' => "Indikator {$idx}: {$namaPendek}",
+                        'deskripsi_kriteria' => $s,
+                        'bobot' => 1.00,
+                        'urutan' => $idx
+                    ];
+                    $idx++;
+                }
+            } else {
+                // Fallback: Bentuk 2-3 indikator capaian bertahap berbasis topik materi & TP
+                $topik = !empty($materiPokok) ? $materiPokok : (!empty($cpElemen) ? $cpElemen : 'materi pokok');
+                $indicators[] = [
+                    'nama_indikator' => "Indikator 1: Pemahaman Konsep {$topik}",
+                    'deskripsi_kriteria' => "Mampu mengidentifikasi, menjelaskan, dan memahami prinsip dasar {$topik}.",
+                    'bobot' => 1.00,
+                    'urutan' => 1
+                ];
+                $indicators[] = [
+                    'nama_indikator' => "Indikator 2: Penerapan & Praktik {$topik}",
+                    'deskripsi_kriteria' => "Mampu mengaplikasikan konsep dan menyelesaikan tugas/studi kasus {$topik}.",
+                    'bobot' => 1.00,
+                    'urutan' => 2
+                ];
+                if (!empty($tpDesc) && mb_strlen($tpDesc) > 30) {
+                    $namaRingkas = mb_strlen($tpDesc) > 65 ? mb_substr($tpDesc, 0, 62) . '...' : $tpDesc;
+                    $indicators[] = [
+                        'nama_indikator' => "Indikator 3: Penguasaan Target Kompetensi",
+                        'deskripsi_kriteria' => $tpDesc,
+                        'bobot' => 1.00,
+                        'urutan' => 3
+                    ];
+                }
+            }
+        }
+
+        return $indicators;
+    }
+
+    /**
+     * Generate data awal KKTP (kriteria, rubrik, indikator) secara otomatis dari CP & TP
+     */
+    public function generateDefaultKktpDataFromTp($tpId) {
+        $tpId = (int)$tpId;
+        $stmt = $this->db->prepare("
+            SELECT tp.*, 
+                   cp.kode_cp, cp.elemen AS cp_elemen, cp.deskripsi AS cp_deskripsi,
+                   m.nama_mapel
+            FROM tujuan_pembelajaran tp
+            JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id
+            LEFT JOIN mata_pelajaran m ON cp.mapel_id = m.id
+            WHERE tp.id = ?
+        ");
+        $stmt->execute([$tpId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return [
+                'id' => null,
+                'tp_id' => $tpId,
+                'metode' => 'interval_nilai',
+                'nilai_minimum' => 75.00,
+                'target_indikator_count' => 0,
+                'deskripsi_kriteria' => 'Batas Ketercapaian Minimum 75.00',
+                'rubrik_deskripsi' => '',
+                'indikator' => []
+            ];
+        }
+
+        $tpDesc = trim($row['deskripsi'] ?? '');
+        $materi = trim($row['materi_pokok'] ?? '');
+        $cpElemen = trim($row['cp_elemen'] ?? '');
+        $cpKode = trim($row['kode_cp'] ?? '');
+        $mapel = trim($row['nama_mapel'] ?? '');
+
+        // 1. Ekstrak indikator dari rumusan TP
+        $indicators = $this->parseIndicatorsFromTpDescription($tpDesc, $materi, $cpElemen);
+
+        // 2. Susun rumusan deskripsi kriteria ketercapaian dari CP & TP
+        $deskripsiKriteria = '';
+        if (!empty($materi) && !empty($cpElemen)) {
+            $deskripsiKriteria = "Peserta didik mencapai ketuntasan materi '{$materi}' pada elemen '{$cpElemen}' dengan penguasaan minimal 75%.";
+        } elseif (!empty($materi)) {
+            $deskripsiKriteria = "Peserta didik mencapai ketuntasan materi '{$materi}' dengan penguasaan kompetensi minimal 75%.";
+        } elseif (!empty($cpElemen)) {
+            $deskripsiKriteria = "Peserta didik mencapai ketuntasan kompetensi elemen '{$cpElemen}' dengan ketuntasan minimal 75%.";
+        } else {
+            $firstSentence = preg_split('/[\.\r\n]/', $tpDesc)[0] ?? $tpDesc;
+            $firstSentence = trim(preg_replace('/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓✔☑▪▫►▶→➔➢+~–—\x{2022}\x{25AA}\x{2713}\x{2714}])\s*/u', '', $firstSentence));
+            $cleanSnippet = mb_strlen($firstSentence) > 110 ? mb_substr($firstSentence, 0, 107) . '...' : $firstSentence;
+            $deskripsiKriteria = "Ketuntasan minimal ketercapaian kompetensi: {$cleanSnippet} (Ambang 75.00)";
+        }
+
+        // 3. Susun rubrik berjenjang operasional berdasarkan materi / TP
+        $topik = !empty($materi) ? $materi : (!empty($cpElemen) ? $cpElemen : 'materi pokok');
+        $rubrikDeskripsi = "- Mahir (>= 85): Menguasai seluruh kriteria {$topik} secara mandiri, akurat, dan mampu mengaplikasikan pada tugas kompleks.\n"
+                         . "- Cakap (75 - 84): Menguasai kriteria utama {$topik} secara mandiri dan memenuhi standar ketercapaian pembelajaran.\n"
+                         . "- Layak (65 - 74): Memahami sebagian konsep {$topik}, namun masih membutuhkan pendampingan pada bagian tertentu.\n"
+                         . "- Perlu Bimbingan (< 65): Belum memenuhi batas minimum kompetensi {$topik} dan memerlukan remedial terstruktur.";
+
+        $totalInd = count($indicators);
+        $targetCount = $totalInd > 0 ? ($totalInd >= 3 ? $totalInd - 1 : $totalInd) : 2;
+
+        return [
+            'id' => null,
+            'tp_id' => $tpId,
+            'kode_tp' => $row['kode_tp'] ?? '',
+            'materi_pokok' => $materi,
+            'tp_deskripsi' => $tpDesc,
+            'cp_id' => $row['cp_id'] ?? null,
+            'cp_kode' => $cpKode,
+            'cp_elemen' => $cpElemen,
+            'cp_deskripsi' => $row['cp_deskripsi'] ?? '',
+            'nama_mapel' => $mapel,
+            'metode' => 'interval_nilai',
+            'nilai_minimum' => 75.00,
+            'target_indikator_count' => $targetCount,
+            'deskripsi_kriteria' => $deskripsiKriteria,
+            'rubrik_deskripsi' => $rubrikDeskripsi,
+            'versi' => 1,
+            'status' => 'aktif',
+            'indikator' => $indicators,
+            'is_auto_derived' => true
+        ];
+    }
+
+    /**
      * Ambil data KKTP aktif untuk suatu TP
+     * Jika belum pernah disimpan atau indikator kosong, perkaya dengan data turunan otomatis dari CP & TP
      */
     public function getKktpByTp($tpId) {
         $tpId = (int)$tpId;
@@ -26,22 +196,25 @@ class AssessmentModel extends BaseModel {
         $stmt->execute([$tpId]);
         $kktp = $stmt->fetch(PDO::FETCH_ASSOC);
 
+        // Ambil info konteks TP dan CP
+        $stmtTp = $this->db->prepare("
+            SELECT tp.*, 
+                   cp.kode_cp, cp.elemen AS cp_elemen, cp.deskripsi AS cp_deskripsi,
+                   m.nama_mapel
+            FROM tujuan_pembelajaran tp
+            JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id
+            LEFT JOIN mata_pelajaran m ON cp.mapel_id = m.id
+            WHERE tp.id = ?
+        ");
+        $stmtTp->execute([$tpId]);
+        $tpInfo = $stmtTp->fetch(PDO::FETCH_ASSOC);
+
         if (!$kktp) {
-            // Default KKTP fallback: Interval Nilai standar 75.00
-            return [
-                'id' => null,
-                'tp_id' => $tpId,
-                'metode' => 'interval_nilai',
-                'nilai_minimum' => 75.00,
-                'target_indikator_count' => 0,
-                'deskripsi_kriteria' => 'Batas Ketercapaian Minimum 75.00',
-                'versi' => 1,
-                'status' => 'aktif',
-                'indikator' => []
-            ];
+            // Belum ada konfigurasi KKTP, buatkan payload turunan otomatis dari TP dan CP
+            return $this->generateDefaultKktpDataFromTp($tpId);
         }
 
-        // Ambil indikator jika ada
+        // Ambil indikator tersimpan jika ada
         $stmtInd = $this->db->prepare("
             SELECT * FROM kktp_indikator 
             WHERE kktp_id = ? 
@@ -50,7 +223,42 @@ class AssessmentModel extends BaseModel {
         $stmtInd->execute([(int)$kktp['id']]);
         $kktp['indikator'] = $stmtInd->fetchAll(PDO::FETCH_ASSOC);
 
+        // Pasangkan info konteks CP & TP
+        if ($tpInfo) {
+            $kktp['kode_tp'] = $tpInfo['kode_tp'] ?? '';
+            $kktp['materi_pokok'] = $tpInfo['materi_pokok'] ?? '';
+            $kktp['tp_deskripsi'] = $tpInfo['deskripsi'] ?? '';
+            $kktp['cp_id'] = $tpInfo['cp_id'] ?? null;
+            $kktp['cp_kode'] = $tpInfo['kode_cp'] ?? '';
+            $kktp['cp_elemen'] = $tpInfo['cp_elemen'] ?? '';
+            $kktp['cp_deskripsi'] = $tpInfo['cp_deskripsi'] ?? '';
+            $kktp['nama_mapel'] = $tpInfo['nama_mapel'] ?? '';
+        }
+
+        // Jika indikator tersimpan masih kosong, sertakan auto_indicators dari turunan TP
+        $autoData = $this->generateDefaultKktpDataFromTp($tpId);
+        $kktp['auto_indicators'] = $autoData['indikator'] ?? [];
+        if (empty($kktp['deskripsi_kriteria']) || $kktp['deskripsi_kriteria'] === 'Batas Ketercapaian Minimum 75.00') {
+            $kktp['auto_deskripsi_kriteria'] = $autoData['deskripsi_kriteria'] ?? '';
+        }
+        $kktp['auto_rubrik_deskripsi'] = $autoData['rubrik_deskripsi'] ?? '';
+
         return $kktp;
+    }
+
+    /**
+     * Otomatis inisialisasi / seeder KKTP dan indikatornya saat TP baru dibuat
+     */
+    public function autoSeedKktpForTp($tpId) {
+        $tpId = (int)$tpId;
+        $autoData = $this->generateDefaultKktpDataFromTp($tpId);
+        return $this->saveKktp($tpId, [
+            'metode' => 'interval_nilai',
+            'nilai_minimum' => 75.00,
+            'target_indikator_count' => $autoData['target_indikator_count'] ?? 0,
+            'deskripsi_kriteria' => $autoData['deskripsi_kriteria'] ?? 'Batas Ketercapaian Minimum 75.00',
+            'indikator' => $autoData['indikator'] ?? []
+        ]);
     }
 
     /**

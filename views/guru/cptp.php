@@ -477,6 +477,11 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                                             data-id="<?= $tp['id'] ?>"
                                                             data-kode="<?= htmlspecialchars($tp['kode_tp']) ?>"
                                                             data-deskripsi="<?= htmlspecialchars($tp['deskripsi']) ?>"
+                                                            data-materi="<?= htmlspecialchars($tp['materi_pokok'] ?? '') ?>"
+                                                            data-cp-id="<?= $cp['id'] ?>"
+                                                            data-cp-kode="<?= htmlspecialchars($cp['kode_cp']) ?>"
+                                                            data-cp-elemen="<?= htmlspecialchars($cp['elemen'] ?? '') ?>"
+                                                            data-cp-deskripsi="<?= htmlspecialchars($cp['deskripsi']) ?>"
                                                             data-metode="<?= $kMetode ?>"
                                                             data-nilai-min="<?= $kMin ?>"
                                                             data-target-ind="<?= $kTarget ?>"
@@ -1151,15 +1156,36 @@ if (!function_exists('formatTpDescriptionHtml')) {
 
                 <!-- Modal Body -->
                 <div class="modal-body p-4 bg-light">
-                    <!-- TP Summary Header Card -->
-                    <div class="card border border-info border-opacity-25 rounded-3 mb-3 bg-white shadow-xs">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <span class="badge bg-info text-dark font-monospace fw-bold" id="kktp_preview_tp_kode">TP-...</span>
-                                <span class="text-muted small fw-semibold">Tujuan Pembelajaran yang Dikonfigurasi</span>
+                    <!-- Induk CP & TP Reference Box with Auto-Generate Action -->
+                    <div class="card border border-info border-opacity-50 rounded-4 mb-3 bg-white shadow-xs overflow-hidden">
+                        <div class="card-header bg-info bg-opacity-10 py-2.5 px-3.5 border-bottom border-info-subtle d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-primary text-white font-monospace fw-bold px-2 py-1" id="kktp_preview_cp_kode">CP-...</span>
+                                <span class="badge bg-white text-dark border fw-semibold px-2 py-1 shadow-xs" id="kktp_preview_cp_elemen">Elemen: -</span>
+                                <span class="text-muted small fw-semibold">Induk Capaian Pembelajaran (CP)</span>
                             </div>
-                            <div class="text-dark small fw-medium" id="kktp_preview_tp_desc" style="line-height: 1.6;">
-                                Memuat ringkasan TP...
+                            <button type="button" class="btn btn-xs btn-outline-info bg-white text-dark rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm border-info" id="btnAutoGenerateKktp" title="Ekstrak indikator dan rumuskan kriteria otomatis dari CP & TP">
+                                <i class="bi bi-magic text-info fs-6"></i>
+                                <span>⚡ Generate Otomatis dari CP & TP</span>
+                            </button>
+                        </div>
+                        <div class="card-body p-3">
+                            <!-- Ringkasan CP -->
+                            <div class="text-muted small mb-2.5 ps-2.5 border-start border-3 border-info" id="kktp_preview_cp_desc" style="line-height: 1.5; font-size: 0.83rem;">
+                                Memuat rumusan CP...
+                            </div>
+                            <!-- TP Acuan -->
+                            <div class="pt-2 border-top border-light-subtle">
+                                <div class="d-flex align-items-center gap-2 mb-1.5 flex-wrap">
+                                    <span class="badge bg-info text-dark font-monospace fw-bold px-2 py-1" id="kktp_preview_tp_kode">TP-...</span>
+                                    <span class="badge bg-light text-primary border border-primary-subtle fw-bold px-2 py-1" id="kktp_preview_tp_materi" style="display: none;">
+                                        <i class="bi bi-tag-fill me-1"></i><span id="kktp_preview_tp_materi_text"></span>
+                                    </span>
+                                    <span class="text-dark small fw-bold">Tujuan Pembelajaran (TP) Acuan:</span>
+                                </div>
+                                <div class="text-dark small fw-medium p-2.5 rounded-3 bg-light border border-dashed" id="kktp_preview_tp_desc" style="line-height: 1.6;">
+                                    Memuat ringkasan TP...
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1968,18 +1994,127 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Client-side parser for TP list indicators and criteria
+    function parseTpIndicatorsClientSide(desc, materi, elemen) {
+        const lines = (desc || '').split(/\r\n|\r|\n/);
+        const indicators = [];
+        let idx = 1;
+        lines.forEach(l => {
+            const trimmed = l.trim();
+            if (!trimmed) return;
+            const m = trimmed.match(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓✔☑▪▫►▶→➔➢+~–—\u2022\u25AA\u2713\u2714])\s*(.*)$/u);
+            if (m && m[2] && m[2].trim()) {
+                const content = m[2].trim();
+                const shortName = content.length > 65 ? content.substring(0, 62) + '...' : content;
+                indicators.push({
+                    nama: `Indikator ${idx}: ${shortName}`,
+                    desc: content,
+                    bobot: 1
+                });
+                idx++;
+            }
+        });
+
+        if (indicators.length === 0) {
+            const sentences = (desc || '').split(/(?<=[;])\s*|(?<=[.])\s+(?=[A-Z0-9])/).map(s => s.trim()).filter(s => s.length >= 12);
+            if (sentences.length >= 2) {
+                sentences.forEach(s => {
+                    const shortName = s.length > 65 ? s.substring(0, 62) + '...' : s;
+                    indicators.push({
+                        nama: `Indikator ${idx}: ${shortName}`,
+                        desc: s,
+                        bobot: 1
+                    });
+                    idx++;
+                });
+            } else {
+                const topik = materi || elemen || 'materi pokok';
+                indicators.push({
+                    nama: `Indikator 1: Pemahaman Konsep ${topik}`,
+                    desc: `Mampu mengidentifikasi, menjelaskan, dan memahami prinsip dasar ${topik}.`,
+                    bobot: 1
+                });
+                indicators.push({
+                    nama: `Indikator 2: Penerapan & Praktik ${topik}`,
+                    desc: `Mampu mengaplikasikan konsep dan menyelesaikan tugas/studi kasus ${topik}.`,
+                    bobot: 1
+                });
+                if (desc && desc.length > 30) {
+                    indicators.push({
+                        nama: `Indikator 3: Penguasaan Target Kompetensi`,
+                        desc: desc,
+                        bobot: 1
+                    });
+                }
+            }
+        }
+        return indicators;
+    }
+
+    function generateAutoCriteriaClientSide(desc, materi, elemen) {
+        let kriteria = '';
+        if (materi && elemen) {
+            kriteria = `Peserta didik mencapai ketuntasan materi '${materi}' pada elemen '${elemen}' dengan penguasaan minimal 75%.`;
+        } else if (materi) {
+            kriteria = `Peserta didik mencapai ketuntasan materi '${materi}' dengan penguasaan kompetensi minimal 75%.`;
+        } else if (elemen) {
+            kriteria = `Peserta didik mencapai ketuntasan kompetensi elemen '${elemen}' dengan ketuntasan minimal 75%.`;
+        } else {
+            const first = (desc || '').split(/[\.\r\n]/)[0] || desc;
+            const cleaned = first.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓✔☑▪▫►▶→➔➢+~–—\u2022\u25AA\u2713\u2714])\s*/u, '').trim();
+            const snippet = cleaned.length > 100 ? cleaned.substring(0, 97) + '...' : cleaned;
+            kriteria = `Ketuntasan minimal ketercapaian kompetensi: ${snippet} (Ambang 75.00)`;
+        }
+
+        const topik = materi || elemen || 'materi pokok';
+        const rubrik = `- Mahir (>= 85): Menguasai seluruh kriteria ${topik} secara mandiri, akurat, dan mampu mengaplikasikan pada tugas kompleks.\n`
+                     + `- Cakap (75 - 84): Menguasai kriteria utama ${topik} secara mandiri dan memenuhi standar ketercapaian pembelajaran.\n`
+                     + `- Layak (65 - 74): Memahami sebagian konsep ${topik}, namun masih membutuhkan pendampingan pada bagian tertentu.\n`
+                     + `- Perlu Bimbingan (< 65): Belum memenuhi batas minimum kompetensi ${topik} dan memerlukan remedial terstruktur.`;
+
+        return { kriteria, rubrik };
+    }
+
+    let currentActiveTpContext = {};
+
     function populateKktpModal(btn) {
         if (!btn) return;
         const tpId = btn.dataset.id;
         const tpKode = btn.dataset.kode || '';
         const tpDesc = btn.dataset.deskripsi || '';
+        const tpMateri = btn.dataset.materi || '';
+        const cpKode = btn.dataset.cpKode || '';
+        const cpElemen = btn.dataset.cpElemen || '';
+        const cpDesc = btn.dataset.cpDeskripsi || '';
         const metode = btn.dataset.metode || 'interval_nilai';
         const nilaiMin = btn.dataset.nilaiMin || '75.00';
         const targetInd = btn.dataset.targetInd || '0';
         const kriteria = btn.dataset.kriteria || '';
 
+        currentActiveTpContext = { tpId, tpKode, tpDesc, tpMateri, cpKode, cpElemen, cpDesc };
+
         document.getElementById('kktp_tp_id').value = tpId;
+        
+        // Update CP Reference Header
+        const cpKodeEl = document.getElementById('kktp_preview_cp_kode');
+        const cpElemenEl = document.getElementById('kktp_preview_cp_elemen');
+        const cpDescEl = document.getElementById('kktp_preview_cp_desc');
+        if (cpKodeEl) cpKodeEl.textContent = cpKode || 'CP Acuan';
+        if (cpElemenEl) cpElemenEl.textContent = 'Elemen: ' + (cpElemen || 'Umum');
+        if (cpDescEl) cpDescEl.textContent = cpDesc ? (cpDesc.length > 250 ? cpDesc.substring(0, 247) + '...' : cpDesc) : 'Deskripsi capaian pembelajaran belum tersedia.';
+
+        // Update TP Reference Header
         document.getElementById('kktp_preview_tp_kode').textContent = tpKode;
+        const materiBadge = document.getElementById('kktp_preview_tp_materi');
+        const materiText = document.getElementById('kktp_preview_tp_materi_text');
+        if (materiBadge && materiText) {
+            if (tpMateri) {
+                materiText.textContent = tpMateri;
+                materiBadge.style.display = 'inline-flex';
+            } else {
+                materiBadge.style.display = 'none';
+            }
+        }
         document.getElementById('kktp_preview_tp_desc').textContent = tpDesc;
 
         // Set radio
@@ -1987,7 +2122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (radio) radio.checked = true;
         switchKktpMetode(metode);
 
-        // Populate fields
+        // Populate baseline fields
         document.getElementById('kktp_nilai_minimum').value = parseFloat(nilaiMin) || 75;
         document.getElementById('kktp_rubrik_nilai_min').value = parseFloat(nilaiMin) || 75;
         document.getElementById('kktp_deskripsi_kriteria_interval').value = kriteria;
@@ -1995,24 +2130,125 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('kktp_target_indikator_count').value = parseInt(targetInd) || 3;
 
         // Fetch detail indicator via AJAX if available
-        if (indListWrapper) indListWrapper.innerHTML = '';
+        if (indListWrapper) indListWrapper.innerHTML = '<div class="text-muted small py-2 text-center"><i class="bi bi-hourglass-split"></i> Memuat kriteria & indikator KKTP...</div>';
+        
         fetch(`<?= BASE_URL ?>index.php?url=guru/asesmen&ajax_action=get_kktp_info&tp_id=${tpId}`)
             .then(r => r.json())
             .then(res => {
-                if (res.status && res.data && res.data.indikator && res.data.indikator.length > 0) {
-                    res.data.indikator.forEach(ind => {
-                        addIndikatorRow(ind.nama_indikator, ind.deskripsi_kriteria, ind.bobot);
-                    });
-                } else {
-                    // Provide 2 default indicator templates if empty
-                    addIndikatorRow('Indikator 1: Mampu mengidentifikasi konsep dasar', '', 1);
-                    addIndikatorRow('Indikator 2: Mampu menerapkan prosedur secara benar', '', 1);
+                if (indListWrapper) indListWrapper.innerHTML = '';
+                if (res.status && res.data) {
+                    const data = res.data;
+                    
+                    // Auto-fill criteria if currently generic or empty
+                    if (!kriteria || kriteria === 'Batas Ketercapaian Minimum 75.00') {
+                        if (data.auto_deskripsi_kriteria) {
+                            document.getElementById('kktp_deskripsi_kriteria_interval').value = data.auto_deskripsi_kriteria;
+                        } else if (data.deskripsi_kriteria && data.deskripsi_kriteria !== 'Batas Ketercapaian Minimum 75.00') {
+                            document.getElementById('kktp_deskripsi_kriteria_interval').value = data.deskripsi_kriteria;
+                        } else {
+                            const auto = generateAutoCriteriaClientSide(tpDesc, tpMateri, cpElemen);
+                            document.getElementById('kktp_deskripsi_kriteria_interval').value = auto.kriteria;
+                        }
+                    }
+
+                    // Auto-fill rubrik if empty
+                    const rubrikVal = document.getElementById('kktp_rubrik_deskripsi').value.trim();
+                    if (!rubrikVal || rubrikVal.includes('Batas Ketercapaian')) {
+                        if (data.auto_rubrik_deskripsi) {
+                            document.getElementById('kktp_rubrik_deskripsi').value = data.auto_rubrik_deskripsi;
+                        } else if (data.rubrik_deskripsi) {
+                            document.getElementById('kktp_rubrik_deskripsi').value = data.rubrik_deskripsi;
+                        } else {
+                            const auto = generateAutoCriteriaClientSide(tpDesc, tpMateri, cpElemen);
+                            document.getElementById('kktp_rubrik_deskripsi').value = auto.rubrik;
+                        }
+                    }
+
+                    // Populate indicators
+                    if (data.indikator && data.indikator.length > 0) {
+                        data.indikator.forEach(ind => {
+                            addIndikatorRow(ind.nama_indikator, ind.deskripsi_kriteria, ind.bobot);
+                        });
+                        document.getElementById('kktp_target_indikator_count').value = parseInt(data.target_indikator_count) || Math.max(1, data.indikator.length);
+                    } else if (data.auto_indicators && data.auto_indicators.length > 0) {
+                        // Automatically render indicators derived from TP & CP!
+                        data.auto_indicators.forEach(ind => {
+                            addIndikatorRow(ind.nama_indikator, ind.deskripsi_kriteria, ind.bobot);
+                        });
+                        document.getElementById('kktp_target_indikator_count').value = Math.max(1, data.auto_indicators.length >= 3 ? data.auto_indicators.length - 1 : data.auto_indicators.length);
+                    } else {
+                        // Fallback client-side indicator extraction
+                        const localInds = parseTpIndicatorsClientSide(tpDesc, tpMateri, cpElemen);
+                        localInds.forEach(ind => addIndikatorRow(ind.nama, ind.desc, ind.bobot));
+                        document.getElementById('kktp_target_indikator_count').value = Math.max(1, localInds.length >= 3 ? localInds.length - 1 : localInds.length);
+                    }
                 }
             })
             .catch(() => {
-                addIndikatorRow('Indikator 1', '', 1);
-                addIndikatorRow('Indikator 2', '', 1);
+                if (indListWrapper) indListWrapper.innerHTML = '';
+                const localInds = parseTpIndicatorsClientSide(tpDesc, tpMateri, cpElemen);
+                localInds.forEach(ind => addIndikatorRow(ind.nama, ind.desc, ind.bobot));
             });
+    }
+
+    // Button Generate Otomatis dari CP & TP
+    const btnAutoGenerate = document.getElementById('btnAutoGenerateKktp');
+    if (btnAutoGenerate) {
+        btnAutoGenerate.addEventListener('click', function() {
+            const ctx = currentActiveTpContext;
+            if (!ctx || !ctx.tpId) return;
+
+            const originalBtnHtml = this.innerHTML;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menurunkan dari CP & TP...';
+            this.disabled = true;
+
+            fetch(`<?= BASE_URL ?>index.php?url=guru/asesmen&ajax_action=generate_kktp_auto&tp_id=${ctx.tpId}`)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status && res.data) {
+                        const d = res.data;
+                        document.getElementById('kktp_deskripsi_kriteria_interval').value = d.deskripsi_kriteria || '';
+                        document.getElementById('kktp_rubrik_deskripsi').value = d.rubrik_deskripsi || '';
+                        document.getElementById('kktp_target_indikator_count').value = d.target_indikator_count || 2;
+
+                        if (indListWrapper) indListWrapper.innerHTML = '';
+                        if (d.indikator && d.indikator.length > 0) {
+                            d.indikator.forEach(ind => addIndikatorRow(ind.nama_indikator, ind.deskripsi_kriteria, ind.bobot));
+                        }
+                    } else {
+                        // Client side fallback
+                        const auto = generateAutoCriteriaClientSide(ctx.tpDesc, ctx.tpMateri, ctx.cpElemen);
+                        document.getElementById('kktp_deskripsi_kriteria_interval').value = auto.kriteria;
+                        document.getElementById('kktp_rubrik_deskripsi').value = auto.rubrik;
+                        
+                        const localInds = parseTpIndicatorsClientSide(ctx.tpDesc, ctx.tpMateri, ctx.cpElemen);
+                        if (indListWrapper) indListWrapper.innerHTML = '';
+                        localInds.forEach(ind => addIndikatorRow(ind.nama, ind.desc, ind.bobot));
+                        document.getElementById('kktp_target_indikator_count').value = Math.max(1, localInds.length >= 3 ? localInds.length - 1 : localInds.length);
+                    }
+
+                    // Visual notification
+                    btnAutoGenerate.className = 'btn btn-xs btn-success text-white rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm';
+                    btnAutoGenerate.innerHTML = '<i class="bi bi-check-circle-fill"></i> <span>✓ KKTP Berhasil Diambil dari CP & TP!</span>';
+                    setTimeout(() => {
+                        btnAutoGenerate.className = 'btn btn-xs btn-outline-info bg-white text-dark rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-sm border-info';
+                        btnAutoGenerate.innerHTML = originalBtnHtml;
+                        btnAutoGenerate.disabled = false;
+                    }, 2200);
+                })
+                .catch(() => {
+                    const auto = generateAutoCriteriaClientSide(ctx.tpDesc, ctx.tpMateri, ctx.cpElemen);
+                    document.getElementById('kktp_deskripsi_kriteria_interval').value = auto.kriteria;
+                    document.getElementById('kktp_rubrik_deskripsi').value = auto.rubrik;
+                    
+                    const localInds = parseTpIndicatorsClientSide(ctx.tpDesc, ctx.tpMateri, ctx.cpElemen);
+                    if (indListWrapper) indListWrapper.innerHTML = '';
+                    localInds.forEach(ind => addIndikatorRow(ind.nama, ind.desc, ind.bobot));
+
+                    btnAutoGenerate.innerHTML = originalBtnHtml;
+                    btnAutoGenerate.disabled = false;
+                });
+        });
     }
 
     document.addEventListener('click', function(e) {
