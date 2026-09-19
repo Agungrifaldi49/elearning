@@ -50,7 +50,7 @@ class SiswaModel extends BaseModel {
 
     public function getByUserId($userId) {
         $stmt = $this->db->prepare("
-            SELECT s.*, k.nama_kelas, j.nama_jurusan, u.username, u.email, u.avatar 
+            SELECT s.*, k.nama_kelas, k.tingkat, j.nama_jurusan, u.username, u.email, u.avatar 
             FROM siswa s 
             JOIN users u ON s.user_id = u.id 
             LEFT JOIN kelas k ON s.kelas_id = k.id 

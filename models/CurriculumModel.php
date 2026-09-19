@@ -324,6 +324,21 @@ class CurriculumModel extends BaseModel {
             return ['status' => false, 'message' => 'Rombel Kelas, Tahun Ajaran, dan Kurikulum wajib dipilih.'];
         }
 
+        // Auto-resolve Fase jika belum dipilih berdasarkan tingkat kelas
+        $kStmt = $this->db->prepare("SELECT tingkat, nama_kelas FROM kelas WHERE id = ?");
+        $kStmt->execute([$rombelId]);
+        $kInfo = $kStmt->fetch(PDO::FETCH_ASSOC);
+        $tUpper = strtoupper(trim($kInfo['tingkat'] ?? ''));
+        $nUpper = strtoupper(trim($kInfo['nama_kelas'] ?? ''));
+        $isFaseF = in_array($tUpper, ['XI', 'XII', '11', '12']) || strpos($nUpper, 'XII') !== false || strpos($nUpper, 'XI') !== false;
+
+        if (empty($faseId)) {
+            $targetKode = $isFaseF ? 'F' : 'E';
+            $fStmt = $this->db->prepare("SELECT id FROM fase WHERE kode = ? AND kurikulum_id = ? LIMIT 1");
+            $fStmt->execute([$targetKode, $kurikulumId]);
+            $faseId = $fStmt->fetchColumn() ?: ($isFaseF ? 2 : 1);
+        }
+
         // VALIDASI BENTROK 1: Kombinasi tahun_ajaran + rombel + kurikulum
         $chkDuplicate = $this->db->prepare("
             SELECT id FROM rombel_kurikulum
@@ -363,6 +378,12 @@ class CurriculumModel extends BaseModel {
             VALUES (?, ?, ?, ?, ?)
         ");
         $res = $stmt->execute([$rombelId, $tahunAjaranId, $kurikulumId, $faseId, $status]);
+
+        // Propagasi langsung ke E-Rapor siswa rombel ini jika status aktif
+        if ($res && $status === 'aktif') {
+            $this->syncRaporSnapshotForRombel($rombelId, $tahunAjaranId, $kurikulumId, $faseId, $isFaseF);
+        }
+
         return ['status' => (bool)$res, 'message' => 'Kurikulum rombel kelas berhasil disimpan.'];
     }
 
@@ -380,6 +401,24 @@ class CurriculumModel extends BaseModel {
             return ['status' => false, 'message' => 'Data penetapan kurikulum rombel tidak ditemukan.'];
         }
 
+        $rombelId = (int)$curr['rombel_id'];
+        $tahunAjaranId = (int)$curr['tahun_ajaran_id'];
+
+        // Auto-resolve Fase jika belum dipilih berdasarkan tingkat kelas
+        $kStmt = $this->db->prepare("SELECT tingkat, nama_kelas FROM kelas WHERE id = ?");
+        $kStmt->execute([$rombelId]);
+        $kInfo = $kStmt->fetch(PDO::FETCH_ASSOC);
+        $tUpper = strtoupper(trim($kInfo['tingkat'] ?? ''));
+        $nUpper = strtoupper(trim($kInfo['nama_kelas'] ?? ''));
+        $isFaseF = in_array($tUpper, ['XI', 'XII', '11', '12']) || strpos($nUpper, 'XII') !== false || strpos($nUpper, 'XI') !== false;
+
+        if (empty($faseId)) {
+            $targetKode = $isFaseF ? 'F' : 'E';
+            $fStmt = $this->db->prepare("SELECT id FROM fase WHERE kode = ? AND kurikulum_id = ? LIMIT 1");
+            $fStmt->execute([$targetKode, $kurikulumId]);
+            $faseId = $fStmt->fetchColumn() ?: ($isFaseF ? 2 : 1);
+        }
+
         // Validate conflict on active status
         if ($status === 'aktif') {
             $chkActive = $this->db->prepare("
@@ -388,7 +427,7 @@ class CurriculumModel extends BaseModel {
                 JOIN kurikulum kur ON rk.kurikulum_id = kur.id
                 WHERE rk.tahun_ajaran_id = ? AND rk.rombel_id = ? AND rk.status = 'aktif' AND rk.id != ?
             ");
-            $chkActive->execute([$curr['tahun_ajaran_id'], $curr['rombel_id'], $id]);
+            $chkActive->execute([$tahunAjaranId, $rombelId, $id]);
             $existingActive = $chkActive->fetch(PDO::FETCH_ASSOC);
 
             if ($existingActive) {
@@ -405,7 +444,54 @@ class CurriculumModel extends BaseModel {
             WHERE id = ?
         ");
         $res = $stmt->execute([$kurikulumId, $faseId, $status, $id]);
+
+        // Propagasi langsung ke E-Rapor siswa rombel ini jika status aktif
+        if ($res && $status === 'aktif') {
+            $this->syncRaporSnapshotForRombel($rombelId, $tahunAjaranId, $kurikulumId, $faseId, $isFaseF);
+        }
+
         return ['status' => (bool)$res, 'message' => 'Data penetapan kurikulum rombel berhasil diperbarui.'];
+    }
+
+    private function syncRaporSnapshotForRombel($rombelId, $tahunAjaranId, $kurikulumId, $faseId, $isFaseF) {
+        try {
+            $faseNama = null;
+            if ($faseId) {
+                $fStmt = $this->db->prepare("SELECT nama FROM fase WHERE id = ?");
+                $fStmt->execute([$faseId]);
+                $faseNama = $fStmt->fetchColumn();
+            }
+            if (empty($faseNama)) {
+                $faseNama = $isFaseF ? 'Fase F (Kelas XI - XII)' : 'Fase E (Kelas X)';
+            }
+
+            $kStmt = $this->db->prepare("SELECT nama FROM kurikulum WHERE id = ?");
+            $kStmt->execute([$kurikulumId]);
+            $kurNama = $kStmt->fetchColumn() ?: 'Kurikulum Merdeka SMK';
+
+            $colsR = [];
+            try {
+                $colsR = $this->db->query("SHOW COLUMNS FROM rapor_siswa")->fetchAll(PDO::FETCH_COLUMN);
+            } catch (\Throwable $e) {}
+
+            $colKur = in_array('kurikulum_nama_snapshot', $colsR) ? 'kurikulum_nama_snapshot' : (in_array('snapshot_kurikulum_nama', $colsR) ? 'snapshot_kurikulum_nama' : null);
+            $colFase = in_array('fase_nama_snapshot', $colsR) ? 'fase_nama_snapshot' : (in_array('snapshot_fase_nama', $colsR) ? 'snapshot_fase_nama' : null);
+
+            $updFields = ["kurikulum_id = ?", "fase_id = ?"];
+            $updParams = [$kurikulumId, $faseId];
+            if ($colKur) {
+                $updFields[] = "{$colKur} = ?";
+                $updParams[] = $kurNama;
+            }
+            if ($colFase) {
+                $updFields[] = "{$colFase} = ?";
+                $updParams[] = $faseNama;
+            }
+            $updParams[] = $rombelId;
+            $updParams[] = $tahunAjaranId;
+
+            $this->db->prepare("UPDATE rapor_siswa SET " . implode(', ', $updFields) . " WHERE rombel_id = ? AND tahun_ajaran_id = ?")->execute($updParams);
+        } catch (\Throwable $e) {}
     }
 
     public function deleteRombelKurikulum($id) {
@@ -420,6 +506,21 @@ class CurriculumModel extends BaseModel {
         if (!$tahunAjaranId) {
             $tahunAjaranId = (int)$this->db->query("SELECT id FROM tahun_ajaran WHERE is_active = 1 LIMIT 1")->fetchColumn();
         }
+
+        // Ambil info tingkat kelas dari rombel
+        $stmtK = $this->db->prepare("SELECT id, nama_kelas, tingkat FROM kelas WHERE id = ?");
+        $stmtK->execute([$rombelId]);
+        $infoKelas = $stmtK->fetch(PDO::FETCH_ASSOC);
+
+        $tingkatKelas = strtoupper(trim($infoKelas['tingkat'] ?? ''));
+        $namaKelasUpper = strtoupper(trim($infoKelas['nama_kelas'] ?? ''));
+        $isFaseF = in_array($tingkatKelas, ['XI', 'XII', '11', '12']) 
+                   || strpos($namaKelasUpper, 'XII') !== false 
+                   || strpos($namaKelasUpper, 'XI') !== false;
+
+        $targetKodeFase = $isFaseF ? 'F' : 'E';
+        $targetFaseNama = $isFaseF ? 'Fase F (Kelas XI - XII)' : 'Fase E (Kelas X)';
+        $targetFaseId = $isFaseF ? 2 : 1;
 
         $stmt = $this->db->prepare("
             SELECT rk.*,
@@ -451,17 +552,24 @@ class CurriculumModel extends BaseModel {
             $row = $stmtFallback->fetch(PDO::FETCH_ASSOC);
         }
 
-        // Global default fallback
+        // Global default fallback jika rombel belum terdaftar sama sekali
         if (!$row) {
             $defaultKur = $this->getActiveKurikulum();
             $row = [
                 'kurikulum_id' => $defaultKur['id'] ?? 1,
                 'nama_kurikulum' => $defaultKur['nama'] ?? 'Kurikulum Merdeka SMK',
                 'kode_kurikulum' => $defaultKur['kode'] ?? 'KMDK',
-                'fase_id' => 1,
-                'kode_fase' => 'E',
-                'nama_fase' => 'Fase E (Kelas X)'
+                'fase_id' => $targetFaseId,
+                'kode_fase' => $targetKodeFase,
+                'nama_fase' => $targetFaseNama
             ];
+        } else {
+            // Pastikan jika fase_id / nama_fase masih kosong pada rombel_kurikulum, kita isi sesuai tingkat kelasnya!
+            if (empty($row['nama_fase'])) {
+                $row['fase_id'] = $targetFaseId;
+                $row['kode_fase'] = $targetKodeFase;
+                $row['nama_fase'] = $targetFaseNama;
+            }
         }
 
         return $row;
@@ -1049,14 +1157,17 @@ class CurriculumModel extends BaseModel {
         }
         if (!$semester) $semester = 'Ganjil';
 
+        // Selalu sinkronisasi header rapor agar snapshot kurikulum, fase, dan rombel terupdate dengan pengaturan admin
+        $this->generateOrSyncRaporSiswa($sId, $tahunAjaranId, $semester);
+
         // 1. Get Rapor Header
         $stmtR = $this->db->prepare("
-            SELECT rs.*, s.nama_lengkap, s.nis, s.nisn,
+            SELECT rs.*, s.nama_lengkap, s.nis, s.nisn, s.kelas_id as siswa_kelas_id,
                    k.nama_kelas, k.tingkat, j.nama_jurusan,
                    ta.tahun_ajaran, ta.semester as semester_ta
             FROM rapor_siswa rs
             JOIN siswa s ON rs.siswa_id = s.id
-            JOIN kelas k ON rs.rombel_id = k.id
+            JOIN kelas k ON s.kelas_id = k.id
             LEFT JOIN jurusan j ON k.jurusan_id = j.id
             JOIN tahun_ajaran ta ON rs.tahun_ajaran_id = ta.id
             WHERE rs.siswa_id = ? AND rs.tahun_ajaran_id = ? AND rs.semester = ?
@@ -1064,14 +1175,22 @@ class CurriculumModel extends BaseModel {
         $stmtR->execute([$sId, $tahunAjaranId, $semester]);
         $header = $stmtR->fetch(PDO::FETCH_ASSOC);
 
-        if (!$header) {
-            // Auto generate/sync if not yet created
-            $this->generateOrSyncRaporSiswa($sId, $tahunAjaranId, $semester);
-            $stmtR->execute([$sId, $tahunAjaranId, $semester]);
-            $header = $stmtR->fetch(PDO::FETCH_ASSOC);
-        }
-
         if (!$header) return null;
+
+        // Fallback cerdas untuk nama_fase jika snapshot masih null atau kosong
+        $tingkatSiswa = strtoupper(trim($header['tingkat'] ?? ''));
+        $namaKelasUpper = strtoupper(trim($header['nama_kelas'] ?? ''));
+        $isFaseF = in_array($tingkatSiswa, ['XI', 'XII', '11', '12']) 
+                   || strpos($namaKelasUpper, 'XII') !== false 
+                   || strpos($namaKelasUpper, 'XI') !== false;
+
+        $targetFaseNama = $isFaseF ? 'Fase F (Kelas XI - XII)' : 'Fase E (Kelas X)';
+        if (empty($header['fase_nama_snapshot'])) {
+            $header['fase_nama_snapshot'] = $targetFaseNama;
+        }
+        if (empty($header['kurikulum_nama_snapshot'])) {
+            $header['kurikulum_nama_snapshot'] = 'Kurikulum Merdeka SMK';
+        }
 
         // 2. Get Dynamic Details (Subjects as rows) - detect columns defensively
         $colsD = [];
@@ -1110,24 +1229,34 @@ class CurriculumModel extends BaseModel {
         $kId = (int)$siswa['kelas_id'];
         $kurInfo = $this->getActiveKurikulumForRombel($kId, $taId);
 
+        $tingkatSiswa = strtoupper(trim($siswa['tingkat'] ?? ''));
+        $namaKelasUpper = strtoupper(trim($siswa['nama_kelas'] ?? ''));
+        $isFaseF = in_array($tingkatSiswa, ['XI', 'XII', '11', '12']) 
+                   || strpos($namaKelasUpper, 'XII') !== false 
+                   || strpos($namaKelasUpper, 'XI') !== false;
+
+        $targetFaseNama = $isFaseF ? 'Fase F (Kelas XI - XII)' : 'Fase E (Kelas X)';
+        $faseNamaToUse = !empty($kurInfo['nama_fase']) ? $kurInfo['nama_fase'] : $targetFaseNama;
+        $kurNamaToUse = !empty($kurInfo['nama_kurikulum']) ? $kurInfo['nama_kurikulum'] : 'Kurikulum Merdeka SMK';
+
+        // Defensively check columns in rapor_siswa table
+        $colsR = [];
+        try {
+            $colsR = $this->db->query("SHOW COLUMNS FROM rapor_siswa")->fetchAll(PDO::FETCH_COLUMN);
+        } catch (\Throwable $e) {}
+
+        $colKur = in_array('kurikulum_nama_snapshot', $colsR) ? 'kurikulum_nama_snapshot' : (in_array('snapshot_kurikulum_nama', $colsR) ? 'snapshot_kurikulum_nama' : null);
+        $colFase = in_array('fase_nama_snapshot', $colsR) ? 'fase_nama_snapshot' : (in_array('snapshot_fase_nama', $colsR) ? 'snapshot_fase_nama' : null);
+        $colTgl = in_array('tanggal_cetak', $colsR) ? 'tanggal_cetak' : (in_array('tanggal_terbit', $colsR) ? 'tanggal_terbit' : null);
+        $hasStatus = in_array('status', $colsR);
+        $hasCatatan = in_array('catatan_akademik', $colsR);
+
         // Check header
         $stmtH = $this->db->prepare("SELECT id FROM rapor_siswa WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ?");
         $stmtH->execute([$sId, $taId, $semester]);
         $raporId = $stmtH->fetchColumn();
 
         if (!$raporId) {
-            // Defensively check columns in rapor_siswa table
-            $colsR = [];
-            try {
-                $colsR = $this->db->query("SHOW COLUMNS FROM rapor_siswa")->fetchAll(PDO::FETCH_COLUMN);
-            } catch (\Throwable $e) {}
-
-            $colKur = in_array('kurikulum_nama_snapshot', $colsR) ? 'kurikulum_nama_snapshot' : (in_array('snapshot_kurikulum_nama', $colsR) ? 'snapshot_kurikulum_nama' : null);
-            $colFase = in_array('fase_nama_snapshot', $colsR) ? 'fase_nama_snapshot' : (in_array('snapshot_fase_nama', $colsR) ? 'snapshot_fase_nama' : null);
-            $colTgl = in_array('tanggal_cetak', $colsR) ? 'tanggal_cetak' : (in_array('tanggal_terbit', $colsR) ? 'tanggal_terbit' : null);
-            $hasStatus = in_array('status', $colsR);
-            $hasCatatan = in_array('catatan_akademik', $colsR);
-
             $insertFields = ['siswa_id', 'tahun_ajaran_id', 'semester', 'rombel_id', 'kurikulum_id', 'fase_id'];
             $insertPlaceholders = ['?', '?', '?', '?', '?', '?'];
             $insertValues = [
@@ -1136,23 +1265,23 @@ class CurriculumModel extends BaseModel {
                 $semester,
                 $kId,
                 $kurInfo['kurikulum_id'] ?? 1,
-                $kurInfo['fase_id'] ?? null
+                $kurInfo['fase_id'] ?? ($isFaseF ? 2 : 1)
             ];
 
             if ($colKur) {
                 $insertFields[] = $colKur;
                 $insertPlaceholders[] = '?';
-                $insertValues[] = $kurInfo['nama_kurikulum'] ?? 'Kurikulum Merdeka SMK';
+                $insertValues[] = $kurNamaToUse;
             }
             if (in_array('snapshot_kurikulum_kode', $colsR)) {
                 $insertFields[] = 'snapshot_kurikulum_kode';
                 $insertPlaceholders[] = '?';
-                $insertValues[] = 'KMDK';
+                $insertValues[] = $kurInfo['kode_kurikulum'] ?? 'KMDK';
             }
             if ($colFase) {
                 $insertFields[] = $colFase;
                 $insertPlaceholders[] = '?';
-                $insertValues[] = $kurInfo['nama_fase'] ?? 'Fase E (Kelas X)';
+                $insertValues[] = $faseNamaToUse;
             }
             if ($colTgl) {
                 $insertFields[] = $colTgl;
@@ -1172,6 +1301,21 @@ class CurriculumModel extends BaseModel {
             $insH = $this->db->prepare($sqlIns);
             $insH->execute($insertValues);
             $raporId = $this->db->lastInsertId();
+        } else {
+            // Update existing header snapshot agar selalu selaras dengan pemetaan kurikulum rombel terkini
+            $updFields = ["rombel_id = ?", "kurikulum_id = ?", "fase_id = ?"];
+            $updValues = [$kId, $kurInfo['kurikulum_id'] ?? 1, $kurInfo['fase_id'] ?? ($isFaseF ? 2 : 1)];
+
+            if ($colKur) {
+                $updFields[] = "{$colKur} = ?";
+                $updValues[] = $kurNamaToUse;
+            }
+            if ($colFase) {
+                $updFields[] = "{$colFase} = ?";
+                $updValues[] = $faseNamaToUse;
+            }
+            $updValues[] = $raporId;
+            $this->db->prepare("UPDATE rapor_siswa SET " . implode(', ', $updFields) . " WHERE id = ?")->execute($updValues);
         }
 
         // Pull enrolled mapels or existing legacy nilai_rapor

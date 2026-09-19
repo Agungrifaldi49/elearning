@@ -418,8 +418,20 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                         </span>
                                     </td>
                                     <td>
-                                        <?php if (!empty($rk['nama_fase'])): ?>
-                                            <span class="badge bg-info-subtle text-dark border px-2.5 py-1.5"><?= htmlspecialchars($rk['nama_fase']) ?></span>
+                                        <?php 
+                                        $faseDisplay = $rk['nama_fase'] ?? '';
+                                        if (empty($faseDisplay)) {
+                                            $t = strtoupper(trim($rk['tingkat'] ?? ''));
+                                            $n = strtoupper(trim($rk['nama_kelas'] ?? ''));
+                                            if (in_array($t, ['XI', 'XII', '11', '12']) || strpos($n, 'XII') !== false || strpos($n, 'XI') !== false) {
+                                                $faseDisplay = 'Fase F (Kelas XI - XII)';
+                                            } elseif ($t === 'X' || strpos($n, 'X') !== false || strpos($n, '10') !== false) {
+                                                $faseDisplay = 'Fase E (Kelas X)';
+                                            }
+                                        }
+                                        ?>
+                                        <?php if (!empty($faseDisplay)): ?>
+                                            <span class="badge bg-info-subtle text-dark border px-2.5 py-1.5"><?= htmlspecialchars($faseDisplay) ?></span>
                                         <?php else: ?>
                                             <span class="text-muted small">-</span>
                                         <?php endif; ?>
@@ -1001,9 +1013,12 @@ if (!function_exists('formatTpDescriptionHtml')) {
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Pilih Rombel Kelas</label>
-                        <select name="rombel_id" class="form-select" required>
+                        <select name="rombel_id" id="assign_rombel_id" class="form-select" required>
+                            <option value="">-- Pilih Rombel Kelas --</option>
                             <?php foreach ($kelasList as $k): ?>
-                                <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?> (Tingkat <?= $k['tingkat'] ?> - <?= htmlspecialchars($k['nama_jurusan'] ?? 'Umum') ?>)</option>
+                                <option value="<?= $k['id'] ?>" data-tingkat="<?= htmlspecialchars($k['tingkat']) ?>" data-kelas="<?= htmlspecialchars($k['nama_kelas']) ?>">
+                                    <?= htmlspecialchars($k['nama_kelas']) ?> (Tingkat <?= $k['tingkat'] ?> - <?= htmlspecialchars($k['nama_jurusan'] ?? 'Umum') ?>)
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -1020,9 +1035,12 @@ if (!function_exists('formatTpDescriptionHtml')) {
                         <select name="fase_id" id="assign_rombel_fase_id" class="form-select">
                             <option value="" data-kurikulum-id="">-- Tanpa Fase Khusus --</option>
                             <?php foreach ($allFaseList as $f): ?>
-                                <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>"><?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)</option>
+                                <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>" data-kode="<?= htmlspecialchars($f['kode'] ?? '') ?>" data-tingkat="<?= htmlspecialchars($f['tingkat_kelas'] ?? '') ?>">
+                                    <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
+                                </option>
                             <?php endforeach; ?>
                         </select>
+                        <small class="text-muted">Jika dikosongkan, sistem otomatis menentukan Fase F (Kelas XI/XII) atau Fase E (Kelas X).</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Status Hubungan</label>
@@ -2278,8 +2296,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const kurAssignRombel = document.getElementById('assign_rombel_kurikulum_id');
+    const rombelSelect = document.getElementById('assign_rombel_id');
+    const faseAssignSelect = document.getElementById('assign_rombel_fase_id');
+
+    function autoMatchFaseForRombel(tingkat, selectElement) {
+        if (!tingkat || !selectElement) return;
+        const t = tingkat.toUpperCase().trim();
+        const targetKode = (t === 'XI' || t === 'XII' || t === '11' || t === '12' || t.includes('XI') || t.includes('XII')) ? 'F' : 'E';
+        for (let i = 0; i < selectElement.options.length; i++) {
+            const opt = selectElement.options[i];
+            const kode = (opt.getAttribute('data-kode') || '').toUpperCase();
+            const txt = opt.textContent.toUpperCase();
+            if (kode === targetKode || txt.includes('FASE ' + targetKode)) {
+                selectElement.selectedIndex = i;
+                break;
+            }
+        }
+    }
+
+    if (rombelSelect && faseAssignSelect) {
+        rombelSelect.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            if (opt) {
+                const tingkat = opt.getAttribute('data-tingkat') || opt.getAttribute('data-kelas') || '';
+                autoMatchFaseForRombel(tingkat, faseAssignSelect);
+            }
+        });
+    }
+
     if (kurAssignRombel) {
-        kurAssignRombel.addEventListener('change', () => filterFaseDropdown('assign_rombel_kurikulum_id', 'assign_rombel_fase_id'));
+        kurAssignRombel.addEventListener('change', () => {
+            filterFaseDropdown('assign_rombel_kurikulum_id', 'assign_rombel_fase_id');
+            if (rombelSelect) {
+                const opt = rombelSelect.options[rombelSelect.selectedIndex];
+                if (opt) autoMatchFaseForRombel(opt.getAttribute('data-tingkat') || '', faseAssignSelect);
+            }
+        });
         filterFaseDropdown('assign_rombel_kurikulum_id', 'assign_rombel_fase_id');
     }
 
@@ -2320,7 +2372,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', function() {
             document.getElementById('edit_rombel_id').value = this.dataset.id || '';
             const kelasLabel = document.getElementById('edit_rombel_kelas_text');
-            if (kelasLabel) kelasLabel.textContent = this.dataset.kelas || '';
+            const kelasNama = this.dataset.kelas || '';
+            if (kelasLabel) kelasLabel.textContent = kelasNama;
 
             const selKur = document.getElementById('edit_rombel_kurikulum_id');
             if (selKur && this.dataset.kurikulumId) {
@@ -2329,7 +2382,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const selFase = document.getElementById('edit_rombel_fase_id');
-            if (selFase) selFase.value = this.dataset.faseId || '';
+            if (selFase) {
+                selFase.value = this.dataset.faseId || '';
+                if (!selFase.value && kelasNama) {
+                    autoMatchFaseForRombel(kelasNama, selFase);
+                }
+            }
 
             const selStatus = document.getElementById('edit_rombel_status');
             if (selStatus) selStatus.value = this.dataset.status || 'aktif';

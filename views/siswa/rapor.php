@@ -159,8 +159,22 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                 </div>
             </div>
             <?php
-            $kurikulumText = $raporData['kurikulum_nama_snapshot'] ?? 'Kurikulum Merdeka SMK';
-            $faseText = $raporData['fase_nama_snapshot'] ?? 'Fase E (Kelas X)';
+            $tingkatSiswa = strtoupper(trim($siswa['tingkat'] ?? ($raporData['tingkat'] ?? '')));
+            if (empty($tingkatSiswa)) {
+                $namaK = strtoupper(trim($siswa['nama_kelas'] ?? ($raporData['nama_kelas'] ?? '')));
+                if (strpos($namaK, 'XII') !== false || strpos($namaK, '12') !== false) {
+                    $tingkatSiswa = 'XII';
+                } elseif (strpos($namaK, 'XI') !== false || strpos($namaK, '11') !== false) {
+                    $tingkatSiswa = 'XI';
+                } elseif (strpos($namaK, 'X') !== false || strpos($namaK, '10') !== false) {
+                    $tingkatSiswa = 'X';
+                }
+            }
+            $isFaseF = in_array($tingkatSiswa, ['XI', 'XII', '11', '12']);
+            $defaultFase = $isFaseF ? 'Fase F (Kelas XI - XII)' : 'Fase E (Kelas X)';
+
+            $kurikulumText = !empty($raporData['kurikulum_nama_snapshot']) ? $raporData['kurikulum_nama_snapshot'] : 'Kurikulum Merdeka SMK';
+            $faseText = !empty($raporData['fase_nama_snapshot']) ? $raporData['fase_nama_snapshot'] : $defaultFase;
             $tahunAjaranText = $raporData['tahun_ajaran'] ?? ($activeTa['tahun_ajaran'] ?? '2026/2027');
             $semesterText = $raporData['semester'] ?? ($activeTa['semester'] ?? 'Ganjil');
             ?>
