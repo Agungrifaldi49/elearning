@@ -1927,6 +1927,84 @@ class GuruController {
         exit();
     }
 
+    /**
+     * Download Template Excel / CSV untuk Pengisian Capaian & Tujuan Pembelajaran (CP & TP)
+     */
+    public function downloadTemplateCpTp() {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename=Template_CP_TP_Kurikulum_Merdeka.csv');
+        
+        $output = fopen('php://output', 'w');
+        // UTF-8 BOM for Microsoft Excel compatibility
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+        // Explicit Excel Column Separator Directive so Excel opens directly per column A - G
+        fwrite($output, "sep=;\n");
+
+        // Panduan Pengisian di dalam berkas Excel
+        fputcsv($output, ['# =========================================================================================================================='], ';');
+        fputcsv($output, ['# PANDUAN PENGISIAN TEMPLATE CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP) - KURIKULUM MERDEKA SMK'], ';');
+        fputcsv($output, ['# 1. elemen           : Wajib diisi. Domain / ranah materi kompetensi CP (Contoh: Pemrograman Sisi Klien).'], ';');
+        fputcsv($output, ['# 2. deskripsi_cp     : Wajib diisi. Kalimat rumusan Capaian Pembelajaran (CP) acuan.'], ';');
+        fputcsv($output, ['# 3. kode_cp          : Opsional. Boleh dikosongkan agar sistem men-generate otomatis (Contoh: CP-MP01-01).'], ';');
+        fputcsv($output, ['# 4. fase             : Opsional. Isi dengan "E" (Kelas X) atau "F" (Kelas XI/XII).'], ';');
+        fputcsv($output, ['# 5. materi_pokok_tp  : Wajib diisi. Sub-topik pokok bahasan untuk butir Tujuan Pembelajaran ini.'], ';');
+        fputcsv($output, ['# 6. deskripsi_tp     : Wajib diisi. Rumusan Tujuan Pembelajaran turunan operasional.'], ';');
+        fputcsv($output, ['# 7. kode_tp          : Opsional. Boleh dikosongkan agar sistem men-generate kode otomatis (Contoh: TP-01.1).'], ';');
+        fputcsv($output, ['# CATATAN PENTING: Jika 1 CP memiliki beberapa butir TP, ulangi elemen dan deskripsi_cp yang sama pada baris-baris berikutnya.'], ';');
+        fputcsv($output, ['# Sistem akan otomatis menggabungkannya ke dalam 1 CP induk yang sama.'], ';');
+        fputcsv($output, ['# =========================================================================================================================='], ';');
+
+        // Header kolom
+        fputcsv($output, ['elemen', 'deskripsi_cp', 'kode_cp', 'fase', 'materi_pokok_tp', 'deskripsi_tp', 'kode_tp'], ';');
+
+        // Contoh Data 1 (CP 1 - Butir TP 1)
+        fputcsv($output, [
+            'Pemrograman Web Sisi Klien (Client-Side)',
+            'Peserta didik mampu menerapkan bahasa pemrograman sisi klien (HTML5, CSS3, JavaScript modern/ES6+, dan framework antarmuka) untuk membangun antarmuka web yang responsif, dinamis, dan memenuhi kaidah UX/UI.',
+            '',
+            'F',
+            'Struktur Semantik HTML5 & Responsive CSS Layout',
+            "1. Menganalisis struktur dokumen semantik HTML5 standar.\n2. Mengembangkan antarmuka adaptif menggunakan CSS Grid dan Flexbox.",
+            ''
+        ], ';');
+
+        // Contoh Data 2 (CP 1 - Butir TP 2 dengan CP yang sama)
+        fputcsv($output, [
+            'Pemrograman Web Sisi Klien (Client-Side)',
+            'Peserta didik mampu menerapkan bahasa pemrograman sisi klien (HTML5, CSS3, JavaScript modern/ES6+, dan framework antarmuka) untuk membangun antarmuka web yang responsif, dinamis, dan memenuhi kaidah UX/UI.',
+            '',
+            'F',
+            'Manipulasi DOM & Validasi Formulir Interaktif',
+            "1. Mengimplementasikan manipulasi elemen DOM menggunakan JavaScript modern.\n2. Menerapkan validasi input data formulir di sisi klien.",
+            ''
+        ], ';');
+
+        // Contoh Data 3 (CP 2 - Butir TP 1)
+        fputcsv($output, [
+            'Pemrograman Sisi Server & Arsitektur MVC',
+            'Peserta didik mampu merancang, memprogram, menguji, dan mengamankan aplikasi web berbasis sisi server (server-side scripting) menggunakan arsitektur Model-View-Controller (MVC) dan basis data relasional.',
+            '',
+            'F',
+            'Konsep Arsitektur MVC & Routing Web',
+            "1. Memahami alur kerja Model-View-Controller (MVC).\n2. Membangun pengontrol sistem (controller) dan manajemen sesi otentikasi login.",
+            ''
+        ], ';');
+
+        // Contoh Data 4 (CP 2 - Butir TP 2)
+        fputcsv($output, [
+            'Pemrograman Sisi Server & Arsitektur MVC',
+            'Peserta didik mampu merancang, memprogram, menguji, dan mengamankan aplikasi web berbasis sisi server (server-side scripting) menggunakan arsitektur Model-View-Controller (MVC) dan basis data relasional.',
+            '',
+            'F',
+            'Operasi CRUD Basis Data & Keamanan Web',
+            "1. Mengimplementasikan operasi Create, Read, Update, Delete data dengan PDO.\n2. Menerapkan pencegahan terhadap SQL Injection, XSS, dan CSRF.",
+            ''
+        ], ';');
+
+        fclose($output);
+        exit();
+    }
+
     public function quizLiveStatus() {
         header('Content-Type: application/json');
         $guru = $this->getGuruInfo();
@@ -2643,6 +2721,179 @@ class GuruController {
                         FlashHelper::setSuccess("Berhasil menerapkan paket template '{$tpl['judul']}'! Sebanyak {$cpCreatedCount} Capaian Pembelajaran (CP) dan {$tpCreatedCount} Tujuan Pembelajaran (TP) berhasil ditambahkan ke mata pelajaran Anda.");
                     } else {
                         FlashHelper::setError("Gagal menerapkan template CP & TP. Silakan periksa kembali konfigurasi mata pelajaran.");
+                    }
+                }
+            } elseif ($action === 'import_cptp_excel') {
+                $kurId = (int)($_POST['kurikulum_id'] ?? 0);
+                $mapelId = (int)($_POST['mapel_id'] ?? 0);
+                $defaultFaseId = !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null;
+
+                if ($kurId <= 0 || $mapelId <= 0) {
+                    FlashHelper::setError('Silakan tentukan Kurikulum dan Mata Pelajaran tujuan import.');
+                } elseif (!isset($_FILES['file_excel']) || $_FILES['file_excel']['error'] !== UPLOAD_ERR_OK) {
+                    FlashHelper::setError('Silakan pilih berkas file template Excel/CSV yang valid untuk diunggah.');
+                } else {
+                    $tmpPath = $_FILES['file_excel']['tmp_name'];
+                    $fileName = $_FILES['file_excel']['name'];
+                    $fileExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+                    if (!in_array($fileExt, ['csv', 'txt', 'xls', 'xlsx'])) {
+                        FlashHelper::setError('Format berkas tidak didukung. Harap gunakan berkas template Excel berformat .csv atau .xlsx/.xls.');
+                    } else {
+                        // Baca file CSV / Excel
+                        $content = file_get_contents($tmpPath);
+                        $delimiter = (substr_count($content, ';') >= substr_count($content, ',')) ? ';' : ',';
+                        if (substr_count($content, "\t") > substr_count($content, $delimiter)) {
+                            $delimiter = "\t";
+                        }
+
+                        $handle = fopen($tmpPath, 'r');
+                        if (!$handle) {
+                            FlashHelper::setError('Gagal membaca isi berkas Excel.');
+                        } else {
+                            $headerRow = null;
+                            $rows = [];
+
+                            while (($line = fgetcsv($handle, 0, $delimiter)) !== false) {
+                                if (empty($line)) continue;
+                                $firstCell = strtolower(trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $line[0] ?? '')));
+                                if ($firstCell === 'sep=' || strpos($firstCell, '#') === 0 || strpos($firstCell, '//') === 0) {
+                                    continue;
+                                }
+
+                                if (!$headerRow) {
+                                    $headerRow = array_map(function($h) {
+                                        return strtolower(trim(preg_replace('/[\x00-\x1F\x7F\xEF\xBB\xBF]/', '', $h)));
+                                    }, $line);
+                                    continue;
+                                }
+
+                                // Ambil baris data
+                                if (count(array_filter($line)) === 0) continue;
+                                $rowAssoc = [];
+                                foreach ($headerRow as $idx => $colName) {
+                                    $rowAssoc[$colName] = isset($line[$idx]) ? trim($line[$idx]) : '';
+                                }
+                                $rows[] = $rowAssoc;
+                            }
+                            fclose($handle);
+
+                            if (empty($rows)) {
+                                FlashHelper::setError('Berkas Excel tidak memuat baris data CP & TP yang dapat diproses.');
+                            } else {
+                                $dbConn = Database::getConnection();
+                                
+                                // Ambil semua fase untuk auto-matching
+                                $allFases = $currModel->getAllFase();
+                                $faseMap = [];
+                                foreach ($allFases as $f) {
+                                    if ($f['kurikulum_id'] == $kurId) {
+                                        $faseMap[strtoupper(trim($f['kode']))] = (int)$f['id'];
+                                    }
+                                }
+
+                                // Kelompokkan TP berdasarkan CP
+                                $cpGroups = [];
+                                foreach ($rows as $r) {
+                                    $elemen = $r['elemen'] ?? ($r['nama_elemen'] ?? '');
+                                    $deskCp = $r['deskripsi_cp'] ?? ($r['deskripsi'] ?? ($r['cp'] ?? ''));
+                                    $kodeCp = strtoupper(trim($r['kode_cp'] ?? ''));
+                                    $faseStr = strtoupper(trim($r['fase'] ?? ($r['kode_fase'] ?? '')));
+                                    $materiTp = $r['materi_pokok_tp'] ?? ($r['materi_pokok'] ?? ($r['materi'] ?? ''));
+                                    $deskTp = $r['deskripsi_tp'] ?? ($r['tujuan_pembelajaran'] ?? ($r['tp'] ?? ''));
+                                    $kodeTp = strtoupper(trim($r['kode_tp'] ?? ''));
+
+                                    if (empty($elemen) && empty($deskCp) && empty($deskTp)) {
+                                        continue;
+                                    }
+
+                                    // Tentukan fase_id untuk baris ini
+                                    $rowFaseId = $defaultFaseId;
+                                    if (!empty($faseStr) && isset($faseMap[$faseStr])) {
+                                        $rowFaseId = $faseMap[$faseStr];
+                                    }
+
+                                    $groupKey = !empty($kodeCp) ? $kodeCp : md5($elemen . '|||' . $deskCp);
+                                    if (!isset($cpGroups[$groupKey])) {
+                                        $cpGroups[$groupKey] = [
+                                            'elemen' => !empty($elemen) ? $elemen : 'Materi Pembelajaran',
+                                            'deskripsi' => !empty($deskCp) ? $deskCp : $elemen,
+                                            'kode_cp' => $kodeCp,
+                                            'fase_id' => $rowFaseId,
+                                            'tp_list' => []
+                                        ];
+                                    }
+
+                                    if (!empty($deskTp)) {
+                                        $cpGroups[$groupKey]['tp_list'][] = [
+                                            'materi_pokok' => !empty($materiTp) ? $materiTp : $elemen,
+                                            'deskripsi' => $deskTp,
+                                            'kode_tp' => $kodeTp
+                                        ];
+                                    }
+                                }
+
+                                $cpCreated = 0;
+                                $tpCreated = 0;
+
+                                foreach ($cpGroups as $g) {
+                                    $targetKodeCp = $g['kode_cp'];
+                                    if (empty($targetKodeCp)) {
+                                        $targetKodeCp = $currModel->generateNextCPCode($kurId, $mapelId);
+                                    }
+
+                                    // Cek apakah CP dengan kode atau deskripsi yang sama sudah ada di DB untuk mapel ini
+                                    $chkCp = $dbConn->prepare("SELECT id FROM capaian_pembelajaran WHERE kurikulum_id = ? AND mapel_id = ? AND (kode_cp = ? OR (elemen = ? AND deskripsi = ?)) LIMIT 1");
+                                    $chkCp->execute([$kurId, $mapelId, $targetKodeCp, $g['elemen'], $g['deskripsi']]);
+                                    $existingCp = $chkCp->fetch(PDO::FETCH_ASSOC);
+
+                                    $cpId = 0;
+                                    if ($existingCp) {
+                                        $cpId = (int)$existingCp['id'];
+                                    } else {
+                                        $resCp = $currModel->addCP([
+                                            'kurikulum_id' => $kurId,
+                                            'mapel_id' => $mapelId,
+                                            'fase_id' => $g['fase_id'],
+                                            'guru_id' => $guruId,
+                                            'kode_cp' => $targetKodeCp,
+                                            'elemen' => $g['elemen'],
+                                            'deskripsi' => $g['deskripsi']
+                                        ]);
+                                        if ($resCp['status'] && !empty($resCp['id'])) {
+                                            $cpId = (int)$resCp['id'];
+                                            $cpCreated++;
+                                        }
+                                    }
+
+                                    if ($cpId > 0 && !empty($g['tp_list'])) {
+                                        foreach ($g['tp_list'] as $tpItem) {
+                                            $targetKodeTp = $tpItem['kode_tp'];
+                                            if (empty($targetKodeTp)) {
+                                                $targetKodeTp = $currModel->generateNextTPCode($cpId);
+                                            }
+
+                                            $resTp = $currModel->addTP([
+                                                'cp_id' => $cpId,
+                                                'guru_id' => $guruId,
+                                                'kode_tp' => $targetKodeTp,
+                                                'materi_pokok' => $tpItem['materi_pokok'],
+                                                'deskripsi' => $tpItem['deskripsi']
+                                            ]);
+                                            if ($resTp['status']) {
+                                                $tpCreated++;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if ($cpCreated > 0 || $tpCreated > 0) {
+                                    FlashHelper::setSuccess("Berhasil men-generate {$cpCreated} Capaian Pembelajaran (CP) dan {$tpCreated} Tujuan Pembelajaran (TP) dari berkas template Excel! Anda dapat menyesuaikan atau mengedit datanya secara manual kapan saja.");
+                                } else {
+                                    FlashHelper::setError("Tidak ada data CP atau TP baru yang dapat disimpan. Kemungkinan data dari template Excel sudah terdaftar sebelumnya.");
+                                }
+                            }
+                        }
                     }
                 }
             }

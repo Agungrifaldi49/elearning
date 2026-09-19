@@ -141,21 +141,29 @@ if (!function_exists('formatTpDescriptionHtml')) {
             <p class="text-muted small mb-0">Kelola dan rumuskan Capaian Pembelajaran (CP) serta Tujuan Pembelajaran (TP) untuk mata pelajaran yang Anda ampu secara terstruktur.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <button type="button" class="btn btn-warning text-dark shadow-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalTemplateCatalog" title="Gunakan paket template CP & TP standar BSKAP Kurikulum Merdeka">
+            <a href="<?= BASE_URL ?>index.php?url=guru/downloadTemplateCpTp" class="btn btn-outline-success bg-white shadow-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" title="Unduh berkas format Excel/CSV resmi untuk mengisi CP & TP">
+                <i class="bi bi-file-earmark-excel-fill text-success fs-5"></i>
+                <span>Unduh Template Excel</span>
+            </a>
+            <button type="button" class="btn btn-success text-white shadow-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalImportExcelCpTp" title="Unggah berkas Excel untuk generate CP & TP secara otomatis">
+                <i class="bi bi-file-earmark-arrow-up-fill fs-5"></i>
+                <span>Import Excel (Generate CP & TP)</span>
+            </button>
+            <button type="button" class="btn btn-warning text-dark shadow-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalTemplateCatalog" title="Gunakan paket template CP & TP online standar BSKAP Kemendikbud">
                 <i class="bi bi-magic fs-5 text-dark"></i>
-                <span>💡 Template CP & TP</span>
+                <span>💡 Template BSKAP</span>
             </button>
-            <button type="button" class="btn btn-outline-success shadow-sm fw-semibold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCopyTP" title="Salin Tujuan Pembelajaran dari CP lain / Tahun Ajaran Sebelumnya">
+            <button type="button" class="btn btn-outline-secondary bg-white shadow-sm fw-semibold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCopyTP" title="Salin Tujuan Pembelajaran dari CP lain">
                 <i class="bi bi-box-arrow-in-down fs-5"></i>
-                <span>Salin dari Bank TP</span>
+                <span>Salin Bank TP</span>
             </button>
-            <button type="button" class="btn btn-outline-primary shadow-sm fw-semibold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalAddTP">
+            <button type="button" class="btn btn-outline-primary bg-white shadow-sm fw-semibold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalAddTP" title="Tambah Tujuan Pembelajaran secara manual">
                 <i class="bi bi-plus-circle fs-5"></i>
-                <span>+ Tambah TP Baru</span>
+                <span>+ TP Manual</span>
             </button>
-            <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3.5 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalAddCP">
+            <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3.5 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalAddCP" title="Tambah Capaian Pembelajaran secara manual">
                 <i class="bi bi-plus-circle-fill fs-5"></i>
-                <span>+ Tambah CP Baru</span>
+                <span>+ CP Manual</span>
             </button>
         </div>
     </div>
@@ -576,6 +584,140 @@ if (!function_exists('formatTpDescriptionHtml')) {
 <!-- =========================================================================== -->
 <!-- MODALS CP & TP GURU (ENLARGED, SPACIOUS & PROFESSIONAL) -->
 <!-- =========================================================================== -->
+
+<!-- =========================================================================== -->
+<!-- MODAL IMPORT & GENERATE CP & TP DARI TEMPLATE EXCEL -->
+<!-- =========================================================================== -->
+<div class="modal fade" id="modalImportExcelCpTp" tabindex="-1" aria-labelledby="modalImportExcelCpTpLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form action="<?= BASE_URL ?>index.php?url=guru/cptp" method="POST" enctype="multipart/form-data">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="import_cptp_excel">
+                <input type="hidden" name="filter_kurikulum_id" value="<?= $filterKurId ?? '' ?>">
+                <input type="hidden" name="filter_mapel_id" value="<?= $filterMapelId ?? '' ?>">
+
+                <!-- Modal Header -->
+                <div class="modal-header py-3.5 px-4 text-white" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle p-2.5 bg-white text-success shadow-sm">
+                            <i class="bi bi-file-earmark-arrow-up-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="modal-title fw-bold text-white mb-0" id="modalImportExcelCpTpLabel">Import & Generate CP/TP dari Template Excel</h5>
+                                <span class="badge bg-white text-success fw-bold rounded-pill px-2.5 py-0.5" style="font-size:0.7rem;">Otomatis</span>
+                            </div>
+                            <small class="text-white-50">Generate Capaian & Tujuan Pembelajaran secara massal menggunakan berkas template spreadsheet.</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4 bg-light">
+                    <!-- Workflow Steps Card -->
+                    <div class="card border-0 shadow-xs rounded-3 p-3 bg-white mb-3">
+                        <h6 class="fw-bold text-dark mb-2.5 d-flex align-items-center gap-2" style="font-size:0.9rem;">
+                            <i class="bi bi-info-circle-fill text-success"></i>
+                            <span>Panduan Praktis Alur Pengisian:</span>
+                        </h6>
+                        <div class="row g-2 text-muted small" style="font-size: 0.8rem; line-height: 1.5;">
+                            <div class="col-12 col-md-4">
+                                <div class="p-2.5 rounded-3 bg-light border h-100">
+                                    <strong class="text-dark d-block mb-1">1. Unduh Template</strong>
+                                    Unduh berkas format Excel resmi yang sudah dilengkapi contoh pengisian standar.
+                                    <a href="<?= BASE_URL ?>index.php?url=guru/downloadTemplateCpTp" class="d-inline-flex align-items-center gap-1 text-success fw-bold text-decoration-none mt-1.5">
+                                        <i class="bi bi-download"></i> Unduh Berkas .CSV
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="p-2.5 rounded-3 bg-light border h-100">
+                                    <strong class="text-dark d-block mb-1">2. Isi di Excel</strong>
+                                    Buka dengan Microsoft Excel / Google Sheets. Isi kolom <em>elemen</em>, <em>deskripsi_cp</em>, <em>materi_pokok_tp</em>, dan <em>deskripsi_tp</em>.
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <div class="p-2.5 rounded-3 bg-light border h-100">
+                                    <strong class="text-dark d-block mb-1">3. Unggah & Generate</strong>
+                                    Unggah berkas di bawah ini. Sistem otomatis membentuk kode CP/TP dan KKTP untuk akun Anda!
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target Configuration -->
+                    <div class="card border-0 shadow-xs rounded-3 p-3 bg-white mb-3">
+                        <div class="row g-3">
+                            <!-- Mata Pelajaran -->
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-secondary mb-1">
+                                    <i class="bi bi-book text-success me-1"></i>Pilih Mata Pelajaran Tujuan <span class="text-danger">*</span>
+                                </label>
+                                <select name="mapel_id" class="form-select rounded-3 py-2" required>
+                                    <?php foreach ($teacherMapelList as $mp): ?>
+                                        <option value="<?= $mp['id'] ?>" <?= ($filterMapelId == $mp['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($mp['nama_mapel']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- Kurikulum -->
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-secondary mb-1">
+                                    <i class="bi bi-mortarboard text-success me-1"></i>Pilih Kurikulum <span class="text-danger">*</span>
+                                </label>
+                                <select name="kurikulum_id" class="form-select rounded-3 py-2" required>
+                                    <?php foreach ($kurikulumList as $kur): ?>
+                                        <option value="<?= $kur['id'] ?>" <?= ($filterKurId == $kur['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- Fase -->
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-secondary mb-1">
+                                    <i class="bi bi-layers text-success me-1"></i>Fase Default (Jika di baris file tidak ditentukan):
+                                </label>
+                                <select name="fase_id" class="form-select rounded-3 py-2">
+                                    <option value="">-- Otomatis Cocokkan Kolom di File Excel --</option>
+                                    <?php foreach ($allFaseList as $f): ?>
+                                        <option value="<?= $f['id'] ?>" <?= ($filterFaseId == $f['id']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- File Upload Input -->
+                    <div class="card border-2 border-dashed border-success border-opacity-50 rounded-3 p-3.5 bg-white text-center">
+                        <i class="bi bi-cloud-arrow-up-fill text-success" style="font-size: 2.25rem;"></i>
+                        <h6 class="fw-bold text-dark mt-2 mb-1">Pilih Berkas Template Excel yang Sudah Diisi</h6>
+                        <p class="text-muted small mb-2.5" style="font-size:0.78rem;">Mendukung berkas format .CSV (Excel Spreadsheet Delimited), .XLS, atau .XLSX</p>
+                        <div class="mx-auto" style="max-width: 420px;">
+                            <input type="file" name="file_excel" class="form-control" accept=".csv, .txt, .xls, .xlsx" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-3 px-4 bg-white border-top d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3.5 py-2 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success text-white rounded-3 px-4 py-2 fw-bold shadow-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-gear-wide-connected fs-5"></i>
+                        <span>Generate CP & TP Sekarang</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- =========================================================================== -->
 <!-- MODAL KATALOG PAKET TEMPLATE CP & TP (BSKAP KURIKULUM MERDEKA) -->
