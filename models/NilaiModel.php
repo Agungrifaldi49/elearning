@@ -107,14 +107,31 @@ class NilaiModel {
                 SET nilai_tugas=?, nilai_quiz=?, nilai_uts=?, nilai_uas=?, nilai_akhir=?, updated_at=NOW()
                 WHERE siswa_id=? AND mapel_id=?
             ");
-            return $stmt->execute([$tugas, $quiz, $uts, $uas, $akhir, $siswaId, $mapelId]);
+            $res = $stmt->execute([$tugas, $quiz, $uts, $uas, $akhir, $siswaId, $mapelId]);
         } else {
             $stmt = $this->db->prepare("
                 INSERT INTO nilai_rapor (siswa_id, mapel_id, nilai_tugas, nilai_quiz, nilai_uts, nilai_uas, nilai_akhir, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
             ");
-            return $stmt->execute([$siswaId, $mapelId, $tugas, $quiz, $uts, $uas, $akhir]);
+            $res = $stmt->execute([$siswaId, $mapelId, $tugas, $quiz, $uts, $uas, $akhir]);
         }
+
+        if ($res) {
+            $this->syncToDynamicRapor($siswaId);
+        }
+        return (bool)$res;
+    }
+
+    private function syncToDynamicRapor(int $siswaId) {
+        try {
+            require_once ROOT_PATH . 'models/CurriculumModel.php';
+            $currModel = new CurriculumModel();
+            $stmtTa = $this->db->query("SELECT id, semester FROM tahun_ajaran WHERE is_active = 1 LIMIT 1");
+            $ta = $stmtTa->fetch(PDO::FETCH_ASSOC);
+            $taId = $ta['id'] ?? 4;
+            $sem = $ta['semester'] ?? 'Ganjil';
+            $currModel->generateOrSyncRaporSiswa($siswaId, $taId, $sem);
+        } catch (\Throwable $e) {}
     }
 
     public function saveNilai($siswaId, $mapelId, $semesterId = 1, $tahunId = 1, $tugas = 0, $quiz = 0, $uts = 0, $uas = 0): bool {
@@ -225,20 +242,26 @@ class NilaiModel {
             $akhir = ($tugas * 0.20) + ($quiz * 0.20) + ($uts * 0.30) + ($uas * 0.30);
         }
 
+        $res = false;
         if ($existing) {
             $stmt = $this->db->prepare("
                 UPDATE nilai_rapor
                 SET nilai_tugas = ?, nilai_quiz = ?, nilai_uts = ?, nilai_uas = ?, nilai_akhir = ?, updated_at = NOW()
                 WHERE id = ?
             ");
-            return $stmt->execute([$tugas, $quiz, $uts, $uas, $akhir, $existing['id']]);
+            $res = $stmt->execute([$tugas, $quiz, $uts, $uas, $akhir, $existing['id']]);
         } else {
             $stmt = $this->db->prepare("
                 INSERT INTO nilai_rapor (siswa_id, mapel_id, nilai_tugas, nilai_quiz, nilai_uts, nilai_uas, nilai_akhir, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
             ");
-            return $stmt->execute([$siswaId, $mapelId, $tugas, $quiz, $uts, $uas, $akhir]);
+            $res = $stmt->execute([$siswaId, $mapelId, $tugas, $quiz, $uts, $uas, $akhir]);
         }
+
+        if ($res) {
+            $this->syncToDynamicRapor($siswaId);
+        }
+        return (bool)$res;
     }
 
     /**

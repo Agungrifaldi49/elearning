@@ -69,6 +69,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'admin/tahunAjaran') ?>" href="<?= BASE_URL ?>index.php?url=admin/tahunAjaran">
                 <i class="bi bi-calendar-event-fill text-warning"></i> Tahun Ajaran & Semester
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'admin/kurikulum') ?>" href="<?= BASE_URL ?>index.php?url=admin/kurikulum">
+                <i class="bi bi-diagram-3-fill text-primary"></i> Kurikulum & CP-TP
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'admin/enrollmentKey') ?>" href="<?= BASE_URL ?>index.php?url=admin/enrollmentKey">
                 <i class="bi bi-key-fill text-primary"></i> Key & Kode Akses Mapel
             </a></li>

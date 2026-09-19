@@ -153,9 +153,18 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     <small class="text-muted d-block"><?= htmlspecialchars($settings['alamat'] ?? 'Jl. Raya Cicalengka, Kab. Bandung, Jawa Barat 40395') ?> <?= !empty($settings['telepon']) ? '| Telp: ' . htmlspecialchars($settings['telepon']) : '' ?></small>
                 </div>
             </div>
-            <div class="mt-3">
+            <?php
+            $kurikulumText = $raporData['kurikulum_nama_snapshot'] ?? 'Kurikulum Merdeka SMK';
+            $faseText = $raporData['fase_nama_snapshot'] ?? 'Fase E (Kelas X)';
+            $tahunAjaranText = $raporData['tahun_ajaran'] ?? ($activeTa['tahun_ajaran'] ?? '2026/2027');
+            $semesterText = $raporData['semester'] ?? ($activeTa['semester'] ?? 'Ganjil');
+            ?>
+            <div class="mt-3 d-flex justify-content-center gap-2 flex-wrap">
                 <span class="fw-bold text-uppercase border border-2 border-primary d-inline-block px-3 py-1.5 rounded-pill bg-primary bg-opacity-10 text-primary" style="font-size:0.8rem;">
-                    <i class="bi bi-award-fill me-1"></i> Laporan Hasil Belajar Siswa (E-Rapor Digital) T.A. 2025/2026
+                    <i class="bi bi-award-fill me-1"></i> Laporan Hasil Belajar (E-Rapor) T.A. <?= htmlspecialchars($tahunAjaranText) ?> (Semester <?= htmlspecialchars($semesterText) ?>)
+                </span>
+                <span class="fw-bold border border-2 border-info d-inline-block px-3 py-1.5 rounded-pill bg-info bg-opacity-10 text-dark" style="font-size:0.8rem;">
+                    <i class="bi bi-mortarboard-fill me-1 text-primary"></i> <?= htmlspecialchars($kurikulumText) ?> — <?= htmlspecialchars($faseText) ?>
                 </span>
             </div>
         </div>
@@ -175,8 +184,8 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                 <table class="table table-sm table-borderless small mb-0">
                     <tbody>
                         <tr><td class="text-muted" style="width:40%">Program Keahlian</td><td class="fw-bold text-dark">: <?= htmlspecialchars($siswa['nama_jurusan'] ?? '-') ?></td></tr>
-                        <tr><td class="text-muted">Semester Target</td><td class="fw-bold text-dark">: Ganjil (1)</td></tr>
-                        <tr><td class="text-muted">Status E-Rapor</td><td class="fw-bold text-success">: <i class="bi bi-patch-check-fill me-1"></i> Terverifikasi Resmi</td></tr>
+                        <tr><td class="text-muted">Kurikulum & Fase</td><td class="fw-bold text-primary">: <?= htmlspecialchars($kurikulumText) ?> (<?= htmlspecialchars($faseText) ?>)</td></tr>
+                        <tr><td class="text-muted">Status E-Rapor</td><td class="fw-bold text-success">: <i class="bi bi-patch-check-fill me-1"></i> <?= htmlspecialchars(ucfirst($raporData['status'] ?? 'Terverifikasi')) ?> Resmi</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -222,29 +231,38 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         <?php endif; ?>
 
         <!-- OFFICIAL GRADE TRANSKRIP TABLE (Scrollable container on mobile, full width on print) -->
+        <?php
+        $capaianMap = [];
+        if (!empty($raporData['nilai_list'])) {
+            foreach ($raporData['nilai_list'] as $rd) {
+                $capaianMap[$rd['mapel_id']] = $rd['capaian_kompetensi'] ?? '';
+            }
+        }
+        ?>
         <div class="rapor-table-scroll mb-4">
             <table class="table grade-table table-bordered text-center align-middle mb-0">
                 <thead class="grade-table-header">
                     <tr>
                         <th class="text-start" rowspan="2" style="width:40px;">No</th>
                         <th class="text-start" rowspan="2">Mata Pelajaran</th>
-                        <th rowspan="2" style="width:65px;">KKM</th>
+                        <th rowspan="2" style="width:60px;">KKM</th>
                         <th colspan="4">Komponen Penilaian</th>
-                        <th rowspan="2" style="width:90px;">Nilai Akhir</th>
-                        <th rowspan="2" style="width:85px;">Predikat</th>
-                        <th rowspan="2" style="width:105px;">Ketuntasan</th>
+                        <th rowspan="2" style="width:85px;">Nilai Akhir</th>
+                        <th rowspan="2" style="width:75px;">Predikat</th>
+                        <th rowspan="2" style="width:95px;">Ketuntasan</th>
+                        <th rowspan="2" class="text-start" style="min-width:240px;">Deskripsi Capaian Kompetensi</th>
                     </tr>
                     <tr>
-                        <th style="width:70px;">Tugas</th>
-                        <th style="width:70px;">Quiz</th>
-                        <th style="width:70px;">UTS</th>
-                        <th style="width:70px;">UAS</th>
+                        <th style="width:60px;">Tugas</th>
+                        <th style="width:60px;">Quiz</th>
+                        <th style="width:60px;">UTS</th>
+                        <th style="width:60px;">UAS</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($nilaiList)): ?>
                         <tr>
-                            <td colspan="10" class="text-center py-4 text-muted">
+                            <td colspan="11" class="text-center py-4 text-muted">
                                 <i class="bi bi-inbox fs-2 d-block mb-2"></i>
                                 Belum ada data nilai yang diinput Guru Pengampu. Nilai E-Rapor akan muncul setelah Guru menyimpan nilai rombel.
                             </td>
@@ -257,6 +275,11 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                             $pred = NilaiModel::getPredikat((float)$n['nilai_akhir']);
                             $totalAkhir += $n['nilai_akhir'];
                             $isTuntas = ((float)$n['nilai_akhir'] >= $kkmVal);
+                            $deskripsiCapaian = $capaianMap[$n['mapel_id']] ?? (
+                                $isTuntas 
+                                ? "Menunjukkan penguasaan yang sangat baik dalam menuntaskan seluruh tujuan pembelajaran {$n['nama_mapel']}."
+                                : "Perlu bimbingan dan tindak lanjut remedial pada beberapa kompetensi dasar mata pelajaran {$n['nama_mapel']}."
+                            );
                         ?>
                         <tr>
                             <td><?= $i + 1 ?></td>
@@ -273,9 +296,12 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                                 </span>
                             </td>
                             <td>
-                                <span class="badge <?= $isTuntas ? 'bg-success' : 'bg-danger' ?> rounded-pill px-2.5 py-1">
-                                    <?= $isTuntas ? 'TUNTAS' : 'BELUM TUNTAS' ?>
+                                <span class="badge <?= $isTuntas ? 'bg-success' : 'bg-danger' ?> rounded-pill px-2 py-1" style="font-size:0.75rem;">
+                                    <?= $isTuntas ? 'TUNTAS' : 'BELUM' ?>
                                 </span>
+                            </td>
+                            <td class="text-start small text-muted lh-sm">
+                                <?= htmlspecialchars($deskripsiCapaian) ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -285,6 +311,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                             <?php $avgPred = NilaiModel::getPredikat($totalAkhir / count($nilaiList)); ?>
                             <td><span class="badge <?= $avgPred['class'] ?> rounded-pill px-2.5 py-1"><?= $avgPred['grade'] ?></span></td>
                             <td><span class="badge bg-success rounded-pill px-2.5 py-1">LULUS</span></td>
+                            <td class="text-start small text-primary fw-semibold">Status Akademik: Memenuhi Kriteria Ketercapaian Tujuan Pembelajaran (KKTP).</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

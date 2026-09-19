@@ -1357,6 +1357,233 @@ class AdminController {
         require_once ROOT_PATH . 'views/admin/tahun_ajaran.php';
     }
 
+    public function kurikulum() {
+        require_once ROOT_PATH . 'models/CurriculumModel.php';
+        $currModel = new CurriculumModel();
+        $academicModel = new AcademicModel();
+
+        $activeTab = $_GET['tab'] ?? 'kurikulum';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('CSRF Token Invalid');
+                header('Location: ' . BASE_URL . 'index.php?url=admin/kurikulum&tab=' . urlencode($activeTab));
+                exit();
+            }
+
+            $action = $_POST['action'] ?? '';
+            $redirectTab = $_POST['redirect_tab'] ?? $activeTab;
+
+            if ($action === 'create_kurikulum') {
+                $res = $currModel->addKurikulum([
+                    'kode' => Security::sanitize($_POST['kode']),
+                    'nama' => Security::sanitize($_POST['nama']),
+                    'tahun_mulai' => (int)$_POST['tahun_mulai'],
+                    'tahun_selesai' => !empty($_POST['tahun_selesai']) ? (int)$_POST['tahun_selesai'] : null,
+                    'status' => $_POST['status'] ?? 'aktif',
+                    'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'update_kurikulum') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->updateKurikulum($id, [
+                    'kode' => Security::sanitize($_POST['kode']),
+                    'nama' => Security::sanitize($_POST['nama']),
+                    'tahun_mulai' => (int)$_POST['tahun_mulai'],
+                    'tahun_selesai' => !empty($_POST['tahun_selesai']) ? (int)$_POST['tahun_selesai'] : null,
+                    'status' => $_POST['status'] ?? 'aktif',
+                    'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'delete_kurikulum') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->deleteKurikulum($id);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'create_fase') {
+                $res = $currModel->addFase([
+                    'kurikulum_id' => (int)$_POST['kurikulum_id'],
+                    'kode' => Security::sanitize($_POST['kode']),
+                    'nama' => Security::sanitize($_POST['nama']),
+                    'tingkat_kelas' => Security::sanitize($_POST['tingkat_kelas'] ?? ''),
+                    'keterangan' => Security::sanitize($_POST['keterangan'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'update_fase') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->updateFase($id, [
+                    'kode' => Security::sanitize($_POST['kode']),
+                    'nama' => Security::sanitize($_POST['nama']),
+                    'tingkat_kelas' => Security::sanitize($_POST['tingkat_kelas'] ?? ''),
+                    'keterangan' => Security::sanitize($_POST['keterangan'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'delete_fase') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->deleteFase($id);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'assign_rombel') {
+                $res = $currModel->assignRombelKurikulum([
+                    'rombel_id' => (int)$_POST['rombel_id'],
+                    'tahun_ajaran_id' => (int)$_POST['tahun_ajaran_id'],
+                    'kurikulum_id' => (int)$_POST['kurikulum_id'],
+                    'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
+                    'status' => $_POST['status'] ?? 'aktif'
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'update_rombel') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->updateRombelKurikulum($id, [
+                    'kurikulum_id' => (int)$_POST['kurikulum_id'],
+                    'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
+                    'status' => $_POST['status'] ?? 'aktif'
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'delete_rombel') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->deleteRombelKurikulum($id);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'add_mapel') {
+                $res = $currModel->addStrukturMapel([
+                    'kurikulum_id' => (int)$_POST['kurikulum_id'],
+                    'mapel_id' => (int)$_POST['mapel_id'],
+                    'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
+                    'tingkat' => Security::sanitize($_POST['tingkat'] ?? 'X'),
+                    'jurusan_id' => !empty($_POST['jurusan_id']) ? (int)$_POST['jurusan_id'] : null,
+                    'kelompok_mapel' => Security::sanitize($_POST['kelompok_mapel'] ?? 'Kejuruan'),
+                    'alokasi_jp' => (int)($_POST['alokasi_jp'] ?? 2),
+                    'kkm' => (float)($_POST['kkm'] ?? 75.0)
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'delete_mapel') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->deleteStrukturMapel($id);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'create_cp') {
+                $res = $currModel->addCP([
+                    'kurikulum_id' => (int)$_POST['kurikulum_id'],
+                    'mapel_id' => (int)$_POST['mapel_id'],
+                    'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
+                    'kode_cp' => Security::sanitize($_POST['kode_cp']),
+                    'elemen' => Security::sanitize($_POST['elemen'] ?? ''),
+                    'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'update_cp') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->updateCP($id, [
+                    'kode_cp' => Security::sanitize($_POST['kode_cp']),
+                    'elemen' => Security::sanitize($_POST['elemen'] ?? ''),
+                    'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? ''),
+                    'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'delete_cp') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->deleteCP($id);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'create_tp') {
+                $res = $currModel->addTP([
+                    'cp_id' => (int)$_POST['cp_id'],
+                    'kode_tp' => Security::sanitize($_POST['kode_tp']),
+                    'materi_pokok' => Security::sanitize($_POST['materi_pokok'] ?? ''),
+                    'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'update_tp') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->updateTP($id, [
+                    'kode_tp' => Security::sanitize($_POST['kode_tp']),
+                    'materi_pokok' => Security::sanitize($_POST['materi_pokok'] ?? ''),
+                    'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'delete_tp') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->deleteTP($id);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'save_komponen') {
+                $kurikulumId = (int)$_POST['kurikulum_id'];
+                $komponenArray = [];
+                $kodes = $_POST['kode_komponen'] ?? [];
+                $namas = $_POST['nama_komponen'] ?? [];
+                $bobots = $_POST['bobot_persen'] ?? [];
+                $descs = $_POST['deskripsi'] ?? [];
+
+                for ($i = 0; $i < count($kodes); $i++) {
+                    if (!empty($kodes[$i])) {
+                        $komponenArray[] = [
+                            'kode_komponen' => $kodes[$i],
+                            'nama_komponen' => $namas[$i] ?? $kodes[$i],
+                            'bobot_persen' => (float)($bobots[$i] ?? 0),
+                            'deskripsi' => $descs[$i] ?? ''
+                        ];
+                    }
+                }
+
+                $res = $currModel->saveKomponenPenilaian($kurikulumId, $komponenArray);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+            }
+
+            header('Location: ' . BASE_URL . 'index.php?url=admin/kurikulum&tab=' . urlencode($redirectTab));
+            exit();
+        }
+
+        // Data for view
+        $kurikulumList = $currModel->getAllKurikulum();
+        $allFaseList = $currModel->getAllFase();
+        $taList = $academicModel->getTahunAjaran();
+        $kelasList = $academicModel->getKelas();
+        $mapelList = $academicModel->getMapel();
+        $jurusanList = $academicModel->getJurusan();
+        $rombelKurikulumList = $currModel->getRombelKurikulum();
+        $cpList = $currModel->getCPList();
+        $tpList = $currModel->getTPList();
+
+        // Selected curriculum for tabs (default to first/active)
+        $selectedKurId = (int)($_GET['kurikulum_id'] ?? ($kurikulumList[0]['id'] ?? 1));
+        $selectedKurikulum = $currModel->getKurikulumById($selectedKurId) ?: ($kurikulumList[0] ?? null);
+        $strukturMapelList = $currModel->getStrukturMapel($selectedKurId);
+        $komponenList = $currModel->getKomponenPenilaian($selectedKurId);
+        $faseKurikulumList = $currModel->getFaseByKurikulum($selectedKurId);
+
+        require_once ROOT_PATH . 'views/admin/kurikulum.php';
+    }
+
     public function pengumuman() {
         $commModel = new CommunicationModel();
         $user = AuthHelper::user();

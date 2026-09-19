@@ -794,6 +794,13 @@ class SiswaController {
 
         $nilaiList = $nilaiModel->getNilaiBySiswa($siswaId);
 
+        require_once ROOT_PATH . 'models/CurriculumModel.php';
+        $currModel = new CurriculumModel();
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $taId = $activeTa['id'] ?? 4;
+        $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+        $raporData = $currModel->getRaporSiswa($siswaId, $taId, $activeSemester);
+
         require_once ROOT_PATH . 'models/SettingsModel.php';
         $settingsModel = new SettingsModel();
         $settings = $settingsModel->getAll();
