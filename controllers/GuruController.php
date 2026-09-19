@@ -2693,6 +2693,22 @@ class GuruController {
                 exit();
             }
 
+            if ($ajaxAction === 'get_asesmen_detail') {
+                $asesmenId = (int)($_GET['asesmen_id'] ?? 0);
+                $asesmen = $assessModel->getAsesmenById($asesmenId);
+                if ($asesmen) {
+                    $assignedTpIds = !empty($asesmen['tujuan_pembelajaran']) ? array_column($asesmen['tujuan_pembelajaran'], 'tp_id') : [];
+                    echo json_encode([
+                        'status' => true, 
+                        'data' => $asesmen,
+                        'assigned_tp_ids' => $assignedTpIds
+                    ]);
+                } else {
+                    echo json_encode(['status' => false, 'message' => 'Asesmen tidak ditemukan.']);
+                }
+                exit();
+            }
+
             if ($ajaxAction === 'save_single_nilai') {
                 if (!Security::verifyCsrfToken()) {
                     echo json_encode(['status' => false, 'message' => 'Token CSRF tidak valid.']);
@@ -2764,6 +2780,52 @@ class GuruController {
                 } else {
                     FlashHelper::setError($res['message']);
                 }
+
+            } elseif ($action === 'update_asesmen') {
+                $asesmenId = (int)($_POST['asesmen_id'] ?? 0);
+                $rombelId = (int)($_POST['rombel_id'] ?? 0);
+                $mapelId = (int)($_POST['mapel_id'] ?? 0);
+                $namaAsesmen = Security::sanitize($_POST['nama_asesmen'] ?? '');
+                $jenisAsesmen = Security::sanitize($_POST['jenis_asesmen'] ?? 'formatif');
+                $tanggal = !empty($_POST['tanggal']) ? Security::sanitize($_POST['tanggal']) : date('Y-m-d');
+                $nilaiMaks = floatval($_POST['nilai_maksimum'] ?? 100.00);
+                $bobot = floatval($_POST['bobot'] ?? 1.00);
+                $tpIds = !empty($_POST['tp_ids']) && is_array($_POST['tp_ids']) ? array_map('intval', $_POST['tp_ids']) : [];
+
+                // Cari kurikulum_id aktif dari rombel/kelas terpilih
+                $kurikulumInfo = $currModel->getActiveKurikulumForRombel($rombelId);
+                $kurikulumId = (int)($kurikulumInfo['kurikulum_id'] ?? 1);
+
+                $res = $assessModel->updateAsesmenMultiTp($asesmenId, [
+                    'rombel_id' => $rombelId,
+                    'mapel_id' => $mapelId,
+                    'guru_id' => $guruId,
+                    'kurikulum_id' => $kurikulumId,
+                    'nama_asesmen' => $namaAsesmen,
+                    'jenis_asesmen' => $jenisAsesmen,
+                    'tanggal' => $tanggal,
+                    'nilai_maksimum' => $nilaiMaks,
+                    'bobot' => $bobot
+                ], $tpIds);
+
+                if ($res['status']) {
+                    FlashHelper::setSuccess($res['message']);
+                } else {
+                    FlashHelper::setError($res['message']);
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=guru/asesmen&tab=asesmen&rombel_id=' . $rombelId . '&mapel_id=' . $mapelId);
+                exit();
+
+            } elseif ($action === 'delete_asesmen') {
+                $asesmenId = (int)($_POST['asesmen_id'] ?? 0);
+                $res = $assessModel->deleteAsesmen($asesmenId, $guruId);
+                if ($res['status']) {
+                    FlashHelper::setSuccess($res['message']);
+                } else {
+                    FlashHelper::setError($res['message']);
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=guru/asesmen&tab=asesmen');
+                exit();
 
             } elseif ($action === 'save_batch_nilai') {
                 $asesmenId = (int)$_POST['asesmen_id'];

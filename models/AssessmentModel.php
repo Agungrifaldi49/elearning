@@ -714,6 +714,174 @@ class AssessmentModel extends BaseModel {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Perbarui data asesmen dan daftar TP yang diukurnya
+     */
+    public function updateAsesmenMultiTp($id, $data, $tpIds = [], $tpWeights = []) {
+        $id = (int)$id;
+        $rombelId = (int)($data['rombel_id'] ?? 0);
+        $mapelId = (int)($data['mapel_id'] ?? 0);
+        $namaAsesmen = trim($data['nama_asesmen'] ?? '');
+        $jenisAsesmen = trim($data['jenis_asesmen'] ?? 'formatif');
+        $tanggal = !empty($data['tanggal']) ? $data['tanggal'] : date('Y-m-d');
+        $nilaiMaks = floatval($data['nilai_maksimum'] ?? 100.00);
+        $bobot = floatval($data['bobot'] ?? 1.00);
+
+        if ($id <= 0) {
+            return ['status' => false, 'message' => 'ID Asesmen tidak valid.'];
+        }
+        if (empty($namaAsesmen)) {
+            return ['status' => false, 'message' => 'Nama asesmen wajib diisi.'];
+        }
+        if (empty($tpIds) || !is_array($tpIds)) {
+            return ['status' => false, 'message' => 'Minimal 1 Tujuan Pembelajaran (TP) harus dipilih.'];
+        }
+
+        $existing = $this->getAsesmenById($id);
+        if (!$existing) {
+            return ['status' => false, 'message' => 'Data asesmen tidak ditemukan.'];
+        }
+
+        // Cari CP ID dari TP pertama
+        $primaryTpId = (int)$tpIds[0];
+        $stmtCp = $this->db->prepare("SELECT cp_id FROM tujuan_pembelajaran WHERE id = ?");
+        $stmtCp->execute([$primaryTpId]);
+        $primaryCpId = (int)$stmtCp->fetchColumn();
+
+        // Ambil kurikulum_id yang sesuai
+        $kurikulumId = !empty($data['kurikulum_id']) ? (int)$data['kurikulum_id'] : (int)$existing['kurikulum_id'];
+
+        try {
+            $this->db->beginTransaction();
+
+            // 1. Update tabel asesmen utama
+            $stmt = $this->db->prepare("
+                UPDATE asesmen 
+                SET rombel_id = ?, mapel_id = ?, kurikulum_id = ?, cp_id = ?, tp_id = ?, 
+                    jenis_asesmen = ?, nama_asesmen = ?, tanggal = ?, nilai_maksimum = ?, bobot = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                $rombelId ?: $existing['rombel_id'],
+                $mapelId ?: $existing['mapel_id'],
+                $kurikulumId,
+                $primaryCpId ?: null,
+                $primaryTpId,
+                $jenisAsesmen,
+                $namaAsesmen,
+                $tanggal,
+                $nilaiMaks,
+                $bobot,
+                $id
+            ]);
+
+            // 2. Ambil TP yang saat ini terdaftar
+            $stmtCurr = $this->db->prepare("SELECT tp_id FROM asesmen_tp WHERE asesmen_id = ?");
+            $stmtCurr->execute([$id]);
+            $currentTpIds = array_map('intval', $stmtCurr->fetchAll(PDO::FETCH_COLUMN));
+
+            $targetTpIds = array_map('intval', $tpIds);
+
+            // TPs to remove
+            $toRemove = array_diff($currentTpIds, $targetTpIds);
+            if (!empty($toRemove)) {
+                $placeholders = implode(',', array_fill(0, count($toRemove), '?'));
+                // Hapus nilai_asesmen_tp untuk TP yang di-uncheck
+                $delNilai = $this->db->prepare("DELETE FROM nilai_asesmen_tp WHERE asesmen_id = ? AND tp_id IN ($placeholders)");
+                $delNilai->execute(array_merge([$id], array_values($toRemove)));
+
+                // Hapus dari asesmen_tp
+                $delAtp = $this->db->prepare("DELETE FROM asesmen_tp WHERE asesmen_id = ? AND tp_id IN ($placeholders)");
+                $delAtp->execute(array_merge([$id], array_values($toRemove)));
+            }
+
+            // TPs to add or update
+            $stmtInsertAtp = $this->db->prepare("
+                INSERT INTO asesmen_tp (asesmen_id, tp_id, kktp_id, bobot_tp, nilai_maksimum)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            $stmtUpdateAtp = $this->db->prepare("
+                UPDATE asesmen_tp SET nilai_maksimum = ?, bobot_tp = ? WHERE asesmen_id = ? AND tp_id = ?
+            ");
+
+            foreach ($targetTpIds as $tId) {
+                if ($tId <= 0) continue;
+                $bTp = isset($tpWeights[$tId]) ? floatval($tpWeights[$tId]) : 100.00;
+
+                if (in_array($tId, $currentTpIds)) {
+                    $stmtUpdateAtp->execute([$nilaiMaks, $bTp, $id, $tId]);
+                } else {
+                    $kktp = $this->getKktpByTp($tId);
+                    $kktpId = !empty($kktp['id']) ? (int)$kktp['id'] : null;
+                    $stmtInsertAtp->execute([$id, $tId, $kktpId, $bTp, $nilaiMaks]);
+                }
+            }
+
+            $this->db->commit();
+            return [
+                'status' => true,
+                'message' => "Asesmen '{$namaAsesmen}' berhasil diperbarui beserta " . count($targetTpIds) . " Tujuan Pembelajaran."
+            ];
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            return ['status' => false, 'message' => 'Gagal memperbarui asesmen: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Hapus Asesmen beserta relasi asesmen_tp dan histori nilai_asesmen_tp secara bersih
+     */
+    public function deleteAsesmen($id, $guruId = null) {
+        $id = (int)$id;
+        if ($id <= 0) {
+            return ['status' => false, 'message' => 'ID Asesmen tidak valid.'];
+        }
+
+        $queryCheck = "SELECT id, nama_asesmen, guru_id FROM asesmen WHERE id = ?";
+        $paramsCheck = [$id];
+        if ($guruId !== null && (int)$guruId > 0) {
+            $queryCheck .= " AND guru_id = ?";
+            $paramsCheck[] = (int)$guruId;
+        }
+
+        $stmt = $this->db->prepare($queryCheck);
+        $stmt->execute($paramsCheck);
+        $asesmen = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$asesmen) {
+            return ['status' => false, 'message' => 'Asesmen tidak ditemukan atau Anda tidak memiliki akses untuk menghapusnya.'];
+        }
+
+        try {
+            $this->db->beginTransaction();
+
+            // 1. Hapus nilai siswa per TP di asesmen ini
+            $delNilai = $this->db->prepare("DELETE FROM nilai_asesmen_tp WHERE asesmen_id = ?");
+            $delNilai->execute([$id]);
+
+            // 2. Hapus asesmen_tp relasi
+            $delAtp = $this->db->prepare("DELETE FROM asesmen_tp WHERE asesmen_id = ?");
+            $delAtp->execute([$id]);
+
+            // 3. Hapus asesmen utama
+            $delAsesmen = $this->db->prepare("DELETE FROM asesmen WHERE id = ?");
+            $delAsesmen->execute([$id]);
+
+            $this->db->commit();
+            return [
+                'status' => true,
+                'message' => "Asesmen '" . htmlspecialchars($asesmen['nama_asesmen']) . "' berhasil dihapus secara bersih."
+            ];
+        } catch (Exception $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            return ['status' => false, 'message' => 'Gagal menghapus asesmen: ' . $e->getMessage()];
+        }
+    }
+
     // =========================================================================
     // 4. PENILAIAN SISWA BERBASIS TP & STATUS KETERCAPAIAN (1/0) + REMEDIAL
     // =========================================================================

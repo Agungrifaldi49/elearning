@@ -46,6 +46,10 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
             </p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-outline-info shadow-sm fw-semibold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalPanduanAsesmen">
+                <i class="bi bi-book-half fs-5"></i>
+                <span>📖 Panduan Asesmen & KKTP</span>
+            </button>
             <a href="<?= BASE_URL ?>index.php?url=guru/cptp" class="btn btn-outline-primary shadow-sm fw-semibold px-3 py-2 rounded-3 d-flex align-items-center gap-2">
                 <i class="bi bi-card-checklist fs-5"></i>
                 <span>Kelola CP & TP</span>
@@ -104,13 +108,48 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                href="<?= BASE_URL ?>index.php?url=guru/asesmen&tab=rekap_siswa&rombel_id=<?= $filterRombelId ?>&mapel_id=<?= $filterMapelId ?>&siswa_id=<?= $selectedSiswaId ?>">
                 <i class="bi bi-person-lines-fill me-1.5"></i> 4. Profil Ketercapaian Siswa & Draf Rapor
             </a>
-        </li>
     </ul>
 
     <!-- ======================================================================= -->
     <!-- TAB 1: DAFTAR ASESMEN -->
     <!-- ======================================================================= -->
     <?php if ($activeTab === 'asesmen'): ?>
+        <!-- Panduan Singkat Alur & Tombol Aksi -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden border-start border-4 border-info">
+            <div class="card-body p-3.5">
+                <div class="d-flex align-items-start justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="rounded-3 bg-info-subtle text-info p-2.5 d-flex align-items-center justify-content-center">
+                            <i class="bi bi-info-circle-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                <span>Panduan Praktis Alur Penilaian & Aksi Asesmen</span>
+                                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill">Kurikulum Merdeka</span>
+                            </h6>
+                            <p class="small text-muted mb-2">
+                                Pipeline Penilaian: <strong>CP</strong> &rarr; <strong>TP</strong> &rarr; <strong>KKTP</strong> &rarr; <strong>Asesmen (Multi-TP)</strong> &rarr; <strong>Nilai Siswa</strong> &rarr; <strong>Status Ketercapaian (1/0)</strong> &rarr; <strong>Remedial</strong> &rarr; <strong>Draf E-Rapor</strong>.
+                            </p>
+                            <div class="d-flex flex-wrap gap-2 small">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1.5 px-2.5 rounded-2">
+                                    <i class="bi bi-pencil-square me-1"></i><strong>Nilai TP:</strong> Input nilai siswa, tentukan ketercapaian, & input remedial
+                                </span>
+                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1.5 px-2.5 rounded-2">
+                                    <i class="bi bi-pencil me-1"></i><strong>Edit:</strong> Ubah nama asesmen, tanggal, bobot, atau centang TP yang diukur
+                                </span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1.5 px-2.5 rounded-2">
+                                    <i class="bi bi-trash me-1"></i><strong>Hapus:</strong> Hapus asesmen beserta nilai terkait secara bersih & aman
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-info rounded-3 px-3 py-2 fw-semibold d-flex align-items-center gap-1.5 align-self-center mt-2 mt-md-0" data-bs-toggle="modal" data-bs-target="#modalPanduanAsesmen">
+                        <i class="bi bi-journal-text"></i> Panduan Lengkap
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Filter Toolbar -->
         <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
             <div class="card-body p-3.5">
@@ -168,7 +207,7 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                                 <th class="text-center">Jenis & Tanggal</th>
                                 <th class="text-center">TP Diukur</th>
                                 <th class="text-center">Siswa Dinilai</th>
-                                <th class="text-center" style="width: 160px;">Aksi</th>
+                                <th class="text-center" style="width: 220px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -215,10 +254,35 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                                             </span>
                                         </td>
                                         <td class="text-center">
-                                            <a href="<?= BASE_URL ?>index.php?url=guru/asesmen&tab=penilaian&asesmen_id=<?= $a['id'] ?>" 
-                                               class="btn btn-sm btn-primary rounded-3 px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs">
-                                                <i class="bi bi-pencil-fill"></i> Nilai TP
-                                            </a>
+                                            <div class="btn-group btn-group-sm shadow-xs" role="group">
+                                                <a href="<?= BASE_URL ?>index.php?url=guru/asesmen&tab=penilaian&asesmen_id=<?= $a['id'] ?>" 
+                                                   class="btn btn-primary fw-semibold d-inline-flex align-items-center gap-1"
+                                                   title="Input & Kelola Nilai TP Siswa">
+                                                    <i class="bi bi-pencil-square"></i> <span>Nilai TP</span>
+                                                </a>
+                                                <button type="button" 
+                                                        class="btn btn-outline-warning text-dark fw-semibold btn-edit-asesmen d-inline-flex align-items-center gap-1"
+                                                        title="Edit Asesmen & Pemetaan TP"
+                                                        data-id="<?= $a['id'] ?>"
+                                                        data-nama="<?= htmlspecialchars($a['nama_asesmen'], ENT_QUOTES) ?>"
+                                                        data-rombel-id="<?= $a['rombel_id'] ?>"
+                                                        data-mapel-id="<?= $a['mapel_id'] ?>"
+                                                        data-kurikulum-id="<?= $a['kurikulum_id'] ?? '' ?>"
+                                                        data-jenis="<?= htmlspecialchars($a['jenis_asesmen'], ENT_QUOTES) ?>"
+                                                        data-tanggal="<?= htmlspecialchars($a['tanggal'], ENT_QUOTES) ?>"
+                                                        data-nilai-maks="<?= $a['nilai_maksimum'] ?>"
+                                                        data-bobot="<?= $a['bobot'] ?>">
+                                                    <i class="bi bi-pencil"></i> <span>Edit</span>
+                                                </button>
+                                                <button type="button" 
+                                                        class="btn btn-outline-danger fw-semibold btn-delete-asesmen d-inline-flex align-items-center gap-1"
+                                                        title="Hapus Asesmen Ini"
+                                                        data-id="<?= $a['id'] ?>"
+                                                        data-nama="<?= htmlspecialchars($a['nama_asesmen'], ENT_QUOTES) ?>"
+                                                        data-total-siswa="<?= (int)$a['total_siswa_dinilai'] ?>">
+                                                    <i class="bi bi-trash"></i> <span>Hapus</span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -227,7 +291,6 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                     </table>
                 </div>
             </div>
-        </div>
     <?php endif; ?>
 
     <!-- ======================================================================= -->
@@ -921,16 +984,369 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
     </div>
 </div>
 
+<!-- =========================================================================== -->
+<!-- MODAL EDIT ASESMEN (MULTI-TP CHECKBOX SELECTOR) -->
+<!-- =========================================================================== -->
+<div class="modal fade" id="modalEditAsesmen" tabindex="-1" aria-labelledby="modalEditAsesmenLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 820px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form action="<?= BASE_URL ?>index.php?url=guru/asesmen" method="POST" id="formEditAsesmen">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="update_asesmen">
+                <input type="hidden" name="asesmen_id" id="edit_asesmen_id" value="">
+
+                <div class="modal-header bg-primary text-white py-3 px-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 bg-white bg-opacity-25 p-2 d-flex align-items-center justify-content-center">
+                            <i class="bi bi-pencil-square fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0" id="modalEditAsesmenLabel">Edit Asesmen Pembelajaran</h5>
+                            <p class="small text-white-50 mb-0">Ubah informasi asesmen, bobot, atau sesuaikan Tujuan Pembelajaran (TP) yang diukur.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4 bg-light">
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1">Rombel / Kelas <span class="text-danger">*</span></label>
+                            <select name="rombel_id" id="edit_asesmen_rombel" class="form-select rounded-3 py-2" required>
+                                <option value="">-- Pilih Rombel Kelas Target --</option>
+                                <?= renderRombelOptgroupsHtml($rombelByJurusan ?? [], 0, false) ?>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1">Mata Pelajaran <span class="text-danger">*</span></label>
+                            <select name="mapel_id" id="edit_asesmen_mapel" class="form-select rounded-3 py-2" required>
+                                <option value="">-- Pilih Mata Pelajaran --</option>
+                                <?php foreach ($teacherMapelList as $m): ?>
+                                    <option value="<?= $m['id'] ?>">
+                                        <?= htmlspecialchars($m['nama_mapel']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-8">
+                            <label class="form-label small fw-bold text-secondary mb-1">Nama Asesmen <span class="text-danger">*</span></label>
+                            <input type="text" name="nama_asesmen" id="edit_nama_asesmen" class="form-control rounded-3 py-2 fw-semibold" placeholder="Contoh: Formatif 1 - Logika Algoritma & Flowchart" required>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-secondary mb-1">Jenis Asesmen <span class="text-danger">*</span></label>
+                            <select name="jenis_asesmen" id="edit_jenis_asesmen" class="form-select rounded-3 py-2" required>
+                                <option value="formatif">Formatif Harian</option>
+                                <option value="tugas">Tugas Mandiri / Kelompok</option>
+                                <option value="projek">Projek / Praktik Kejuruan</option>
+                                <option value="sumatif_tengah">Sumatif Tengah Semester (STS)</option>
+                                <option value="sumatif_akhir">Sumatif Akhir Semester (SAS)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-secondary mb-1">Tanggal Pelaksanaan</label>
+                            <input type="date" name="tanggal" id="edit_tanggal" class="form-control rounded-3 py-2" required>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-secondary mb-1">Nilai Maksimum</label>
+                            <input type="number" step="1" name="nilai_maksimum" id="edit_nilai_maksimum" class="form-control rounded-3 py-2 text-center font-monospace" value="100">
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold text-secondary mb-1">Bobot Asesmen</label>
+                            <input type="number" step="0.1" min="0.1" name="bobot" id="edit_bobot" class="form-control rounded-3 py-2 text-center font-monospace" value="1.0">
+                        </div>
+                    </div>
+
+                    <!-- Multi-TP Checkbox Selection Section -->
+                    <div class="card border-0 rounded-3 shadow-xs bg-white p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label small fw-bold text-secondary mb-0">
+                                <i class="bi bi-check2-square text-primary me-1"></i>Tujuan Pembelajaran (TP) yang Diukur <span class="text-danger">*</span>
+                            </label>
+                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" id="btnEditSelectAllTp">Pilih Semua</button>
+                        </div>
+                        <div class="form-text text-muted small mb-2">Centang TP yang diukur pada asesmen ini. Minimal pilih 1 TP.</div>
+
+                        <div id="editTpCheckboxList" class="d-flex flex-column gap-2" style="max-height: 240px; overflow-y: auto;">
+                            <div class="text-muted small py-3 text-center">Memuat daftar TP...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-white py-3 px-4 border-top">
+                    <button type="button" class="btn btn-light border px-4 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-check-circle-fill"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================== -->
+<!-- MODAL HAPUS ASESMEN (KONFIRMASI AMAN) -->
+<!-- =========================================================================== -->
+<div class="modal fade" id="modalDeleteAsesmen" tabindex="-1" aria-labelledby="modalDeleteAsesmenLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 480px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form action="<?= BASE_URL ?>index.php?url=guru/asesmen" method="POST" id="formDeleteAsesmen">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="delete_asesmen">
+                <input type="hidden" name="asesmen_id" id="delete_asesmen_id" value="">
+
+                <div class="modal-header bg-danger text-white py-3 px-4">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="rounded-3 bg-white bg-opacity-25 p-2 d-flex align-items-center justify-content-center">
+                            <i class="bi bi-trash-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0" id="modalDeleteAsesmenLabel">Hapus Asesmen</h5>
+                            <p class="small text-white-50 mb-0">Konfirmasi tindakan penghapusan asesmen</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4 bg-light">
+                    <div class="card border-0 rounded-3 p-3 bg-white mb-3 shadow-xs border-start border-4 border-danger">
+                        <div class="text-muted small mb-1">Nama Asesmen:</div>
+                        <div class="fw-bold text-dark fs-6" id="delete_nama_asesmen">-</div>
+                    </div>
+
+                    <div class="alert alert-danger mb-0 rounded-3 small">
+                        <div class="d-flex gap-2">
+                            <i class="bi bi-exclamation-triangle-fill fs-5 flex-shrink-0 text-danger"></i>
+                            <div>
+                                <strong>Peringatan Penting:</strong>
+                                <div>Menghapus asesmen ini akan menghapus seluruh pemetaan TP dan <strong id="delete_total_siswa_text">data nilai siswa</strong> yang sudah tersimpan di asesmen ini secara permanen. Tindakan ini tidak dapat dibatalkan!</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-white py-3 px-4 border-top">
+                    <button type="button" class="btn btn-light border px-4 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger fw-bold px-4 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-trash-fill"></i> Ya, Hapus Asesmen
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================== -->
+<!-- MODAL PANDUAN LENGKAP ASESMEN, KKTP & TOMBOL AKSI -->
+<!-- =========================================================================== -->
+<div class="modal fade" id="modalPanduanAsesmen" tabindex="-1" aria-labelledby="modalPanduanAsesmenLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-dark text-white py-3 px-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-3 bg-white bg-opacity-25 p-2 d-flex align-items-center justify-content-center">
+                        <i class="bi bi-book-half fs-4 text-warning"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="modalPanduanAsesmenLabel">Buku Panduan Asesmen, Penilaian TP & KKTP</h5>
+                        <p class="small text-white-50 mb-0">Petunjuk Operasional Guru Berdasarkan Prinsip Kurikulum Merdeka</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4 bg-light">
+                <!-- Pipeline Visual Diagram -->
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-4 mb-4">
+                    <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-diagram-3-fill text-danger"></i>
+                        <span>1. Alur Kerja Standar (Pipeline Penilaian)</span>
+                    </h6>
+                    <div class="row g-3 text-center">
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="p-3 rounded-3 bg-primary bg-opacity-10 border border-primary-subtle h-100">
+                                <div class="badge bg-primary text-white rounded-pill mb-2">Tahap 1</div>
+                                <div class="fw-bold text-primary small">CP (Capaian)</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Fase & Elemen Kompetensi per Mapel</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="p-3 rounded-3 bg-info bg-opacity-10 border border-info-subtle h-100">
+                                <div class="badge bg-info text-white rounded-pill mb-2">Tahap 2</div>
+                                <div class="fw-bold text-info-emphasis small">TP (Tujuan)</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Tujuan Pembelajaran Terstruktur</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="p-3 rounded-3 bg-warning bg-opacity-10 border border-warning-subtle h-100">
+                                <div class="badge bg-warning text-dark rounded-pill mb-2">Tahap 3</div>
+                                <div class="fw-bold text-dark small">KKTP Otomatis</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Kriteria & Ambang Nilai (e.g. 75)</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="p-3 rounded-3 bg-danger bg-opacity-10 border border-danger-subtle h-100">
+                                <div class="badge bg-danger text-white rounded-pill mb-2">Tahap 4</div>
+                                <div class="fw-bold text-danger small">Asesmen (Multi-TP)</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">1 Asesmen mengukur 1 atau banyak TP</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="p-3 rounded-3 bg-success bg-opacity-10 border border-success-subtle h-100">
+                                <div class="badge bg-success text-white rounded-pill mb-2">Tahap 5</div>
+                                <div class="fw-bold text-success small">Nilai & Status (1/0)</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Otomatis: 1 = Tercapai, 0 = Belum</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-4 col-lg-2">
+                            <div class="p-3 rounded-3 bg-secondary bg-opacity-10 border border-secondary-subtle h-100">
+                                <div class="badge bg-dark text-white rounded-pill mb-2">Tahap 6</div>
+                                <div class="fw-bold text-dark small">Remedial & E-Rapor</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">Histori terjaga & narasi rapor otomatis</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Penjelasan Tombol Aksi -->
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-4 mb-4">
+                    <h6 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-cursor-fill text-primary"></i>
+                        <span>2. Penjelasan Fungsi Tombol AKSI pada Tabel Asesmen</span>
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <div class="border rounded-3 p-3 h-100 bg-white">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="btn btn-sm btn-primary py-1 px-2.5 fw-bold disabled">
+                                        <i class="bi bi-pencil-square"></i> Nilai TP
+                                    </span>
+                                    <span class="fw-bold text-primary">Lembar Penilaian</span>
+                                </div>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li>Klik tombol ini untuk masuk ke <strong>Tab 2 (Lembar Nilai & Remedial)</strong>.</li>
+                                    <li>Guru dapat memasukkan skor angka siswa untuk setiap TP yang diukur.</li>
+                                    <li>Jika siswa belum mencapai ambang KKTP (status 0 / merah), klik tombol kuning <strong>Remedial</strong> di samping nilai siswa.</li>
+                                    <li>Skor awal tetap disimpan dan nilai baru akan langsung dievaluasi ulang.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <div class="border rounded-3 p-3 h-100 bg-white">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="btn btn-sm btn-outline-warning text-dark py-1 px-2.5 fw-bold disabled">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </span>
+                                    <span class="fw-bold text-warning-emphasis">Edit Asesmen</span>
+                                </div>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li>Membuka formulir perubahan data asesmen.</li>
+                                    <li>Guru dapat mengoreksi <strong>Nama Asesmen, Rombel/Kelas, Mapel, Jenis (Formatif/STS/SAS), Tanggal, Bobot, serta Nilai Maksimum</strong>.</li>
+                                    <li>Guru juga dapat menambah atau mengurangi centang Tujuan Pembelajaran (TP) yang diukur pada kegiatan asesmen/projek tersebut.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <div class="border rounded-3 p-3 h-100 bg-white">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="btn btn-sm btn-outline-danger py-1 px-2.5 fw-bold disabled">
+                                        <i class="bi bi-trash"></i> Hapus
+                                    </span>
+                                    <span class="fw-bold text-danger">Hapus Asesmen</span>
+                                </div>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li>Menghapus asesmen yang keliru dibuat atau dibatalkan.</li>
+                                    <li>Sistem menerapkan <em>clean transaction cascade</em>: data relasi pemetaan TP dan histori nilai siswa pada asesmen tersebut akan dibersihkan tanpa merusak data TP atau data kelas lainnya.</li>
+                                    <li>Terdapat dialog konfirmasi pengaman sebelum proses penghapusan dieksekusi.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Penentuan Ketercapaian (KKTP) & Remedial -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-6">
+                        <div class="card border-0 rounded-4 shadow-sm bg-white p-4 h-100">
+                            <h6 class="fw-bold text-dark mb-2.5 d-flex align-items-center gap-2">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <span>3. Penentuan Status Ketercapaian (1 atau 0)</span>
+                            </h6>
+                            <p class="small text-muted mb-3">
+                                Berbeda dari KKM pada kurikulum lama yang tunggal untuk satu mapel, dalam Kurikulum Merdeka setiap TP memiliki <strong>KKTP</strong> masing-masing.
+                            </p>
+                            <div class="p-3 bg-light rounded-3 mb-2 small">
+                                <div class="fw-bold text-success mb-1">
+                                    <i class="bi bi-check-lg text-success me-1"></i>Status: Tercapai (Kode: 1)
+                                </div>
+                                <div class="text-muted">Diperoleh jika nilai siswa &ge; batas KKTP (misal &ge; 75.00). Siswa dianggap telah menguasai kompetensi TP tersebut.</div>
+                            </div>
+                            <div class="p-3 bg-light rounded-3 small">
+                                <div class="fw-bold text-danger mb-1">
+                                    <i class="bi bi-x-lg text-danger me-1"></i>Status: Belum Tercapai (Kode: 0)
+                                </div>
+                                <div class="text-muted">Diperoleh jika nilai siswa &lt; batas KKTP. Siswa masuk daftar rekomendasi remedial untuk pendampingan atau tes ulang.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="card border-0 rounded-4 shadow-sm bg-white p-4 h-100">
+                            <h6 class="fw-bold text-dark mb-2.5 d-flex align-items-center gap-2">
+                                <i class="bi bi-arrow-repeat text-warning"></i>
+                                <span>4. Alur Remedial & Histori Nilai</span>
+                            </h6>
+                            <p class="small text-muted mb-3">
+                                Prinsip Kurikulum Merdeka menjamin jejak belajar siswa tidak dihilangkan secara sepihak saat remedial.
+                            </p>
+                            <ol class="small text-muted ps-3 mb-0 d-flex flex-column gap-2">
+                                <li>Saat guru menekan tombol <strong>Remedial</strong> pada siswa yang belum tuntas, modal interaktif akan menampilkan nilai awal siswa.</li>
+                                <li>Guru menginputkan skor hasil remedial beserta catatan bentuk perlakuan (misal: penugasan konsep / tes tulis ulang).</li>
+                                <li>Nilai awal tetap disimpan dalam kolom <code>nilai_awal</code>, sedangkan nilai saat ini diperbarui dengan nilai hasil perbaikan.</li>
+                                <li>Jika nilai baru &ge; KKTP, status ketercapaian langsung berubah menjadi <strong>Tercapai (1)</strong>.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Integrasi Draf E-Rapor -->
+                <div class="card border-0 rounded-4 shadow-sm bg-white p-4">
+                    <h6 class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
+                        <i class="bi bi-mortarboard-fill text-danger"></i>
+                        <span>5. Integrasi Otomatis dengan E-Rapor</span>
+                    </h6>
+                    <p class="small text-muted mb-0">
+                        Pada <strong>Tab 4 (Profil Ketercapaian Siswa & Draf Rapor)</strong>, sistem secara otomatis mengolah seluruh status ketercapaian TP. Sistem mendeteksi TP mana yang memiliki penguasaan paling unggul untuk menghasilkan kalimat <em>"Menunjukkan penguasaan sangat baik dalam..."</em> dan TP yang belum tercapai untuk kalimat <em>"Perlu pendampingan dan bimbingan dalam..."</em> yang siap disalin atau diintegrasikan langsung ke Buku Rapor Elektronik.
+                    </p>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-white py-3 px-4 border-top">
+                <button type="button" class="btn btn-primary fw-semibold px-4 py-2 rounded-3" data-bs-dismiss="modal">
+                    Saya Mengerti
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Dynamic TP loader for modalAddAsesmen
-    const mapelSelect = document.getElementById('add_asesmen_mapel');
-    const tpListWrapper = document.getElementById('tpCheckboxList');
-    const btnSelectAll = document.getElementById('btnSelectAllTp');
+    // 1. Dynamic TP loader for modalAddAsesmen
+    const addMapelSelect = document.getElementById('add_asesmen_mapel');
+    const addTpListWrapper = document.getElementById('tpCheckboxList');
+    const btnAddSelectAll = document.getElementById('btnSelectAllTp');
 
-    function loadTpsForMapel(mapelId) {
-        if (!mapelId || !tpListWrapper) return;
-        tpListWrapper.innerHTML = '<div class="text-muted small py-2 text-center"><i class="bi bi-hourglass-split"></i> Memuat Tujuan Pembelajaran...</div>';
+    function loadAddTps(mapelId) {
+        if (!mapelId || !addTpListWrapper) return;
+        addTpListWrapper.innerHTML = '<div class="text-muted small py-2 text-center"><i class="bi bi-hourglass-split"></i> Memuat Tujuan Pembelajaran...</div>';
 
         fetch(`<?= BASE_URL ?>index.php?url=guru/asesmen&ajax_action=get_tp_by_mapel&mapel_id=${mapelId}`)
             .then(r => r.json())
@@ -951,35 +1367,144 @@ document.addEventListener('DOMContentLoaded', function() {
                             </label>
                         `;
                     });
-                    tpListWrapper.innerHTML = html;
+                    addTpListWrapper.innerHTML = html;
                 } else {
-                    tpListWrapper.innerHTML = '<div class="text-warning small py-3 text-center"><i class="bi bi-info-circle"></i> Belum ada TP yang dirumuskan untuk Mapel ini. Silakan tambahkan di menu Penyusunan CP & TP.</div>';
+                    addTpListWrapper.innerHTML = '<div class="text-warning small py-3 text-center"><i class="bi bi-info-circle"></i> Belum ada TP yang dirumuskan untuk Mapel ini. Silakan tambahkan di menu Penyusunan CP & TP.</div>';
                 }
             })
             .catch(() => {
-                tpListWrapper.innerHTML = '<div class="text-danger small py-3 text-center">Gagal memuat TP. Silakan periksa koneksi.</div>';
+                addTpListWrapper.innerHTML = '<div class="text-danger small py-3 text-center">Gagal memuat TP. Silakan periksa koneksi.</div>';
             });
     }
 
-    if (mapelSelect) {
-        mapelSelect.addEventListener('change', function() {
-            loadTpsForMapel(this.value);
+    if (addMapelSelect) {
+        addMapelSelect.addEventListener('change', function() {
+            loadAddTps(this.value);
         });
-        if (mapelSelect.value) {
-            loadTpsForMapel(mapelSelect.value);
+        if (addMapelSelect.value) {
+            loadAddTps(addMapelSelect.value);
         }
     }
 
-    if (btnSelectAll) {
-        btnSelectAll.addEventListener('click', function() {
-            const checks = document.querySelectorAll('.tp-check-item');
+    if (btnAddSelectAll) {
+        btnAddSelectAll.addEventListener('click', function() {
+            const checks = addTpListWrapper.querySelectorAll('.tp-check-item');
             const allChecked = Array.from(checks).every(c => c.checked);
             checks.forEach(c => c.checked = !allChecked);
-            btnSelectAll.textContent = allChecked ? 'Pilih Semua' : 'Batal Pilih';
+            btnAddSelectAll.textContent = allChecked ? 'Pilih Semua' : 'Batal Pilih';
         });
     }
 
-    // Modal Remedial Handler
+    // 2. Dynamic TP loader for modalEditAsesmen
+    const editMapelSelect = document.getElementById('edit_asesmen_mapel');
+    const editTpListWrapper = document.getElementById('editTpCheckboxList');
+    const btnEditSelectAll = document.getElementById('btnEditSelectAllTp');
+
+    function loadEditTps(mapelId, checkedTpIds = []) {
+        if (!mapelId || !editTpListWrapper) return;
+        editTpListWrapper.innerHTML = '<div class="text-muted small py-2 text-center"><i class="bi bi-hourglass-split"></i> Memuat Tujuan Pembelajaran...</div>';
+
+        fetch(`<?= BASE_URL ?>index.php?url=guru/asesmen&ajax_action=get_tp_by_mapel&mapel_id=${mapelId}`)
+            .then(r => r.json())
+            .then(res => {
+                if (res.status && res.data && res.data.length > 0) {
+                    let html = '';
+                    res.data.forEach(t => {
+                        const isChecked = checkedTpIds.includes(parseInt(t.id)) ? 'checked' : '';
+                        html += `
+                            <label class="card border rounded-3 p-2.5 bg-light d-flex flex-row align-items-start gap-2.5 cursor-pointer mb-1" style="cursor: pointer;">
+                                <input type="checkbox" name="tp_ids[]" value="${t.id}" class="form-check-input mt-1 flex-shrink-0 edit-tp-check-item" ${isChecked}>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="d-flex align-items-center gap-2 mb-0.5">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace fw-bold" style="font-size: 0.72rem;">${t.kode_tp}</span>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.7rem;">KKTP Min: ${t.kktp_nilai_min}</span>
+                                    </div>
+                                    <div class="small text-dark text-truncate" style="line-height: 1.4;">${t.deskripsi}</div>
+                                </div>
+                            </label>
+                        `;
+                    });
+                    editTpListWrapper.innerHTML = html;
+                } else {
+                    editTpListWrapper.innerHTML = '<div class="text-warning small py-3 text-center"><i class="bi bi-info-circle"></i> Belum ada TP yang dirumuskan untuk Mapel ini.</div>';
+                }
+            })
+            .catch(() => {
+                editTpListWrapper.innerHTML = '<div class="text-danger small py-3 text-center">Gagal memuat TP. Silakan periksa koneksi.</div>';
+            });
+    }
+
+    if (editMapelSelect) {
+        editMapelSelect.addEventListener('change', function() {
+            loadEditTps(this.value, []);
+        });
+    }
+
+    if (btnEditSelectAll) {
+        btnEditSelectAll.addEventListener('click', function() {
+            const checks = editTpListWrapper.querySelectorAll('.edit-tp-check-item');
+            const allChecked = Array.from(checks).every(c => c.checked);
+            checks.forEach(c => c.checked = !allChecked);
+            btnEditSelectAll.textContent = allChecked ? 'Pilih Semua' : 'Batal Pilih';
+        });
+    }
+
+    // 3. Edit Asesmen Button Trigger
+    document.querySelectorAll('.btn-edit-asesmen').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const nama = this.dataset.nama;
+            const rombelId = this.dataset.rombelId;
+            const mapelId = this.dataset.mapelId;
+            const jenis = this.dataset.jenis;
+            const tanggal = this.dataset.tanggal;
+            const nilaiMaks = this.dataset.nilaiMaks;
+            const bobot = this.dataset.bobot;
+
+            document.getElementById('edit_asesmen_id').value = id;
+            document.getElementById('edit_nama_asesmen').value = nama;
+            document.getElementById('edit_asesmen_rombel').value = rombelId;
+            document.getElementById('edit_asesmen_mapel').value = mapelId;
+            document.getElementById('edit_jenis_asesmen').value = jenis;
+            document.getElementById('edit_tanggal').value = tanggal;
+            document.getElementById('edit_nilai_maksimum').value = nilaiMaks;
+            document.getElementById('edit_bobot').value = bobot;
+
+            // Fetch detail asesmen to get checked TPs
+            fetch(`<?= BASE_URL ?>index.php?url=guru/asesmen&ajax_action=get_asesmen_detail&asesmen_id=${id}`)
+                .then(r => r.json())
+                .then(res => {
+                    const assignedTpIds = (res.status && res.assigned_tp_ids) ? res.assigned_tp_ids.map(Number) : [];
+                    loadEditTps(mapelId, assignedTpIds);
+                })
+                .catch(() => {
+                    loadEditTps(mapelId, []);
+                });
+
+            const editModal = new bootstrap.Modal(document.getElementById('modalEditAsesmen'));
+            editModal.show();
+        });
+    });
+
+    // 4. Delete Asesmen Button Trigger
+    document.querySelectorAll('.btn-delete-asesmen').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const nama = this.dataset.nama;
+            const totalSiswa = parseInt(this.dataset.totalSiswa || 0);
+
+            document.getElementById('delete_asesmen_id').value = id;
+            document.getElementById('delete_nama_asesmen').textContent = nama;
+            document.getElementById('delete_total_siswa_text').textContent = totalSiswa > 0 
+                ? `${totalSiswa} data nilai siswa` 
+                : 'data nilai';
+
+            const delModal = new bootstrap.Modal(document.getElementById('modalDeleteAsesmen'));
+            delModal.show();
+        });
+    });
+
+    // 5. Modal Remedial Handler
     document.querySelectorAll('.btn-open-remedial').forEach(btn => {
         btn.addEventListener('click', function() {
             document.getElementById('remedial_asesmen_id').value = this.dataset.asesmenId;
