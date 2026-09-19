@@ -188,17 +188,9 @@ $backupStats = is_array($backupStats ?? null) ? $backupStats : [
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (empty($backups)): ?>
-                            <tr>
-                                <td colspan="7" class="text-center py-5 text-muted">
-                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
-                                    Belum ada berkas backup tersimpan. Klik "Buat Backup Manual" untuk memulai.
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($backups as $i => $b): 
-                                $isAuto = ($b['type'] ?? 'manual') === 'auto';
-                            ?>
+                        <?php foreach ($backups as $i => $b): 
+                            $isAuto = ($b['type'] ?? 'manual') === 'auto';
+                        ?>
                                 <tr>
                                     <td class="ps-4 fw-semibold text-muted"><?= $i + 1 ?></td>
                                     <td>
@@ -300,7 +292,6 @@ $backupStats = is_array($backupStats ?? null) ? $backupStats : [
                                 </div>
 
                             <?php endforeach; ?>
-                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>

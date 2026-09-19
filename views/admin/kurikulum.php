@@ -541,31 +541,27 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (empty($strukturMapelList)): ?>
-                                <tr><td colspan="9" class="text-center py-4 text-muted">Belum ada mata pelajaran yang dikaitkan ke kurikulum ini.</td></tr>
-                            <?php else: ?>
-                                <?php foreach ($strukturMapelList as $i => $sm): ?>
-                                    <tr>
-                                        <td><?= $i + 1 ?></td>
-                                        <td><code><?= htmlspecialchars($sm['kode_mapel']) ?></code></td>
-                                        <td class="fw-bold text-dark"><?= htmlspecialchars($sm['nama_mapel']) ?></td>
-                                        <td><span class="badge bg-secondary-subtle text-dark border"><?= htmlspecialchars($sm['kelompok_mapel']) ?></span></td>
-                                        <td><?= htmlspecialchars($sm['nama_fase'] ?? 'Semua Fase') ?></td>
-                                        <td><span class="badge bg-primary"><?= htmlspecialchars($sm['tingkat'] ?: 'Semua') ?></span></td>
-                                        <td><?= $sm['alokasi_jp'] ?> JP / Minggu</td>
-                                        <td><span class="fw-bold text-success"><?= $sm['kkm'] ?></span></td>
-                                        <td class="text-center">
-                                            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST" class="d-inline" onsubmit="return confirm('Lepaskan mapel ini dari kurikulum?');">
-                                                <?= Security::csrfField() ?>
-                                                <input type="hidden" name="action" value="delete_mapel">
-                                                <input type="hidden" name="redirect_tab" value="struktur">
-                                                <input type="hidden" name="id" value="<?= $sm['id'] ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Lepas"><i class="bi bi-trash"></i></button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
+                            <?php foreach ($strukturMapelList as $i => $sm): ?>
+                                <tr>
+                                    <td><?= $i + 1 ?></td>
+                                    <td><code><?= htmlspecialchars($sm['kode_mapel']) ?></code></td>
+                                    <td class="fw-bold text-dark"><?= htmlspecialchars($sm['nama_mapel']) ?></td>
+                                    <td><span class="badge bg-secondary-subtle text-dark border"><?= htmlspecialchars($sm['kelompok_mapel']) ?></span></td>
+                                    <td><?= htmlspecialchars($sm['nama_fase'] ?? 'Semua Fase') ?></td>
+                                    <td><span class="badge bg-primary"><?= htmlspecialchars($sm['tingkat'] ?: 'Semua') ?></span></td>
+                                    <td><?= $sm['alokasi_jp'] ?> JP / Minggu</td>
+                                    <td><span class="fw-bold text-success"><?= $sm['kkm'] ?></span></td>
+                                    <td class="text-center">
+                                        <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST" class="d-inline" onsubmit="return confirm('Lepaskan mapel ini dari kurikulum?');">
+                                            <?= Security::csrfField() ?>
+                                            <input type="hidden" name="action" value="delete_mapel">
+                                            <input type="hidden" name="redirect_tab" value="struktur">
+                                            <input type="hidden" name="id" value="<?= $sm['id'] ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Lepas"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
@@ -653,12 +649,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (empty($cpList)): ?>
-                                <tr><td colspan="7" class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i> Tidak ada data CP yang cocok dengan kriteria filter.</td></tr>
-                            <?php else: ?>
-                                <?php foreach ($cpList as $i => $cp): 
-                                    $childTps = array_filter($tpList, function($t) use ($cp) { return $t['cp_id'] == $cp['id']; });
-                                ?>
+                            <?php foreach ($cpList as $i => $cp): 
+                                $childTps = array_filter($tpList, function($t) use ($cp) { return $t['cp_id'] == $cp['id']; });
+                            ?>
                                     <tr>
                                         <td><?= $i + 1 ?></td>
                                         <td>
@@ -748,7 +741,6 @@
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
-                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
