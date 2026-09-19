@@ -20,6 +20,22 @@
         </div>
     </div>
 
+    <!-- Flash Notification Alerts -->
+    <?php if (class_exists('FlashHelper')): ?>
+        <?php if (FlashHelper::hasSuccess()): ?>
+            <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-xs mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i> <?= FlashHelper::getSuccess() ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+        <?php if (FlashHelper::hasError()): ?>
+            <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-xs mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> <?= FlashHelper::getError() ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+
     <!-- Quick Stats Cards -->
     <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-xl-3">
@@ -175,7 +191,16 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="d-inline-flex gap-1">
-                                            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalEditKurikulum<?= $k['id'] ?>" title="Edit">
+                                            <button type="button" class="btn btn-sm btn-outline-warning btn-edit-kurikulum" 
+                                                data-bs-toggle="modal" data-bs-target="#modalEditKurikulum"
+                                                data-id="<?= $k['id'] ?>"
+                                                data-kode="<?= htmlspecialchars($k['kode']) ?>"
+                                                data-nama="<?= htmlspecialchars($k['nama']) ?>"
+                                                data-mulai="<?= $k['tahun_mulai'] ?>"
+                                                data-selesai="<?= $k['tahun_selesai'] ?>"
+                                                data-status="<?= $k['status'] ?>"
+                                                data-deskripsi="<?= htmlspecialchars($k['deskripsi'] ?? '') ?>"
+                                                title="Edit">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
                                             <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST" class="d-inline" onsubmit="return confirm('Hapus kurikulum ini? (Hanya bisa dihapus jika belum ada riwayat nilai/rapor)');">
@@ -190,60 +215,6 @@
                                         </div>
                                     </td>
                                 </tr>
-
-                                <!-- Modal Edit Kurikulum -->
-                                <div class="modal fade" id="modalEditKurikulum<?= $k['id'] ?>" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content border-0 shadow-lg rounded-4">
-                                            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
-                                                <?= Security::csrfField() ?>
-                                                <input type="hidden" name="action" value="update_kurikulum">
-                                                <input type="hidden" name="redirect_tab" value="kurikulum">
-                                                <input type="hidden" name="id" value="<?= $k['id'] ?>">
-                                                <div class="modal-header border-0 pb-0">
-                                                    <h5 class="fw-bold mb-0">Edit Kurikulum: <?= htmlspecialchars($k['nama']) ?></h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Kode Kurikulum</label>
-                                                        <input type="text" name="kode" class="form-control" value="<?= htmlspecialchars($k['kode']) ?>" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Nama Kurikulum</label>
-                                                        <input type="text" name="nama" class="form-control" value="<?= htmlspecialchars($k['nama']) ?>" required>
-                                                    </div>
-                                                    <div class="row g-2 mb-3">
-                                                        <div class="col-6">
-                                                            <label class="form-label small fw-bold">Tahun Mulai</label>
-                                                            <input type="number" name="tahun_mulai" class="form-control" value="<?= $k['tahun_mulai'] ?>" required>
-                                                        </div>
-                                                        <div class="col-6">
-                                                            <label class="form-label small fw-bold">Tahun Selesai (Opsional)</label>
-                                                            <input type="number" name="tahun_selesai" class="form-control" value="<?= $k['tahun_selesai'] ?>" placeholder="Kosongkan jika aktif">
-                                                        </div>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Status Kurikulum</label>
-                                                        <select name="status" class="form-select">
-                                                            <option value="aktif" <?= $k['status'] === 'aktif' ? 'selected' : '' ?>>Aktif (Dapat Dipakai KBM)</option>
-                                                            <option value="non-aktif" <?= $k['status'] === 'non-aktif' ? 'selected' : '' ?>>Non-Aktif</option>
-                                                            <option value="arsip" <?= $k['status'] === 'arsip' ? 'selected' : '' ?>>Arsip (Hanya Untuk Histori Nilai)</option>
-                                                        </select>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Deskripsi</label>
-                                                        <textarea name="deskripsi" class="form-control" rows="3"><?= htmlspecialchars($k['deskripsi'] ?? '') ?></textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer border-0 pt-0">
-                                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                                                    <button type="submit" class="btn btn-primary fw-bold px-4">Simpan Perubahan</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -290,7 +261,15 @@
                                     <td><small class="text-muted"><?= htmlspecialchars($f['keterangan'] ?: '-') ?></small></td>
                                     <td class="text-center">
                                         <div class="d-inline-flex gap-1">
-                                            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalEditFase<?= $f['id'] ?>" title="Edit">
+                                            <button type="button" class="btn btn-sm btn-outline-warning btn-edit-fase" 
+                                                data-bs-toggle="modal" data-bs-target="#modalEditFase"
+                                                data-id="<?= $f['id'] ?>"
+                                                data-kurikulum-id="<?= $f['kurikulum_id'] ?>"
+                                                data-kode="<?= htmlspecialchars($f['kode']) ?>"
+                                                data-nama="<?= htmlspecialchars($f['nama']) ?>"
+                                                data-tingkat="<?= htmlspecialchars($f['tingkat_kelas'] ?? '') ?>"
+                                                data-keterangan="<?= htmlspecialchars($f['keterangan'] ?? '') ?>"
+                                                title="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST" class="d-inline" onsubmit="return confirm('Hapus fase ini?');">
@@ -303,46 +282,6 @@
                                         </div>
                                     </td>
                                 </tr>
-
-                                <!-- Modal Edit Fase -->
-                                <div class="modal fade" id="modalEditFase<?= $f['id'] ?>" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content border-0 shadow-lg rounded-4">
-                                            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
-                                                <?= Security::csrfField() ?>
-                                                <input type="hidden" name="action" value="update_fase">
-                                                <input type="hidden" name="redirect_tab" value="fase">
-                                                <input type="hidden" name="id" value="<?= $f['id'] ?>">
-                                                <div class="modal-header border-0 pb-0">
-                                                    <h5 class="fw-bold mb-0">Edit Fase: <?= htmlspecialchars($f['nama']) ?></h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Kode Fase</label>
-                                                        <input type="text" name="kode" class="form-control" value="<?= htmlspecialchars($f['kode']) ?>" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Nama Fase</label>
-                                                        <input type="text" name="nama" class="form-control" value="<?= htmlspecialchars($f['nama']) ?>" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Target Tingkat Kelas (misal: X atau XI,XII)</label>
-                                                        <input type="text" name="tingkat_kelas" class="form-control" value="<?= htmlspecialchars($f['tingkat_kelas'] ?? '') ?>">
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Keterangan</label>
-                                                        <textarea name="keterangan" class="form-control" rows="2"><?= htmlspecialchars($f['keterangan'] ?? '') ?></textarea>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer border-0 pt-0">
-                                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                                                    <button type="submit" class="btn btn-primary fw-bold px-4">Simpan Perubahan</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -429,7 +368,14 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="d-inline-flex gap-1">
-                                            <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalEditRombel<?= $rk['id'] ?>" title="Edit">
+                                            <button type="button" class="btn btn-sm btn-outline-warning btn-edit-rombel" 
+                                                data-bs-toggle="modal" data-bs-target="#modalEditRombel"
+                                                data-id="<?= $rk['id'] ?>"
+                                                data-kelas="<?= htmlspecialchars($rk['nama_kelas']) ?>"
+                                                data-kurikulum-id="<?= $rk['kurikulum_id'] ?>"
+                                                data-fase-id="<?= $rk['fase_id'] ?? '' ?>"
+                                                data-status="<?= $rk['status'] ?>"
+                                                title="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                             <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST" class="d-inline" onsubmit="return confirm('Lepaskan kurikulum dari rombel ini?');">
@@ -442,59 +388,6 @@
                                         </div>
                                     </td>
                                 </tr>
-
-                                <!-- Modal Edit Rombel Kurikulum -->
-                                <div class="modal fade" id="modalEditRombel<?= $rk['id'] ?>" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content border-0 shadow-lg rounded-4">
-                                            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
-                                                <?= Security::csrfField() ?>
-                                                <input type="hidden" name="action" value="update_rombel">
-                                                <input type="hidden" name="redirect_tab" value="rombel">
-                                                <input type="hidden" name="id" value="<?= $rk['id'] ?>">
-                                                <div class="modal-header border-0 pb-0">
-                                                    <h5 class="fw-bold mb-0">Edit Kurikulum Rombel <?= htmlspecialchars($rk['nama_kelas']) ?></h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Pilih Kurikulum</label>
-                                                        <select name="kurikulum_id" class="form-select" required>
-                                                            <?php foreach ($kurikulumList as $kur): ?>
-                                                                <option value="<?= $kur['id'] ?>" <?= $rk['kurikulum_id'] == $kur['id'] ? 'selected' : '' ?>>
-                                                                    <?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Pilih Fase</label>
-                                                        <select name="fase_id" class="form-select">
-                                                            <option value="">-- Tanpa Fase Khusus --</option>
-                                                            <?php foreach ($allFaseList as $f): ?>
-                                                                <option value="<?= $f['id'] ?>" <?= $rk['fase_id'] == $f['id'] ? 'selected' : '' ?>>
-                                                                    <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
-                                                                </option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label small fw-bold">Status Hubungan</label>
-                                                        <select name="status" class="form-select">
-                                                            <option value="aktif" <?= $rk['status'] === 'aktif' ? 'selected' : '' ?>>Aktif (Berjalan Saat Ini)</option>
-                                                            <option value="selesai" <?= $rk['status'] === 'selesai' ? 'selected' : '' ?>>Selesai (Arsip Periode Lalu)</option>
-                                                            <option value="non-aktif" <?= $rk['status'] === 'non-aktif' ? 'selected' : '' ?>>Non-Aktif</option>
-                                                        </select>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer border-0 pt-0">
-                                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                                                    <button type="submit" class="btn btn-primary fw-bold px-4">Simpan</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
@@ -537,7 +430,7 @@
                                 <th>Tingkat</th>
                                 <th>Alokasi JP</th>
                                 <th>KKM Standar</th>
-                                <th class="text-center" style="width:100px;">Aksi</th>
+                                <th class="text-center" style="width:120px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -552,13 +445,29 @@
                                     <td><?= $sm['alokasi_jp'] ?> JP / Minggu</td>
                                     <td><span class="fw-bold text-success"><?= $sm['kkm'] ?></span></td>
                                     <td class="text-center">
-                                        <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST" class="d-inline" onsubmit="return confirm('Lepaskan mapel ini dari kurikulum?');">
-                                            <?= Security::csrfField() ?>
-                                            <input type="hidden" name="action" value="delete_mapel">
-                                            <input type="hidden" name="redirect_tab" value="struktur">
-                                            <input type="hidden" name="id" value="<?= $sm['id'] ?>">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Lepas"><i class="bi bi-trash"></i></button>
-                                        </form>
+                                        <div class="d-inline-flex gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-warning btn-edit-struktur" 
+                                                data-bs-toggle="modal" data-bs-target="#modalEditStrukturMapel"
+                                                data-id="<?= $sm['id'] ?>"
+                                                data-mapel-nama="<?= htmlspecialchars($sm['nama_mapel']) ?>"
+                                                data-mapel-kode="<?= htmlspecialchars($sm['kode_mapel']) ?>"
+                                                data-fase-id="<?= $sm['fase_id'] ?? '' ?>"
+                                                data-tingkat="<?= htmlspecialchars($sm['tingkat'] ?? 'X') ?>"
+                                                data-kelompok="<?= htmlspecialchars($sm['kelompok_mapel'] ?? 'Kejuruan') ?>"
+                                                data-jp="<?= $sm['alokasi_jp'] ?>"
+                                                data-kkm="<?= $sm['kkm'] ?>"
+                                                title="Edit Konfigurasi Mapel">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST" class="d-inline" onsubmit="return confirm('Lepaskan mapel ini dari kurikulum?');">
+                                                <?= Security::csrfField() ?>
+                                                <input type="hidden" name="action" value="delete_mapel">
+                                                <input type="hidden" name="redirect_tab" value="struktur">
+                                                <input type="hidden" name="kurikulum_id" value="<?= $selectedKurId ?>">
+                                                <input type="hidden" name="id" value="<?= $sm['id'] ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Lepas"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -699,6 +608,7 @@
                                                                     <input type="hidden" name="redirect_tab" value="cptp">
                                                                     <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
                                                                     <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
+                                                                    <input type="hidden" name="filter_fase_id" value="<?= $filterCpFaseId ?? '' ?>">
                                                                     <input type="hidden" name="id" value="<?= $tp['id'] ?>">
                                                                     <button type="submit" class="btn btn-xs btn-outline-danger rounded px-1.5 py-0.5" title="Hapus TP"><i class="bi bi-trash" style="font-size: 0.75rem;"></i></button>
                                                                 </form>
@@ -734,6 +644,7 @@
                                                     <input type="hidden" name="redirect_tab" value="cptp">
                                                     <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
                                                     <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
+                                                    <input type="hidden" name="filter_fase_id" value="<?= $filterCpFaseId ?? '' ?>">
                                                     <input type="hidden" name="id" value="<?= $cp['id'] ?>">
                                                     <button type="submit" class="btn btn-outline-danger" title="Hapus CP"><i class="bi bi-trash"></i></button>
                                                 </form>
@@ -774,6 +685,27 @@
                     <input type="hidden" name="action" value="save_komponen">
                     <input type="hidden" name="redirect_tab" value="komponen">
                     <input type="hidden" name="kurikulum_id" value="<?= $selectedKurId ?>">
+
+                    <!-- Quick Preset Buttons -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 bg-light p-2.5 rounded-3 border">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="small fw-bold text-muted"><i class="bi bi-magic text-primary me-1"></i>Muat Cepat Template Bobot:</span>
+                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 fw-semibold" onclick="loadBobotPreset('standar')">
+                                <i class="bi bi-check-circle me-1"></i>Standar (20/20/30/30)
+                            </button>
+                            <button type="button" class="btn btn-xs btn-outline-success rounded-pill px-2.5 py-1 fw-semibold" onclick="loadBobotPreset('merdeka')">
+                                <i class="bi bi-stars me-1"></i>Kurikulum Merdeka (40/30/30)
+                            </button>
+                            <button type="button" class="btn btn-xs btn-outline-info rounded-pill px-2.5 py-1 fw-semibold" onclick="loadBobotPreset('vokasi')">
+                                <i class="bi bi-tools me-1"></i>SMK Vokasi / Praktik (20/20/40/20)
+                            </button>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-3 fw-bold" onclick="addKomponenRow()">
+                                <i class="bi bi-plus-circle me-1"></i> Tambah Baris
+                            </button>
+                        </div>
+                    </div>
 
                     <div class="table-responsive mb-3">
                         <table class="table table-hover align-middle border" id="tableKomponen">
@@ -979,7 +911,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Pilih Kurikulum Yang Berlaku</label>
-                        <select name="kurikulum_id" class="form-select" required>
+                        <select name="kurikulum_id" id="assign_rombel_kurikulum_id" class="form-select" required>
                             <?php foreach ($kurikulumList as $kur): ?>
                                 <option value="<?= $kur['id'] ?>"><?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)</option>
                             <?php endforeach; ?>
@@ -987,10 +919,10 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Pilih Fase / Jenjang (Opsional)</label>
-                        <select name="fase_id" class="form-select">
-                            <option value="">-- Tanpa Fase Khusus --</option>
+                        <select name="fase_id" id="assign_rombel_fase_id" class="form-select">
+                            <option value="" data-kurikulum-id="">-- Tanpa Fase Khusus --</option>
                             <?php foreach ($allFaseList as $f): ?>
-                                <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)</option>
+                                <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>"><?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)</option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -1092,6 +1024,7 @@
                 <input type="hidden" name="redirect_tab" value="cptp">
                 <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
                 <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
+                <input type="hidden" name="filter_fase_id" value="<?= $filterCpFaseId ?? '' ?>">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="fw-bold mb-0"><i class="bi bi-plus-circle text-primary me-2"></i>Tambah Capaian Pembelajaran (CP)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -1099,7 +1032,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Pilih Kurikulum</label>
-                        <select name="kurikulum_id" class="form-select" required>
+                        <select name="kurikulum_id" id="add_cp_kurikulum_id" class="form-select" required>
                             <?php foreach ($kurikulumList as $kur): ?>
                                 <option value="<?= $kur['id'] ?>" <?= ($filterCpKurId == $kur['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)
@@ -1119,10 +1052,10 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Pilih Fase</label>
-                        <select name="fase_id" class="form-select">
-                            <option value="">-- Tanpa Fase Khusus --</option>
+                        <select name="fase_id" id="add_cp_fase_id" class="form-select">
+                            <option value="" data-kurikulum-id="">-- Tanpa Fase Khusus --</option>
                             <?php foreach ($allFaseList as $f): ?>
-                                <option value="<?= $f['id'] ?>" <?= ($filterCpFaseId == $f['id']) ? 'selected' : '' ?>>
+                                <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>" <?= ($filterCpFaseId == $f['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
                                 </option>
                             <?php endforeach; ?>
@@ -1162,6 +1095,7 @@
                 <input type="hidden" name="redirect_tab" value="cptp">
                 <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
                 <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
+                <input type="hidden" name="filter_fase_id" value="<?= $filterCpFaseId ?? '' ?>">
                 <input type="hidden" name="id" id="edit_cp_id">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Capaian Pembelajaran (CP)</h5>
@@ -1187,9 +1121,11 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Pilih Fase</label>
                         <select name="fase_id" id="edit_cp_fase_id" class="form-select">
-                            <option value="">-- Tanpa Fase Khusus --</option>
+                            <option value="" data-kurikulum-id="">-- Tanpa Fase Khusus --</option>
                             <?php foreach ($allFaseList as $f): ?>
-                                <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)</option>
+                                <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>">
+                                    <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -1227,6 +1163,7 @@
                 <input type="hidden" name="redirect_tab" value="cptp">
                 <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
                 <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
+                <input type="hidden" name="filter_fase_id" value="<?= $filterCpFaseId ?? '' ?>">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="fw-bold mb-0"><i class="bi bi-plus-circle text-primary me-2"></i>Tambah Tujuan Pembelajaran (TP)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -1274,6 +1211,7 @@
                 <input type="hidden" name="redirect_tab" value="cptp">
                 <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
                 <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
+                <input type="hidden" name="filter_fase_id" value="<?= $filterCpFaseId ?? '' ?>">
                 <input type="hidden" name="id" id="edit_tp_id">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Tujuan Pembelajaran (TP)</h5>
@@ -1306,6 +1244,232 @@
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary fw-bold px-4">Perbarui TP</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================== -->
+<!-- REUSABLE MODALS (OUTSIDE TBODY) -->
+<!-- =========================================================================== -->
+
+<!-- Modal Edit Kurikulum (Reusable) -->
+<div class="modal fade" id="modalEditKurikulum" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="update_kurikulum">
+                <input type="hidden" name="redirect_tab" value="kurikulum">
+                <input type="hidden" name="id" id="edit_kurikulum_id">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Master Kurikulum</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Kode Kurikulum</label>
+                        <input type="text" name="kode" id="edit_kurikulum_kode" class="form-control font-monospace" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nama Kurikulum</label>
+                        <input type="text" name="nama" id="edit_kurikulum_nama" class="form-control" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Tahun Mulai</label>
+                            <input type="number" name="tahun_mulai" id="edit_kurikulum_mulai" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Tahun Selesai (Opsional)</label>
+                            <input type="number" name="tahun_selesai" id="edit_kurikulum_selesai" class="form-control" placeholder="Kosongkan jika aktif">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Status Kurikulum</label>
+                        <select name="status" id="edit_kurikulum_status" class="form-select">
+                            <option value="aktif">Aktif (Dapat Dipakai KBM)</option>
+                            <option value="non-aktif">Non-Aktif</option>
+                            <option value="arsip">Arsip (Hanya Untuk Histori Nilai)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Deskripsi</label>
+                        <textarea name="deskripsi" id="edit_kurikulum_deskripsi" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Fase (Reusable) -->
+<div class="modal fade" id="modalEditFase" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="update_fase">
+                <input type="hidden" name="redirect_tab" value="fase">
+                <input type="hidden" name="id" id="edit_fase_id">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Fase / Tingkat</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Kurikulum Induk</label>
+                        <select name="kurikulum_id" id="edit_fase_kurikulum_id" class="form-select" required>
+                            <?php foreach ($kurikulumList as $kur): ?>
+                                <option value="<?= $kur['id'] ?>"><?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Kode Fase</label>
+                        <input type="text" name="kode" id="edit_fase_kode" class="form-control font-monospace" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nama Fase</label>
+                        <input type="text" name="nama" id="edit_fase_nama" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Target Tingkat Kelas (misal: X atau XI,XII)</label>
+                        <input type="text" name="tingkat_kelas" id="edit_fase_tingkat" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Keterangan</label>
+                        <textarea name="keterangan" id="edit_fase_keterangan" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Rombel Kurikulum (Reusable) -->
+<div class="modal fade" id="modalEditRombel" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="update_rombel">
+                <input type="hidden" name="redirect_tab" value="rombel">
+                <input type="hidden" name="id" id="edit_rombel_id">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Kurikulum Rombel <span id="edit_rombel_kelas_text" class="text-primary"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Kurikulum</label>
+                        <select name="kurikulum_id" id="edit_rombel_kurikulum_id" class="form-select" required>
+                            <?php foreach ($kurikulumList as $kur): ?>
+                                <option value="<?= $kur['id'] ?>">
+                                    <?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Fase</label>
+                        <select name="fase_id" id="edit_rombel_fase_id" class="form-select">
+                            <option value="" data-kurikulum-id="">-- Tanpa Fase Khusus --</option>
+                            <?php foreach ($allFaseList as $f): ?>
+                                <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>">
+                                    <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Status Hubungan</label>
+                        <select name="status" id="edit_rombel_status" class="form-select">
+                            <option value="aktif">Aktif (Berjalan Saat Ini)</option>
+                            <option value="selesai">Selesai (Arsip Periode Lalu)</option>
+                            <option value="non-aktif">Non-Aktif</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit Struktur Mapel (Reusable) -->
+<div class="modal fade" id="modalEditStrukturMapel" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="update_mapel">
+                <input type="hidden" name="redirect_tab" value="struktur">
+                <input type="hidden" name="kurikulum_id" value="<?= $selectedKurId ?>">
+                <input type="hidden" name="id" id="edit_struktur_id">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Konfigurasi Mapel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Mata Pelajaran</label>
+                        <div class="p-2.5 bg-light rounded-3 border fw-bold text-dark fs-6" id="edit_struktur_mapel_text">-</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Fase Target</label>
+                        <select name="fase_id" id="edit_struktur_fase_id" class="form-select">
+                            <option value="">-- Semua Fase --</option>
+                            <?php foreach ($faseKurikulumList as $f): ?>
+                                <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nama']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Kelompok Mapel</label>
+                            <select name="kelompok_mapel" id="edit_struktur_kelompok" class="form-select">
+                                <option value="Kejuruan">Kejuruan</option>
+                                <option value="Umum">Umum</option>
+                                <option value="Pilihan">Pilihan</option>
+                                <option value="Muatan Lokal">Muatan Lokal</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Tingkat Kelas</label>
+                            <select name="tingkat" id="edit_struktur_tingkat" class="form-select">
+                                <option value="X">Kelas X</option>
+                                <option value="XI">Kelas XI</option>
+                                <option value="XII">Kelas XII</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Alokasi JP/Minggu</label>
+                            <input type="number" name="alokasi_jp" id="edit_struktur_jp" class="form-control" min="1" max="20" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">KKM Standar</label>
+                            <input type="number" name="kkm" id="edit_struktur_kkm" class="form-control" min="0" max="100" step="0.5" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Simpan Perubahan</button>
                 </div>
             </form>
         </div>
@@ -1349,28 +1513,217 @@ function recalcTotalBobot() {
     }
 }
 
-function addKomponenRow() {
+function addKomponenRow(kode = '', nama = '', bobot = 10, ket = '') {
     const tbody = document.querySelector('#tableKomponen tbody');
     if (!tbody) return;
     const tr = document.createElement('tr');
     tr.innerHTML = `
-        <td><input type="text" name="kode_komponen[]" class="form-control form-control-sm font-monospace" placeholder="kode" required></td>
-        <td><input type="text" name="nama_komponen[]" class="form-control form-control-sm" placeholder="Nama Komponen" required></td>
+        <td><input type="text" name="kode_komponen[]" class="form-control form-control-sm font-monospace" placeholder="kode" value="${escapeHtml(kode)}" required></td>
+        <td><input type="text" name="nama_komponen[]" class="form-control form-control-sm" placeholder="Nama Komponen" value="${escapeHtml(nama)}" required></td>
         <td>
             <div class="input-group input-group-sm">
-                <input type="number" name="bobot_persen[]" class="form-control form-control-sm bobot-input text-end fw-bold" step="0.5" min="0" max="100" value="10" required oninput="recalcTotalBobot()">
+                <input type="number" name="bobot_persen[]" class="form-control form-control-sm bobot-input text-end fw-bold" step="0.5" min="0" max="100" value="${bobot}" required oninput="recalcTotalBobot()">
                 <span class="input-group-text">%</span>
             </div>
         </td>
-        <td><input type="text" name="deskripsi[]" class="form-control form-control-sm" placeholder="Opsional"></td>
+        <td><input type="text" name="deskripsi[]" class="form-control form-control-sm" placeholder="Opsional" value="${escapeHtml(ket)}"></td>
         <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove(); recalcTotalBobot();"><i class="bi bi-x-lg"></i></button></td>
     `;
     tbody.appendChild(tr);
     recalcTotalBobot();
 }
 
+function loadBobotPreset(type) {
+    const tbody = document.querySelector('#tableKomponen tbody');
+    if (!tbody) return;
+
+    if (!confirm('Ganti seluruh baris komponen penilaian dengan template ini?')) {
+        return;
+    }
+
+    tbody.innerHTML = '';
+    if (type === 'standar') {
+        addKomponenRow('tugas', 'Tugas Mandiri / Harian', 20, 'Penugasan dan portofolio materi KBM.');
+        addKomponenRow('quiz', 'Kuis / Formatif Harian', 20, 'Evaluasi pemahaman tujuan pembelajaran.');
+        addKomponenRow('uts', 'Sumatif Tengah Semester (STS)', 30, 'Ujian tengah semester.');
+        addKomponenRow('uas', 'Sumatif Akhir Semester (SAS)', 30, 'Ujian akhir semester.');
+    } else if (type === 'merdeka') {
+        addKomponenRow('formatif', 'Asesmen Formatif (TP)', 40, 'Penilaian ketercapaian Tujuan Pembelajaran harian.');
+        addKomponenRow('sumatif_lm', 'Sumatif Lingkup Materi', 30, 'Evaluasi per satu atau lebih Capaian Pembelajaran.');
+        addKomponenRow('sumatif_akhir', 'Sumatif Akhir Semester (SAS)', 30, 'Evaluasi menyeluruh kompetensi semester.');
+    } else if (type === 'vokasi') {
+        addKomponenRow('teori', 'Tes Teori Kejuruan / Kuis', 20, 'Evaluasi konsep kejuruan dasar.');
+        addKomponenRow('tugas', 'Tugas / Laporan Praktikum', 20, 'Laporan lembar kerja siswa (jobsheet).');
+        addKomponenRow('praktik', 'Uji Kompetensi / Projek Vokasi', 40, 'Praktik bengkel / pembuatan produk nyata.');
+        addKomponenRow('uas', 'Sumatif Akhir Semester (SAS)', 20, 'Evaluasi akhir komprehensif.');
+    }
+    recalcTotalBobot();
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// Dynamically filter Fase dropdown options based on selected Kurikulum
+function filterFaseDropdown(kurikulumSelectId, faseSelectId) {
+    const kurSel = document.getElementById(kurikulumSelectId);
+    const faseSel = document.getElementById(faseSelectId);
+    if (!kurSel || !faseSel) return;
+
+    const selectedKurId = kurSel.value;
+    const options = faseSel.querySelectorAll('option');
+
+    let firstVisibleMatch = null;
+    let currentlySelectedStillValid = false;
+
+    options.forEach(opt => {
+        const optKurId = opt.getAttribute('data-kurikulum-id');
+        if (!optKurId || optKurId === '' || optKurId === selectedKurId) {
+            opt.style.display = '';
+            opt.disabled = false;
+            if (opt.selected) currentlySelectedStillValid = true;
+            if (!firstVisibleMatch && opt.value !== '') firstVisibleMatch = opt.value;
+        } else {
+            opt.style.display = 'none';
+            opt.disabled = true;
+            if (opt.selected) opt.selected = false;
+        }
+    });
+
+    if (!currentlySelectedStillValid) {
+        faseSel.value = '';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     recalcTotalBobot();
+
+    // DataTables dynamic adjustment when tab is switched
+    if (window.jQuery) {
+        jQuery('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
+            if (jQuery.fn.dataTable) {
+                jQuery.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+            }
+
+            // Sync active tab to URL parameter without reloading
+            const target = jQuery(e.target).attr('data-bs-target');
+            const tabMap = {
+                '#tabKurikulum': 'kurikulum',
+                '#tabFase': 'fase',
+                '#tabRombel': 'rombel',
+                '#tabStruktur': 'struktur',
+                '#tabCPTP': 'cptp',
+                '#tabKomponen': 'komponen'
+            };
+            if (tabMap[target]) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', tabMap[target]);
+                window.history.replaceState({}, '', url.toString());
+            }
+        });
+    }
+
+    // Dynamic Fase filtering in modals
+    const kurAddCp = document.getElementById('add_cp_kurikulum_id');
+    if (kurAddCp) {
+        kurAddCp.addEventListener('change', () => filterFaseDropdown('add_cp_kurikulum_id', 'add_cp_fase_id'));
+        filterFaseDropdown('add_cp_kurikulum_id', 'add_cp_fase_id');
+    }
+
+    const kurEditCp = document.getElementById('edit_cp_kurikulum_id');
+    if (kurEditCp) {
+        kurEditCp.addEventListener('change', () => filterFaseDropdown('edit_cp_kurikulum_id', 'edit_cp_fase_id'));
+    }
+
+    const kurAssignRombel = document.getElementById('assign_rombel_kurikulum_id');
+    if (kurAssignRombel) {
+        kurAssignRombel.addEventListener('change', () => filterFaseDropdown('assign_rombel_kurikulum_id', 'assign_rombel_fase_id'));
+        filterFaseDropdown('assign_rombel_kurikulum_id', 'assign_rombel_fase_id');
+    }
+
+    const kurEditRombel = document.getElementById('edit_rombel_kurikulum_id');
+    if (kurEditRombel) {
+        kurEditRombel.addEventListener('change', () => filterFaseDropdown('edit_rombel_kurikulum_id', 'edit_rombel_fase_id'));
+    }
+
+    // Modal Edit Kurikulum
+    document.querySelectorAll('.btn-edit-kurikulum').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('edit_kurikulum_id').value = this.dataset.id || '';
+            document.getElementById('edit_kurikulum_kode').value = this.dataset.kode || '';
+            document.getElementById('edit_kurikulum_nama').value = this.dataset.nama || '';
+            document.getElementById('edit_kurikulum_mulai').value = this.dataset.mulai || '';
+            document.getElementById('edit_kurikulum_selesai').value = this.dataset.selesai || '';
+            document.getElementById('edit_kurikulum_status').value = this.dataset.status || 'aktif';
+            document.getElementById('edit_kurikulum_deskripsi').value = this.dataset.deskripsi || '';
+        });
+    });
+
+    // Modal Edit Fase
+    document.querySelectorAll('.btn-edit-fase').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('edit_fase_id').value = this.dataset.id || '';
+            document.getElementById('edit_fase_kode').value = this.dataset.kode || '';
+            document.getElementById('edit_fase_nama').value = this.dataset.nama || '';
+            document.getElementById('edit_fase_tingkat').value = this.dataset.tingkat || '';
+            document.getElementById('edit_fase_keterangan').value = this.dataset.keterangan || '';
+            
+            const selKur = document.getElementById('edit_fase_kurikulum_id');
+            if (selKur && this.dataset.kurikulumId) selKur.value = this.dataset.kurikulumId;
+        });
+    });
+
+    // Modal Edit Rombel
+    document.querySelectorAll('.btn-edit-rombel').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('edit_rombel_id').value = this.dataset.id || '';
+            const kelasLabel = document.getElementById('edit_rombel_kelas_text');
+            if (kelasLabel) kelasLabel.textContent = this.dataset.kelas || '';
+
+            const selKur = document.getElementById('edit_rombel_kurikulum_id');
+            if (selKur && this.dataset.kurikulumId) {
+                selKur.value = this.dataset.kurikulumId;
+                filterFaseDropdown('edit_rombel_kurikulum_id', 'edit_rombel_fase_id');
+            }
+
+            const selFase = document.getElementById('edit_rombel_fase_id');
+            if (selFase) selFase.value = this.dataset.faseId || '';
+
+            const selStatus = document.getElementById('edit_rombel_status');
+            if (selStatus) selStatus.value = this.dataset.status || 'aktif';
+        });
+    });
+
+    // Modal Edit Struktur Mapel
+    document.querySelectorAll('.btn-edit-struktur').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('edit_struktur_id').value = this.dataset.id || '';
+            
+            const txt = document.getElementById('edit_struktur_mapel_text');
+            if (txt) txt.textContent = (this.dataset.mapelKode ? `[${this.dataset.mapelKode}] ` : '') + (this.dataset.mapelNama || '');
+
+            const selFase = document.getElementById('edit_struktur_fase_id');
+            if (selFase) selFase.value = this.dataset.faseId || '';
+
+            const selKel = document.getElementById('edit_struktur_kelompok');
+            if (selKel && this.dataset.kelompok) selKel.value = this.dataset.kelompok;
+
+            const selTingkat = document.getElementById('edit_struktur_tingkat');
+            if (selTingkat && this.dataset.tingkat) selTingkat.value = this.dataset.tingkat;
+
+            const inpJp = document.getElementById('edit_struktur_jp');
+            if (inpJp) inpJp.value = this.dataset.jp || 2;
+
+            const inpKkm = document.getElementById('edit_struktur_kkm');
+            if (inpKkm) inpKkm.value = this.dataset.kkm || 75;
+        });
+    });
 
     // Direct "+ Tambah TP" from CP row
     document.querySelectorAll('.btn-add-tp-for-cp').forEach(btn => {
@@ -1392,7 +1745,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('edit_cp_deskripsi').value = this.dataset.deskripsi || '';
             
             const selKur = document.getElementById('edit_cp_kurikulum_id');
-            if (selKur && this.dataset.kurikulumId) selKur.value = this.dataset.kurikulumId;
+            if (selKur && this.dataset.kurikulumId) {
+                selKur.value = this.dataset.kurikulumId;
+                filterFaseDropdown('edit_cp_kurikulum_id', 'edit_cp_fase_id');
+            }
 
             const selMapel = document.getElementById('edit_cp_mapel_id');
             if (selMapel && this.dataset.mapelId) selMapel.value = this.dataset.mapelId;

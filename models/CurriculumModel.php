@@ -204,32 +204,52 @@ class CurriculumModel extends BaseModel {
         $nama = trim($data['nama'] ?? '');
         $tingkatKelas = trim($data['tingkat_kelas'] ?? '');
         $keterangan = trim($data['keterangan'] ?? '');
+        $kurikulumId = !empty($data['kurikulum_id']) ? (int)$data['kurikulum_id'] : null;
 
         $stmtKur = $this->db->prepare("SELECT kurikulum_id FROM fase WHERE id = ?");
         $stmtKur->execute([$id]);
-        $kurId = $stmtKur->fetchColumn();
+        $currentKurId = $stmtKur->fetchColumn();
 
-        if (!$kurId || empty($kode) || empty($nama)) {
+        if (!$currentKurId || empty($kode) || empty($nama)) {
             return ['status' => false, 'message' => 'Data tidak lengkap atau Fase tidak ditemukan.'];
         }
 
+        $targetKurId = $kurikulumId ?: (int)$currentKurId;
+
         $chk = $this->db->prepare("SELECT id FROM fase WHERE kurikulum_id = ? AND kode = ? AND id != ?");
-        $chk->execute([$kurId, $kode, $id]);
+        $chk->execute([$targetKurId, $kode, $id]);
         if ($chk->fetch()) {
             return ['status' => false, 'message' => "Kode Fase '{$kode}' sudah ada pada kurikulum ini."];
         }
 
         $stmt = $this->db->prepare("
             UPDATE fase
-            SET kode = ?, nama = ?, tingkat_kelas = ?, keterangan = ?
+            SET kurikulum_id = ?, kode = ?, nama = ?, tingkat_kelas = ?, keterangan = ?
             WHERE id = ?
         ");
-        $res = $stmt->execute([$kode, $nama, $tingkatKelas, $keterangan, $id]);
+        $res = $stmt->execute([$targetKurId, $kode, $nama, $tingkatKelas, $keterangan, $id]);
         return ['status' => (bool)$res, 'message' => 'Fase berhasil diperbarui.'];
     }
 
     public function deleteFase($id) {
         $id = (int)$id;
+
+        // Safety check: ensure fase is not currently in use by CP, Rombel, or Struktur Mapel
+        $stmtCp = $this->db->prepare("SELECT COUNT(*) FROM capaian_pembelajaran WHERE fase_id = ?");
+        $stmtCp->execute([$id]);
+        $cpCount = (int)$stmtCp->fetchColumn();
+
+        $stmtRk = $this->db->prepare("SELECT COUNT(*) FROM rombel_kurikulum WHERE fase_id = ?");
+        $stmtRk->execute([$id]);
+        $rkCount = (int)$stmtRk->fetchColumn();
+
+        if ($cpCount > 0 || $rkCount > 0) {
+            return [
+                'status' => false,
+                'message' => "⚠️ Fase ini tidak dapat dihapus karena masih digunakan oleh {$cpCount} Capaian Pembelajaran dan {$rkCount} Rombel Kelas."
+            ];
+        }
+
         $stmt = $this->db->prepare("DELETE FROM fase WHERE id = ?");
         $res = $stmt->execute([$id]);
         return ['status' => (bool)$res, 'message' => 'Fase berhasil dihapus.'];
@@ -469,18 +489,60 @@ class CurriculumModel extends BaseModel {
             return ['status' => false, 'message' => 'Kurikulum dan Mata Pelajaran wajib ditentukan.'];
         }
 
+        // Check if mapel already mapped for this curriculum and grade
+        $chk = $this->db->prepare("
+            SELECT id FROM kurikulum_mapel 
+            WHERE kurikulum_id = ? AND mapel_id = ? AND (tingkat = ? OR (tingkat IS NULL AND ? = ''))
+        ");
+        $chk->execute([$kurikulumId, $mapelId, $tingkat, $tingkat]);
+        $existingId = $chk->fetchColumn();
+
+        if ($existingId) {
+            return $this->updateStrukturMapel($existingId, [
+                'fase_id' => $faseId,
+                'tingkat' => $tingkat,
+                'kelompok_mapel' => $kelompok,
+                'alokasi_jp' => $alokasiJp,
+                'kkm' => $kkm
+            ]);
+        }
+
         $stmt = $this->db->prepare("
             INSERT INTO kurikulum_mapel (kurikulum_id, mapel_id, fase_id, tingkat, jurusan_id, kelompok_mapel, alokasi_jp, kkm, is_active)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
-            ON DUPLICATE KEY UPDATE
-                tingkat = VALUES(tingkat),
-                kelompok_mapel = VALUES(kelompok_mapel),
-                alokasi_jp = VALUES(alokasi_jp),
-                kkm = VALUES(kkm),
-                is_active = 1
         ");
         $res = $stmt->execute([$kurikulumId, $mapelId, $faseId, $tingkat, $jurusanId, $kelompok, $alokasiJp, $kkm]);
         return ['status' => (bool)$res, 'message' => 'Struktur mata pelajaran kurikulum berhasil disimpan.'];
+    }
+
+    public function getStrukturMapelById($id) {
+        $stmt = $this->db->prepare("
+            SELECT km.*, mp.nama_mapel, mp.kode_mapel, kur.nama as nama_kurikulum, f.nama as nama_fase
+            FROM kurikulum_mapel km
+            JOIN mata_pelajaran mp ON km.mapel_id = mp.id
+            JOIN kurikulum kur ON km.kurikulum_id = kur.id
+            LEFT JOIN fase f ON km.fase_id = f.id
+            WHERE km.id = ?
+        ");
+        $stmt->execute([(int)$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateStrukturMapel($id, $data) {
+        $id = (int)$id;
+        $faseId = !empty($data['fase_id']) ? (int)$data['fase_id'] : null;
+        $tingkat = trim($data['tingkat'] ?? 'X');
+        $kelompok = trim($data['kelompok_mapel'] ?? 'Kejuruan');
+        $alokasiJp = (int)($data['alokasi_jp'] ?? 2);
+        $kkm = (float)($data['kkm'] ?? 75.0);
+
+        $stmt = $this->db->prepare("
+            UPDATE kurikulum_mapel
+            SET fase_id = ?, tingkat = ?, kelompok_mapel = ?, alokasi_jp = ?, kkm = ?
+            WHERE id = ?
+        ");
+        $res = $stmt->execute([$faseId, $tingkat, $kelompok, $alokasiJp, $kkm, $id]);
+        return ['status' => (bool)$res, 'message' => 'Konfigurasi struktur mata pelajaran berhasil diperbarui.'];
     }
 
     public function deleteStrukturMapel($id) {
@@ -586,8 +648,11 @@ class CurriculumModel extends BaseModel {
     }
 
     public function deleteCP($id) {
+        $id = (int)$id;
+        // Clean up child TPs first to ensure database consistency
+        $this->db->prepare("DELETE FROM tujuan_pembelajaran WHERE cp_id = ?")->execute([$id]);
         $stmt = $this->db->prepare("DELETE FROM capaian_pembelajaran WHERE id = ?");
-        $res = $stmt->execute([(int)$id]);
+        $res = $stmt->execute([$id]);
         return ['status' => (bool)$res, 'message' => 'Capaian Pembelajaran beserta TP turunannya berhasil dihapus.'];
     }
 

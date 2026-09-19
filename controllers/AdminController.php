@@ -1419,6 +1419,7 @@ class AdminController {
             } elseif ($action === 'update_fase') {
                 $id = (int)$_POST['id'];
                 $res = $currModel->updateFase($id, [
+                    'kurikulum_id' => !empty($_POST['kurikulum_id']) ? (int)$_POST['kurikulum_id'] : null,
                     'kode' => Security::sanitize($_POST['kode']),
                     'nama' => Security::sanitize($_POST['nama']),
                     'tingkat_kelas' => Security::sanitize($_POST['tingkat_kelas'] ?? ''),
@@ -1467,6 +1468,18 @@ class AdminController {
                     'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
                     'tingkat' => Security::sanitize($_POST['tingkat'] ?? 'X'),
                     'jurusan_id' => !empty($_POST['jurusan_id']) ? (int)$_POST['jurusan_id'] : null,
+                    'kelompok_mapel' => Security::sanitize($_POST['kelompok_mapel'] ?? 'Kejuruan'),
+                    'alokasi_jp' => (int)($_POST['alokasi_jp'] ?? 2),
+                    'kkm' => (float)($_POST['kkm'] ?? 75.0)
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'update_mapel') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->updateStrukturMapel($id, [
+                    'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
+                    'tingkat' => Security::sanitize($_POST['tingkat'] ?? 'X'),
                     'kelompok_mapel' => Security::sanitize($_POST['kelompok_mapel'] ?? 'Kejuruan'),
                     'alokasi_jp' => (int)($_POST['alokasi_jp'] ?? 2),
                     'kkm' => (float)($_POST['kkm'] ?? 75.0)
@@ -1564,11 +1577,17 @@ class AdminController {
             }
 
             $extraParams = '';
+            if (!empty($_POST['kurikulum_id'])) {
+                $extraParams .= '&kurikulum_id=' . (int)$_POST['kurikulum_id'];
+            }
             if (!empty($_POST['filter_kurikulum_id'])) {
                 $extraParams .= '&filter_kurikulum_id=' . (int)$_POST['filter_kurikulum_id'];
             }
             if (!empty($_POST['filter_mapel_id'])) {
                 $extraParams .= '&filter_mapel_id=' . (int)$_POST['filter_mapel_id'];
+            }
+            if (!empty($_POST['filter_fase_id'])) {
+                $extraParams .= '&filter_fase_id=' . (int)$_POST['filter_fase_id'];
             }
 
             header('Location: ' . BASE_URL . 'index.php?url=admin/kurikulum&tab=' . urlencode($redirectTab) . $extraParams);
