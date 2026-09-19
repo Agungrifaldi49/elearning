@@ -1455,27 +1455,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Populate Edit CP Modal
-    document.querySelectorAll('.btn-edit-cp').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.getElementById('edit_cp_id').value = this.dataset.id || '';
-            document.getElementById('edit_cp_kode').value = this.dataset.kode || '';
-            document.getElementById('edit_cp_elemen').value = this.dataset.elemen || '';
-            document.getElementById('edit_cp_deskripsi').value = this.dataset.deskripsi || '';
-            
+    // Populate Edit CP Modal — use show.bs.modal for reliable DataTables support
+    const modalEditCpEl = document.getElementById('modalEditCP');
+    if (modalEditCpEl) {
+        modalEditCpEl.addEventListener('show.bs.modal', function(e) {
+            const btn = e.relatedTarget;
+            if (!btn || !btn.classList.contains('btn-edit-cp')) return;
+
+            const id = btn.getAttribute('data-id') || '';
+            const kode = btn.getAttribute('data-kode') || '';
+            const elemen = btn.getAttribute('data-elemen') || '';
+            const deskripsi = btn.getAttribute('data-deskripsi') || '';
+            const kurikulumId = btn.getAttribute('data-kurikulum-id') || '';
+            const mapelId = btn.getAttribute('data-mapel-id') || '';
+            const faseId = btn.getAttribute('data-fase-id') || '';
+
+            const idInp = document.getElementById('edit_cp_id');
+            const kodeInp = document.getElementById('edit_cp_kode');
+            const elemenInp = document.getElementById('edit_cp_elemen');
+            const deskInp = document.getElementById('edit_cp_deskripsi');
+
+            if (idInp) idInp.value = id;
+            if (kodeInp) kodeInp.value = kode;
+            if (elemenInp) elemenInp.value = elemen;
+            if (deskInp) deskInp.value = deskripsi;
+
             const selKur = document.getElementById('edit_cp_kurikulum_id');
-            if (selKur && this.dataset.kurikulumId) {
-                selKur.value = this.dataset.kurikulumId;
+            if (selKur && kurikulumId) {
+                selKur.value = kurikulumId;
                 filterFaseDropdown('edit_cp_kurikulum_id', 'edit_cp_fase_id');
             }
 
             const selMapel = document.getElementById('edit_cp_mapel_id');
-            if (selMapel && this.dataset.mapelId) selMapel.value = this.dataset.mapelId;
+            if (selMapel && mapelId) selMapel.value = mapelId;
 
             const selFase = document.getElementById('edit_cp_fase_id');
-            if (selFase) selFase.value = this.dataset.faseId || '';
+            if (selFase) selFase.value = faseId;
         });
-    });
+    }
 
     // Edit TP Modal — use show.bs.modal to reliably populate fields from relatedTarget
     // This also works when DataTables re-renders rows (event delegation via modal show event)
