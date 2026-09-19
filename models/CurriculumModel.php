@@ -1073,13 +1073,21 @@ class CurriculumModel extends BaseModel {
 
         if (!$header) return null;
 
-        // 2. Get Dynamic Details (Subjects as rows)
+        // 2. Get Dynamic Details (Subjects as rows) - detect columns defensively
+        $colsD = [];
+        try {
+            $colsD = $this->db->query("SHOW COLUMNS FROM rapor_nilai_detail")->fetchAll(PDO::FETCH_COLUMN);
+        } catch (\Throwable $e) {}
+
+        $fkCol = in_array('rapor_id', $colsD) ? 'rd.rapor_id' : (in_array('rapor_siswa_id', $colsD) ? 'rd.rapor_siswa_id' : 'rd.rapor_id');
+        $mapelSnapCol = in_array('mapel_nama_snapshot', $colsD) ? 'rd.mapel_nama_snapshot' : (in_array('snapshot_mapel_nama', $colsD) ? 'rd.snapshot_mapel_nama' : 'NULL');
+
         $stmtD = $this->db->prepare("
             SELECT rd.*, mp.kode_mapel, mp.nama_mapel as live_nama_mapel,
-                   COALESCE(rd.mapel_nama_snapshot, mp.nama_mapel) as nama_mapel
+                   COALESCE({$mapelSnapCol}, mp.nama_mapel) as nama_mapel
             FROM rapor_nilai_detail rd
             JOIN mata_pelajaran mp ON rd.mapel_id = mp.id
-            WHERE rd.rapor_id = ?
+            WHERE {$fkCol} = ?
             ORDER BY mp.nama_mapel ASC
         ");
         $stmtD->execute([$header['id']]);
@@ -1108,20 +1116,61 @@ class CurriculumModel extends BaseModel {
         $raporId = $stmtH->fetchColumn();
 
         if (!$raporId) {
-            $insH = $this->db->prepare("
-                INSERT INTO rapor_siswa (siswa_id, tahun_ajaran_id, semester, rombel_id, kurikulum_id, fase_id, kurikulum_nama_snapshot, fase_nama_snapshot, tanggal_cetak, status, catatan_akademik)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'terverifikasi', 'Menunjukkan kemajuan belajar dan kedisiplinan yang baik.')
-            ");
-            $insH->execute([
+            // Defensively check columns in rapor_siswa table
+            $colsR = [];
+            try {
+                $colsR = $this->db->query("SHOW COLUMNS FROM rapor_siswa")->fetchAll(PDO::FETCH_COLUMN);
+            } catch (\Throwable $e) {}
+
+            $colKur = in_array('kurikulum_nama_snapshot', $colsR) ? 'kurikulum_nama_snapshot' : (in_array('snapshot_kurikulum_nama', $colsR) ? 'snapshot_kurikulum_nama' : null);
+            $colFase = in_array('fase_nama_snapshot', $colsR) ? 'fase_nama_snapshot' : (in_array('snapshot_fase_nama', $colsR) ? 'snapshot_fase_nama' : null);
+            $colTgl = in_array('tanggal_cetak', $colsR) ? 'tanggal_cetak' : (in_array('tanggal_terbit', $colsR) ? 'tanggal_terbit' : null);
+            $hasStatus = in_array('status', $colsR);
+            $hasCatatan = in_array('catatan_akademik', $colsR);
+
+            $insertFields = ['siswa_id', 'tahun_ajaran_id', 'semester', 'rombel_id', 'kurikulum_id', 'fase_id'];
+            $insertPlaceholders = ['?', '?', '?', '?', '?', '?'];
+            $insertValues = [
                 $sId,
                 $taId,
                 $semester,
                 $kId,
                 $kurInfo['kurikulum_id'] ?? 1,
-                $kurInfo['fase_id'] ?? null,
-                $kurInfo['nama_kurikulum'] ?? 'Kurikulum Merdeka SMK',
-                $kurInfo['nama_fase'] ?? 'Fase E (Kelas X)'
-            ]);
+                $kurInfo['fase_id'] ?? null
+            ];
+
+            if ($colKur) {
+                $insertFields[] = $colKur;
+                $insertPlaceholders[] = '?';
+                $insertValues[] = $kurInfo['nama_kurikulum'] ?? 'Kurikulum Merdeka SMK';
+            }
+            if (in_array('snapshot_kurikulum_kode', $colsR)) {
+                $insertFields[] = 'snapshot_kurikulum_kode';
+                $insertPlaceholders[] = '?';
+                $insertValues[] = 'KMDK';
+            }
+            if ($colFase) {
+                $insertFields[] = $colFase;
+                $insertPlaceholders[] = '?';
+                $insertValues[] = $kurInfo['nama_fase'] ?? 'Fase E (Kelas X)';
+            }
+            if ($colTgl) {
+                $insertFields[] = $colTgl;
+                $insertPlaceholders[] = 'CURDATE()';
+            }
+            if ($hasStatus) {
+                $insertFields[] = 'status';
+                $insertPlaceholders[] = "'terverifikasi'";
+            }
+            if ($hasCatatan) {
+                $insertFields[] = 'catatan_akademik';
+                $insertPlaceholders[] = '?';
+                $insertValues[] = 'Menunjukkan kemajuan belajar dan kedisiplinan yang baik.';
+            }
+
+            $sqlIns = "INSERT INTO rapor_siswa (" . implode(', ', $insertFields) . ") VALUES (" . implode(', ', $insertPlaceholders) . ")";
+            $insH = $this->db->prepare($sqlIns);
+            $insH->execute($insertValues);
             $raporId = $this->db->lastInsertId();
         }
 
@@ -1134,6 +1183,18 @@ class CurriculumModel extends BaseModel {
         ");
         $stmtLegacy->execute([$sId]);
         $legacyRows = $stmtLegacy->fetchAll(PDO::FETCH_ASSOC);
+
+        // Detect available columns in rapor_nilai_detail
+        $colsD = [];
+        try {
+            $colsD = $this->db->query("SHOW COLUMNS FROM rapor_nilai_detail")->fetchAll(PDO::FETCH_COLUMN);
+        } catch (\Throwable $e) {}
+
+        $colRaporFk = in_array('rapor_id', $colsD) ? 'rapor_id' : (in_array('rapor_siswa_id', $colsD) ? 'rapor_siswa_id' : 'rapor_id');
+        $colMapelSnap = in_array('mapel_nama_snapshot', $colsD) ? 'mapel_nama_snapshot' : (in_array('snapshot_mapel_nama', $colsD) ? 'snapshot_mapel_nama' : null);
+        $hasKkm = in_array('kkm', $colsD);
+        $hasPredikat = in_array('predikat', $colsD);
+        $colCapaian = in_array('capaian_kompetensi', $colsD) ? 'capaian_kompetensi' : (in_array('deskripsi_kemajuan', $colsD) ? 'deskripsi_kemajuan' : null);
 
         foreach ($legacyRows as $lr) {
             $mId = (int)$lr['mapel_id'];
@@ -1149,17 +1210,42 @@ class CurriculumModel extends BaseModel {
                 ? "Menunjukkan penguasaan sangat baik dalam menuntaskan seluruh tujuan pembelajaran {$lr['nama_mapel']}."
                 : "Perlu bimbingan dan tindak lanjut remedial pada beberapa kompetensi dasar mata pelajaran {$lr['nama_mapel']}.";
 
-            $stmtUpsert = $this->db->prepare("
-                INSERT INTO rapor_nilai_detail (rapor_id, mapel_id, mapel_nama_snapshot, nilai_akhir, kkm, predikat, capaian_kompetensi)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE
-                    mapel_nama_snapshot = VALUES(mapel_nama_snapshot),
-                    nilai_akhir = VALUES(nilai_akhir),
-                    kkm = VALUES(kkm),
-                    predikat = VALUES(predikat),
-                    capaian_kompetensi = VALUES(capaian_kompetensi)
-            ");
-            $stmtUpsert->execute([$raporId, $mId, $lr['nama_mapel'], $akhir, $kkmVal, $predikat, $capaian]);
+            $upsertFields = [$colRaporFk, 'mapel_id', 'nilai_akhir'];
+            $upsertPlaceholders = ['?', '?', '?'];
+            $upsertValues = [$raporId, $mId, $akhir];
+            $updateClauses = ['nilai_akhir = VALUES(nilai_akhir)'];
+
+            if ($colMapelSnap) {
+                $upsertFields[] = $colMapelSnap;
+                $upsertPlaceholders[] = '?';
+                $upsertValues[] = $lr['nama_mapel'];
+                $updateClauses[] = "{$colMapelSnap} = VALUES({$colMapelSnap})";
+            }
+            if ($hasKkm) {
+                $upsertFields[] = 'kkm';
+                $upsertPlaceholders[] = '?';
+                $upsertValues[] = $kkmVal;
+                $updateClauses[] = "kkm = VALUES(kkm)";
+            }
+            if ($hasPredikat) {
+                $upsertFields[] = 'predikat';
+                $upsertPlaceholders[] = '?';
+                $upsertValues[] = $predikat;
+                $updateClauses[] = "predikat = VALUES(predikat)";
+            }
+            if ($colCapaian) {
+                $upsertFields[] = $colCapaian;
+                $upsertPlaceholders[] = '?';
+                $upsertValues[] = $capaian;
+                $updateClauses[] = "{$colCapaian} = VALUES({$colCapaian})";
+            }
+
+            $sqlUpsert = "INSERT INTO rapor_nilai_detail (" . implode(', ', $upsertFields) . ") "
+                       . "VALUES (" . implode(', ', $upsertPlaceholders) . ") "
+                       . "ON DUPLICATE KEY UPDATE " . implode(', ', $updateClauses);
+
+            $stmtUpsert = $this->db->prepare($sqlUpsert);
+            $stmtUpsert->execute($upsertValues);
         }
 
         return true;

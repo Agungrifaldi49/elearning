@@ -376,40 +376,32 @@ class Database {
                     rombel_id INT NOT NULL,
                     kurikulum_id INT NOT NULL,
                     fase_id INT NULL,
-                    snapshot_kurikulum_nama VARCHAR(150) NOT NULL,
-                    snapshot_kurikulum_kode VARCHAR(30) NOT NULL,
-                    snapshot_fase_kode VARCHAR(30) NULL,
-                    snapshot_fase_nama VARCHAR(100) NULL,
-                    status_kenaikan VARCHAR(50) NULL,
+                    kurikulum_nama_snapshot VARCHAR(150) NULL,
+                    fase_nama_snapshot VARCHAR(100) NULL,
+                    tanggal_cetak DATE NULL,
+                    status ENUM('draft', 'terverifikasi', 'final') NOT NULL DEFAULT 'terverifikasi',
                     catatan_akademik TEXT NULL,
-                    catatan_wali_kelas TEXT NULL,
-                    catatan_industri TEXT NULL,
-                    sakit INT DEFAULT 0,
-                    izin INT DEFAULT 0,
-                    tanpa_keterangan INT DEFAULT 0,
-                    tanggal_terbit DATE NULL,
-                    is_published TINYINT(1) DEFAULT 0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     INDEX idx_rs_siswa (siswa_id),
                     INDEX idx_rs_ta (tahun_ajaran_id),
-                    INDEX idx_rs_rombel (rombel_id)
+                    INDEX idx_rs_rombel (rombel_id),
+                    UNIQUE KEY u_rapor_siswa_ta_sem (siswa_id, tahun_ajaran_id, semester)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
                 CREATE TABLE IF NOT EXISTS rapor_nilai_detail (
                     id INT AUTO_INCREMENT PRIMARY KEY,
-                    rapor_siswa_id INT NOT NULL,
+                    rapor_id INT NOT NULL,
                     mapel_id INT NOT NULL,
-                    snapshot_mapel_nama VARCHAR(150) NOT NULL,
-                    snapshot_kelompok VARCHAR(50) NULL,
+                    mapel_nama_snapshot VARCHAR(150) NULL,
                     nilai_akhir DECIMAL(5,2) NOT NULL DEFAULT 0.00,
-                    capaian_tertinggi TEXT NULL,
-                    capaian_terendah TEXT NULL,
-                    predikat VARCHAR(10) NULL,
-                    deskripsi_kemajuan TEXT NULL,
+                    kkm DECIMAL(5,2) DEFAULT 75.00,
+                    predikat VARCHAR(10) DEFAULT 'B',
+                    capaian_kompetensi TEXT NULL,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    INDEX idx_rnd_rapor (rapor_siswa_id),
-                    INDEX idx_rnd_mapel (mapel_id)
+                    INDEX idx_rnd_rapor (rapor_id),
+                    INDEX idx_rnd_mapel (mapel_id),
+                    UNIQUE KEY u_rapor_mapel (rapor_id, mapel_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
 
@@ -442,6 +434,64 @@ class Database {
             $colsTp = self::$conn->query("SHOW COLUMNS FROM tujuan_pembelajaran LIKE 'guru_id'")->fetchAll();
             if (empty($colsTp)) {
                 self::$conn->exec("ALTER TABLE tujuan_pembelajaran ADD COLUMN guru_id INT NULL AFTER cp_id, ADD INDEX idx_tp_guru (guru_id)");
+            }
+
+            // Ensure rapor_siswa snapshot columns exist (self-healing migration for existing databases)
+            $colsRapor = self::$conn->query("SHOW COLUMNS FROM rapor_siswa")->fetchAll(PDO::FETCH_COLUMN);
+            if (!empty($colsRapor)) {
+                if (!in_array('kurikulum_nama_snapshot', $colsRapor)) {
+                    self::$conn->exec("ALTER TABLE rapor_siswa ADD COLUMN kurikulum_nama_snapshot VARCHAR(150) NULL AFTER fase_id");
+                    if (in_array('snapshot_kurikulum_nama', $colsRapor)) {
+                        self::$conn->exec("UPDATE rapor_siswa SET kurikulum_nama_snapshot = snapshot_kurikulum_nama WHERE kurikulum_nama_snapshot IS NULL");
+                    }
+                }
+                if (!in_array('fase_nama_snapshot', $colsRapor)) {
+                    self::$conn->exec("ALTER TABLE rapor_siswa ADD COLUMN fase_nama_snapshot VARCHAR(100) NULL AFTER kurikulum_nama_snapshot");
+                    if (in_array('snapshot_fase_nama', $colsRapor)) {
+                        self::$conn->exec("UPDATE rapor_siswa SET fase_nama_snapshot = snapshot_fase_nama WHERE fase_nama_snapshot IS NULL");
+                    }
+                }
+                if (!in_array('tanggal_cetak', $colsRapor)) {
+                    self::$conn->exec("ALTER TABLE rapor_siswa ADD COLUMN tanggal_cetak DATE NULL AFTER fase_nama_snapshot");
+                    if (in_array('tanggal_terbit', $colsRapor)) {
+                        self::$conn->exec("UPDATE rapor_siswa SET tanggal_cetak = tanggal_terbit WHERE tanggal_cetak IS NULL");
+                    }
+                }
+                if (!in_array('status', $colsRapor)) {
+                    self::$conn->exec("ALTER TABLE rapor_siswa ADD COLUMN status ENUM('draft', 'terverifikasi', 'final') NOT NULL DEFAULT 'terverifikasi' AFTER tanggal_cetak");
+                }
+                if (!in_array('catatan_akademik', $colsRapor)) {
+                    self::$conn->exec("ALTER TABLE rapor_siswa ADD COLUMN catatan_akademik TEXT NULL AFTER status");
+                }
+            }
+
+            // Ensure rapor_nilai_detail columns exist (self-healing migration for existing databases)
+            $colsRnd = self::$conn->query("SHOW COLUMNS FROM rapor_nilai_detail")->fetchAll(PDO::FETCH_COLUMN);
+            if (!empty($colsRnd)) {
+                if (!in_array('rapor_id', $colsRnd)) {
+                    self::$conn->exec("ALTER TABLE rapor_nilai_detail ADD COLUMN rapor_id INT NOT NULL DEFAULT 0 AFTER id, ADD INDEX idx_rnd_rapor_id (rapor_id)");
+                    if (in_array('rapor_siswa_id', $colsRnd)) {
+                        self::$conn->exec("UPDATE rapor_nilai_detail SET rapor_id = rapor_siswa_id WHERE rapor_id = 0");
+                    }
+                }
+                if (!in_array('mapel_nama_snapshot', $colsRnd)) {
+                    self::$conn->exec("ALTER TABLE rapor_nilai_detail ADD COLUMN mapel_nama_snapshot VARCHAR(150) NULL AFTER mapel_id");
+                    if (in_array('snapshot_mapel_nama', $colsRnd)) {
+                        self::$conn->exec("UPDATE rapor_nilai_detail SET mapel_nama_snapshot = snapshot_mapel_nama WHERE mapel_nama_snapshot IS NULL");
+                    }
+                }
+                if (!in_array('kkm', $colsRnd)) {
+                    self::$conn->exec("ALTER TABLE rapor_nilai_detail ADD COLUMN kkm DECIMAL(5,2) DEFAULT 75.00 AFTER nilai_akhir");
+                }
+                if (!in_array('predikat', $colsRnd)) {
+                    self::$conn->exec("ALTER TABLE rapor_nilai_detail ADD COLUMN predikat VARCHAR(10) DEFAULT 'B' AFTER kkm");
+                }
+                if (!in_array('capaian_kompetensi', $colsRnd)) {
+                    self::$conn->exec("ALTER TABLE rapor_nilai_detail ADD COLUMN capaian_kompetensi TEXT NULL AFTER predikat");
+                    if (in_array('deskripsi_kemajuan', $colsRnd)) {
+                        self::$conn->exec("UPDATE rapor_nilai_detail SET capaian_kompetensi = deskripsi_kemajuan WHERE capaian_kompetensi IS NULL");
+                    }
+                }
             }
         } catch (\Throwable $e) {
             // Silently ignore if table already exists or DDL restricted
