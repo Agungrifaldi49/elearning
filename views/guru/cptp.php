@@ -2,8 +2,77 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+if (!function_exists('formatTpDescriptionHtml')) {
+    function formatTpDescriptionHtml($text) {
+        if (empty($text)) return '';
+        $lines = preg_split('/\r\n|\r|\n/', trim($text));
+        if (count($lines) <= 1 && !preg_match('/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓✔☑▪▫►▶→➔➢+~–—\x{2022}\x{25AA}\x{2713}\x{2714}])\s*/u', trim($text))) {
+            return htmlspecialchars($text);
+        }
+        $html = '<div class="tp-formatted-list d-flex flex-column" style="gap: 4px;">';
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '') continue;
+            // 1. Numbered: 1. or 1) or 1-
+            if (preg_match('/^(\d+)[\.\)\-]\s*(.*)$/u', $trimmed, $m)) {
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
+                      . '<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace rounded-pill flex-shrink-0" style="font-size:0.68rem; min-width:20px; padding: 2px 6px; text-align:center;">' . $m[1] . '</span>'
+                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                      . '</div>';
+            // 2. Lettered: a. or A. or a)
+            } elseif (preg_match('/^([a-zA-Z])[\.\)]\s*(.*)$/u', $trimmed, $m)) {
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
+                      . '<span class="badge bg-secondary-subtle text-dark border font-monospace rounded-pill flex-shrink-0" style="font-size:0.68rem; min-width:20px; padding: 2px 6px; text-align:center;">' . strtoupper($m[1]) . '</span>'
+                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                      . '</div>';
+            // 3. Checkmarks: ✓, ✔, ☑
+            } elseif (preg_match('/^([✓✔☑\x{2713}\x{2714}])\s*(.*)$/u', $trimmed, $m)) {
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
+                      . '<span class="text-success flex-shrink-0 fw-bold" style="font-size:0.85rem; line-height:1.4; width:16px; text-align:center;"><i class="bi bi-check-circle-fill"></i></span>'
+                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                      . '</div>';
+            // 4. Arrows: →, ➔, ➢, ►, >
+            } elseif (preg_match('/^([→➔➢►▶>])\s*(.*)$/u', $trimmed, $m)) {
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
+                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:0.82rem; line-height:1.4; width:16px; text-align:center;"><i class="bi bi-arrow-right-short fs-6"></i></span>'
+                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                      . '</div>';
+            // 5. Bullets & Other Symbols: •, -, *, ▪, ▫, +
+            } elseif (preg_match('/^([•\-\*▪▫+–—\x{2022}\x{25AA}])\s*(.*)$/u', $trimmed, $m)) {
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
+                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:0.9rem; line-height:1.3; width:16px; text-align:center;">•</span>'
+                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                      . '</div>';
+            } else {
+                $html .= '<div class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($trimmed) . '</div>';
+            }
+        }
+        $html .= '</div>';
+        return $html;
+    }
+}
+?>
+
 <style>
 /* Modern & Responsive Aesthetics for CP/TP Management */
+.btn-xs {
+    padding: 0.18rem 0.45rem;
+    font-size: 0.72rem;
+    line-height: 1.3;
+}
+.tp-formatted-list {
+    font-size: 0.88rem;
+}
+.tp-list-row {
+    margin-bottom: 0.15rem;
+}
+.tp-list-row:last-child {
+    margin-bottom: 0;
+}
+.tp-list-text {
+    word-break: break-word;
+}
 .card {
     transition: all 0.2s ease-in-out;
 }
@@ -95,29 +164,49 @@
     <div class="row g-3 mb-4">
         <!-- Teacher Profile & Mapel Card -->
         <div class="col-12 col-xl-6">
-            <div class="card h-100 border-0 shadow-sm rounded-4 p-3.5" style="background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%); border-left: 5px solid #0284c7 !important;">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="bg-primary text-white p-3 rounded-4 shadow-sm flex-shrink-0">
-                        <i class="bi bi-person-workspace fs-3"></i>
-                    </div>
-                    <div class="flex-grow-1 min-w-0">
-                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                            <span class="badge bg-primary text-white rounded-pill px-2.5 py-0.5 small fw-normal">Guru Pengampu</span>
-                            <span class="badge bg-white text-primary border rounded-pill px-2 py-0.5 small fw-bold"><?= htmlspecialchars($kurikulumList[0]['kode'] ?? 'Kurikulum') ?></span>
+            <div class="card h-100 border border-primary border-opacity-25 shadow-sm rounded-4 p-3 bg-white position-relative overflow-hidden">
+                <div class="position-absolute top-0 start-0 h-100 bg-primary" style="width: 4px;"></div>
+                <div class="d-flex align-items-center gap-3 ps-2">
+                    <!-- Circular Teacher Avatar with Verified Ring -->
+                    <div class="position-relative flex-shrink-0">
+                        <div class="rounded-circle text-white shadow-sm d-flex align-items-center justify-content-center" 
+                             style="width: 58px; height: 58px; background: linear-gradient(135deg, #0d6efd 0%, #0284c7 100%); border: 3px solid #e0f2fe;">
+                            <i class="bi bi-person-fill" style="font-size: 1.85rem;"></i>
                         </div>
-                        <h5 class="fw-bold text-dark mb-1 text-truncate">
-                            <?= htmlspecialchars($guru['nama_lengkap'] ?? 'Bpk/Ibu Guru') ?>
+                        <span class="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle p-1" style="width: 12px; height: 12px;" title="Guru Aktif"></span>
+                    </div>
+
+                    <!-- Teacher Information Block -->
+                    <div class="flex-grow-1 min-w-0">
+                        <!-- Top Meta: Guru Pengampu Badge & Kurikulum Tag -->
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="badge bg-primary text-white rounded-pill px-2.5 py-1 small fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs" style="font-size: 0.72rem;">
+                                <i class="bi bi-person-badge-fill"></i> Guru Pengampu
+                            </span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 small fw-bold font-monospace" style="font-size: 0.72rem;">
+                                <?= htmlspecialchars($kurikulumList[0]['kode'] ?? 'Kurikulum') ?>
+                            </span>
+                        </div>
+
+                        <!-- Teacher Full Name with Icon & Verified Badge -->
+                        <h5 class="fw-bold text-dark mb-1 text-truncate d-flex align-items-center gap-1.5">
+                            <span class="text-truncate"><?= htmlspecialchars($guru['nama_lengkap'] ?? 'Bpk/Ibu Guru') ?></span>
+                            <i class="bi bi-patch-check-fill text-primary flex-shrink-0" style="font-size: 1.05rem;" title="Terverifikasi"></i>
                         </h5>
-                        <div class="text-secondary small d-flex flex-wrap align-items-center gap-1.5 mt-1.5">
-                            <span class="text-muted fw-semibold"><i class="bi bi-book me-1 text-primary"></i>Mapel Anda:</span>
+
+                        <!-- Assigned Subject Badges -->
+                        <div class="text-secondary small d-flex flex-wrap align-items-center gap-1.5 mt-1">
+                            <span class="text-muted fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.78rem;">
+                                <i class="bi bi-book-half text-primary"></i> Mapel Diampu:
+                            </span>
                             <?php if (!empty($teacherMapelList)): ?>
                                 <?php foreach ($teacherMapelList as $tmp): ?>
-                                    <span class="badge bg-white text-primary border shadow-xs px-2 py-1 rounded-2">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill fw-medium" style="font-size: 0.72rem;">
                                         <?= htmlspecialchars($tmp['nama_mapel']) ?>
                                     </span>
                                 <?php endforeach; ?>
                             <?php else: ?>
-                                <span class="badge bg-white text-muted border px-2 py-1">Semua Mata Pelajaran</span>
+                                <span class="badge bg-light text-muted border px-2.5 py-1 rounded-pill" style="font-size: 0.72rem;">Semua Mata Pelajaran</span>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -285,19 +374,21 @@
                                 </td>
                                 <td>
                                     <div class="fw-bold text-dark"><?= htmlspecialchars($cp['nama_mapel']) ?></div>
-                                    <?php if ($isMyCp): ?>
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle mt-1.5 d-inline-flex align-items-center gap-1 rounded-pill px-2 py-0.5" style="font-size:0.75rem;">
-                                            <i class="bi bi-person-check-fill"></i> Disusun oleh Anda
-                                        </span>
-                                    <?php elseif (!empty($cp['nama_guru'])): ?>
-                                        <span class="badge bg-info-subtle text-dark border border-info-subtle mt-1.5 d-inline-flex align-items-center gap-1 rounded-pill px-2 py-0.5" style="font-size:0.72rem;">
-                                            <i class="bi bi-person-fill text-primary"></i> <?= htmlspecialchars($cp['nama_guru']) ?>
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="badge bg-light text-muted border mt-1.5 d-inline-flex align-items-center gap-1 rounded-pill px-2 py-0.5" style="font-size:0.72rem;">
-                                            <i class="bi bi-shield-check text-muted"></i> Kurikulum Sekolah
-                                        </span>
-                                    <?php endif; ?>
+                                    <div class="mt-1 d-flex align-items-center">
+                                        <?php if ($isMyCp): ?>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1 rounded-pill px-2.5 py-0.5" style="font-size:0.73rem;">
+                                                <i class="bi bi-person-check-fill"></i> Guru: Anda Sendiri
+                                            </span>
+                                        <?php elseif (!empty($cp['nama_guru'])): ?>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center gap-1 rounded-pill px-2.5 py-0.5" style="font-size:0.73rem;">
+                                                <i class="bi bi-person-badge-fill"></i> Guru: <?= htmlspecialchars($cp['nama_guru']) ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-light text-muted border d-inline-flex align-items-center gap-1 rounded-pill px-2.5 py-0.5" style="font-size:0.72rem;">
+                                                <i class="bi bi-shield-check text-muted"></i> Tim Kurikulum
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                                 <!-- Merged Spacious CP Column (Kode, Elemen, Full Deskripsi) -->
                                 <td>
@@ -336,8 +427,8 @@
                                                                 </span>
                                                             <?php endif; ?>
                                                         </div>
-                                                        <div class="text-secondary" style="line-height: 1.45;">
-                                                            <?= htmlspecialchars($tp['deskripsi']) ?>
+                                                        <div class="tp-deskripsi-wrapper">
+                                                            <?= formatTpDescriptionHtml($tp['deskripsi']) ?>
                                                         </div>
                                                     </div>
                                                     <div class="d-flex gap-1 flex-shrink-0 align-items-center">
@@ -790,12 +881,38 @@
 
                             <!-- Deskripsi TP -->
                             <div class="col-12">
-                                <label class="form-label small fw-bold text-dark mb-1">
-                                    <i class="bi bi-card-text text-success me-1"></i>Deskripsi Rumusan Tujuan Pembelajaran (TP) Baru <span class="text-danger">*</span>
-                                </label>
-                                <textarea name="deskripsi" id="add_tp_deskripsi" class="form-control rounded-3 p-3" rows="4" required placeholder="Tuliskan rumusan Tujuan Pembelajaran baru di sini... Contoh: Peserta didik mampu mengimplementasikan fungsi rekursif secara tepat melalui latihan pemrograman mandiri."></textarea>
+                                <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-2">
+                                    <label class="form-label small fw-bold text-dark mb-0 d-flex align-items-center gap-1">
+                                        <i class="bi bi-card-text text-success me-1"></i>Deskripsi Rumusan Tujuan Pembelajaran (TP) Baru <span class="text-danger">*</span>
+                                    </label>
+                                    <!-- Quick List Formatting Toolbar -->
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="text-muted small me-1" style="font-size:0.72rem;">Format List:</span>
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Format List TP">
+                                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'number')" title="Daftar Bernomor (1., 2., 3.)">
+                                                <i class="bi bi-list-ol"></i> 1. 2. 3.
+                                            </button>
+                                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'letter')" title="Daftar Berhuruf (a., b., c.)">
+                                                <i class="bi bi-fonts"></i> a. b. c.
+                                            </button>
+                                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'bullet')" title="Daftar Simbol Bullet (•)">
+                                                <i class="bi bi-list-ul"></i> • Bullet
+                                            </button>
+                                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'dash')" title="Daftar Simbol Strip (-)">
+                                                <i class="bi bi-dash"></i> - Strip
+                                            </button>
+                                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'check')" title="Daftar Simbol Centang (✓)">
+                                                <i class="bi bi-check2-square"></i> ✓ Cek
+                                            </button>
+                                            <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'arrow')" title="Daftar Simbol Panah (→)">
+                                                <i class="bi bi-arrow-right"></i> → Panah
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <textarea name="deskripsi" id="add_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Tuliskan rumusan Tujuan Pembelajaran baru di sini... Anda dapat menuliskan butir berupa list (1., 2. / a., b. / •, -)..."></textarea>
                                 <div class="d-flex justify-content-between align-items-center mt-1">
-                                    <span class="form-text small text-muted"><i class="bi bi-lightbulb text-warning me-1"></i>Tips ABCD: <strong>A</strong>udience, <strong>B</strong>ehavior, <strong>C</strong>ondition, <strong>D</strong>egree.</span>
+                                    <span class="form-text small text-muted"><i class="bi bi-lightbulb text-warning me-1"></i>Tekan <strong>Enter</strong> pada baris list untuk otomatis melanjutkan nomor/huruf/simbol list berikutnya.</span>
                                     <span class="form-text small text-muted" id="add_tp_char_count">0 karakter</span>
                                 </div>
                             </div>
@@ -904,10 +1021,36 @@
                             <input type="text" name="materi_pokok" id="edit_tp_materi" class="form-control rounded-3 py-2">
                         </div>
                         <div class="col-12">
-                            <label class="form-label small fw-bold text-secondary mb-1.5">
-                                <i class="bi bi-card-text text-warning me-1"></i>Deskripsi Tujuan Pembelajaran <span class="text-danger">*</span>
-                            </label>
-                            <textarea name="deskripsi" id="edit_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required></textarea>
+                            <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-2">
+                                <label class="form-label small fw-bold text-secondary mb-0 d-flex align-items-center gap-1">
+                                    <i class="bi bi-card-text text-warning me-1"></i>Deskripsi Tujuan Pembelajaran <span class="text-danger">*</span>
+                                </label>
+                                <!-- Quick List Formatting Toolbar -->
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="text-muted small me-1" style="font-size:0.72rem;">Format List:</span>
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="Format List TP">
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'number')" title="Daftar Bernomor (1., 2., 3.)">
+                                            <i class="bi bi-list-ol"></i> 1. 2. 3.
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'letter')" title="Daftar Berhuruf (a., b., c.)">
+                                            <i class="bi bi-fonts"></i> a. b. c.
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'bullet')" title="Daftar Simbol Bullet (•)">
+                                            <i class="bi bi-list-ul"></i> • Bullet
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'dash')" title="Daftar Simbol Strip (-)">
+                                            <i class="bi bi-dash"></i> - Strip
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'check')" title="Daftar Simbol Centang (✓)">
+                                            <i class="bi bi-check2-square"></i> ✓ Cek
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'arrow')" title="Daftar Simbol Panah (→)">
+                                            <i class="bi bi-arrow-right"></i> → Panah
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <textarea name="deskripsi" id="edit_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Edit rumusan tujuan pembelajaran..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -926,6 +1069,123 @@
 </div>
 
 <script>
+// Quick List Toolbar Formatter
+function insertTpListFormat(textareaId, type) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+
+    let prefix = '1. ';
+    if (type === 'letter') prefix = 'a. ';
+    else if (type === 'bullet') prefix = '• ';
+    else if (type === 'dash') prefix = '- ';
+    else if (type === 'check') prefix = '✓ ';
+    else if (type === 'arrow') prefix = '→ ';
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+
+    if (start === end) {
+        const before = val.substring(0, start);
+        const after = val.substring(end);
+        const needsNewline = before.length > 0 && !before.endsWith('\n');
+        const insertText = (needsNewline ? '\n' : '') + prefix;
+        textarea.value = before + insertText + after;
+        textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
+    } else {
+        const selectedText = val.substring(start, end);
+        const lines = selectedText.split('\n');
+        let counter = 1;
+        let letterCode = 97; // 'a'
+        const formatted = lines.map(line => {
+            if (line.trim() === '') return line;
+            if (type === 'number') return (counter++) + '. ' + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪→\x{2022}\x{25AA}\x{2713}])\s*/u, '');
+            if (type === 'letter') return String.fromCharCode(letterCode++) + '. ' + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪→\x{2022}\x{25AA}\x{2713}])\s*/u, '');
+            return prefix + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪→\x{2022}\x{25AA}\x{2713}])\s*/u, '');
+        }).join('\n');
+
+        textarea.value = val.substring(0, start) + formatted + val.substring(end);
+        textarea.selectionStart = start;
+        textarea.selectionEnd = start + formatted.length;
+    }
+    textarea.focus();
+    textarea.dispatchEvent(new Event('input'));
+}
+
+// Smart Enter List Continuation
+function setupSmartListTextarea(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+
+    textarea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            const cursor = this.selectionStart;
+            const text = this.value;
+            const lastLineBreak = text.lastIndexOf('\n', cursor - 1);
+            const lineStart = lastLineBreak === -1 ? 0 : lastLineBreak + 1;
+            const currentLine = text.substring(lineStart, cursor);
+
+            // Match Number: e.g. "1. " or "1) "
+            const matchNum = currentLine.match(/^(\d+)[\.\)]\s*(.*)$/);
+            if (matchNum) {
+                e.preventDefault();
+                const num = parseInt(matchNum[1], 10);
+                const content = matchNum[2];
+                if (content.trim() === '') {
+                    this.value = text.substring(0, lineStart) + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = lineStart;
+                } else {
+                    const nextItem = '\n' + (num + 1) + '. ';
+                    this.value = text.substring(0, cursor) + nextItem + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = cursor + nextItem.length;
+                }
+                this.dispatchEvent(new Event('input'));
+                return;
+            }
+
+            // Match Letter: e.g. "a. " or "A. "
+            const matchLetter = currentLine.match(/^([a-zA-Z])[\.\)]\s*(.*)$/);
+            if (matchLetter) {
+                e.preventDefault();
+                const charCode = matchLetter[1].charCodeAt(0);
+                const content = matchLetter[2];
+                if (content.trim() === '') {
+                    this.value = text.substring(0, lineStart) + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = lineStart;
+                } else {
+                    const isUpper = matchLetter[1] === matchLetter[1].toUpperCase();
+                    let nextChar = String.fromCharCode(charCode + 1);
+                    if (isUpper && charCode === 90) nextChar = 'A';
+                    if (!isUpper && charCode === 122) nextChar = 'a';
+                    const nextItem = '\n' + nextChar + '. ';
+                    this.value = text.substring(0, cursor) + nextItem + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = cursor + nextItem.length;
+                }
+                this.dispatchEvent(new Event('input'));
+                return;
+            }
+
+            // Match Bullet / Symbol: e.g. "• ", "- ", "* ", "✓ ", "→ "
+            const matchSymbol = currentLine.match(/^([•\-\*✓▪▫►▶→➔➢+~–—\x{2022}\x{25AA}\x{2713}])\s*(.*)$/u);
+            if (matchSymbol) {
+                e.preventDefault();
+                const sym = matchSymbol[1];
+                const content = matchSymbol[2];
+                if (content.trim() === '') {
+                    this.value = text.substring(0, lineStart) + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = lineStart;
+                } else {
+                    const nextItem = '\n' + sym + ' ';
+                    this.value = text.substring(0, cursor) + nextItem + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = cursor + nextItem.length;
+                }
+                this.dispatchEvent(new Event('input'));
+                return;
+            }
+        }
+    });
+}
+
 // Next Code Maps for Auto-generation
 const nextCpCodeMap = <?= json_encode($nextCpCodeMap ?? []) ?>;
 const nextTpCodeMap = <?= json_encode($nextTpCodeMap ?? []) ?>;
@@ -1070,6 +1330,10 @@ document.addEventListener('DOMContentLoaded', () => {
             addTpCount.textContent = addTpDesk.value.length + ' karakter';
         });
     }
+
+    // Initialize Smart List Handlers
+    setupSmartListTextarea('add_tp_deskripsi');
+    setupSmartListTextarea('edit_tp_deskripsi');
 
     // Dynamic Fase filtering in modals
     const kurAddCp = document.getElementById('add_cp_kurikulum_id');

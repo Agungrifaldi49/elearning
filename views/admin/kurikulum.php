@@ -2,6 +2,73 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+if (!function_exists('formatTpDescriptionHtml')) {
+    function formatTpDescriptionHtml($text) {
+        if (empty($text)) return '';
+        $lines = preg_split('/\r\n|\r|\n/', trim($text));
+        if (count($lines) <= 1 && !preg_match('/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓✔☑▪▫►▶→➔➢+~–—\x{2022}\x{25AA}\x{2713}\x{2714}])\s*/u', trim($text))) {
+            return htmlspecialchars($text);
+        }
+        $html = '<div class="tp-formatted-list d-flex flex-column" style="gap: 4px;">';
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '') continue;
+            // 1. Numbered: 1. or 1) or 1-
+            if (preg_match('/^(\d+)[\.\)\-]\s*(.*)$/u', $trimmed, $m)) {
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
+                      . '<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace rounded-pill flex-shrink-0" style="font-size:0.68rem; min-width:20px; padding: 2px 6px; text-align:center;">' . $m[1] . '</span>'
+                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                      . '</div>';
+            // 2. Lettered: a. or A. or a)
+            } elseif (preg_match('/^([a-zA-Z])[\.\)]\s*(.*)$/u', $trimmed, $m)) {
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
+                      . '<span class="badge bg-secondary-subtle text-dark border font-monospace rounded-pill flex-shrink-0" style="font-size:0.68rem; min-width:20px; padding: 2px 6px; text-align:center;">' . strtoupper($m[1]) . '</span>'
+                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                      . '</div>';
+            // 3. Checkmarks: ✓, ✔, ☑
+            } elseif (preg_match('/^([✓✔☑\x{2713}\x{2714}])\s*(.*)$/u', $trimmed, $m)) {
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
+                      . '<span class="text-success flex-shrink-0 fw-bold" style="font-size:0.85rem; line-height:1.4; width:16px; text-align:center;"><i class="bi bi-check-circle-fill"></i></span>'
+                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                      . '</div>';
+            // 4. Arrows: →, ➔, ➢, ►, >
+            } elseif (preg_match('/^([→➔➢►▶>])\s*(.*)$/u', $trimmed, $m)) {
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
+                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:0.82rem; line-height:1.4; width:16px; text-align:center;"><i class="bi bi-arrow-right-short fs-6"></i></span>'
+                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                      . '</div>';
+            // 5. Bullets & Other Symbols: •, -, *, ▪, ▫, +
+            } elseif (preg_match('/^([•\-\*▪▫+–—\x{2022}\x{25AA}])\s*(.*)$/u', $trimmed, $m)) {
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
+                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:0.9rem; line-height:1.3; width:16px; text-align:center;">•</span>'
+                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                      . '</div>';
+            } else {
+                $html .= '<div class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($trimmed) . '</div>';
+            }
+        }
+        $html .= '</div>';
+        return $html;
+    }
+}
+?>
+
+<style>
+.tp-formatted-list {
+    font-size: 0.88rem;
+}
+.tp-list-row {
+    margin-bottom: 0.15rem;
+}
+.tp-list-row:last-child {
+    margin-bottom: 0;
+}
+.tp-list-text {
+    word-break: break-word;
+}
+</style>
+
 <main class="main-content px-3 px-md-4">
 <div class="container-fluid">
 
@@ -577,15 +644,17 @@
                                         </td>
                                         <td class="fw-bold text-dark">
                                             <div><?= htmlspecialchars($cp['nama_mapel']) ?></div>
-                                            <?php if (!empty($cp['nama_guru'])): ?>
-                                                <span class="badge bg-info-subtle text-primary border mt-1.5 d-inline-block" style="font-size:0.75rem; font-weight:500;">
-                                                    <i class="bi bi-person-badge-fill me-1"></i>Penyusun: <?= htmlspecialchars($cp['nama_guru']) ?>
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="badge bg-light text-muted border mt-1.5 d-inline-block" style="font-size:0.72rem; font-weight:normal;">
-                                                    <i class="bi bi-shield-check me-1"></i>Penyusun: Kurikulum / Admin
-                                                </span>
-                                            <?php endif; ?>
+                                            <div class="mt-1 d-flex align-items-center">
+                                                <?php if (!empty($cp['nama_guru'])): ?>
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-inline-flex align-items-center gap-1 rounded-pill px-2.5 py-0.5" style="font-size:0.73rem; font-weight:500;">
+                                                        <i class="bi bi-person-badge-fill"></i> Guru: <?= htmlspecialchars($cp['nama_guru']) ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-light text-muted border d-inline-flex align-items-center gap-1 rounded-pill px-2.5 py-0.5" style="font-size:0.72rem; font-weight:normal;">
+                                                        <i class="bi bi-shield-check text-muted"></i> Tim Kurikulum / Admin
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                         <td>
                                             <div class="fw-bold font-monospace text-primary"><?= htmlspecialchars($cp['kode_cp']) ?></div>
@@ -606,7 +675,9 @@
                                                                 <?php if (!empty($tp['materi_pokok'])): ?>
                                                                     <span class="text-muted fw-semibold">(<?= htmlspecialchars($tp['materi_pokok']) ?>):</span>
                                                                 <?php endif; ?>
-                                                                <span class="text-secondary"><?= htmlspecialchars($tp['deskripsi']) ?></span>
+                                                                <div class="tp-deskripsi-wrapper text-secondary mt-0.5">
+                                                                    <?= formatTpDescriptionHtml($tp['deskripsi']) ?>
+                                                                </div>
                                                                 <?php if (!empty($tp['nama_guru'])): ?>
                                                                     <span class="badge bg-light text-secondary border ms-1" style="font-size:0.68rem;" title="Penyusun TP">
                                                                         <i class="bi bi-person me-0.5"></i><?= htmlspecialchars($tp['nama_guru']) ?>
@@ -1379,11 +1450,37 @@
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label small fw-bold text-secondary mb-1.5">
-                                <i class="bi bi-card-text text-success me-1"></i>Deskripsi Tujuan Pembelajaran (TP) <span class="text-danger">*</span>
-                            </label>
-                            <textarea name="deskripsi" id="add_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Tuliskan tujuan pembelajaran yang spesifik dan terukur..."></textarea>
-                            <div class="form-text small text-muted mt-1"><i class="bi bi-lightbulb text-warning me-1"></i>Tips ABCD: <strong>A</strong>udience, <strong>B</strong>ehavior, <strong>C</strong>ondition, <strong>D</strong>egree.</div>
+                            <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-2">
+                                <label class="form-label small fw-bold text-secondary mb-0 d-flex align-items-center gap-1">
+                                    <i class="bi bi-card-text text-success me-1"></i>Deskripsi Tujuan Pembelajaran (TP) <span class="text-danger">*</span>
+                                </label>
+                                <!-- Quick List Formatting Toolbar -->
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="text-muted small me-1" style="font-size:0.72rem;">Format List:</span>
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="Format List TP">
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'number')" title="Daftar Bernomor (1., 2., 3.)">
+                                            <i class="bi bi-list-ol"></i> 1. 2. 3.
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'letter')" title="Daftar Berhuruf (a., b., c.)">
+                                            <i class="bi bi-fonts"></i> a. b. c.
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'bullet')" title="Daftar Simbol Bullet (•)">
+                                            <i class="bi bi-list-ul"></i> • Bullet
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'dash')" title="Daftar Simbol Strip (-)">
+                                            <i class="bi bi-dash"></i> - Strip
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'check')" title="Daftar Simbol Centang (✓)">
+                                            <i class="bi bi-check2-square"></i> ✓ Cek
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('add_tp_deskripsi', 'arrow')" title="Daftar Simbol Panah (→)">
+                                            <i class="bi bi-arrow-right"></i> → Panah
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <textarea name="deskripsi" id="add_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Tuliskan tujuan pembelajaran yang spesifik dan terukur (dapat berupa list 1., 2. / a., b. / •, -)..."></textarea>
+                            <div class="form-text small text-muted mt-1"><i class="bi bi-lightbulb text-warning me-1"></i>Tekan <strong>Enter</strong> pada baris list untuk otomatis melanjutkan nomor/huruf/simbol list berikutnya.</div>
                         </div>
                     </div>
                 </div>
@@ -1459,9 +1556,35 @@
                             <input type="text" name="materi_pokok" id="edit_tp_materi" class="form-control rounded-3 py-2">
                         </div>
                         <div class="col-12">
-                            <label class="form-label small fw-bold text-secondary mb-1.5">
-                                <i class="bi bi-card-text text-success me-1"></i>Deskripsi Tujuan Pembelajaran <span class="text-danger">*</span>
-                            </label>
+                            <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-2">
+                                <label class="form-label small fw-bold text-secondary mb-0 d-flex align-items-center gap-1">
+                                    <i class="bi bi-card-text text-success me-1"></i>Deskripsi Tujuan Pembelajaran <span class="text-danger">*</span>
+                                </label>
+                                <!-- Quick List Formatting Toolbar -->
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="text-muted small me-1" style="font-size:0.72rem;">Format List:</span>
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="Format List TP">
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'number')" title="Daftar Bernomor (1., 2., 3.)">
+                                            <i class="bi bi-list-ol"></i> 1. 2. 3.
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'letter')" title="Daftar Berhuruf (a., b., c.)">
+                                            <i class="bi bi-fonts"></i> a. b. c.
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'bullet')" title="Daftar Simbol Bullet (•)">
+                                            <i class="bi bi-list-ul"></i> • Bullet
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'dash')" title="Daftar Simbol Strip (-)">
+                                            <i class="bi bi-dash"></i> - Strip
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'check')" title="Daftar Simbol Centang (✓)">
+                                            <i class="bi bi-check2-square"></i> ✓ Cek
+                                        </button>
+                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="insertTpListFormat('edit_tp_deskripsi', 'arrow')" title="Daftar Simbol Panah (→)">
+                                            <i class="bi bi-arrow-right"></i> → Panah
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                             <textarea name="deskripsi" id="edit_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required></textarea>
                         </div>
                     </div>
@@ -1840,6 +1963,119 @@ function filterFaseDropdown(kurikulumSelectId, faseSelectId) {
     }
 }
 
+// Quick List Toolbar Formatter
+function insertTpListFormat(textareaId, type) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+
+    let prefix = '1. ';
+    if (type === 'letter') prefix = 'a. ';
+    else if (type === 'bullet') prefix = '• ';
+    else if (type === 'dash') prefix = '- ';
+    else if (type === 'check') prefix = '✓ ';
+    else if (type === 'arrow') prefix = '→ ';
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+
+    if (start === end) {
+        const before = val.substring(0, start);
+        const after = val.substring(end);
+        const needsNewline = before.length > 0 && !before.endsWith('\n');
+        const insertText = (needsNewline ? '\n' : '') + prefix;
+        textarea.value = before + insertText + after;
+        textarea.selectionStart = textarea.selectionEnd = start + insertText.length;
+    } else {
+        const selectedText = val.substring(start, end);
+        const lines = selectedText.split('\n');
+        let counter = 1;
+        let letterCode = 97; // 'a'
+        const formatted = lines.map(line => {
+            if (line.trim() === '') return line;
+            if (type === 'number') return (counter++) + '. ' + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪])\s*/, '');
+            if (type === 'letter') return String.fromCharCode(letterCode++) + '. ' + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪])\s*/, '');
+            return prefix + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪])\s*/, '');
+        }).join('\n');
+
+        textarea.value = val.substring(0, start) + formatted + val.substring(end);
+        textarea.selectionStart = start;
+        textarea.selectionEnd = start + formatted.length;
+    }
+    textarea.focus();
+    textarea.dispatchEvent(new Event('input'));
+}
+
+// Smart Enter List Continuation
+function setupSmartListTextarea(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+
+    textarea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            const cursor = this.selectionStart;
+            const text = this.value;
+            const lastLineBreak = text.lastIndexOf('\n', cursor - 1);
+            const lineStart = lastLineBreak === -1 ? 0 : lastLineBreak + 1;
+            const currentLine = text.substring(lineStart, cursor);
+
+            // Match Number: e.g. "1. "
+            const matchNum = currentLine.match(/^(\d+)[\.\)]\s*(.*)$/);
+            if (matchNum) {
+                e.preventDefault();
+                const num = parseInt(matchNum[1], 10);
+                const content = matchNum[2];
+                if (content.trim() === '') {
+                    this.value = text.substring(0, lineStart) + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = lineStart;
+                } else {
+                    const nextItem = '\n' + (num + 1) + '. ';
+                    this.value = text.substring(0, cursor) + nextItem + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = cursor + nextItem.length;
+                }
+                this.dispatchEvent(new Event('input'));
+                return;
+            }
+
+            // Match Letter: e.g. "a. " or "A. "
+            const matchLetter = currentLine.match(/^([a-zA-Z])[\.\)]\s*(.*)$/);
+            if (matchLetter) {
+                e.preventDefault();
+                const charCode = matchLetter[1].charCodeAt(0);
+                const content = matchLetter[2];
+                if (content.trim() === '') {
+                    this.value = text.substring(0, lineStart) + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = lineStart;
+                } else {
+                    const nextItem = '\n' + String.fromCharCode(charCode + 1) + '. ';
+                    this.value = text.substring(0, cursor) + nextItem + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = cursor + nextItem.length;
+                }
+                this.dispatchEvent(new Event('input'));
+                return;
+            }
+
+            // Match Bullet / Symbol: e.g. "• ", "- ", "* ", "✓ "
+            const matchSymbol = currentLine.match(/^([•\-\*✓▪▫►▶→➔➢+~–—])\ *(.*)$/);
+            if (matchSymbol) {
+                e.preventDefault();
+                const sym = matchSymbol[1];
+                const content = matchSymbol[2];
+                if (content.trim() === '') {
+                    this.value = text.substring(0, lineStart) + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = lineStart;
+                } else {
+                    const nextItem = '\n' + sym + ' ';
+                    this.value = text.substring(0, cursor) + nextItem + text.substring(cursor);
+                    this.selectionStart = this.selectionEnd = cursor + nextItem.length;
+                }
+                this.dispatchEvent(new Event('input'));
+                return;
+            }
+        }
+    });
+}
+
 // Next Code Maps for Auto-generation
 const nextCpCodeMap = <?= json_encode($nextCpCodeMap ?? []) ?>;
 const nextTpCodeMap = <?= json_encode($nextTpCodeMap ?? []) ?>;
@@ -1898,6 +2134,10 @@ function updateParentCpPreviewAdmin() {
 
 document.addEventListener('DOMContentLoaded', () => {
     recalcTotalBobot();
+
+    // Initialize Smart List Handlers
+    setupSmartListTextarea('add_tp_deskripsi');
+    setupSmartListTextarea('edit_tp_deskripsi');
 
     // DataTables dynamic adjustment when tab is switched
     if (window.jQuery) {
