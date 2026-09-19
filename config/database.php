@@ -427,13 +427,28 @@ class Database {
             }
             
             // Ensure guru_id column exists on existing installations
-            $colsCp = self::$conn->query("SHOW COLUMNS FROM capaian_pembelajaran LIKE 'guru_id'")->fetchAll();
-            if (empty($colsCp)) {
+            // Ensure capaian_pembelajaran columns exist on existing installations
+            $colsCpAll = self::$conn->query("SHOW COLUMNS FROM capaian_pembelajaran")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('guru_id', $colsCpAll)) {
                 self::$conn->exec("ALTER TABLE capaian_pembelajaran ADD COLUMN guru_id INT NULL AFTER fase_id, ADD INDEX idx_cp_guru (guru_id)");
             }
-            $colsTp = self::$conn->query("SHOW COLUMNS FROM tujuan_pembelajaran LIKE 'guru_id'")->fetchAll();
-            if (empty($colsTp)) {
+            if (!in_array('status', $colsCpAll)) {
+                self::$conn->exec("ALTER TABLE capaian_pembelajaran ADD COLUMN status ENUM('aktif', 'arsip') NOT NULL DEFAULT 'aktif' AFTER deskripsi, ADD INDEX idx_cp_status (status)");
+            }
+
+            // Ensure tujuan_pembelajaran columns exist on existing installations
+            $colsTpAll = self::$conn->query("SHOW COLUMNS FROM tujuan_pembelajaran")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('guru_id', $colsTpAll)) {
                 self::$conn->exec("ALTER TABLE tujuan_pembelajaran ADD COLUMN guru_id INT NULL AFTER cp_id, ADD INDEX idx_tp_guru (guru_id)");
+            }
+            if (!in_array('urutan', $colsTpAll)) {
+                self::$conn->exec("ALTER TABLE tujuan_pembelajaran ADD COLUMN urutan INT NOT NULL DEFAULT 1 AFTER deskripsi");
+            }
+            if (!in_array('status', $colsTpAll)) {
+                self::$conn->exec("ALTER TABLE tujuan_pembelajaran ADD COLUMN status ENUM('aktif', 'arsip') NOT NULL DEFAULT 'aktif' AFTER urutan, ADD INDEX idx_tp_status (status)");
+            }
+            if (!in_array('tahun_ajaran_id', $colsTpAll)) {
+                self::$conn->exec("ALTER TABLE tujuan_pembelajaran ADD COLUMN tahun_ajaran_id INT NULL AFTER status, ADD INDEX idx_tp_ta (tahun_ajaran_id)");
             }
 
             // Ensure rapor_siswa snapshot columns exist (self-healing migration for existing databases)

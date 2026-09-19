@@ -224,6 +224,18 @@ class AssessmentModel extends BaseModel {
     // 2. CP & TP LIFECYCLE (ARSIP & BANK TP / COPY)
     // =========================================================================
 
+    public function hasTpColumn($colName) {
+        static $cols = null;
+        if ($cols === null) {
+            try {
+                $cols = $this->db->query("SHOW COLUMNS FROM tujuan_pembelajaran")->fetchAll(PDO::FETCH_COLUMN);
+            } catch (\Throwable $e) {
+                $cols = [];
+            }
+        }
+        return in_array($colName, $cols);
+    }
+
     /**
      * Arsipkan Capaian Pembelajaran (CP) - aman untuk histori nilai
      */
@@ -237,8 +249,12 @@ class AssessmentModel extends BaseModel {
      * Arsipkan Tujuan Pembelajaran (TP)
      */
     public function archiveTp($tpId) {
-        $stmt = $this->db->prepare("UPDATE tujuan_pembelajaran SET status = 'arsip' WHERE id = ?");
-        $res = $stmt->execute([(int)$tpId]);
+        if ($this->hasTpColumn('status')) {
+            $stmt = $this->db->prepare("UPDATE tujuan_pembelajaran SET status = 'arsip' WHERE id = ?");
+            $res = $stmt->execute([(int)$tpId]);
+        } else {
+            $res = true;
+        }
         return ['status' => (bool)$res, 'message' => 'Tujuan Pembelajaran (TP) berhasil diarsipkan.'];
     }
 
@@ -250,10 +266,12 @@ class AssessmentModel extends BaseModel {
         $targetCpId = (int)$targetCpId;
 
         // Ambil TP dari source CP yang aktif
+        $statusClause = $this->hasTpColumn('status') ? " AND status != 'arsip'" : "";
+        $orderCol = $this->hasTpColumn('urutan') ? "urutan ASC, kode_tp ASC" : "kode_tp ASC";
         $stmt = $this->db->prepare("
             SELECT * FROM tujuan_pembelajaran 
-            WHERE cp_id = ? AND status != 'arsip'
-            ORDER BY urutan ASC, kode_tp ASC
+            WHERE cp_id = ?{$statusClause}
+            ORDER BY {$orderCol}
         ");
         $stmt->execute([$sourceCpId]);
         $tps = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -264,24 +282,28 @@ class AssessmentModel extends BaseModel {
 
         $insertedCount = 0;
         $stmtChk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ?");
-        $stmtIns = $this->db->prepare("
-            INSERT INTO tujuan_pembelajaran (cp_id, guru_id, kode_tp, materi_pokok, deskripsi, urutan, status, tahun_ajaran_id)
-            VALUES (?, ?, ?, ?, ?, ?, 'aktif', ?)
-        ");
+        
+        $fields = ["cp_id", "guru_id", "kode_tp", "materi_pokok", "deskripsi"];
+        $placeholders = ["?", "?", "?", "?", "?"];
+        if ($this->hasTpColumn('urutan')) { $fields[] = "urutan"; $placeholders[] = "?"; }
+        if ($this->hasTpColumn('status')) { $fields[] = "status"; $placeholders[] = "'aktif'"; }
+        if ($this->hasTpColumn('tahun_ajaran_id')) { $fields[] = "tahun_ajaran_id"; $placeholders[] = "?"; }
+        
+        $sqlIns = "INSERT INTO tujuan_pembelajaran (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
+        $stmtIns = $this->db->prepare($sqlIns);
 
         foreach ($tps as $tp) {
             $stmtChk->execute([$targetCpId, $tp['kode_tp']]);
             if (!$stmtChk->fetch()) {
                 $targetGuru = $guruId ?: $tp['guru_id'];
-                $stmtIns->execute([
-                    $targetCpId,
-                    $targetGuru,
-                    $tp['kode_tp'],
-                    $tp['materi_pokok'],
-                    $tp['deskripsi'],
-                    $tp['urutan'] ?? 1,
-                    $tahunAjaranId
-                ]);
+                $insParams = [$targetCpId, $targetGuru, $tp['kode_tp'], $tp['materi_pokok'], $tp['deskripsi']];
+                if ($this->hasTpColumn('urutan')) {
+                    $insParams[] = $tp['urutan'] ?? 1;
+                }
+                if ($this->hasTpColumn('tahun_ajaran_id')) {
+                    $insParams[] = $tahunAjaranId;
+                }
+                $stmtIns->execute($insParams);
                 $newTpId = (int)$this->db->lastInsertId();
                 $insertedCount++;
 

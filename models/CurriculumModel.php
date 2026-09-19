@@ -956,6 +956,30 @@ class CurriculumModel extends BaseModel {
         return ['status' => (bool)$res, 'message' => 'Capaian Pembelajaran beserta TP turunannya berhasil dihapus.'];
     }
 
+    public function hasTpColumn($colName) {
+        static $cols = null;
+        if ($cols === null) {
+            try {
+                $cols = $this->db->query("SHOW COLUMNS FROM tujuan_pembelajaran")->fetchAll(PDO::FETCH_COLUMN);
+            } catch (\Throwable $e) {
+                $cols = [];
+            }
+        }
+        return in_array($colName, $cols);
+    }
+
+    public function hasCpColumn($colName) {
+        static $cols = null;
+        if ($cols === null) {
+            try {
+                $cols = $this->db->query("SHOW COLUMNS FROM capaian_pembelajaran")->fetchAll(PDO::FETCH_COLUMN);
+            } catch (\Throwable $e) {
+                $cols = [];
+            }
+        }
+        return in_array($colName, $cols);
+    }
+
     public function getTPList($cpId = null, $guruId = null, $includeArchived = false) {
         $sql = "
             SELECT tp.*, cp.kode_cp, cp.elemen, cp.kurikulum_id, cp.mapel_id, mp.nama_mapel, kur.kode as kode_kurikulum,
@@ -971,7 +995,7 @@ class CurriculumModel extends BaseModel {
             WHERE 1=1
         ";
         $params = [];
-        if (!$includeArchived) {
+        if (!$includeArchived && $this->hasTpColumn('status')) {
             $sql .= " AND (tp.status != 'arsip' OR tp.status IS NULL)";
         }
         if ($cpId) {
@@ -982,7 +1006,8 @@ class CurriculumModel extends BaseModel {
             $sql .= " AND tp.guru_id = ?";
             $params[] = (int)$guruId;
         }
-        $sql .= " ORDER BY tp.urutan ASC, tp.kode_tp ASC";
+        $orderCol = $this->hasTpColumn('urutan') ? "tp.urutan ASC, tp.kode_tp ASC" : "tp.kode_tp ASC";
+        $sql .= " ORDER BY " . $orderCol;
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -1028,17 +1053,35 @@ class CurriculumModel extends BaseModel {
             return ['status' => false, 'message' => 'Deskripsi Tujuan Pembelajaran wajib diisi.'];
         }
 
-        $chk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ? AND status != 'arsip'");
+        $chkSql = "SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ?" . ($this->hasTpColumn('status') ? " AND status != 'arsip'" : "");
+        $chk = $this->db->prepare($chkSql);
         $chk->execute([$cpId, $kodeTp]);
         if ($chk->fetch()) {
             return ['status' => false, 'message' => "Kode TP '{$kodeTp}' sudah ada untuk Capaian Pembelajaran ini."];
         }
 
-        $stmt = $this->db->prepare("
-            INSERT INTO tujuan_pembelajaran (cp_id, guru_id, kode_tp, materi_pokok, deskripsi, urutan, status, tahun_ajaran_id)
-            VALUES (?, ?, ?, ?, ?, ?, 'aktif', ?)
-        ");
-        $res = $stmt->execute([$cpId, $guruId, $kodeTp, $materiPokok, $deskripsi, $urutan, $tahunAjaranId]);
+        $fields = ["cp_id", "guru_id", "kode_tp", "materi_pokok", "deskripsi"];
+        $placeholders = ["?", "?", "?", "?", "?"];
+        $values = [$cpId, $guruId, $kodeTp, $materiPokok, $deskripsi];
+
+        if ($this->hasTpColumn('urutan')) {
+            $fields[] = "urutan";
+            $placeholders[] = "?";
+            $values[] = $urutan;
+        }
+        if ($this->hasTpColumn('status')) {
+            $fields[] = "status";
+            $placeholders[] = "'aktif'";
+        }
+        if ($this->hasTpColumn('tahun_ajaran_id')) {
+            $fields[] = "tahun_ajaran_id";
+            $placeholders[] = "?";
+            $values[] = $tahunAjaranId;
+        }
+
+        $sql = "INSERT INTO tujuan_pembelajaran (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
+        $stmt = $this->db->prepare($sql);
+        $res = $stmt->execute($values);
         $newTpId = (int)$this->db->lastInsertId();
 
         // Buat KKTP default (Interval Nilai min 75.00)
@@ -1067,7 +1110,7 @@ class CurriculumModel extends BaseModel {
             return ['status' => false, 'message' => 'Kode TP dan Deskripsi Tujuan Pembelajaran tidak boleh kosong.'];
         }
 
-        $stmtCurrent = $this->db->prepare("SELECT cp_id, guru_id, urutan FROM tujuan_pembelajaran WHERE id = ?");
+        $stmtCurrent = $this->db->prepare("SELECT * FROM tujuan_pembelajaran WHERE id = ?");
         $stmtCurrent->execute([$id]);
         $current = $stmtCurrent->fetch(PDO::FETCH_ASSOC);
         if (!$current) {
@@ -1076,20 +1119,27 @@ class CurriculumModel extends BaseModel {
 
         $targetCpId = !empty($data['cp_id']) ? (int)$data['cp_id'] : (int)$current['cp_id'];
         $targetGuruId = $guruId ?: (!empty($current['guru_id']) ? (int)$current['guru_id'] : null);
-        $targetUrutan = ($urutan !== null) ? $urutan : (int)$current['urutan'];
+        $targetUrutan = ($urutan !== null) ? $urutan : (isset($current['urutan']) ? (int)$current['urutan'] : 1);
 
-        $chk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ? AND id != ? AND status != 'arsip'");
+        $chkSql = "SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ? AND id != ?" . ($this->hasTpColumn('status') ? " AND status != 'arsip'" : "");
+        $chk = $this->db->prepare($chkSql);
         $chk->execute([$targetCpId, $kodeTp, $id]);
         if ($chk->fetch()) {
             return ['status' => false, 'message' => "Kode TP '{$kodeTp}' sudah terdaftar untuk Capaian Pembelajaran ini."];
         }
 
-        $stmt = $this->db->prepare("
-            UPDATE tujuan_pembelajaran
-            SET cp_id = ?, kode_tp = ?, materi_pokok = ?, deskripsi = ?, guru_id = ?, urutan = ?
-            WHERE id = ?
-        ");
-        $res = $stmt->execute([$targetCpId, $kodeTp, $materiPokok, $deskripsi, $targetGuruId, $targetUrutan, $id]);
+        $setParts = ["cp_id = ?", "kode_tp = ?", "materi_pokok = ?", "deskripsi = ?", "guru_id = ?"];
+        $params = [$targetCpId, $kodeTp, $materiPokok, $deskripsi, $targetGuruId];
+
+        if ($this->hasTpColumn('urutan')) {
+            $setParts[] = "urutan = ?";
+            $params[] = $targetUrutan;
+        }
+        $params[] = $id;
+
+        $sql = "UPDATE tujuan_pembelajaran SET " . implode(', ', $setParts) . " WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        $res = $stmt->execute($params);
         return ['status' => (bool)$res, 'message' => 'Tujuan Pembelajaran (TP) berhasil diperbarui.'];
     }
 
