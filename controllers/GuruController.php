@@ -2817,6 +2817,18 @@ class GuruController {
         $teacherKelasList = $academicModel->getKelasByGuru($guruId);
         $rombelList = $academicModel->getKelas();
 
+        // Kelompokkan rombel berdasarkan Jurusan (RPL, TBSM, dll) agar terstruktur rapi
+        $rombelByJurusan = [];
+        foreach ($rombelList as $rb) {
+            $jKode = !empty($rb['kode_jurusan']) ? strtoupper(trim($rb['kode_jurusan'])) : 'UMUM';
+            $jNama = !empty($rb['nama_jurusan']) ? trim($rb['nama_jurusan']) : 'Umum';
+            $groupTitle = "Jurusan {$jNama} ({$jKode})";
+            if (!isset($rombelByJurusan[$groupTitle])) {
+                $rombelByJurusan[$groupTitle] = [];
+            }
+            $rombelByJurusan[$groupTitle][] = $rb;
+        }
+
         // Filter Param
         $filterRombelId = !empty($_GET['rombel_id']) ? (int)$_GET['rombel_id'] : (!empty($rombelList[0]['id']) ? (int)$rombelList[0]['id'] : 0);
         $filterMapelId = !empty($_GET['mapel_id']) ? (int)$_GET['mapel_id'] : (!empty($teacherMapelList[0]['id']) ? (int)$teacherMapelList[0]['id'] : 0);

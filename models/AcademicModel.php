@@ -44,12 +44,23 @@ class AcademicModel extends BaseModel {
     // --- KELAS ---
     public function getKelas() {
         return $this->db->query("
-            SELECT k.*, j.nama_jurusan, g.nama_lengkap as nama_walikelas, g.nip as nip_walikelas 
+            SELECT k.*, 
+                   COALESCE(k.nama_kelas, '') as nama_rombel,
+                   j.nama_jurusan, j.kode_jurusan, 
+                   g.nama_lengkap as nama_walikelas, g.nip as nip_walikelas 
             FROM kelas k 
-            JOIN jurusan j ON k.jurusan_id = j.id 
+            LEFT JOIN jurusan j ON k.jurusan_id = j.id 
             LEFT JOIN guru g ON k.wali_kelas_id = g.id
-            ORDER BY k.tingkat ASC, k.nama_kelas ASC
-        ")->fetchAll();
+            ORDER BY 
+                CASE 
+                    WHEN k.tingkat IN ('X', '10') THEN 1
+                    WHEN k.tingkat IN ('XI', '11') THEN 2
+                    WHEN k.tingkat IN ('XII', '12') THEN 3
+                    ELSE 4
+                END ASC,
+                j.kode_jurusan ASC,
+                k.nama_kelas ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function addKelas($nama, $jurusan_id, $tingkat, $wali_kelas_id = null) {
@@ -189,7 +200,9 @@ class AcademicModel extends BaseModel {
         $this->ensureEnrollmentTables();
         $gId = (int)$guru_id;
         $sql = "
-            SELECT DISTINCT k.*, j.nama_jurusan
+            SELECT DISTINCT k.*, 
+                   COALESCE(k.nama_kelas, '') as nama_rombel,
+                   j.nama_jurusan, j.kode_jurusan
             FROM kelas k
             LEFT JOIN jurusan j ON k.jurusan_id = j.id
             WHERE k.id IN (
@@ -203,11 +216,21 @@ class AcademicModel extends BaseModel {
                 UNION
                 SELECT kelas_id FROM tugas WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
                 UNION
+                SELECT rombel_id FROM asesmen WHERE guru_id = {$gId} AND rombel_id IS NOT NULL
+                UNION
                 SELECT s.kelas_id FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.guru_id = {$gId} AND s.kelas_id IS NOT NULL
             )
-            ORDER BY k.tingkat ASC, k.nama_kelas ASC
+            ORDER BY 
+                CASE 
+                    WHEN k.tingkat IN ('X', '10') THEN 1
+                    WHEN k.tingkat IN ('XI', '11') THEN 2
+                    WHEN k.tingkat IN ('XII', '12') THEN 3
+                    ELSE 4
+                END ASC,
+                j.kode_jurusan ASC,
+                k.nama_kelas ASC
         ";
-        return $this->db->query($sql)->fetchAll();
+        return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function generateKodeMapel($nama = '', $jurusan_id = 0) {

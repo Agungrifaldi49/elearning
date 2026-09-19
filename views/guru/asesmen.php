@@ -1,6 +1,29 @@
 <?php require_once ROOT_PATH . 'views/layouts/header.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
+<?php
+if (!function_exists('renderRombelOptgroupsHtml')) {
+    function renderRombelOptgroupsHtml($rombelByJurusan, $selectedId, $showAllOption = false) {
+        $html = '';
+        if ($showAllOption) {
+            $html .= '<option value="">-- Semua Rombel / Kelas --</option>';
+        }
+        if (!empty($rombelByJurusan) && is_array($rombelByJurusan)) {
+            foreach ($rombelByJurusan as $groupTitle => $classes) {
+                $html .= '<optgroup label="' . htmlspecialchars($groupTitle) . '">';
+                foreach ($classes as $r) {
+                    $sel = ($selectedId == $r['id']) ? ' selected' : '';
+                    $rombelName = !empty($r['nama_kelas']) ? $r['nama_kelas'] : (!empty($r['nama_rombel']) ? $r['nama_rombel'] : 'Kelas ' . $r['tingkat']);
+                    $jurBadge = !empty($r['kode_jurusan']) ? ' [' . htmlspecialchars($r['kode_jurusan']) . ']' : '';
+                    $html .= '<option value="' . $r['id'] . '"' . $sel . '>' . htmlspecialchars($rombelName) . ' (Tingkat ' . htmlspecialchars($r['tingkat']) . ')' . $jurBadge . '</option>';
+                }
+                $html .= '</optgroup>';
+            }
+        }
+        return $html;
+    }
+}
+?>
 
 <main class="main-content">
 <div class="container-fluid px-3 px-md-4 py-4">
@@ -98,12 +121,7 @@
                     <div class="col-12 col-md-5">
                         <label class="form-label small fw-bold text-secondary mb-1">Rombel / Kelas</label>
                         <select name="rombel_id" class="form-select rounded-3" onchange="this.form.submit()">
-                            <option value="">-- Semua Kelas --</option>
-                            <?php foreach ($rombelList as $r): ?>
-                                <option value="<?= $r['id'] ?>" <?= ($filterRombelId == $r['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($r['nama_rombel']) ?> (Tingkat <?= $r['tingkat'] ?>)
-                                </option>
-                            <?php endforeach; ?>
+                            <?= renderRombelOptgroupsHtml($rombelByJurusan ?? [], $filterRombelId, true) ?>
                         </select>
                     </div>
 
@@ -174,7 +192,7 @@
                                         </td>
                                         <td>
                                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
-                                                <?= htmlspecialchars($a['nama_rombel']) ?>
+                                                <?= htmlspecialchars($a['nama_kelas'] ?? ($a['nama_rombel'] ?? 'Rombel')) ?>
                                             </span>
                                         </td>
                                         <td>
@@ -242,7 +260,7 @@
                                 <?= strtoupper($asesmen['jenis_asesmen']) ?>
                             </span>
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1">
-                                <?= htmlspecialchars($asesmen['nama_rombel']) ?>
+                                <?= htmlspecialchars($asesmen['nama_kelas'] ?? ($asesmen['nama_rombel'] ?? 'Rombel')) ?>
                             </span>
                             <span class="badge bg-light text-dark border rounded-pill px-3 py-1">
                                 <?= htmlspecialchars($asesmen['nama_mapel']) ?>
@@ -449,11 +467,7 @@
                     <div class="col-12 col-md-5">
                         <label class="form-label small fw-bold text-secondary mb-1">Rombel / Kelas</label>
                         <select name="rombel_id" class="form-select rounded-3" onchange="this.form.submit()">
-                            <?php foreach ($rombelList as $r): ?>
-                                <option value="<?= $r['id'] ?>" <?= ($filterRombelId == $r['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($r['nama_rombel']) ?> (Tingkat <?= $r['tingkat'] ?>)
-                                </option>
-                            <?php endforeach; ?>
+                            <?= renderRombelOptgroupsHtml($rombelByJurusan ?? [], $filterRombelId, false) ?>
                         </select>
                     </div>
 
@@ -584,11 +598,7 @@
                     <div class="col-12 col-md-4">
                         <label class="form-label small fw-bold text-secondary mb-1">Rombel / Kelas</label>
                         <select name="rombel_id" class="form-select rounded-3" onchange="this.form.submit()">
-                            <?php foreach ($rombelList as $r): ?>
-                                <option value="<?= $r['id'] ?>" <?= ($filterRombelId == $r['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($r['nama_rombel']) ?>
-                                </option>
-                            <?php endforeach; ?>
+                            <?= renderRombelOptgroupsHtml($rombelByJurusan ?? [], $filterRombelId, false) ?>
                         </select>
                     </div>
 
@@ -778,12 +788,8 @@
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-secondary mb-1">Rombel / Kelas <span class="text-danger">*</span></label>
                             <select name="rombel_id" id="add_asesmen_rombel" class="form-select rounded-3 py-2" required>
-                                <option value="">-- Pilih Rombel --</option>
-                                <?php foreach ($rombelList as $r): ?>
-                                    <option value="<?= $r['id'] ?>" <?= ($filterRombelId == $r['id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($r['nama_rombel']) ?> (Tingkat <?= $r['tingkat'] ?>)
-                                    </option>
-                                <?php endforeach; ?>
+                                <option value="">-- Pilih Rombel Kelas Target --</option>
+                                <?= renderRombelOptgroupsHtml($rombelByJurusan ?? [], $filterRombelId, false) ?>
                             </select>
                         </div>
 
