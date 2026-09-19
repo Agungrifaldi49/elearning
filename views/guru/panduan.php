@@ -273,7 +273,7 @@
                         <h6 class="fw-bold text-info"><i class="bi bi-pencil-fill me-1"></i>Leger E-Rapor Batch & Kalkulasi Otomatis (`guru/inputNilai`)</h6>
                         <ul class="small text-muted ps-3 mb-0">
                             <li class="mb-2"><strong>Restriksi Filter Kelas & Mapel:</strong> Dropdown pilihan Rombel Kelas dan Mata Pelajaran disesuaikan secara presisi hanya untuk kelas & mapel yang diajar Guru.</li>
-                            <li class="mb-2"><strong>Bobot Perhitungan Rapor:</strong> Tugas (20%), Quiz (20%), UTS (30%), dan UAS (30%). Mengisi angka nilai langsung mengkalkulasi Nilai Akhir & Predikat (A/B/C/D) secara otomatis.</li>
+                            <li class="mb-2"><strong>Bobot Perhitungan Rapor:</strong> Tugas Mandiri / Terstruktur (20%), Kuis / Formatif Harian (20%), Sumatif Tengah Semester (STS - 30%), dan Sumatif Akhir Semester (SAS - 30%). Mengisi angka nilai langsung mengkalkulasi Nilai Akhir & Predikat (A/B/C/D) secara otomatis.</li>
                             <li class="mb-2"><strong>Batch Save 1-Klik:</strong> Simpan seluruh nilai siswa dalam 1 rombel kelas sekaligus dengan menekan <strong>Simpan Seluruh E-Rapor Kelas Ini</strong>.</li>
                         </ul>
                     </div>

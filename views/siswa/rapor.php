@@ -93,6 +93,11 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
+    .badge {
+        border: 1px solid #94a3b8 !important;
+        color: #0f172a !important;
+        background: #f8fafc !important;
+    }
 }
 </style>
 
@@ -191,6 +196,33 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
             </div>
         </div>
 
+        <!-- ASSESSMENT COMPONENTS INFO BADGE (Screen Only) -->
+        <div class="p-3 mb-4 rounded-3 border bg-light d-flex flex-wrap align-items-center justify-content-between gap-3 no-print">
+            <div class="d-flex align-items-center gap-2.5">
+                <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-circle">
+                    <i class="bi bi-calculator-fill fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold text-dark mb-0 fs-6">Komponen Penilaian E-Rapor</h6>
+                    <small class="text-muted">Kalkulasi Nilai Akhir mengacu pada 4 instrumen penilaian resmi Kurikulum Merdeka SMK:</small>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
+                    <i class="bi bi-file-earmark-text text-primary me-1"></i> Tugas Mandiri / Terstruktur <strong>(20%)</strong>
+                </span>
+                <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
+                    <i class="bi bi-ui-checks text-warning me-1"></i> Kuis / Formatif Harian <strong>(20%)</strong>
+                </span>
+                <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
+                    <i class="bi bi-calendar2-check text-info me-1"></i> Sumatif Tengah Semester (STS) <strong>(30%)</strong>
+                </span>
+                <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
+                    <i class="bi bi-award-fill text-success me-1"></i> Sumatif Akhir Semester (SAS) <strong>(30%)</strong>
+                </span>
+            </div>
+        </div>
+
         <!-- MOBILE GRADE CARD VIEW (Screen Only - Displays on Mobile < 768px) -->
         <?php if (!empty($nilaiList)): ?>
             <div class="d-block d-md-none mb-4 no-print">
@@ -217,11 +249,27 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                                         <span class="badge <?= $isTuntas ? 'bg-success' : 'bg-danger' ?> rounded-pill px-2 py-0.5" style="font-size:0.68rem;"><?= $isTuntas ? 'TUNTAS' : 'BELUM' ?></span>
                                     </div>
                                 </div>
-                                <div class="row g-1 text-center bg-light rounded-2 p-1.5 border" style="font-size:0.73rem;">
-                                    <div class="col-3"><span class="text-muted d-block">Tugas</span><strong><?= number_format($mn['nilai_tugas'], 0) ?></strong></div>
-                                    <div class="col-3"><span class="text-muted d-block">Quiz</span><strong><?= number_format($mn['nilai_quiz'], 0) ?></strong></div>
-                                    <div class="col-3"><span class="text-muted d-block">UTS</span><strong><?= number_format($mn['nilai_uts'], 0) ?></strong></div>
-                                    <div class="col-3"><span class="text-muted d-block">UAS</span><strong><?= number_format($mn['nilai_uas'], 0) ?></strong></div>
+                                <div class="row g-2 text-center bg-light rounded-3 p-2 border" style="font-size:0.75rem;">
+                                    <div class="col-6 col-sm-3">
+                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;">Tugas Mandiri / Terstruktur</span>
+                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_tugas'], 0) ?></strong>
+                                        <span class="text-primary small fw-semibold" style="font-size:0.65rem;">(20%)</span>
+                                    </div>
+                                    <div class="col-6 col-sm-3">
+                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;">Kuis / Formatif Harian</span>
+                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_quiz'], 0) ?></strong>
+                                        <span class="text-warning-emphasis small fw-semibold" style="font-size:0.65rem;">(20%)</span>
+                                    </div>
+                                    <div class="col-6 col-sm-3">
+                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;">Sumatif Tengah Sem. (STS)</span>
+                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_uts'], 0) ?></strong>
+                                        <span class="text-info-emphasis small fw-semibold" style="font-size:0.65rem;">(30%)</span>
+                                    </div>
+                                    <div class="col-6 col-sm-3">
+                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;">Sumatif Akhir Sem. (SAS)</span>
+                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_uas'], 0) ?></strong>
+                                        <span class="text-success small fw-semibold" style="font-size:0.65rem;">(30%)</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -244,19 +292,31 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                 <thead class="grade-table-header">
                     <tr>
                         <th class="text-start" rowspan="2" style="width:40px;">No</th>
-                        <th class="text-start" rowspan="2">Mata Pelajaran</th>
+                        <th class="text-start" rowspan="2" style="min-width:180px;">Mata Pelajaran</th>
                         <th rowspan="2" style="width:60px;">KKM</th>
-                        <th colspan="4">Komponen Penilaian</th>
+                        <th colspan="4" class="text-center py-2" style="background-color: #f1f5f9;">Komponen Penilaian</th>
                         <th rowspan="2" style="width:85px;">Nilai Akhir</th>
                         <th rowspan="2" style="width:75px;">Predikat</th>
                         <th rowspan="2" style="width:95px;">Ketuntasan</th>
                         <th rowspan="2" class="text-start" style="min-width:240px;">Deskripsi Capaian Kompetensi</th>
                     </tr>
-                    <tr>
-                        <th style="width:60px;">Tugas</th>
-                        <th style="width:60px;">Quiz</th>
-                        <th style="width:60px;">UTS</th>
-                        <th style="width:60px;">UAS</th>
+                    <tr style="background-color: #f8fafc;">
+                        <th style="min-width:130px; vertical-align:middle;" class="px-2 py-2">
+                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;">Tugas Mandiri / Terstruktur</div>
+                            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600;">(20%)</span>
+                        </th>
+                        <th style="min-width:130px; vertical-align:middle;" class="px-2 py-2">
+                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;">Kuis / Formatif Harian</div>
+                            <span class="badge bg-warning bg-opacity-10 text-dark rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(245, 158, 11, 0.15) !important;">(20%)</span>
+                        </th>
+                        <th style="min-width:140px; vertical-align:middle;" class="px-2 py-2">
+                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;">Sumatif Tengah Semester (STS)</div>
+                            <span class="badge bg-info bg-opacity-10 text-dark rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(14, 165, 233, 0.15) !important;">(30%)</span>
+                        </th>
+                        <th style="min-width:140px; vertical-align:middle;" class="px-2 py-2">
+                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;">Sumatif Akhir Semester (SAS)</div>
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(16, 185, 129, 0.15) !important;">(30%)</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>

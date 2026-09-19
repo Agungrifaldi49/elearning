@@ -130,10 +130,10 @@
                             <th style="width:50px;">No</th>
                             <th>NIS / NISN</th>
                             <th>Nama Lengkap Siswa</th>
-                            <th class="text-center">Tugas (20%)</th>
-                            <th class="text-center">Quiz CBT (20%)</th>
-                            <th class="text-center">UTS (30%)</th>
-                            <th class="text-center">UAS (30%)</th>
+                            <th class="text-center" style="min-width:140px;">Tugas Mandiri / Terstruktur (20%)</th>
+                            <th class="text-center" style="min-width:140px;">Kuis / Formatif Harian (20%)</th>
+                            <th class="text-center" style="min-width:150px;">Sumatif Tengah Semester (STS) (30%)</th>
+                            <th class="text-center" style="min-width:150px;">Sumatif Akhir Semester (SAS) (30%)</th>
                             <th class="text-center">Nilai Akhir</th>
                             <th class="text-center">Predikat</th>
                             <th class="text-center">Kelulusan KKM</th>
@@ -237,19 +237,19 @@
 
                         <div class="row g-3">
                             <div class="col-6">
-                                <label class="form-label small fw-bold">Nilai Tugas (20%)</label>
+                                <label class="form-label small fw-bold">Tugas Mandiri / Terstruktur (20%)</label>
                                 <input type="number" step="0.1" name="nilai_tugas" class="form-control" value="<?= $tugas ?>" min="0" max="100" required>
                             </div>
                             <div class="col-6">
-                                <label class="form-label small fw-bold">Nilai Quiz CBT (20%)</label>
+                                <label class="form-label small fw-bold">Kuis / Formatif Harian (20%)</label>
                                 <input type="number" step="0.1" name="nilai_quiz" class="form-control" value="<?= $quiz ?>" min="0" max="100" required>
                             </div>
                             <div class="col-6">
-                                <label class="form-label small fw-bold">Nilai UTS (30%)</label>
+                                <label class="form-label small fw-bold">Sumatif Tengah Semester (STS) (30%)</label>
                                 <input type="number" step="0.1" name="nilai_uts" class="form-control" value="<?= $uts ?>" min="0" max="100" required>
                             </div>
                             <div class="col-6">
-                                <label class="form-label small fw-bold">Nilai UAS (30%)</label>
+                                <label class="form-label small fw-bold">Sumatif Akhir Semester (SAS) (30%)</label>
                                 <input type="number" step="0.1" name="nilai_uas" class="form-control" value="<?= $uas ?>" min="0" max="100" required>
                             </div>
                         </div>

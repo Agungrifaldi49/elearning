@@ -11,7 +11,7 @@ $kurInfo = $currModel->getActiveKurikulumForRombel((int)$selectedKelasId);
 $kompList = $currModel->getKomponenPenilaian($kurInfo['kurikulum_id'] ?? 1);
 
 $wTugas = 20.0; $wQuiz = 20.0; $wUts = 30.0; $wUas = 30.0;
-$labelTugas = 'Tugas'; $labelQuiz = 'Quiz'; $labelUts = 'UTS'; $labelUas = 'UAS';
+$labelTugas = 'Tugas Mandiri / Terstruktur'; $labelQuiz = 'Kuis / Formatif Harian'; $labelUts = 'Sumatif Tengah Semester (STS)'; $labelUas = 'Sumatif Akhir Semester (SAS)';
 foreach ($kompList as $kp) {
     $code = strtolower(trim($kp['kode_komponen']));
     $b = (float)$kp['bobot_persen'];
@@ -263,19 +263,19 @@ foreach ($kompList as $kp) {
 
                             <div class="row g-3">
                                 <div class="col-6">
-                                    <label class="form-label small fw-bold text-dark">Nilai Tugas (20%)</label>
+                                    <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelTugas) ?> (<?= $wTugas ?>%)</label>
                                     <input type="number" name="nilai_tugas" class="form-control rounded-3" min="0" max="100" step="0.5" value="<?= $nTugas ?>" required>
                                 </div>
                                 <div class="col-6">
-                                    <label class="form-label small fw-bold text-dark">Nilai Quiz (20%)</label>
+                                    <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelQuiz) ?> (<?= $wQuiz ?>%)</label>
                                     <input type="number" name="nilai_quiz" class="form-control rounded-3" min="0" max="100" step="0.5" value="<?= $nQuiz ?>" required>
                                 </div>
                                 <div class="col-6">
-                                    <label class="form-label small fw-bold text-dark">Nilai UTS (30%)</label>
+                                    <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelUts) ?> (<?= $wUts ?>%)</label>
                                     <input type="number" name="nilai_uts" class="form-control rounded-3" min="0" max="100" step="0.5" value="<?= $nUts ?>" required>
                                 </div>
                                 <div class="col-6">
-                                    <label class="form-label small fw-bold text-dark">Nilai UAS (30%)</label>
+                                    <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelUas) ?> (<?= $wUas ?>%)</label>
                                     <input type="number" name="nilai_uas" class="form-control rounded-3" min="0" max="100" step="0.5" value="<?= $nUas ?>" required>
                                 </div>
                             </div>
@@ -328,19 +328,19 @@ foreach ($kompList as $kp) {
 
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label small fw-bold">Nilai Tugas</label>
+                            <label class="form-label small fw-bold"><?= htmlspecialchars($labelTugas) ?> (<?= $wTugas ?>%)</label>
                             <input type="number" name="nilai_tugas" class="form-control" min="0" max="100" step="0.5" required>
                         </div>
                         <div class="col-6">
-                            <label class="form-label small fw-bold">Nilai Quiz</label>
+                            <label class="form-label small fw-bold"><?= htmlspecialchars($labelQuiz) ?> (<?= $wQuiz ?>%)</label>
                             <input type="number" name="nilai_quiz" class="form-control" min="0" max="100" step="0.5" required>
                         </div>
                         <div class="col-6">
-                            <label class="form-label small fw-bold">Nilai UTS</label>
+                            <label class="form-label small fw-bold"><?= htmlspecialchars($labelUts) ?> (<?= $wUts ?>%)</label>
                             <input type="number" name="nilai_uts" class="form-control" min="0" max="100" step="0.5" required>
                         </div>
                         <div class="col-6">
-                            <label class="form-label small fw-bold">Nilai UAS</label>
+                            <label class="form-label small fw-bold"><?= htmlspecialchars($labelUas) ?> (<?= $wUas ?>%)</label>
                             <input type="number" name="nilai_uas" class="form-control" min="0" max="100" step="0.5" required>
                         </div>
                     </div>

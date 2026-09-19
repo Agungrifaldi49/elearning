@@ -166,7 +166,7 @@
                     <div class="p-3 border rounded-3 bg-light mb-3">
                         <h6 class="fw-bold text-info"><i class="bi bi-file-earmark-text-fill me-1"></i>E-Rapor Digital Siswa (`siswa/rapor`)</h6>
                         <ul class="small text-muted ps-3 mb-0">
-                            <li class="mb-2"><strong>Transkrip Resmi:</strong> Menampilkan komponen nilai Tugas (20%), Quiz (20%), UTS (30%), dan UAS (30%), serta Nilai Akhir & Predikat.</li>
+                            <li class="mb-2"><strong>Transkrip Resmi:</strong> Menampilkan 4 komponen penilaian resmi: Tugas Mandiri / Terstruktur (20%), Kuis / Formatif Harian (20%), Sumatif Tengah Semester (STS - 30%), dan Sumatif Akhir Semester (SAS - 30%), serta Nilai Akhir & Predikat.</li>
                             <li class="mb-2"><strong>Logo Kop & TTD Pengaturan:</strong> Terkoneksi dengan Logo Resmi Sekolah, Nama Kepala Sekolah, & Wali Kelas.</li>
                             <li class="mb-2"><strong>Cetak PDF Rapor:</strong> Klik <i>Cetak / Simpan PDF Rapor</i> untuk mencetak tanpa bilah scrollbar.</li>
                         </ul>
