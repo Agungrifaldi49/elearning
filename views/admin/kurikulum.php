@@ -8,44 +8,44 @@ if (!function_exists('formatTpDescriptionHtml')) {
         if (empty($text)) return '';
         $lines = preg_split('/\r\n|\r|\n/', trim($text));
         if (count($lines) <= 1 && !preg_match('/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓✔☑▪▫►▶→➔➢+~–—\x{2022}\x{25AA}\x{2713}\x{2714}])\s*/u', trim($text))) {
-            return htmlspecialchars($text);
+            return '<div class="tp-deskripsi-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . nl2br(htmlspecialchars($text)) . '</div>';
         }
-        $html = '<div class="tp-formatted-list d-flex flex-column" style="gap: 4px;">';
+        $html = '<div class="tp-formatted-list d-flex flex-column" style="gap: 6px; margin-top: 3px;">';
         foreach ($lines as $line) {
             $trimmed = trim($line);
             if ($trimmed === '') continue;
             // 1. Numbered: 1. or 1) or 1-
             if (preg_match('/^(\d+)[\.\)\-]\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
-                      . '<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace rounded-pill flex-shrink-0" style="font-size:0.68rem; min-width:20px; padding: 2px 6px; text-align:center;">' . $m[1] . '</span>'
-                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 8px;">'
+                      . '<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace rounded-pill flex-shrink-0" style="font-size:0.72rem; min-width:22px; padding: 2.5px 6px; text-align:center; font-weight:700;">' . $m[1] . '</span>'
+                      . '<span class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($m[2]) . '</span>'
                       . '</div>';
             // 2. Lettered: a. or A. or a)
             } elseif (preg_match('/^([a-zA-Z])[\.\)]\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
-                      . '<span class="badge bg-secondary-subtle text-dark border font-monospace rounded-pill flex-shrink-0" style="font-size:0.68rem; min-width:20px; padding: 2px 6px; text-align:center;">' . strtoupper($m[1]) . '</span>'
-                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 8px;">'
+                      . '<span class="badge bg-secondary-subtle text-dark border font-monospace rounded-pill flex-shrink-0" style="font-size:0.72rem; min-width:22px; padding: 2.5px 6px; text-align:center; font-weight:700;">' . strtoupper($m[1]) . '</span>'
+                      . '<span class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($m[2]) . '</span>'
                       . '</div>';
             // 3. Checkmarks: ✓, ✔, ☑
             } elseif (preg_match('/^([✓✔☑\x{2713}\x{2714}])\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
-                      . '<span class="text-success flex-shrink-0 fw-bold" style="font-size:0.85rem; line-height:1.4; width:16px; text-align:center;"><i class="bi bi-check-circle-fill"></i></span>'
-                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 8px;">'
+                      . '<span class="text-success flex-shrink-0 fw-bold" style="font-size:0.95rem; line-height:1.5; width:18px; text-align:center;"><i class="bi bi-check-circle-fill"></i></span>'
+                      . '<span class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($m[2]) . '</span>'
                       . '</div>';
             // 4. Arrows: →, ➔, ➢, ►, >
             } elseif (preg_match('/^([→➔➢►▶>])\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
-                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:0.82rem; line-height:1.4; width:16px; text-align:center;"><i class="bi bi-arrow-right-short fs-6"></i></span>'
-                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 8px;">'
+                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:0.95rem; line-height:1.5; width:18px; text-align:center;"><i class="bi bi-arrow-right-short fs-5"></i></span>'
+                      . '<span class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($m[2]) . '</span>'
                       . '</div>';
             // 5. Bullets & Other Symbols: •, -, *, ▪, ▫, +
             } elseif (preg_match('/^([•\-\*▪▫+–—\x{2022}\x{25AA}])\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
-                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:0.9rem; line-height:1.3; width:16px; text-align:center;">•</span>'
-                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 8px;">'
+                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:1.15rem; line-height:1.2; width:18px; text-align:center;">•</span>'
+                      . '<span class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($m[2]) . '</span>'
                       . '</div>';
             } else {
-                $html .= '<div class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($trimmed) . '</div>';
+                $html .= '<div class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($trimmed) . '</div>';
             }
         }
         $html .= '</div>';
@@ -663,28 +663,30 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                             <?php endif; ?>
                                         </td>
                                         <td><div class="small text-dark" style="max-height: 120px; overflow-y: auto;"><?= nl2br(htmlspecialchars($cp['deskripsi'])) ?></div></td>
-                                        <td>
+                                        <td style="min-width: 340px; padding: 12px 14px !important;">
                                             <?php if (empty($childTps)): ?>
-                                                <div class="alert alert-light border py-1.5 px-2 mb-2 text-muted small"><i class="bi bi-exclamation-circle me-1"></i> Belum ada TP</div>
+                                                <div class="alert alert-light border py-2 px-2.5 mb-2 text-muted small"><i class="bi bi-exclamation-circle me-1"></i> Belum ada TP</div>
                                             <?php else: ?>
-                                                <div class="tp-list-box mb-2" style="max-height: 180px; overflow-y: auto;">
+                                                <div class="tp-list-box mb-2" style="max-height: 220px; overflow-y: auto;">
                                                     <?php foreach ($childTps as $tp): ?>
-                                                        <div class="p-2 mb-1.5 rounded-2 bg-light border d-flex justify-content-between align-items-start gap-2">
-                                                            <div class="small">
-                                                                <strong class="text-primary font-monospace"><?= htmlspecialchars($tp['kode_tp']) ?></strong>
-                                                                <?php if (!empty($tp['materi_pokok'])): ?>
-                                                                    <span class="text-muted fw-semibold">(<?= htmlspecialchars($tp['materi_pokok']) ?>):</span>
-                                                                <?php endif; ?>
-                                                                <div class="tp-deskripsi-wrapper text-secondary mt-0.5">
+                                                        <div class="p-2.5 mb-2 rounded-3 bg-white border shadow-xs d-flex justify-content-between align-items-start gap-2" style="border-left: 3px solid #0d6efd !important;">
+                                                            <div class="small flex-grow-1">
+                                                                <div class="d-flex align-items-center gap-1.5 flex-wrap mb-1">
+                                                                    <strong class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-0.5 rounded"><?= htmlspecialchars($tp['kode_tp']) ?></strong>
+                                                                    <?php if (!empty($tp['materi_pokok'])): ?>
+                                                                        <span class="badge bg-light text-dark border px-2 py-0.5 rounded" style="font-size:0.72rem;"><?= htmlspecialchars($tp['materi_pokok']) ?></span>
+                                                                    <?php endif; ?>
+                                                                    <?php if (!empty($tp['nama_guru'])): ?>
+                                                                        <span class="badge bg-light text-secondary border px-1.5 py-0.5 rounded" style="font-size:0.68rem;" title="Penyusun TP">
+                                                                            <i class="bi bi-person me-0.5"></i><?= htmlspecialchars($tp['nama_guru']) ?>
+                                                                        </span>
+                                                                    <?php endif; ?>
+                                                                </div>
+                                                                <div class="tp-deskripsi-wrapper text-dark" style="line-height: 1.6; font-size: 0.88rem; color: #0f172a !important;">
                                                                     <?= formatTpDescriptionHtml($tp['deskripsi']) ?>
                                                                 </div>
-                                                                <?php if (!empty($tp['nama_guru'])): ?>
-                                                                    <span class="badge bg-light text-secondary border ms-1" style="font-size:0.68rem;" title="Penyusun TP">
-                                                                        <i class="bi bi-person me-0.5"></i><?= htmlspecialchars($tp['nama_guru']) ?>
-                                                                    </span>
-                                                                <?php endif; ?>
                                                             </div>
-                                                            <div class="d-flex gap-1 flex-shrink-0">
+                                                            <div class="d-flex gap-1 flex-shrink-0 pt-0.5">
                                                                 <button type="button" class="btn btn-xs btn-outline-warning rounded px-1.5 py-0.5 btn-edit-tp" 
                                                                     title="Edit TP"
                                                                     data-bs-toggle="modal" data-bs-target="#modalEditTP"
@@ -710,7 +712,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                                     <?php endforeach; ?>
                                                 </div>
                                             <?php endif; ?>
-                                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill fw-semibold btn-add-tp-for-cp px-2 py-1"
+                                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill fw-semibold btn-add-tp-for-cp px-2.5 py-1"
                                                 data-bs-toggle="modal" data-bs-target="#modalAddTP"
                                                 data-cp-id="<?= $cp['id'] ?>"
                                                 data-cp-kode="<?= htmlspecialchars($cp['kode_cp']) ?>"

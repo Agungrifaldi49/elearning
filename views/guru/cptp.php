@@ -8,44 +8,44 @@ if (!function_exists('formatTpDescriptionHtml')) {
         if (empty($text)) return '';
         $lines = preg_split('/\r\n|\r|\n/', trim($text));
         if (count($lines) <= 1 && !preg_match('/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓✔☑▪▫►▶→➔➢+~–—\x{2022}\x{25AA}\x{2713}\x{2714}])\s*/u', trim($text))) {
-            return htmlspecialchars($text);
+            return '<div class="tp-deskripsi-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . nl2br(htmlspecialchars($text)) . '</div>';
         }
-        $html = '<div class="tp-formatted-list d-flex flex-column" style="gap: 4px;">';
+        $html = '<div class="tp-formatted-list d-flex flex-column" style="gap: 6px; margin-top: 3px;">';
         foreach ($lines as $line) {
             $trimmed = trim($line);
             if ($trimmed === '') continue;
             // 1. Numbered: 1. or 1) or 1-
             if (preg_match('/^(\d+)[\.\)\-]\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
-                      . '<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace rounded-pill flex-shrink-0" style="font-size:0.68rem; min-width:20px; padding: 2px 6px; text-align:center;">' . $m[1] . '</span>'
-                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 8px;">'
+                      . '<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace rounded-pill flex-shrink-0" style="font-size:0.72rem; min-width:22px; padding: 2.5px 6px; text-align:center; font-weight:700;">' . $m[1] . '</span>'
+                      . '<span class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($m[2]) . '</span>'
                       . '</div>';
             // 2. Lettered: a. or A. or a)
             } elseif (preg_match('/^([a-zA-Z])[\.\)]\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
-                      . '<span class="badge bg-secondary-subtle text-dark border font-monospace rounded-pill flex-shrink-0" style="font-size:0.68rem; min-width:20px; padding: 2px 6px; text-align:center;">' . strtoupper($m[1]) . '</span>'
-                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 8px;">'
+                      . '<span class="badge bg-secondary-subtle text-dark border font-monospace rounded-pill flex-shrink-0" style="font-size:0.72rem; min-width:22px; padding: 2.5px 6px; text-align:center; font-weight:700;">' . strtoupper($m[1]) . '</span>'
+                      . '<span class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($m[2]) . '</span>'
                       . '</div>';
             // 3. Checkmarks: ✓, ✔, ☑
             } elseif (preg_match('/^([✓✔☑\x{2713}\x{2714}])\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
-                      . '<span class="text-success flex-shrink-0 fw-bold" style="font-size:0.85rem; line-height:1.4; width:16px; text-align:center;"><i class="bi bi-check-circle-fill"></i></span>'
-                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 8px;">'
+                      . '<span class="text-success flex-shrink-0 fw-bold" style="font-size:0.95rem; line-height:1.5; width:18px; text-align:center;"><i class="bi bi-check-circle-fill"></i></span>'
+                      . '<span class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($m[2]) . '</span>'
                       . '</div>';
             // 4. Arrows: →, ➔, ➢, ►, >
             } elseif (preg_match('/^([→➔➢►▶>])\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
-                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:0.82rem; line-height:1.4; width:16px; text-align:center;"><i class="bi bi-arrow-right-short fs-6"></i></span>'
-                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 8px;">'
+                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:0.95rem; line-height:1.5; width:18px; text-align:center;"><i class="bi bi-arrow-right-short fs-5"></i></span>'
+                      . '<span class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($m[2]) . '</span>'
                       . '</div>';
             // 5. Bullets & Other Symbols: •, -, *, ▪, ▫, +
             } elseif (preg_match('/^([•\-\*▪▫+–—\x{2022}\x{25AA}])\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 6px;">'
-                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:0.9rem; line-height:1.3; width:16px; text-align:center;">•</span>'
-                      . '<span class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 8px;">'
+                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:1.15rem; line-height:1.2; width:18px; text-align:center;">•</span>'
+                      . '<span class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($m[2]) . '</span>'
                       . '</div>';
             } else {
-                $html .= '<div class="tp-list-text text-secondary" style="line-height:1.45;">' . htmlspecialchars($trimmed) . '</div>';
+                $html .= '<div class="tp-list-text" style="color: #0f172a !important; line-height: 1.6; font-size: 0.9rem;">' . htmlspecialchars($trimmed) . '</div>';
             }
         }
         $html .= '</div>';
@@ -62,16 +62,19 @@ if (!function_exists('formatTpDescriptionHtml')) {
     line-height: 1.3;
 }
 .tp-formatted-list {
-    font-size: 0.88rem;
+    font-size: 0.9rem;
 }
 .tp-list-row {
-    margin-bottom: 0.15rem;
+    margin-bottom: 0.35rem;
 }
 .tp-list-row:last-child {
     margin-bottom: 0;
 }
 .tp-list-text {
     word-break: break-word;
+    color: #0f172a !important;
+    font-size: 0.9rem;
+    line-height: 1.62;
 }
 .card {
     transition: all 0.2s ease-in-out;
@@ -83,12 +86,23 @@ if (!function_exists('formatTpDescriptionHtml')) {
     vertical-align: top !important;
 }
 .tp-item-card {
-    border-left: 3px solid #0d6efd !important;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0 !important;
+    border-left: 4px solid #0d6efd !important;
+    border-radius: 10px !important;
+    padding: 12px 14px !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 .tp-item-card:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.05) !important;
+    box-shadow: 0 4px 8px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.05) !important;
+    border-color: #cbd5e1 !important;
+}
+.tp-deskripsi-wrapper {
+    color: #0f172a !important;
+    font-size: 0.9rem;
+    line-height: 1.62;
 }
 .modal-body {
     max-height: calc(85vh - 120px);
@@ -406,24 +420,24 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                         <?= nl2br(htmlspecialchars($cp['deskripsi'])) ?>
                                     </div>
                                 </td>
-                                <td>
+                                <td style="min-width: 360px; padding: 14px 16px !important;">
                                     <!-- Child TP Cards List -->
                                     <?php if (empty($childTps)): ?>
-                                        <div class="p-2.5 rounded-3 bg-light border border-dashed text-center text-muted small mb-2">
+                                        <div class="p-3 rounded-3 bg-light border border-dashed text-center text-muted small mb-2">
                                             <i class="bi bi-info-circle me-1"></i> Belum ada TP turunan untuk CP ini.
                                         </div>
                                     <?php else: ?>
-                                        <div class="tp-container d-flex flex-column gap-2 mb-2">
+                                        <div class="tp-container d-flex flex-column gap-2.5 mb-2.5">
                                             <?php foreach ($childTps as $tp): ?>
-                                                <div class="p-2.5 rounded-3 bg-white border shadow-xs d-flex justify-content-between align-items-start gap-2" style="border-left: 3px solid #0d6efd !important;">
-                                                    <div class="small flex-grow-1 min-w-0">
-                                                        <div class="d-flex align-items-center gap-1.5 flex-wrap mb-1">
-                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-0.5 rounded">
+                                                <div class="tp-item-card d-flex justify-content-between align-items-start gap-3">
+                                                    <div class="flex-grow-1 min-w-0">
+                                                        <div class="d-flex align-items-center gap-2 flex-wrap mb-2">
+                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2.5 py-1 rounded fw-bold" style="font-size: 0.78rem;">
                                                                 <?= htmlspecialchars($tp['kode_tp']) ?>
                                                             </span>
                                                             <?php if (!empty($tp['materi_pokok'])): ?>
-                                                                <span class="badge bg-light text-dark border px-2 py-0.5 rounded" style="font-size:0.72rem;">
-                                                                    <i class="bi bi-tag text-primary me-0.5"></i><?= htmlspecialchars($tp['materi_pokok']) ?>
+                                                                <span class="badge bg-light text-dark border px-2.5 py-1 rounded fw-semibold" style="font-size: 0.75rem; background-color: #f8fafc !important;">
+                                                                    <i class="bi bi-tag-fill text-primary me-1"></i><?= htmlspecialchars($tp['materi_pokok']) ?>
                                                                 </span>
                                                             <?php endif; ?>
                                                         </div>
@@ -431,8 +445,8 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                                             <?= formatTpDescriptionHtml($tp['deskripsi']) ?>
                                                         </div>
                                                     </div>
-                                                    <div class="d-flex gap-1 flex-shrink-0 align-items-center">
-                                                        <button type="button" class="btn btn-sm btn-light border text-warning rounded-2 p-1 px-1.5 btn-edit-tp" 
+                                                    <div class="d-flex gap-1.5 flex-shrink-0 align-items-center pt-0.5">
+                                                        <button type="button" class="btn btn-sm btn-outline-warning rounded-2 p-1.5 px-2 btn-edit-tp" 
                                                             title="Edit TP"
                                                             data-bs-toggle="modal" data-bs-target="#modalEditTP"
                                                             data-id="<?= $tp['id'] ?>"
@@ -440,7 +454,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                                             data-kode="<?= htmlspecialchars($tp['kode_tp']) ?>"
                                                             data-materi="<?= htmlspecialchars($tp['materi_pokok'] ?? '') ?>"
                                                             data-deskripsi="<?= htmlspecialchars($tp['deskripsi']) ?>">
-                                                            <i class="bi bi-pencil-fill" style="font-size: 0.8rem;"></i>
+                                                            <i class="bi bi-pencil-fill" style="font-size: 0.82rem;"></i>
                                                         </button>
                                                         <form action="<?= BASE_URL ?>index.php?url=guru/cptp" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Tujuan Pembelajaran (TP) ini?');">
                                                             <?= Security::csrfField() ?>
@@ -449,8 +463,8 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                                             <input type="hidden" name="filter_mapel_id" value="<?= $filterMapelId ?? '' ?>">
                                                             <input type="hidden" name="filter_fase_id" value="<?= $filterFaseId ?? '' ?>">
                                                             <input type="hidden" name="id" value="<?= $tp['id'] ?>">
-                                                            <button type="submit" class="btn btn-sm btn-light border text-danger rounded-2 p-1 px-1.5" title="Hapus TP">
-                                                                <i class="bi bi-trash-fill" style="font-size: 0.8rem;"></i>
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-2 p-1.5 px-2" title="Hapus TP">
+                                                                <i class="bi bi-trash-fill" style="font-size: 0.82rem;"></i>
                                                             </button>
                                                         </form>
                                                     </div>
@@ -460,7 +474,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                     <?php endif; ?>
 
                                     <!-- Button to Add TP for this specific CP -->
-                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-semibold btn-add-tp-for-cp px-3 py-1 d-inline-flex align-items-center gap-1 mt-1"
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-semibold btn-add-tp-for-cp px-3 py-1.5 d-inline-flex align-items-center gap-1.5 mt-1"
                                         data-bs-toggle="modal" data-bs-target="#modalAddTP"
                                         data-cp-id="<?= $cp['id'] ?>"
                                         data-cp-kode="<?= htmlspecialchars($cp['kode_cp']) ?>"
