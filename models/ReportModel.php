@@ -305,6 +305,9 @@ class ReportModel extends BaseModel {
 
     public function createDatabaseBackup($type = 'manual', $note = '') {
         $this->ensureBackupTableExist();
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(300);
+        $fp = null;
         try {
             $prefix = ($type === 'auto') ? 'auto_backup_' : 'backup_';
             $fileName = $prefix . date('Y-m-d_H-i-s') . '.sql';
@@ -314,42 +317,55 @@ class ReportModel extends BaseModel {
                 mkdir(ROOT_PATH . 'database/', 0777, true);
             }
 
+            $fp = fopen($filePath, 'wb');
+            if (!$fp) {
+                return false;
+            }
+
             $tables = $this->db->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-            $output = "-- ========================================================\n";
-            $output .= "-- Database Backup: " . (defined('APP_NAME') ? APP_NAME : 'E-Learning SMK MH') . "\n";
-            $output .= "-- Date: " . date('Y-m-d H:i:s') . "\n";
-            $output .= "-- Type: " . strtoupper($type) . "\n";
-            $output .= "-- Note: " . ($note ?: 'Auto Backup Activity System') . "\n";
-            $output .= "-- ========================================================\n\n";
-            $output .= "SET FOREIGN_KEY_CHECKS = 0;\n\n";
+            $header = "-- ========================================================\n";
+            $header .= "-- Database Backup: " . (defined('APP_NAME') ? APP_NAME : 'E-Learning SMK MH') . "\n";
+            $header .= "-- Date: " . date('Y-m-d H:i:s') . "\n";
+            $header .= "-- Type: " . strtoupper($type) . "\n";
+            $header .= "-- Note: " . ($note ?: 'Auto Backup Activity System') . "\n";
+            $header .= "-- ========================================================\n\n";
+            $header .= "SET FOREIGN_KEY_CHECKS = 0;\n\n";
+            fwrite($fp, $header);
 
             foreach ($tables as $table) {
                 if ($table === 'backup') continue;
                 $createTableStmt = $this->db->query("SHOW CREATE TABLE `$table`")->fetch(PDO::FETCH_ASSOC);
                 if (!$createTableStmt) continue;
 
-                $output .= "-- Table structure for `$table` --\n";
-                $output .= "DROP TABLE IF EXISTS `$table`;\n";
-                $output .= $createTableStmt['Create Table'] . ";\n\n";
+                fwrite($fp, "-- Table structure for `$table` --\n");
+                fwrite($fp, "DROP TABLE IF EXISTS `$table`;\n");
+                fwrite($fp, $createTableStmt['Create Table'] . ";\n\n");
 
-                $rows = $this->db->query("SELECT * FROM `$table`")->fetchAll(PDO::FETCH_ASSOC);
-                if (!empty($rows)) {
-                    $output .= "-- Dumping data for `$table` --\n";
-                    foreach ($rows as $row) {
+                $stmt = $this->db->query("SELECT * FROM `$table`");
+                if ($stmt) {
+                    $hasRows = false;
+                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                        if (!$hasRows) {
+                            fwrite($fp, "-- Dumping data for `$table` --\n");
+                            $hasRows = true;
+                        }
                         $fields = array_map(function($val) {
                             if ($val === null) return "NULL";
                             return $this->db->quote($val);
                         }, array_values($row));
-                        $output .= "INSERT INTO `$table` VALUES(" . implode(', ', $fields) . ");\n";
+                        fwrite($fp, "INSERT INTO `$table` VALUES(" . implode(', ', $fields) . ");\n");
                     }
-                    $output .= "\n";
+                    if ($hasRows) {
+                        fwrite($fp, "\n");
+                    }
                 }
             }
 
-            $output .= "SET FOREIGN_KEY_CHECKS = 1;\n";
+            fwrite($fp, "SET FOREIGN_KEY_CHECKS = 1;\n");
+            fclose($fp);
+            $fp = null;
 
-            file_put_contents($filePath, $output);
-            $bytes = filesize($filePath);
+            $bytes = file_exists($filePath) ? filesize($filePath) : 0;
             $fileSize = round($bytes / 1024, 2) . ' KB';
             if ($bytes >= 1048576) {
                 $fileSize = round($bytes / 1048576, 2) . ' MB';
@@ -369,12 +385,18 @@ class ReportModel extends BaseModel {
 
             return $fileName;
         } catch (Throwable $e) {
+            if ($fp && is_resource($fp)) {
+                @fclose($fp);
+            }
+            error_log("createDatabaseBackup error: " . $e->getMessage());
             return false;
         }
     }
 
     public function restoreDatabaseBackup($fileName) {
         $this->ensureBackupTableExist();
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(300);
         $fileName = basename($fileName);
         $filePath = ROOT_PATH . 'database/' . $fileName;
 
@@ -400,6 +422,8 @@ class ReportModel extends BaseModel {
 
     public function restoreFromUploadedSql($fileArray) {
         $this->ensureBackupTableExist();
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(300);
         if (empty($fileArray['tmp_name']) || $fileArray['error'] !== UPLOAD_ERR_OK) {
             throw new Exception("Gagal mengunggah file .sql. Silakan coba lagi.");
         }
@@ -453,8 +477,24 @@ class ReportModel extends BaseModel {
     }
 
     public function triggerAutoBackupIfNeeded($source = 'activity') {
+        static $alreadyTriggered = false;
+        if ($alreadyTriggered) return;
+
         $this->ensureBackupTableExist();
         try {
+            // Never trigger during student/teacher exam/quiz activity
+            $currentUrl = $_GET['url'] ?? '';
+            if (strpos($currentUrl, 'ujian') !== false || strpos($currentUrl, 'cbt') !== false || strpos($currentUrl, 'quiz') !== false) {
+                return;
+            }
+
+            // Only permit auto-backup if explicitly invoked by admin dashboard or admin session
+            $user = class_exists('AuthHelper') ? AuthHelper::user() : null;
+            $roleName = $user ? ($user['role_name'] ?? '') : '';
+            if ($source !== 'admin_dashboard' && $source !== 'cron' && $roleName !== 'Administrator') {
+                return;
+            }
+
             $stmt = $this->db->query("SELECT created_at FROM backup WHERE type = 'auto' ORDER BY id DESC LIMIT 1");
             $lastCreated = $stmt ? $stmt->fetchColumn() : null;
 
@@ -463,17 +503,16 @@ class ReportModel extends BaseModel {
                 $shouldBackup = true;
             } else {
                 $lastTime = strtotime($lastCreated);
-                // Trigger auto-backup if 10 minutes have elapsed since last auto-backup
-                if ((time() - $lastTime) >= 600) {
+                // Trigger auto-backup at most once every 24 hours (86400 seconds)
+                if ((time() - $lastTime) >= 86400) {
                     $shouldBackup = true;
                 }
             }
 
             if ($shouldBackup) {
-                $user = class_exists('AuthHelper') ? AuthHelper::user() : null;
-                $userName = $user ? ($user['full_name'] ?? $user['username'] ?? 'User') : 'User';
-                $roleName = $user ? ($user['role_name'] ?? 'System') : 'System';
-                $note = "Otomatisasi Backup pasca aktivitas {$roleName} ({$userName}) - Source: {$source}";
+                $alreadyTriggered = true;
+                $userName = $user ? ($user['full_name'] ?? $user['username'] ?? 'Admin') : 'System';
+                $note = "Otomatisasi Backup Harian pasca aktivitas {$roleName} ({$userName}) - Source: {$source}";
                 $this->createDatabaseBackup('auto', $note);
             }
         } catch (Throwable $e) {}

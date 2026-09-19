@@ -88,6 +88,10 @@ class AdminController {
         $pengumumanList = $commModel->getPengumuman('all');
         $activeTa = $academicModel->getActiveTahunAjaran();
 
+        try {
+            $reportModel->triggerAutoBackupIfNeeded('admin_dashboard');
+        } catch (Throwable $eBackup) {}
+
         require_once ROOT_PATH . 'views/admin/dashboard.php';
     }
 
