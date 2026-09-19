@@ -1362,7 +1362,8 @@ class AdminController {
         $currModel = new CurriculumModel();
         $academicModel = new AcademicModel();
 
-        $activeTab = $_GET['tab'] ?? 'kurikulum';
+        $validTabs = ['kurikulum', 'fase', 'rombel', 'struktur', 'cptp', 'komponen'];
+        $activeTab = in_array($_GET['tab'] ?? '', $validTabs, true) ? $_GET['tab'] : 'kurikulum';
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
@@ -1372,7 +1373,7 @@ class AdminController {
             }
 
             $action = $_POST['action'] ?? '';
-            $redirectTab = $_POST['redirect_tab'] ?? $activeTab;
+            $redirectTab = in_array($_POST['redirect_tab'] ?? '', $validTabs, true) ? $_POST['redirect_tab'] : $activeTab;
 
             if ($action === 'create_kurikulum') {
                 $res = $currModel->addKurikulum([
@@ -1479,6 +1480,7 @@ class AdminController {
                 $id = (int)$_POST['id'];
                 $res = $currModel->updateStrukturMapel($id, [
                     'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
+                    'jurusan_id' => !empty($_POST['jurusan_id']) ? (int)$_POST['jurusan_id'] : null,
                     'tingkat' => Security::sanitize($_POST['tingkat'] ?? 'X'),
                     'kelompok_mapel' => Security::sanitize($_POST['kelompok_mapel'] ?? 'Kejuruan'),
                     'alokasi_jp' => (int)($_POST['alokasi_jp'] ?? 2),
@@ -1498,7 +1500,7 @@ class AdminController {
                     'kurikulum_id' => (int)$_POST['kurikulum_id'],
                     'mapel_id' => (int)$_POST['mapel_id'],
                     'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
-                    'kode_cp' => Security::sanitize($_POST['kode_cp']),
+                    'kode_cp' => Security::sanitize($_POST['kode_cp'] ?? ''),
                     'elemen' => Security::sanitize($_POST['elemen'] ?? ''),
                     'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
                 ]);
@@ -1527,7 +1529,7 @@ class AdminController {
             } elseif ($action === 'create_tp') {
                 $res = $currModel->addTP([
                     'cp_id' => (int)$_POST['cp_id'],
-                    'kode_tp' => Security::sanitize($_POST['kode_tp']),
+                    'kode_tp' => Security::sanitize($_POST['kode_tp'] ?? ''),
                     'materi_pokok' => Security::sanitize($_POST['materi_pokok'] ?? ''),
                     'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
                 ]);
@@ -1552,7 +1554,7 @@ class AdminController {
                 else FlashHelper::setError($res['message']);
 
             } elseif ($action === 'save_komponen') {
-                $kurikulumId = (int)$_POST['kurikulum_id'];
+                $kurikulumId = !empty($_POST['kurikulum_id']) ? (int)$_POST['kurikulum_id'] : 1;
                 $komponenArray = [];
                 if (isset($_POST['kode_komponen']) && is_array($_POST['kode_komponen'])) {
                     $kodes = $_POST['kode_komponen'];
@@ -1609,15 +1611,31 @@ class AdminController {
         $filterCpFaseId = !empty($_GET['filter_fase_id']) ? (int)$_GET['filter_fase_id'] : null;
 
         $cpList = $currModel->getCPList($filterCpKurId, $filterCpMapelId, $filterCpFaseId);
-        $allCpForDropdown = $filterCpKurId || $filterCpMapelId ? $currModel->getCPList() : $cpList;
+        $allCpForDropdown = $currModel->getCPList(); // Always full list so edit modals never lose parent CP
         $tpList = $currModel->getTPList();
 
         // Selected curriculum for tabs (default to first/active)
         $selectedKurId = (int)($_GET['kurikulum_id'] ?? ($kurikulumList[0]['id'] ?? 1));
         $selectedKurikulum = $currModel->getKurikulumById($selectedKurId) ?: ($kurikulumList[0] ?? null);
+        if ($selectedKurikulum) {
+            $selectedKurId = (int)$selectedKurikulum['id'];
+        }
         $strukturMapelList = $currModel->getStrukturMapel($selectedKurId);
         $komponenList = $currModel->getKomponenPenilaian($selectedKurId);
         $faseKurikulumList = $currModel->getFaseByKurikulum($selectedKurId);
+
+        // Precompute next auto-generated codes for CP and TP
+        $nextCpCodeMap = [];
+        foreach ($kurikulumList as $kur) {
+            $nextCpCodeMap[$kur['id']] = [];
+            foreach ($mapelList as $mp) {
+                $nextCpCodeMap[$kur['id']][$mp['id']] = $currModel->generateNextCPCode($kur['id'], $mp['id']);
+            }
+        }
+        $nextTpCodeMap = [];
+        foreach ($allCpForDropdown as $c) {
+            $nextTpCodeMap[$c['id']] = $currModel->generateNextTPCode($c['id']);
+        }
 
         require_once ROOT_PATH . 'views/admin/kurikulum.php';
     }

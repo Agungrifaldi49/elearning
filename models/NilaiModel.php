@@ -68,6 +68,49 @@ class NilaiModel {
     }
 
     /**
+     * Ambil bobot komponen penilaian dinamis sesuai kurikulum rombel siswa
+     */
+    public function getBobotKomponenForSiswa(int $siswaId): array {
+        try {
+            $stmtS = $this->db->prepare("SELECT kelas_id FROM siswa WHERE id = ?");
+            $stmtS->execute([$siswaId]);
+            $kelasId = (int)$stmtS->fetchColumn();
+
+            if ($kelasId > 0) {
+                require_once ROOT_PATH . 'models/CurriculumModel.php';
+                $currModel = new CurriculumModel();
+                $kurInfo = $currModel->getActiveKurikulumForRombel($kelasId);
+                $kurId = $kurInfo['kurikulum_id'] ?? 1;
+                $komponenList = $currModel->getKomponenPenilaian($kurId);
+
+                $bobot = [
+                    'tugas' => 0.20,
+                    'quiz'  => 0.20,
+                    'uts'   => 0.30,
+                    'uas'   => 0.30
+                ];
+
+                foreach ($komponenList as $kp) {
+                    $code = strtolower(trim($kp['kode_komponen']));
+                    $w = ((float)$kp['bobot_persen']) / 100.0;
+                    if (strpos($code, 'tugas') !== false || strpos($code, 'formatif') !== false || strpos($code, 'tp') !== false) {
+                        $bobot['tugas'] = $w;
+                    } elseif (strpos($code, 'quiz') !== false || strpos($code, 'kuis') !== false || strpos($code, 'teori') !== false || strpos($code, 'sumatif_lm') !== false) {
+                        $bobot['quiz'] = $w;
+                    } elseif (strpos($code, 'uts') !== false || strpos($code, 'sts') !== false || strpos($code, 'praktik') !== false) {
+                        $bobot['uts'] = $w;
+                    } elseif (strpos($code, 'uas') !== false || strpos($code, 'sas') !== false || strpos($code, 'sumatif_akhir') !== false) {
+                        $bobot['uas'] = $w;
+                    }
+                }
+                return $bobot;
+            }
+        } catch (\Throwable $e) {}
+
+        return ['tugas' => 0.20, 'quiz' => 0.20, 'uts' => 0.30, 'uas' => 0.30];
+    }
+
+    /**
      * Simpan / update nilai siswa untuk satu mapel
      */
     public function simpanNilai(int $siswaId, int $mapelId, array $komponen): bool {
@@ -76,12 +119,18 @@ class NilaiModel {
         $uts   = min(100.0, max(0.0, (float)($komponen['nilai_uts'] ?? 0)));
         $uas   = min(100.0, max(0.0, (float)($komponen['nilai_uas'] ?? 0)));
 
+        $bobot = $this->getBobotKomponenForSiswa($siswaId);
+        $wTugas = (float)($bobot['tugas'] ?? 0.20);
+        $wQuiz  = (float)($bobot['quiz'] ?? 0.20);
+        $wUts   = (float)($bobot['uts'] ?? 0.30);
+        $wUas   = (float)($bobot['uas'] ?? 0.30);
+
         // Calculate Proportional Weighted Average for Active Evaluation Components
         $weights = [];
-        if ($tugas > 0) $weights[] = ['val' => $tugas, 'w' => 0.20];
-        if ($quiz > 0)  $weights[] = ['val' => $quiz,  'w' => 0.20];
-        if ($uts > 0)   $weights[] = ['val' => $uts,   'w' => 0.30];
-        if ($uas > 0)   $weights[] = ['val' => $uas,   'w' => 0.30];
+        if ($tugas > 0) $weights[] = ['val' => $tugas, 'w' => $wTugas];
+        if ($quiz > 0)  $weights[] = ['val' => $quiz,  'w' => $wQuiz];
+        if ($uts > 0)   $weights[] = ['val' => $uts,   'w' => $wUts];
+        if ($uas > 0)   $weights[] = ['val' => $uas,   'w' => $wUas];
 
         if (!empty($weights)) {
             $sumVal = 0;
@@ -92,7 +141,7 @@ class NilaiModel {
             }
             $akhir = ($sumW > 0) ? round($sumVal / $sumW, 2) : 0.00;
         } else {
-            $akhir = ($tugas * 0.20) + ($quiz * 0.20) + ($uts * 0.30) + ($uas * 0.30);
+            $akhir = ($tugas * $wTugas) + ($quiz * $wQuiz) + ($uts * $wUts) + ($uas * $wUas);
         }
         $akhir = min(100.0, max(0.0, (float)$akhir));
 
@@ -204,30 +253,36 @@ class NilaiModel {
         $uts   = ($avgUtsVal   !== false && $avgUtsVal   !== null) ? (float)$avgUtsVal   : (float)($existing['nilai_uts']   ?? 0);
         $uas   = ($avgUasVal   !== false && $avgUasVal   !== null) ? (float)$avgUasVal   : (float)($existing['nilai_uas']   ?? 0);
 
+        $bobot = $this->getBobotKomponenForSiswa($siswaId);
+        $wTugas = (float)($bobot['tugas'] ?? 0.20);
+        $wQuiz  = (float)($bobot['quiz'] ?? 0.20);
+        $wUts   = (float)($bobot['uts'] ?? 0.30);
+        $wUas   = (float)($bobot['uas'] ?? 0.30);
+
         // Calculate Proportional Weighted Average for Available Evaluation Components
         $weights = [];
         if ($avgTugasVal !== false && $avgTugasVal !== null) {
-            $weights[] = ['val' => (float)$avgTugasVal, 'w' => 0.20];
+            $weights[] = ['val' => (float)$avgTugasVal, 'w' => $wTugas];
         } elseif (!empty($existing['nilai_tugas']) && (float)$existing['nilai_tugas'] > 0) {
-            $weights[] = ['val' => (float)$existing['nilai_tugas'], 'w' => 0.20];
+            $weights[] = ['val' => (float)$existing['nilai_tugas'], 'w' => $wTugas];
         }
 
         if ($avgQuizVal !== false && $avgQuizVal !== null) {
-            $weights[] = ['val' => (float)$avgQuizVal, 'w' => 0.20];
+            $weights[] = ['val' => (float)$avgQuizVal, 'w' => $wQuiz];
         } elseif (!empty($existing['nilai_quiz']) && (float)$existing['nilai_quiz'] > 0) {
-            $weights[] = ['val' => (float)$existing['nilai_quiz'], 'w' => 0.20];
+            $weights[] = ['val' => (float)$existing['nilai_quiz'], 'w' => $wQuiz];
         }
 
         if ($avgUtsVal !== false && $avgUtsVal !== null) {
-            $weights[] = ['val' => (float)$avgUtsVal, 'w' => 0.30];
+            $weights[] = ['val' => (float)$avgUtsVal, 'w' => $wUts];
         } elseif (!empty($existing['nilai_uts']) && (float)$existing['nilai_uts'] > 0) {
-            $weights[] = ['val' => (float)$existing['nilai_uts'], 'w' => 0.30];
+            $weights[] = ['val' => (float)$existing['nilai_uts'], 'w' => $wUts];
         }
 
         if ($avgUasVal !== false && $avgUasVal !== null) {
-            $weights[] = ['val' => (float)$avgUasVal, 'w' => 0.30];
+            $weights[] = ['val' => (float)$avgUasVal, 'w' => $wUas];
         } elseif (!empty($existing['nilai_uas']) && (float)$existing['nilai_uas'] > 0) {
-            $weights[] = ['val' => (float)$existing['nilai_uas'], 'w' => 0.30];
+            $weights[] = ['val' => (float)$existing['nilai_uas'], 'w' => $wUas];
         }
 
         if (!empty($weights)) {
@@ -239,7 +294,7 @@ class NilaiModel {
             }
             $akhir = ($sumW > 0) ? round($sumVal / $sumW, 2) : 0.00;
         } else {
-            $akhir = ($tugas * 0.20) + ($quiz * 0.20) + ($uts * 0.30) + ($uas * 0.30);
+            $akhir = ($tugas * $wTugas) + ($quiz * $wQuiz) + ($uts * $wUts) + ($uas * $wUas);
         }
 
         $res = false;

@@ -124,7 +124,7 @@ class CurriculumModel extends BaseModel {
 
     public function deleteKurikulum($id) {
         $id = (int)$id;
-        // Safety constraint: Never delete curriculum that has historical grade/rapor records
+        // Safety constraint: Never delete curriculum that has historical grade/rapor records or connected rombels
         $stmtRapor = $this->db->prepare("SELECT COUNT(*) FROM rapor_siswa WHERE kurikulum_id = ?");
         $stmtRapor->execute([$id]);
         $hasRapor = (int)$stmtRapor->fetchColumn();
@@ -140,9 +140,22 @@ class CurriculumModel extends BaseModel {
             ];
         }
 
-        $stmt = $this->db->prepare("DELETE FROM kurikulum WHERE id = ?");
-        $res = $stmt->execute([$id]);
-        return ['status' => (bool)$res, 'message' => 'Kurikulum berhasil dihapus.'];
+        $this->db->beginTransaction();
+        try {
+            // Clean up child dependencies to prevent foreign key lock
+            $this->db->prepare("DELETE tp FROM tujuan_pembelajaran tp JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id WHERE cp.kurikulum_id = ?")->execute([$id]);
+            $this->db->prepare("DELETE FROM capaian_pembelajaran WHERE kurikulum_id = ?")->execute([$id]);
+            $this->db->prepare("DELETE FROM kurikulum_mapel WHERE kurikulum_id = ?")->execute([$id]);
+            $this->db->prepare("DELETE FROM komponen_penilaian WHERE kurikulum_id = ?")->execute([$id]);
+            $this->db->prepare("DELETE FROM fase WHERE kurikulum_id = ?")->execute([$id]);
+            $stmt = $this->db->prepare("DELETE FROM kurikulum WHERE id = ?");
+            $res = $stmt->execute([$id]);
+            $this->db->commit();
+            return ['status' => (bool)$res, 'message' => 'Kurikulum beserta konfigurasi dasarnya berhasil dihapus.'];
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return ['status' => false, 'message' => 'Gagal menghapus kurikulum: ' . $e->getMessage()];
+        }
     }
 
     // =========================================================================
@@ -165,9 +178,9 @@ class CurriculumModel extends BaseModel {
 
     public function getAllFase() {
         $stmt = $this->db->query("
-            SELECT f.*, k.nama as nama_kurikulum, k.kode as kode_kurikulum
+            SELECT f.*, COALESCE(k.nama, 'Kurikulum Terkait') as nama_kurikulum, COALESCE(k.kode, '-') as kode_kurikulum
             FROM fase f
-            JOIN kurikulum k ON f.kurikulum_id = k.id
+            LEFT JOIN kurikulum k ON f.kurikulum_id = k.id
             ORDER BY k.nama ASC, f.kode ASC
         ");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -243,10 +256,14 @@ class CurriculumModel extends BaseModel {
         $stmtRk->execute([$id]);
         $rkCount = (int)$stmtRk->fetchColumn();
 
-        if ($cpCount > 0 || $rkCount > 0) {
+        $stmtKm = $this->db->prepare("SELECT COUNT(*) FROM kurikulum_mapel WHERE fase_id = ?");
+        $stmtKm->execute([$id]);
+        $kmCount = (int)$stmtKm->fetchColumn();
+
+        if ($cpCount > 0 || $rkCount > 0 || $kmCount > 0) {
             return [
                 'status' => false,
-                'message' => "⚠️ Fase ini tidak dapat dihapus karena masih digunakan oleh {$cpCount} Capaian Pembelajaran dan {$rkCount} Rombel Kelas."
+                'message' => "⚠️ Fase ini tidak dapat dihapus karena masih digunakan oleh {$cpCount} CP, {$rkCount} Rombel, dan {$kmCount} Struktur Mapel."
             ];
         }
 
@@ -489,17 +506,26 @@ class CurriculumModel extends BaseModel {
             return ['status' => false, 'message' => 'Kurikulum dan Mata Pelajaran wajib ditentukan.'];
         }
 
-        // Check if mapel already mapped for this curriculum and grade
-        $chk = $this->db->prepare("
-            SELECT id FROM kurikulum_mapel 
-            WHERE kurikulum_id = ? AND mapel_id = ? AND (tingkat = ? OR (tingkat IS NULL AND ? = ''))
-        ");
-        $chk->execute([$kurikulumId, $mapelId, $tingkat, $tingkat]);
+        // Check if mapel already mapped for this curriculum, grade, and major
+        if ($jurusanId) {
+            $chk = $this->db->prepare("
+                SELECT id FROM kurikulum_mapel 
+                WHERE kurikulum_id = ? AND mapel_id = ? AND tingkat = ? AND jurusan_id = ?
+            ");
+            $chk->execute([$kurikulumId, $mapelId, $tingkat, $jurusanId]);
+        } else {
+            $chk = $this->db->prepare("
+                SELECT id FROM kurikulum_mapel 
+                WHERE kurikulum_id = ? AND mapel_id = ? AND tingkat = ? AND jurusan_id IS NULL
+            ");
+            $chk->execute([$kurikulumId, $mapelId, $tingkat]);
+        }
         $existingId = $chk->fetchColumn();
 
         if ($existingId) {
             return $this->updateStrukturMapel($existingId, [
                 'fase_id' => $faseId,
+                'jurusan_id' => $jurusanId,
                 'tingkat' => $tingkat,
                 'kelompok_mapel' => $kelompok,
                 'alokasi_jp' => $alokasiJp,
@@ -517,11 +543,12 @@ class CurriculumModel extends BaseModel {
 
     public function getStrukturMapelById($id) {
         $stmt = $this->db->prepare("
-            SELECT km.*, mp.nama_mapel, mp.kode_mapel, kur.nama as nama_kurikulum, f.nama as nama_fase
+            SELECT km.*, mp.nama_mapel, mp.kode_mapel, kur.nama as nama_kurikulum, f.nama as nama_fase, j.nama_jurusan
             FROM kurikulum_mapel km
             JOIN mata_pelajaran mp ON km.mapel_id = mp.id
             JOIN kurikulum kur ON km.kurikulum_id = kur.id
             LEFT JOIN fase f ON km.fase_id = f.id
+            LEFT JOIN jurusan j ON km.jurusan_id = j.id
             WHERE km.id = ?
         ");
         $stmt->execute([(int)$id]);
@@ -531,6 +558,7 @@ class CurriculumModel extends BaseModel {
     public function updateStrukturMapel($id, $data) {
         $id = (int)$id;
         $faseId = !empty($data['fase_id']) ? (int)$data['fase_id'] : null;
+        $jurusanId = !empty($data['jurusan_id']) ? (int)$data['jurusan_id'] : null;
         $tingkat = trim($data['tingkat'] ?? 'X');
         $kelompok = trim($data['kelompok_mapel'] ?? 'Kejuruan');
         $alokasiJp = (int)($data['alokasi_jp'] ?? 2);
@@ -538,10 +566,10 @@ class CurriculumModel extends BaseModel {
 
         $stmt = $this->db->prepare("
             UPDATE kurikulum_mapel
-            SET fase_id = ?, tingkat = ?, kelompok_mapel = ?, alokasi_jp = ?, kkm = ?
+            SET fase_id = ?, jurusan_id = ?, tingkat = ?, kelompok_mapel = ?, alokasi_jp = ?, kkm = ?
             WHERE id = ?
         ");
-        $res = $stmt->execute([$faseId, $tingkat, $kelompok, $alokasiJp, $kkm, $id]);
+        $res = $stmt->execute([$faseId, $jurusanId, $tingkat, $kelompok, $alokasiJp, $kkm, $id]);
         return ['status' => (bool)$res, 'message' => 'Konfigurasi struktur mata pelajaran berhasil diperbarui.'];
     }
 
@@ -588,6 +616,88 @@ class CurriculumModel extends BaseModel {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /**
+     * Otomatis membuat kode CP berikutnya berdasarkan Kurikulum & Mapel
+     * Format standar: CP-[KODE_MAPEL]-[01, 02, ...]
+     */
+    public function generateNextCPCode($kurikulumId, $mapelId) {
+        $kurikulumId = (int)$kurikulumId;
+        $mapelId = (int)$mapelId;
+
+        $mapelCode = 'MAPEL';
+        if ($mapelId > 0) {
+            $stmtM = $this->db->prepare("SELECT kode_mapel, nama_mapel FROM mata_pelajaran WHERE id = ?");
+            $stmtM->execute([$mapelId]);
+            $mapel = $stmtM->fetch(PDO::FETCH_ASSOC);
+
+            if ($mapel && !empty($mapel['kode_mapel'])) {
+                $mapelCode = strtoupper(preg_replace('/[^a-zA-Z0-9]/', '', $mapel['kode_mapel']));
+            } elseif ($mapel && !empty($mapel['nama_mapel'])) {
+                $words = preg_split('/\s+/', trim($mapel['nama_mapel']));
+                $initials = '';
+                foreach ($words as $w) {
+                    if (!empty($w)) $initials .= strtoupper($w[0]);
+                }
+                $mapelCode = !empty($initials) ? substr($initials, 0, 4) : 'CP';
+            }
+        }
+
+        $stmtCp = $this->db->prepare("
+            SELECT kode_cp FROM capaian_pembelajaran
+            WHERE kurikulum_id = ? AND mapel_id = ?
+        ");
+        $stmtCp->execute([$kurikulumId, $mapelId]);
+        $existingCodes = $stmtCp->fetchAll(PDO::FETCH_COLUMN);
+
+        $maxNum = 0;
+        foreach ($existingCodes as $c) {
+            if (preg_match('/(\d+)$/', $c, $m)) {
+                $num = (int)$m[1];
+                if ($num > $maxNum) $maxNum = $num;
+            }
+        }
+
+        $nextNum = $maxNum + 1;
+        $formattedNum = str_pad($nextNum, 2, '0', STR_PAD_LEFT);
+        return "CP-{$mapelCode}-{$formattedNum}";
+    }
+
+    /**
+     * Otomatis membuat kode TP berikutnya berdasarkan Induk CP
+     * Format standar: TP-[NUM_CP].[SUB_INDEX], misal TP-01.1, TP-01.2
+     */
+    public function generateNextTPCode($cpId) {
+        $cpId = (int)$cpId;
+        if ($cpId <= 0) return 'TP-01.1';
+
+        $stmtCp = $this->db->prepare("SELECT kode_cp FROM capaian_pembelajaran WHERE id = ?");
+        $stmtCp->execute([$cpId]);
+        $cpCode = $stmtCp->fetchColumn() ?: 'CP-01';
+
+        $cpNumPrefix = '01';
+        if (preg_match('/(\d+)$/', $cpCode, $m)) {
+            $cpNumPrefix = str_pad((int)$m[1], 2, '0', STR_PAD_LEFT);
+        }
+
+        $stmtTp = $this->db->prepare("SELECT kode_tp FROM tujuan_pembelajaran WHERE cp_id = ?");
+        $stmtTp->execute([$cpId]);
+        $existingCodes = $stmtTp->fetchAll(PDO::FETCH_COLUMN);
+
+        $maxSub = 0;
+        foreach ($existingCodes as $t) {
+            if (preg_match('/\.(\d+)$/', $t, $m)) {
+                $sub = (int)$m[1];
+                if ($sub > $maxSub) $maxSub = $sub;
+            } elseif (preg_match('/(\d+)$/', $t, $m)) {
+                $sub = (int)$m[1];
+                if ($sub > $maxSub) $maxSub = $sub;
+            }
+        }
+
+        $nextSub = $maxSub + 1;
+        return "TP-{$cpNumPrefix}.{$nextSub}";
+    }
+
     public function addCP($data) {
         $kurikulumId = (int)($data['kurikulum_id'] ?? 0);
         $mapelId = (int)($data['mapel_id'] ?? 0);
@@ -596,8 +706,33 @@ class CurriculumModel extends BaseModel {
         $elemen = trim($data['elemen'] ?? '');
         $deskripsi = trim($data['deskripsi'] ?? '');
 
-        if ($kurikulumId <= 0 || $mapelId <= 0 || empty($kodeCp) || empty($deskripsi)) {
-            return ['status' => false, 'message' => 'Kurikulum, Mapel, Kode CP, dan Deskripsi Capaian wajib diisi.'];
+        if ($kurikulumId <= 0 || $mapelId <= 0) {
+            return ['status' => false, 'message' => 'Kurikulum dan Mata Pelajaran wajib dipilih.'];
+        }
+
+        // Auto-generate code if empty
+        if (empty($kodeCp)) {
+            $kodeCp = $this->generateNextCPCode($kurikulumId, $mapelId);
+        }
+
+        if (empty($deskripsi)) {
+            return ['status' => false, 'message' => 'Deskripsi Capaian Pembelajaran wajib diisi.'];
+        }
+
+        // Duplicate code check
+        $chk = $this->db->prepare("SELECT id FROM capaian_pembelajaran WHERE kurikulum_id = ? AND mapel_id = ? AND kode_cp = ?");
+        $chk->execute([$kurikulumId, $mapelId, $kodeCp]);
+        if ($chk->fetch()) {
+            return ['status' => false, 'message' => "Kode CP '{$kodeCp}' sudah terdaftar untuk mata pelajaran ini pada kurikulum yang dipilih."];
+        }
+
+        // Validate fase belongs to kurikulum
+        if ($faseId) {
+            $chkFase = $this->db->prepare("SELECT id FROM fase WHERE id = ? AND kurikulum_id = ?");
+            $chkFase->execute([$faseId, $kurikulumId]);
+            if (!$chkFase->fetch()) {
+                $faseId = null;
+            }
         }
 
         $stmt = $this->db->prepare("
@@ -605,7 +740,7 @@ class CurriculumModel extends BaseModel {
             VALUES (?, ?, ?, ?, ?, ?)
         ");
         $res = $stmt->execute([$kurikulumId, $mapelId, $faseId, $kodeCp, $elemen, $deskripsi]);
-        return ['status' => (bool)$res, 'message' => 'Capaian Pembelajaran (CP) berhasil ditambahkan.'];
+        return ['status' => (bool)$res, 'message' => "Capaian Pembelajaran (CP) '{$kodeCp}' berhasil ditambahkan."];
     }
 
     public function getCPById($id) {
@@ -629,19 +764,38 @@ class CurriculumModel extends BaseModel {
         $deskripsi = trim($data['deskripsi'] ?? '');
         $faseId = !empty($data['fase_id']) ? (int)$data['fase_id'] : null;
 
-        $updates = ["kode_cp = ?", "elemen = ?", "deskripsi = ?", "fase_id = ?"];
-        $params = [$kodeCp, $elemen, $deskripsi, $faseId];
-
-        if (!empty($data['kurikulum_id'])) {
-            $updates[] = "kurikulum_id = ?";
-            $params[] = (int)$data['kurikulum_id'];
-        }
-        if (!empty($data['mapel_id'])) {
-            $updates[] = "mapel_id = ?";
-            $params[] = (int)$data['mapel_id'];
+        if (empty($kodeCp) || empty($deskripsi)) {
+            return ['status' => false, 'message' => 'Kode CP dan Deskripsi Capaian Pembelajaran tidak boleh kosong.'];
         }
 
-        $params[] = $id;
+        $stmtCurrent = $this->db->prepare("SELECT kurikulum_id, mapel_id FROM capaian_pembelajaran WHERE id = ?");
+        $stmtCurrent->execute([$id]);
+        $current = $stmtCurrent->fetch(PDO::FETCH_ASSOC);
+        if (!$current) {
+            return ['status' => false, 'message' => 'Data Capaian Pembelajaran tidak ditemukan.'];
+        }
+
+        $targetKurId = !empty($data['kurikulum_id']) ? (int)$data['kurikulum_id'] : (int)$current['kurikulum_id'];
+        $targetMapelId = !empty($data['mapel_id']) ? (int)$data['mapel_id'] : (int)$current['mapel_id'];
+
+        $chk = $this->db->prepare("SELECT id FROM capaian_pembelajaran WHERE kurikulum_id = ? AND mapel_id = ? AND kode_cp = ? AND id != ?");
+        $chk->execute([$targetKurId, $targetMapelId, $kodeCp, $id]);
+        if ($chk->fetch()) {
+            return ['status' => false, 'message' => "Kode CP '{$kodeCp}' sudah terdaftar untuk mata pelajaran ini pada kurikulum tersebut."];
+        }
+
+        // Validate fase belongs to kurikulum
+        if ($faseId) {
+            $chkFase = $this->db->prepare("SELECT id FROM fase WHERE id = ? AND kurikulum_id = ?");
+            $chkFase->execute([$faseId, $targetKurId]);
+            if (!$chkFase->fetch()) {
+                $faseId = null;
+            }
+        }
+
+        $updates = ["kode_cp = ?", "elemen = ?", "deskripsi = ?", "fase_id = ?", "kurikulum_id = ?", "mapel_id = ?"];
+        $params = [$kodeCp, $elemen, $deskripsi, $faseId, $targetKurId, $targetMapelId, $id];
+
         $stmt = $this->db->prepare("UPDATE capaian_pembelajaran SET " . implode(', ', $updates) . " WHERE id = ?");
         $res = $stmt->execute($params);
         return ['status' => (bool)$res, 'message' => 'Capaian Pembelajaran (CP) berhasil diperbarui.'];
@@ -649,7 +803,8 @@ class CurriculumModel extends BaseModel {
 
     public function deleteCP($id) {
         $id = (int)$id;
-        // Clean up child TPs first to ensure database consistency
+        // Clean up references in asesmen and child TPs first to maintain database integrity
+        $this->db->prepare("UPDATE asesmen SET cp_id = NULL, tp_id = NULL WHERE cp_id = ?")->execute([$id]);
         $this->db->prepare("DELETE FROM tujuan_pembelajaran WHERE cp_id = ?")->execute([$id]);
         $stmt = $this->db->prepare("DELETE FROM capaian_pembelajaran WHERE id = ?");
         $res = $stmt->execute([$id]);
@@ -695,8 +850,23 @@ class CurriculumModel extends BaseModel {
         $materiPokok = trim($data['materi_pokok'] ?? '');
         $deskripsi = trim($data['deskripsi'] ?? '');
 
-        if ($cpId <= 0 || empty($kodeTp) || empty($deskripsi)) {
-            return ['status' => false, 'message' => 'Induk CP, Kode TP, dan Deskripsi Tujuan Pembelajaran wajib diisi.'];
+        if ($cpId <= 0) {
+            return ['status' => false, 'message' => 'Induk Capaian Pembelajaran (CP) wajib dipilih.'];
+        }
+
+        // Auto-generate code if empty
+        if (empty($kodeTp)) {
+            $kodeTp = $this->generateNextTPCode($cpId);
+        }
+
+        if (empty($deskripsi)) {
+            return ['status' => false, 'message' => 'Deskripsi Tujuan Pembelajaran wajib diisi.'];
+        }
+
+        $chk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ?");
+        $chk->execute([$cpId, $kodeTp]);
+        if ($chk->fetch()) {
+            return ['status' => false, 'message' => "Kode TP '{$kodeTp}' sudah ada untuk Capaian Pembelajaran ini."];
         }
 
         $stmt = $this->db->prepare("
@@ -704,7 +874,7 @@ class CurriculumModel extends BaseModel {
             VALUES (?, ?, ?, ?)
         ");
         $res = $stmt->execute([$cpId, $kodeTp, $materiPokok, $deskripsi]);
-        return ['status' => (bool)$res, 'message' => 'Tujuan Pembelajaran (TP) berhasil ditambahkan.'];
+        return ['status' => (bool)$res, 'message' => "Tujuan Pembelajaran (TP) '{$kodeTp}' berhasil ditambahkan."];
     }
 
     public function updateTP($id, $data) {
@@ -713,23 +883,35 @@ class CurriculumModel extends BaseModel {
         $materiPokok = trim($data['materi_pokok'] ?? '');
         $deskripsi = trim($data['deskripsi'] ?? '');
 
-        $updates = ["kode_tp = ?", "materi_pokok = ?", "deskripsi = ?"];
-        $params = [$kodeTp, $materiPokok, $deskripsi];
-
-        if (!empty($data['cp_id'])) {
-            $updates[] = "cp_id = ?";
-            $params[] = (int)$data['cp_id'];
+        if (empty($kodeTp) || empty($deskripsi)) {
+            return ['status' => false, 'message' => 'Kode TP dan Deskripsi Tujuan Pembelajaran tidak boleh kosong.'];
         }
 
-        $params[] = $id;
-        $stmt = $this->db->prepare("UPDATE tujuan_pembelajaran SET " . implode(', ', $updates) . " WHERE id = ?");
-        $res = $stmt->execute($params);
+        $stmtCurrent = $this->db->prepare("SELECT cp_id FROM tujuan_pembelajaran WHERE id = ?");
+        $stmtCurrent->execute([$id]);
+        $currentCpId = $stmtCurrent->fetchColumn();
+        if (!$currentCpId) {
+            return ['status' => false, 'message' => 'Data Tujuan Pembelajaran tidak ditemukan.'];
+        }
+
+        $targetCpId = !empty($data['cp_id']) ? (int)$data['cp_id'] : (int)$currentCpId;
+
+        $chk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ? AND id != ?");
+        $chk->execute([$targetCpId, $kodeTp, $id]);
+        if ($chk->fetch()) {
+            return ['status' => false, 'message' => "Kode TP '{$kodeTp}' sudah ada untuk Capaian Pembelajaran ini."];
+        }
+
+        $stmt = $this->db->prepare("UPDATE tujuan_pembelajaran SET cp_id = ?, kode_tp = ?, materi_pokok = ?, deskripsi = ? WHERE id = ?");
+        $res = $stmt->execute([$targetCpId, $kodeTp, $materiPokok, $deskripsi, $id]);
         return ['status' => (bool)$res, 'message' => 'Tujuan Pembelajaran (TP) berhasil diperbarui.'];
     }
 
     public function deleteTP($id) {
+        $id = (int)$id;
+        $this->db->prepare("UPDATE asesmen SET tp_id = NULL WHERE tp_id = ?")->execute([$id]);
         $stmt = $this->db->prepare("DELETE FROM tujuan_pembelajaran WHERE id = ?");
-        $res = $stmt->execute([(int)$id]);
+        $res = $stmt->execute([$id]);
         return ['status' => (bool)$res, 'message' => 'Tujuan Pembelajaran berhasil dihapus.'];
     }
 

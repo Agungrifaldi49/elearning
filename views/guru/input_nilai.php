@@ -1,8 +1,31 @@
 <?php require_once ROOT_PATH . 'models/NilaiModel.php'; ?>
+<?php require_once ROOT_PATH . 'models/CurriculumModel.php'; ?>
 <?php
 $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
 $isReadOnly = in_array($userRole, ['kepala sekolah', 'kepsek']);
 $formTargetUrl = in_array($userRole, ['administrator', 'admin']) ? 'admin/inputNilai' : 'guru/inputNilai';
+
+// Ambil konfigurasi kurikulum & bobot penilaian aktif rombel kelas terpilih
+$currModel = new CurriculumModel();
+$kurInfo = $currModel->getActiveKurikulumForRombel((int)$selectedKelasId);
+$kompList = $currModel->getKomponenPenilaian($kurInfo['kurikulum_id'] ?? 1);
+
+$wTugas = 20.0; $wQuiz = 20.0; $wUts = 30.0; $wUas = 30.0;
+$labelTugas = 'Tugas'; $labelQuiz = 'Quiz'; $labelUts = 'UTS'; $labelUas = 'UAS';
+foreach ($kompList as $kp) {
+    $code = strtolower(trim($kp['kode_komponen']));
+    $b = (float)$kp['bobot_persen'];
+    $n = trim($kp['nama_komponen']);
+    if (strpos($code, 'tugas') !== false || strpos($code, 'formatif') !== false || strpos($code, 'tp') !== false) {
+        $wTugas = $b; $labelTugas = $n;
+    } elseif (strpos($code, 'quiz') !== false || strpos($code, 'kuis') !== false || strpos($code, 'teori') !== false || strpos($code, 'sumatif_lm') !== false) {
+        $wQuiz = $b; $labelQuiz = $n;
+    } elseif (strpos($code, 'uts') !== false || strpos($code, 'sts') !== false || strpos($code, 'praktik') !== false) {
+        $wUts = $b; $labelUts = $n;
+    } elseif (strpos($code, 'uas') !== false || strpos($code, 'sas') !== false || strpos($code, 'sumatif_akhir') !== false) {
+        $wUas = $b; $labelUas = $n;
+    }
+}
 ?>
 <?php require_once ROOT_PATH . 'views/layouts/header.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
@@ -80,7 +103,8 @@ $formTargetUrl = in_array($userRole, ['administrator', 'admin']) ? 'admin/inputN
                 </div>
             </div>
             <div class="text-muted small">
-                Formula: <span class="badge bg-white text-dark border shadow-sm">Tugas 20% + Quiz 20% + UTS 30% + UAS 30%</span>
+                <span class="badge bg-primary-subtle text-primary border me-1"><i class="bi bi-diagram-3 me-1"></i>Kurikulum: <?= htmlspecialchars($kurInfo['nama_kurikulum']) ?> (<?= htmlspecialchars($kurInfo['nama_fase'] ?? '-') ?>)</span>
+                Formula: <span class="badge bg-white text-dark border shadow-sm"><?= htmlspecialchars($labelTugas) ?> <?= $wTugas ?>% + <?= htmlspecialchars($labelQuiz) ?> <?= $wQuiz ?>% + <?= htmlspecialchars($labelUts) ?> <?= $wUts ?>% + <?= htmlspecialchars($labelUas) ?> <?= $wUas ?>%</span>
             </div>
         </div>
     <?php endif; ?>
@@ -97,10 +121,10 @@ $formTargetUrl = in_array($userRole, ['administrator', 'admin']) ? 'admin/inputN
                         <tr>
                             <th style="width:40px;">No</th>
                             <th>NIS & Nama Siswa</th>
-                            <th style="width:120px;" class="text-center">Tugas (20%)</th>
-                            <th style="width:120px;" class="text-center">Quiz (20%)</th>
-                            <th style="width:120px;" class="text-center">UTS (30%)</th>
-                            <th style="width:120px;" class="text-center">UAS (30%)</th>
+                            <th style="width:120px;" class="text-center"><?= htmlspecialchars($labelTugas) ?> (<?= $wTugas ?>%)</th>
+                            <th style="width:120px;" class="text-center"><?= htmlspecialchars($labelQuiz) ?> (<?= $wQuiz ?>%)</th>
+                            <th style="width:120px;" class="text-center"><?= htmlspecialchars($labelUts) ?> (<?= $wUts ?>%)</th>
+                            <th style="width:120px;" class="text-center"><?= htmlspecialchars($labelUas) ?> (<?= $wUas ?>%)</th>
                             <th style="width:110px;" class="text-center">Nilai Akhir</th>
                             <th style="width:130px;" class="text-center">Predikat</th>
                             <?php if (!$isReadOnly): ?>
@@ -121,11 +145,16 @@ $formTargetUrl = in_array($userRole, ['administrator', 'admin']) ? 'admin/inputN
                                 $nUts   = min(100.0, max(0.0, (float)($nData['nilai_uts'] ?? 0)));
                                 $nUas   = min(100.0, max(0.0, (float)($nData['nilai_uas'] ?? 0)));
 
+                                $wTRow = $wTugas / 100.0;
+                                $wQRow = $wQuiz / 100.0;
+                                $wURow = $wUts / 100.0;
+                                $wARow = $wUas / 100.0;
+
                                 $weightsRow = [];
-                                if ($nTugas > 0) $weightsRow[] = ['val' => $nTugas, 'w' => 0.20];
-                                if ($nQuiz > 0)  $weightsRow[] = ['val' => $nQuiz,  'w' => 0.20];
-                                if ($nUts > 0)   $weightsRow[] = ['val' => $nUts,   'w' => 0.30];
-                                if ($nUas > 0)   $weightsRow[] = ['val' => $nUas,   'w' => 0.30];
+                                if ($nTugas > 0) $weightsRow[] = ['val' => $nTugas, 'w' => $wTRow];
+                                if ($nQuiz > 0)  $weightsRow[] = ['val' => $nQuiz,  'w' => $wQRow];
+                                if ($nUts > 0)   $weightsRow[] = ['val' => $nUts,   'w' => $wURow];
+                                if ($nUas > 0)   $weightsRow[] = ['val' => $nUas,   'w' => $wARow];
 
                                 if (!empty($weightsRow)) {
                                     $sumValR = 0; $sumWR = 0;
@@ -135,7 +164,7 @@ $formTargetUrl = in_array($userRole, ['administrator', 'admin']) ? 'admin/inputN
                                     }
                                     $nAkhir = ($sumWR > 0) ? round($sumValR / $sumWR, 2) : 0.00;
                                 } else {
-                                    $nAkhir = ($nTugas*0.2) + ($nQuiz*0.2) + ($nUts*0.3) + ($nUas*0.3);
+                                    $nAkhir = ($nTugas * $wTRow) + ($nQuiz * $wQRow) + ($nUts * $wURow) + ($nUas * $wARow);
                                 }
                                 $nAkhir = min(100.0, max(0.0, (float)$nAkhir));
 
@@ -341,13 +370,18 @@ function calcRow(siswaId) {
     if (uts > 100) { uts = 100; inputs[2].value = 100; }
     if (uas > 100) { uas = 100; inputs[3].value = 100; }
 
-    let sumVal = 0, sumW = 0;
-    if (t > 0)   { sumVal += (t * 0.20);   sumW += 0.20; }
-    if (q > 0)   { sumVal += (q * 0.20);   sumW += 0.20; }
-    if (uts > 0) { sumVal += (uts * 0.30); sumW += 0.30; }
-    if (uas > 0) { sumVal += (uas * 0.30); sumW += 0.30; }
+    const wT = <?= (float)$wTugas / 100.0 ?>;
+    const wQ = <?= (float)$wQuiz / 100.0 ?>;
+    const wU = <?= (float)$wUts / 100.0 ?>;
+    const wA = <?= (float)$wUas / 100.0 ?>;
 
-    let akhir = sumW > 0 ? (sumVal / sumW) : ((t * 0.2) + (q * 0.2) + (uts * 0.3) + (uas * 0.3));
+    let sumVal = 0, sumW = 0;
+    if (t > 0)   { sumVal += (t * wT); sumW += wT; }
+    if (q > 0)   { sumVal += (q * wQ); sumW += wQ; }
+    if (uts > 0) { sumVal += (uts * wU); sumW += wU; }
+    if (uas > 0) { sumVal += (uas * wA); sumW += wA; }
+
+    let akhir = sumW > 0 ? (sumVal / sumW) : ((t * wT) + (q * wQ) + (uts * wU) + (uas * wA));
     if (akhir > 100) akhir = 100;
 
     const valElem = document.getElementById('valAkhir' + siswaId);

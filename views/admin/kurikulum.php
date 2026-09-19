@@ -99,33 +99,33 @@
     <!-- Navigation Pills Tabs -->
     <div class="card-custom p-2 mb-4 shadow-sm">
         <ul class="nav nav-pills nav-fill gap-2" id="kurikulumTab" role="tablist">
-            <li class="nav-item">
-                <button class="nav-link <?= $activeTab === 'kurikulum' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabKurikulum">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link <?= $activeTab === 'kurikulum' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabKurikulum" role="tab" aria-selected="<?= $activeTab === 'kurikulum' ? 'true' : 'false' ?>">
                     <i class="bi bi-mortarboard-fill me-1.5"></i> 1. Master Kurikulum
                 </button>
             </li>
-            <li class="nav-item">
-                <button class="nav-link <?= $activeTab === 'fase' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabFase">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link <?= $activeTab === 'fase' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabFase" role="tab" aria-selected="<?= $activeTab === 'fase' ? 'true' : 'false' ?>">
                     <i class="bi bi-layers-fill me-1.5"></i> 2. Fase / Tingkat
                 </button>
             </li>
-            <li class="nav-item">
-                <button class="nav-link <?= $activeTab === 'rombel' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabRombel">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link <?= $activeTab === 'rombel' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabRombel" role="tab" aria-selected="<?= $activeTab === 'rombel' ? 'true' : 'false' ?>">
                     <i class="bi bi-building me-1.5"></i> 3. Kurikulum Rombel
                 </button>
             </li>
-            <li class="nav-item">
-                <button class="nav-link <?= $activeTab === 'struktur' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabStruktur">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link <?= $activeTab === 'struktur' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabStruktur" role="tab" aria-selected="<?= $activeTab === 'struktur' ? 'true' : 'false' ?>">
                     <i class="bi bi-journal-text me-1.5"></i> 4. Struktur Mapel
                 </button>
             </li>
-            <li class="nav-item">
-                <button class="nav-link <?= $activeTab === 'cptp' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabCPTP">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link <?= $activeTab === 'cptp' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabCPTP" role="tab" aria-selected="<?= $activeTab === 'cptp' ? 'true' : 'false' ?>">
                     <i class="bi bi-card-checklist me-1.5"></i> 5. CP & TP
                 </button>
             </li>
-            <li class="nav-item">
-                <button class="nav-link <?= $activeTab === 'komponen' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabKomponen">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link <?= $activeTab === 'komponen' ? 'active' : '' ?> rounded-3 fw-semibold py-2.5" data-bs-toggle="tab" data-bs-target="#tabKomponen" role="tab" aria-selected="<?= $activeTab === 'komponen' ? 'true' : 'false' ?>">
                     <i class="bi bi-sliders me-1.5"></i> 6. Bobot Penilaian
                 </button>
             </li>
@@ -439,7 +439,12 @@
                                     <td><?= $i + 1 ?></td>
                                     <td><code><?= htmlspecialchars($sm['kode_mapel']) ?></code></td>
                                     <td class="fw-bold text-dark"><?= htmlspecialchars($sm['nama_mapel']) ?></td>
-                                    <td><span class="badge bg-secondary-subtle text-dark border"><?= htmlspecialchars($sm['kelompok_mapel']) ?></span></td>
+                                    <td>
+                                        <span class="badge bg-secondary-subtle text-dark border"><?= htmlspecialchars($sm['kelompok_mapel']) ?></span>
+                                        <?php if (!empty($sm['nama_jurusan'])): ?>
+                                            <span class="badge bg-primary-subtle text-primary border mt-1 d-block"><i class="bi bi-mortarboard me-1"></i><?= htmlspecialchars($sm['nama_jurusan']) ?></span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?= htmlspecialchars($sm['nama_fase'] ?? 'Semua Fase') ?></td>
                                     <td><span class="badge bg-primary"><?= htmlspecialchars($sm['tingkat'] ?: 'Semua') ?></span></td>
                                     <td><?= $sm['alokasi_jp'] ?> JP / Minggu</td>
@@ -452,6 +457,7 @@
                                                 data-mapel-nama="<?= htmlspecialchars($sm['nama_mapel']) ?>"
                                                 data-mapel-kode="<?= htmlspecialchars($sm['kode_mapel']) ?>"
                                                 data-fase-id="<?= $sm['fase_id'] ?? '' ?>"
+                                                data-jurusan-id="<?= $sm['jurusan_id'] ?? '' ?>"
                                                 data-tingkat="<?= htmlspecialchars($sm['tingkat'] ?? 'X') ?>"
                                                 data-kelompok="<?= htmlspecialchars($sm['kelompok_mapel'] ?? 'Kejuruan') ?>"
                                                 data-jp="<?= $sm['alokasi_jp'] ?>"
@@ -975,6 +981,16 @@
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Jurusan / Konsentrasi Keahlian (Opsional)</label>
+                        <select name="jurusan_id" class="form-select">
+                            <option value="">-- Berlaku Semua Jurusan / Umum --</option>
+                            <?php foreach ($jurusanList as $jur): ?>
+                                <option value="<?= $jur['id'] ?>"><?= htmlspecialchars($jur['nama_jurusan']) ?> (<?= htmlspecialchars($jur['kode_jurusan'] ?? '') ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">Pilih jika mapel ini dikhususkan untuk jurusan/kejuruan tertentu.</small>
+                    </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label small fw-bold">Kelompok Mapel</label>
@@ -1042,7 +1058,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Pilih Mata Pelajaran</label>
-                        <select name="mapel_id" class="form-select" required>
+                        <select name="mapel_id" id="add_cp_mapel_id" class="form-select" required>
                             <?php foreach ($mapelList as $mp): ?>
                                 <option value="<?= $mp['id'] ?>" <?= ($filterCpMapelId == $mp['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($mp['nama_mapel']) ?> (<?= htmlspecialchars($mp['kode_mapel']) ?>)
@@ -1063,8 +1079,12 @@
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label small fw-bold">Kode CP (contoh: CP-RPL-01)</label>
-                            <input type="text" name="kode_cp" class="form-control font-monospace" placeholder="CP-RPL-01" required>
+                            <label class="form-label small fw-bold">Kode CP (Otomatis)</label>
+                            <div class="input-group">
+                                <input type="text" name="kode_cp" id="add_cp_kode" class="form-control font-monospace" placeholder="Otomatis..." value="">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btn_regen_cp_code" title="Generate Ulang Kode"><i class="bi bi-arrow-clockwise"></i></button>
+                            </div>
+                            <small class="text-muted" style="font-size:0.75rem;">Dibuat otomatis, dapat disesuaikan manual.</small>
                         </div>
                         <div class="col-6">
                             <label class="form-label small fw-bold">Elemen / Ranah</label>
@@ -1172,15 +1192,29 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Pilih Induk Capaian Pembelajaran (CP)</label>
                         <select name="cp_id" id="add_tp_cp_id" class="form-select" required>
-                            <?php foreach (($allCpForDropdown ?? $cpList) as $c): ?>
-                                <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_kurikulum'] ?? '') ?> | <?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel']) ?> - <?= htmlspecialchars(substr($c['deskripsi'], 0, 45)) ?>...</option>
+                            <?php 
+                            $groupedCpAdd = [];
+                            foreach (($allCpForDropdown ?? $cpList) as $c) {
+                                $grpKey = ($c['nama_kurikulum'] ?? 'Kurikulum') . ' — ' . ($c['nama_mapel'] ?? 'Mapel');
+                                $groupedCpAdd[$grpKey][] = $c;
+                            }
+                            foreach ($groupedCpAdd as $grpName => $cList): ?>
+                                <optgroup label="<?= htmlspecialchars($grpName) ?>">
+                                    <?php foreach ($cList as $c): ?>
+                                        <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 50, '...')) ?></option>
+                                    <?php endforeach; ?>
+                                </optgroup>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label small fw-bold">Kode TP (misal: TP-01.1)</label>
-                            <input type="text" name="kode_tp" class="form-control font-monospace" placeholder="TP-01.1" required>
+                            <label class="form-label small fw-bold">Kode TP (Otomatis)</label>
+                            <div class="input-group">
+                                <input type="text" name="kode_tp" id="add_tp_kode" class="form-control font-monospace" placeholder="Otomatis..." value="">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btn_regen_tp_code" title="Generate Ulang Kode"><i class="bi bi-arrow-clockwise"></i></button>
+                            </div>
+                            <small class="text-muted" style="font-size:0.75rem;">Dibuat otomatis, dapat disesuaikan manual.</small>
                         </div>
                         <div class="col-6">
                             <label class="form-label small fw-bold">Materi Pokok</label>
@@ -1221,8 +1255,12 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Pilih Induk Capaian Pembelajaran (CP)</label>
                         <select name="cp_id" id="edit_tp_cp_id" class="form-select" required>
-                            <?php foreach (($allCpForDropdown ?? $cpList) as $c): ?>
-                                <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_kurikulum'] ?? '') ?> | <?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel']) ?> - <?= htmlspecialchars(substr($c['deskripsi'], 0, 45)) ?>...</option>
+                            <?php foreach ($groupedCpAdd as $grpName => $cList): ?>
+                                <optgroup label="<?= htmlspecialchars($grpName) ?>">
+                                    <?php foreach ($cList as $c): ?>
+                                        <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 50, '...')) ?></option>
+                                    <?php endforeach; ?>
+                                </optgroup>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -1437,6 +1475,15 @@
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Jurusan / Konsentrasi Keahlian (Opsional)</label>
+                        <select name="jurusan_id" id="edit_struktur_jurusan_id" class="form-select">
+                            <option value="">-- Berlaku Semua Jurusan / Umum --</option>
+                            <?php foreach ($jurusanList as $jur): ?>
+                                <option value="<?= $jur['id'] ?>"><?= htmlspecialchars($jur['nama_jurusan']) ?> (<?= htmlspecialchars($jur['kode_jurusan'] ?? '') ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label small fw-bold">Kelompok Mapel</label>
@@ -1601,6 +1648,31 @@ function filterFaseDropdown(kurikulumSelectId, faseSelectId) {
     }
 }
 
+// Next Code Maps for Auto-generation
+const nextCpCodeMap = <?= json_encode($nextCpCodeMap ?? []) ?>;
+const nextTpCodeMap = <?= json_encode($nextTpCodeMap ?? []) ?>;
+
+function updateAutoCpCode() {
+    const kurId = document.getElementById('add_cp_kurikulum_id')?.value;
+    const mapelId = document.getElementById('add_cp_mapel_id')?.value;
+    const kodeInp = document.getElementById('add_cp_kode');
+    if (kodeInp && kurId && mapelId) {
+        if (nextCpCodeMap[kurId] && nextCpCodeMap[kurId][mapelId]) {
+            kodeInp.value = nextCpCodeMap[kurId][mapelId];
+        }
+    }
+}
+
+function updateAutoTpCode() {
+    const cpId = document.getElementById('add_tp_cp_id')?.value;
+    const kodeInp = document.getElementById('add_tp_kode');
+    if (kodeInp && cpId) {
+        if (nextTpCodeMap[cpId]) {
+            kodeInp.value = nextTpCodeMap[cpId];
+        }
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     recalcTotalBobot();
 
@@ -1608,7 +1680,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.jQuery) {
         jQuery('button[data-bs-toggle="tab"]').on('shown.bs.tab', function (e) {
             if (jQuery.fn.dataTable) {
-                jQuery.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+                const api = jQuery.fn.dataTable.tables({ visible: true, api: true });
+                api.columns.adjust();
+                if (api.responsive && typeof api.responsive.recalc === 'function') {
+                    try { api.responsive.recalc(); } catch (err) {}
+                }
             }
 
             // Sync active tab to URL parameter without reloading
@@ -1632,8 +1708,52 @@ document.addEventListener('DOMContentLoaded', () => {
     // Dynamic Fase filtering in modals
     const kurAddCp = document.getElementById('add_cp_kurikulum_id');
     if (kurAddCp) {
-        kurAddCp.addEventListener('change', () => filterFaseDropdown('add_cp_kurikulum_id', 'add_cp_fase_id'));
+        kurAddCp.addEventListener('change', () => {
+            filterFaseDropdown('add_cp_kurikulum_id', 'add_cp_fase_id');
+            updateAutoCpCode();
+        });
         filterFaseDropdown('add_cp_kurikulum_id', 'add_cp_fase_id');
+    }
+
+    const mapelAddCp = document.getElementById('add_cp_mapel_id');
+    if (mapelAddCp) {
+        mapelAddCp.addEventListener('change', updateAutoCpCode);
+    }
+
+    const btnRegenCp = document.getElementById('btn_regen_cp_code');
+    if (btnRegenCp) {
+        btnRegenCp.addEventListener('click', updateAutoCpCode);
+    }
+
+    const modalAddCpEl = document.getElementById('modalAddCP');
+    if (modalAddCpEl) {
+        modalAddCpEl.addEventListener('shown.bs.modal', () => {
+            const kodeInp = document.getElementById('add_cp_kode');
+            if (kodeInp && !kodeInp.value) {
+                updateAutoCpCode();
+            }
+        });
+    }
+
+    // TP Auto Code Listeners
+    const selectAddTpCp = document.getElementById('add_tp_cp_id');
+    if (selectAddTpCp) {
+        selectAddTpCp.addEventListener('change', updateAutoTpCode);
+    }
+
+    const btnRegenTp = document.getElementById('btn_regen_tp_code');
+    if (btnRegenTp) {
+        btnRegenTp.addEventListener('click', updateAutoTpCode);
+    }
+
+    const modalAddTpEl = document.getElementById('modalAddTP');
+    if (modalAddTpEl) {
+        modalAddTpEl.addEventListener('shown.bs.modal', () => {
+            const kodeInp = document.getElementById('add_tp_kode');
+            if (kodeInp && !kodeInp.value) {
+                updateAutoTpCode();
+            }
+        });
     }
 
     const kurEditCp = document.getElementById('edit_cp_kurikulum_id');
@@ -1711,6 +1831,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const selFase = document.getElementById('edit_struktur_fase_id');
             if (selFase) selFase.value = this.dataset.faseId || '';
 
+            const selJur = document.getElementById('edit_struktur_jurusan_id');
+            if (selJur) selJur.value = this.dataset.jurusanId || '';
+
             const selKel = document.getElementById('edit_struktur_kelompok');
             if (selKel && this.dataset.kelompok) selKel.value = this.dataset.kelompok;
 
@@ -1732,6 +1855,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const select = document.getElementById('add_tp_cp_id');
             if (select && cpId) {
                 select.value = cpId;
+                updateAutoTpCode();
             }
         });
     });
@@ -1769,6 +1893,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const selCp = document.getElementById('edit_tp_cp_id');
             if (selCp && this.dataset.cpId) selCp.value = this.dataset.cpId;
         });
+    });
+
+    // Form Bobot Penilaian submit validation
+    const formBobot = document.getElementById('formBobot');
+    if (formBobot) {
+        formBobot.addEventListener('submit', function(e) {
+            const inputs = document.querySelectorAll('.bobot-input');
+            let total = 0;
+            inputs.forEach(inp => { total += parseFloat(inp.value) || 0; });
+            if (Math.abs(total - 100.0) >= 0.1) {
+                e.preventDefault();
+                alert('Total akumulasi bobot harus tepat 100%! Saat ini total: ' + total.toFixed(1) + '%. Silakan sesuaikan bobot komponen.');
+                return false;
+            }
+        });
+    }
+
+    // Auto adjust datatables on window resize
+    window.addEventListener('resize', () => {
+        if (window.jQuery && jQuery.fn.dataTable) {
+            jQuery.fn.dataTable.tables({ visible: true, api: true }).columns.adjust();
+        }
     });
 });
 </script>
