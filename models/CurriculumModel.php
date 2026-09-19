@@ -10,6 +10,17 @@ class CurriculumModel extends BaseModel {
 
     public function __construct() {
         parent::__construct();
+        $this->ensureCurriculumTables();
+    }
+
+    public function ensureCurriculumTables() {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+
+        if (class_exists('Database')) {
+            Database::ensureCustomTables();
+        }
     }
 
     // =========================================================================
@@ -535,6 +546,20 @@ class CurriculumModel extends BaseModel {
         return ['status' => (bool)$res, 'message' => 'Capaian Pembelajaran (CP) berhasil ditambahkan.'];
     }
 
+    public function getCPById($id) {
+        $stmt = $this->db->prepare("
+            SELECT cp.*, kur.nama as nama_kurikulum, kur.kode as kode_kurikulum,
+                   mp.nama_mapel, mp.kode_mapel, f.nama as nama_fase, f.kode as kode_fase
+            FROM capaian_pembelajaran cp
+            JOIN kurikulum kur ON cp.kurikulum_id = kur.id
+            JOIN mata_pelajaran mp ON cp.mapel_id = mp.id
+            LEFT JOIN fase f ON cp.fase_id = f.id
+            WHERE cp.id = ?
+        ");
+        $stmt->execute([(int)$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function updateCP($id, $data) {
         $id = (int)$id;
         $kodeCp = strtoupper(trim($data['kode_cp'] ?? ''));
@@ -542,12 +567,21 @@ class CurriculumModel extends BaseModel {
         $deskripsi = trim($data['deskripsi'] ?? '');
         $faseId = !empty($data['fase_id']) ? (int)$data['fase_id'] : null;
 
-        $stmt = $this->db->prepare("
-            UPDATE capaian_pembelajaran
-            SET kode_cp = ?, elemen = ?, deskripsi = ?, fase_id = ?
-            WHERE id = ?
-        ");
-        $res = $stmt->execute([$kodeCp, $elemen, $deskripsi, $faseId, $id]);
+        $updates = ["kode_cp = ?", "elemen = ?", "deskripsi = ?", "fase_id = ?"];
+        $params = [$kodeCp, $elemen, $deskripsi, $faseId];
+
+        if (!empty($data['kurikulum_id'])) {
+            $updates[] = "kurikulum_id = ?";
+            $params[] = (int)$data['kurikulum_id'];
+        }
+        if (!empty($data['mapel_id'])) {
+            $updates[] = "mapel_id = ?";
+            $params[] = (int)$data['mapel_id'];
+        }
+
+        $params[] = $id;
+        $stmt = $this->db->prepare("UPDATE capaian_pembelajaran SET " . implode(', ', $updates) . " WHERE id = ?");
+        $res = $stmt->execute($params);
         return ['status' => (bool)$res, 'message' => 'Capaian Pembelajaran (CP) berhasil diperbarui.'];
     }
 
@@ -559,9 +593,10 @@ class CurriculumModel extends BaseModel {
 
     public function getTPList($cpId = null) {
         $sql = "
-            SELECT tp.*, cp.kode_cp, cp.elemen, mp.nama_mapel
+            SELECT tp.*, cp.kode_cp, cp.elemen, cp.kurikulum_id, cp.mapel_id, mp.nama_mapel, kur.kode as kode_kurikulum
             FROM tujuan_pembelajaran tp
             JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id
+            JOIN kurikulum kur ON cp.kurikulum_id = kur.id
             JOIN mata_pelajaran mp ON cp.mapel_id = mp.id
             WHERE 1=1
         ";
@@ -575,6 +610,18 @@ class CurriculumModel extends BaseModel {
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getTPById($id) {
+        $stmt = $this->db->prepare("
+            SELECT tp.*, cp.kode_cp, cp.elemen, cp.kurikulum_id, cp.mapel_id, mp.nama_mapel
+            FROM tujuan_pembelajaran tp
+            JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id
+            JOIN mata_pelajaran mp ON cp.mapel_id = mp.id
+            WHERE tp.id = ?
+        ");
+        $stmt->execute([(int)$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     public function addTP($data) {
@@ -601,12 +648,17 @@ class CurriculumModel extends BaseModel {
         $materiPokok = trim($data['materi_pokok'] ?? '');
         $deskripsi = trim($data['deskripsi'] ?? '');
 
-        $stmt = $this->db->prepare("
-            UPDATE tujuan_pembelajaran
-            SET kode_tp = ?, materi_pokok = ?, deskripsi = ?
-            WHERE id = ?
-        ");
-        $res = $stmt->execute([$kodeTp, $materiPokok, $deskripsi, $id]);
+        $updates = ["kode_tp = ?", "materi_pokok = ?", "deskripsi = ?"];
+        $params = [$kodeTp, $materiPokok, $deskripsi];
+
+        if (!empty($data['cp_id'])) {
+            $updates[] = "cp_id = ?";
+            $params[] = (int)$data['cp_id'];
+        }
+
+        $params[] = $id;
+        $stmt = $this->db->prepare("UPDATE tujuan_pembelajaran SET " . implode(', ', $updates) . " WHERE id = ?");
+        $res = $stmt->execute($params);
         return ['status' => (bool)$res, 'message' => 'Tujuan Pembelajaran (TP) berhasil diperbarui.'];
     }
 

@@ -1495,6 +1495,8 @@ class AdminController {
             } elseif ($action === 'update_cp') {
                 $id = (int)$_POST['id'];
                 $res = $currModel->updateCP($id, [
+                    'kurikulum_id' => !empty($_POST['kurikulum_id']) ? (int)$_POST['kurikulum_id'] : null,
+                    'mapel_id' => !empty($_POST['mapel_id']) ? (int)$_POST['mapel_id'] : null,
                     'kode_cp' => Security::sanitize($_POST['kode_cp']),
                     'elemen' => Security::sanitize($_POST['elemen'] ?? ''),
                     'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? ''),
@@ -1522,6 +1524,7 @@ class AdminController {
             } elseif ($action === 'update_tp') {
                 $id = (int)$_POST['id'];
                 $res = $currModel->updateTP($id, [
+                    'cp_id' => !empty($_POST['cp_id']) ? (int)$_POST['cp_id'] : null,
                     'kode_tp' => Security::sanitize($_POST['kode_tp']),
                     'materi_pokok' => Security::sanitize($_POST['materi_pokok'] ?? ''),
                     'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
@@ -1538,13 +1541,14 @@ class AdminController {
             } elseif ($action === 'save_komponen') {
                 $kurikulumId = (int)$_POST['kurikulum_id'];
                 $komponenArray = [];
-                $kodes = $_POST['kode_komponen'] ?? [];
-                $namas = $_POST['nama_komponen'] ?? [];
-                $bobots = $_POST['bobot_persen'] ?? [];
-                $descs = $_POST['deskripsi'] ?? [];
+                if (isset($_POST['kode_komponen']) && is_array($_POST['kode_komponen'])) {
+                    $kodes = $_POST['kode_komponen'];
+                    $namas = $_POST['nama_komponen'] ?? [];
+                    $bobots = $_POST['bobot_persen'] ?? [];
+                    $descs = $_POST['deskripsi'] ?? [];
 
-                for ($i = 0; $i < count($kodes); $i++) {
-                    if (!empty($kodes[$i])) {
+                    for ($i = 0; $i < count($kodes); $i++) {
+                        if (empty($kodes[$i])) continue;
                         $komponenArray[] = [
                             'kode_komponen' => $kodes[$i],
                             'nama_komponen' => $namas[$i] ?? $kodes[$i],
@@ -1559,7 +1563,15 @@ class AdminController {
                 else FlashHelper::setError($res['message']);
             }
 
-            header('Location: ' . BASE_URL . 'index.php?url=admin/kurikulum&tab=' . urlencode($redirectTab));
+            $extraParams = '';
+            if (!empty($_POST['filter_kurikulum_id'])) {
+                $extraParams .= '&filter_kurikulum_id=' . (int)$_POST['filter_kurikulum_id'];
+            }
+            if (!empty($_POST['filter_mapel_id'])) {
+                $extraParams .= '&filter_mapel_id=' . (int)$_POST['filter_mapel_id'];
+            }
+
+            header('Location: ' . BASE_URL . 'index.php?url=admin/kurikulum&tab=' . urlencode($redirectTab) . $extraParams);
             exit();
         }
 
@@ -1571,7 +1583,14 @@ class AdminController {
         $mapelList = $academicModel->getMapel();
         $jurusanList = $academicModel->getJurusan();
         $rombelKurikulumList = $currModel->getRombelKurikulum();
-        $cpList = $currModel->getCPList();
+
+        // Filters for CP & TP
+        $filterCpKurId = !empty($_GET['filter_kurikulum_id']) ? (int)$_GET['filter_kurikulum_id'] : null;
+        $filterCpMapelId = !empty($_GET['filter_mapel_id']) ? (int)$_GET['filter_mapel_id'] : null;
+        $filterCpFaseId = !empty($_GET['filter_fase_id']) ? (int)$_GET['filter_fase_id'] : null;
+
+        $cpList = $currModel->getCPList($filterCpKurId, $filterCpMapelId, $filterCpFaseId);
+        $allCpForDropdown = $filterCpKurId || $filterCpMapelId ? $currModel->getCPList() : $cpList;
         $tpList = $currModel->getTPList();
 
         // Selected curriculum for tabs (default to first/active)

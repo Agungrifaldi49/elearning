@@ -236,7 +236,199 @@ class Database {
                     INDEX idx_riwayat_siswa (siswa_id),
                     INDEX idx_riwayat_tgl (tanggal_bayar)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS kurikulum (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    kode VARCHAR(30) NOT NULL UNIQUE,
+                    nama VARCHAR(150) NOT NULL,
+                    tahun_mulai INT NOT NULL,
+                    tahun_selesai INT NULL,
+                    status ENUM('aktif', 'non-aktif', 'arsip') NOT NULL DEFAULT 'aktif',
+                    deskripsi TEXT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS fase (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    kurikulum_id INT NOT NULL,
+                    kode VARCHAR(30) NOT NULL,
+                    nama VARCHAR(100) NOT NULL,
+                    tingkat_kelas VARCHAR(50) NULL,
+                    keterangan TEXT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_fase_kur (kurikulum_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS rombel_kurikulum (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    rombel_id INT NOT NULL,
+                    tahun_ajaran_id INT NOT NULL,
+                    kurikulum_id INT NOT NULL,
+                    fase_id INT NULL,
+                    status ENUM('aktif', 'selesai', 'non-aktif') NOT NULL DEFAULT 'aktif',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_rk_rombel (rombel_id),
+                    INDEX idx_rk_ta (tahun_ajaran_id),
+                    INDEX idx_rk_kur (kurikulum_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS kurikulum_mapel (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    kurikulum_id INT NOT NULL,
+                    mapel_id INT NOT NULL,
+                    fase_id INT NULL,
+                    tingkat VARCHAR(20) NULL,
+                    jurusan_id INT NULL,
+                    kelompok_mapel VARCHAR(50) DEFAULT 'Kejuruan',
+                    alokasi_jp INT DEFAULT 2,
+                    kkm DECIMAL(5,2) DEFAULT 75.00,
+                    is_active TINYINT(1) DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_km_kur (kurikulum_id),
+                    INDEX idx_km_mapel (mapel_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS capaian_pembelajaran (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    kurikulum_id INT NOT NULL,
+                    mapel_id INT NOT NULL,
+                    fase_id INT NULL,
+                    kode_cp VARCHAR(50) NOT NULL,
+                    elemen VARCHAR(150) NULL,
+                    deskripsi TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_cp_kur (kurikulum_id),
+                    INDEX idx_cp_mapel (mapel_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS tujuan_pembelajaran (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    cp_id INT NOT NULL,
+                    kode_tp VARCHAR(50) NOT NULL,
+                    materi_pokok VARCHAR(255) NULL,
+                    deskripsi TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_tp_cp (cp_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS komponen_penilaian (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    kurikulum_id INT NOT NULL,
+                    nama_komponen VARCHAR(100) NOT NULL,
+                    kode_komponen VARCHAR(50) NOT NULL,
+                    bobot_persen DECIMAL(5,2) NOT NULL DEFAULT 25.00,
+                    is_active TINYINT(1) DEFAULT 1,
+                    deskripsi VARCHAR(255) NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_kp_kur (kurikulum_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS asesmen (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    tahun_ajaran_id INT NOT NULL,
+                    semester VARCHAR(20) NOT NULL DEFAULT 'Ganjil',
+                    rombel_id INT NOT NULL,
+                    mapel_id INT NOT NULL,
+                    kurikulum_id INT NOT NULL,
+                    guru_id INT NOT NULL,
+                    cp_id INT NULL,
+                    tp_id INT NULL,
+                    jenis_asesmen VARCHAR(50) NOT NULL DEFAULT 'formatif',
+                    nama_asesmen VARCHAR(150) NOT NULL,
+                    tanggal DATE NOT NULL,
+                    nilai_maksimum DECIMAL(5,2) DEFAULT 100.00,
+                    bobot DECIMAL(5,2) DEFAULT 1.00,
+                    keterangan TEXT NULL,
+                    ref_tugas_id INT NULL,
+                    ref_quiz_id INT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_asm_ta (tahun_ajaran_id),
+                    INDEX idx_asm_rombel (rombel_id),
+                    INDEX idx_asm_mapel (mapel_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS nilai_asesmen_siswa (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    asesmen_id INT NOT NULL,
+                    siswa_id INT NOT NULL,
+                    nilai DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+                    catatan TEXT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_nas_asm (asesmen_id),
+                    INDEX idx_nas_siswa (siswa_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS rapor_siswa (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    siswa_id INT NOT NULL,
+                    tahun_ajaran_id INT NOT NULL,
+                    semester VARCHAR(20) NOT NULL DEFAULT 'Ganjil',
+                    rombel_id INT NOT NULL,
+                    kurikulum_id INT NOT NULL,
+                    fase_id INT NULL,
+                    snapshot_kurikulum_nama VARCHAR(150) NOT NULL,
+                    snapshot_kurikulum_kode VARCHAR(30) NOT NULL,
+                    snapshot_fase_kode VARCHAR(30) NULL,
+                    snapshot_fase_nama VARCHAR(100) NULL,
+                    status_kenaikan VARCHAR(50) NULL,
+                    catatan_akademik TEXT NULL,
+                    catatan_wali_kelas TEXT NULL,
+                    catatan_industri TEXT NULL,
+                    sakit INT DEFAULT 0,
+                    izin INT DEFAULT 0,
+                    tanpa_keterangan INT DEFAULT 0,
+                    tanggal_terbit DATE NULL,
+                    is_published TINYINT(1) DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_rs_siswa (siswa_id),
+                    INDEX idx_rs_ta (tahun_ajaran_id),
+                    INDEX idx_rs_rombel (rombel_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+                CREATE TABLE IF NOT EXISTS rapor_nilai_detail (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    rapor_siswa_id INT NOT NULL,
+                    mapel_id INT NOT NULL,
+                    snapshot_mapel_nama VARCHAR(150) NOT NULL,
+                    snapshot_kelompok VARCHAR(50) NULL,
+                    nilai_akhir DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+                    capaian_tertinggi TEXT NULL,
+                    capaian_terendah TEXT NULL,
+                    predikat VARCHAR(10) NULL,
+                    deskripsi_kemajuan TEXT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_rnd_rapor (rapor_siswa_id),
+                    INDEX idx_rnd_mapel (mapel_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
+
+            // Seed default curriculum if empty
+            $countKur = (int)self::$conn->query("SELECT COUNT(*) FROM kurikulum")->fetchColumn();
+            if ($countKur === 0) {
+                self::$conn->exec("
+                    INSERT INTO kurikulum (id, kode, nama, tahun_mulai, status, deskripsi)
+                    VALUES (1, 'KMDK', 'Kurikulum Merdeka SMK', 2024, 'aktif', 'Kurikulum Merdeka berorientasi kompetensi keahlian dan pembelajaran kontekstual.');
+
+                    INSERT IGNORE INTO fase (id, kurikulum_id, kode, nama, tingkat_kelas, keterangan)
+                    VALUES 
+                    (1, 1, 'E', 'Fase E (Kelas X)', 'X', 'Fase dasar kejuruan dan umum kelas X SMK'),
+                    (2, 1, 'F', 'Fase F (Kelas XI & XII)', 'XI,XII', 'Fase konsentrasi keahlian kejuruan kelas XI & XII SMK');
+
+                    INSERT IGNORE INTO komponen_penilaian (kurikulum_id, nama_komponen, kode_komponen, bobot_persen, is_active, deskripsi)
+                    VALUES 
+                    (1, 'Tugas Mandiri / Terstruktur', 'tugas', 20.00, 1, 'Penugasan portofolio KBM harian siswa.'),
+                    (1, 'Kuis / Formatif Harian', 'quiz', 20.00, 1, 'Evaluasi formatif pemahaman tujuan pembelajaran.'),
+                    (1, 'Sumatif Tengah Semester (STS)', 'uts', 30.00, 1, 'Ujian evaluasi capaian tengah semester.'),
+                    (1, 'Sumatif Akhir Semester (SAS)', 'uas', 30.00, 1, 'Ujian akhir evaluasi kompetensi semester.');
+                ");
+            }
         } catch (\Throwable $e) {
             // Silently ignore if table already exists or DDL restricted
         }

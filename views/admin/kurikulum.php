@@ -579,12 +579,12 @@
             <div class="card-custom p-4 shadow-sm mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                     <div>
-                        <h5 class="fw-bold mb-1">Capaian Pembelajaran (CP) & Tujuan Pembelajaran (TP)</h5>
-                        <p class="text-muted small mb-0">Setiap kurikulum memiliki CP/TP terisolasi sehingga perubahan kurikulum tidak akan menimpa materi masa lalu.</p>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-card-checklist text-primary me-2"></i>Capaian Pembelajaran (CP) & Tujuan Pembelajaran (TP)</h5>
+                        <p class="text-muted small mb-0">Setiap kurikulum memiliki CP/TP terisolasi sehingga pergantian kurikulum masa depan tidak akan mengganggu materi & rapor masa lalu.</p>
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-outline-primary btn-sm rounded-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalAddTP">
-                            <i class="bi bi-plus-circle me-1"></i> Tambah TP
+                            <i class="bi bi-plus-circle me-1"></i> Tambah TP Baru
                         </button>
                         <button class="btn btn-primary btn-sm rounded-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalAddCP">
                             <i class="bi bi-plus-circle me-1"></i> Tambah CP Baru
@@ -592,59 +592,159 @@
                     </div>
                 </div>
 
+                <!-- Filter Box for CP & TP -->
+                <div class="bg-light p-3 rounded-3 mb-4 border">
+                    <form method="GET" action="<?= BASE_URL ?>index.php" class="row g-2 align-items-center">
+                        <input type="hidden" name="url" value="admin/kurikulum">
+                        <input type="hidden" name="tab" value="cptp">
+                        <div class="col-12 col-md-3">
+                            <label class="small fw-bold text-muted mb-1">Filter Kurikulum:</label>
+                            <select name="filter_kurikulum_id" class="form-select form-select-sm">
+                                <option value="">-- Semua Kurikulum --</option>
+                                <?php foreach ($kurikulumList as $kur): ?>
+                                    <option value="<?= $kur['id'] ?>" <?= ($filterCpKurId == $kur['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="small fw-bold text-muted mb-1">Filter Mata Pelajaran:</label>
+                            <select name="filter_mapel_id" class="form-select form-select-sm">
+                                <option value="">-- Semua Mata Pelajaran --</option>
+                                <?php foreach ($mapelList as $mp): ?>
+                                    <option value="<?= $mp['id'] ?>" <?= ($filterCpMapelId == $mp['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($mp['nama_mapel']) ?> (<?= htmlspecialchars($mp['kode_mapel']) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="small fw-bold text-muted mb-1">Filter Fase:</label>
+                            <select name="filter_fase_id" class="form-select form-select-sm">
+                                <option value="">-- Semua Fase --</option>
+                                <?php foreach ($allFaseList as $f): ?>
+                                    <option value="<?= $f['id'] ?>" <?= ($filterCpFaseId == $f['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2 d-flex gap-1 align-items-end pt-md-3">
+                            <button type="submit" class="btn btn-sm btn-primary flex-fill fw-bold"><i class="bi bi-funnel me-1"></i> Filter</button>
+                            <?php if ($filterCpKurId || $filterCpMapelId || $filterCpFaseId): ?>
+                                <a href="<?= BASE_URL ?>index.php?url=admin/kurikulum&tab=cptp" class="btn btn-sm btn-outline-secondary" title="Reset Filter"><i class="bi bi-arrow-counterclockwise"></i></a>
+                            <?php endif; ?>
+                        </div>
+                    </form>
+                </div>
+
                 <div class="table-responsive">
                     <table class="table table-hover align-middle datatable">
                         <thead class="table-light">
                             <tr>
                                 <th style="width:50px;">No</th>
-                                <th>Kurikulum</th>
-                                <th>Mata Pelajaran</th>
-                                <th>Kode & Elemen CP</th>
+                                <th style="width:130px;">Kurikulum & Fase</th>
+                                <th style="width:170px;">Mata Pelajaran</th>
+                                <th style="width:160px;">Kode & Elemen CP</th>
                                 <th>Deskripsi Capaian Pembelajaran</th>
-                                <th>Tujuan Pembelajaran (TP) Terkait</th>
-                                <th class="text-center" style="width:120px;">Aksi</th>
+                                <th style="width:340px;">Tujuan Pembelajaran (TP) Terkait</th>
+                                <th class="text-center" style="width:110px;">Aksi CP</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (empty($cpList)): ?>
-                                <tr><td colspan="7" class="text-center py-4 text-muted">Belum ada CP yang didaftarkan.</td></tr>
+                                <tr><td colspan="7" class="text-center py-4 text-muted"><i class="bi bi-info-circle me-1"></i> Tidak ada data CP yang cocok dengan kriteria filter.</td></tr>
                             <?php else: ?>
                                 <?php foreach ($cpList as $i => $cp): 
                                     $childTps = array_filter($tpList, function($t) use ($cp) { return $t['cp_id'] == $cp['id']; });
                                 ?>
                                     <tr>
                                         <td><?= $i + 1 ?></td>
-                                        <td><span class="badge bg-primary-subtle text-primary border"><?= htmlspecialchars($cp['kode_kurikulum']) ?></span></td>
-                                        <td class="fw-bold"><?= htmlspecialchars($cp['nama_mapel']) ?></td>
                                         <td>
-                                            <strong class="font-monospace text-dark"><?= htmlspecialchars($cp['kode_cp']) ?></strong>
-                                            <?php if (!empty($cp['elemen'])): ?>
-                                                <small class="d-block text-muted">Elemen: <?= htmlspecialchars($cp['elemen']) ?></small>
+                                            <span class="badge bg-primary-subtle text-primary border mb-1 d-inline-block"><?= htmlspecialchars($cp['kode_kurikulum']) ?></span>
+                                            <?php if (!empty($cp['nama_fase'])): ?>
+                                                <span class="badge bg-secondary-subtle text-dark border d-block"><?= htmlspecialchars($cp['nama_fase']) ?></span>
                                             <?php endif; ?>
                                         </td>
-                                        <td><small class="text-dark"><?= htmlspecialchars($cp['deskripsi']) ?></small></td>
+                                        <td class="fw-bold text-dark"><?= htmlspecialchars($cp['nama_mapel']) ?></td>
+                                        <td>
+                                            <div class="fw-bold font-monospace text-primary"><?= htmlspecialchars($cp['kode_cp']) ?></div>
+                                            <?php if (!empty($cp['elemen'])): ?>
+                                                <span class="badge bg-light text-secondary border mt-1"><i class="bi bi-tag me-1"></i><?= htmlspecialchars($cp['elemen']) ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><div class="small text-dark" style="max-height: 120px; overflow-y: auto;"><?= nl2br(htmlspecialchars($cp['deskripsi'])) ?></div></td>
                                         <td>
                                             <?php if (empty($childTps)): ?>
-                                                <span class="badge bg-light text-muted border">Belum ada TP</span>
+                                                <div class="alert alert-light border py-1.5 px-2 mb-2 text-muted small"><i class="bi bi-exclamation-circle me-1"></i> Belum ada TP</div>
                                             <?php else: ?>
-                                                <ul class="list-unstyled mb-0 small">
+                                                <div class="tp-list-box mb-2" style="max-height: 180px; overflow-y: auto;">
                                                     <?php foreach ($childTps as $tp): ?>
-                                                        <li class="mb-1">
-                                                            <strong class="text-primary font-monospace"><?= htmlspecialchars($tp['kode_tp']) ?>:</strong> 
-                                                            <?= htmlspecialchars($tp['deskripsi']) ?>
-                                                        </li>
+                                                        <div class="p-2 mb-1.5 rounded-2 bg-light border d-flex justify-content-between align-items-start gap-2">
+                                                            <div class="small">
+                                                                <strong class="text-primary font-monospace"><?= htmlspecialchars($tp['kode_tp']) ?></strong>
+                                                                <?php if (!empty($tp['materi_pokok'])): ?>
+                                                                    <span class="text-muted fw-semibold">(<?= htmlspecialchars($tp['materi_pokok']) ?>):</span>
+                                                                <?php endif; ?>
+                                                                <span class="text-secondary"><?= htmlspecialchars($tp['deskripsi']) ?></span>
+                                                            </div>
+                                                            <div class="d-flex gap-1 flex-shrink-0">
+                                                                <button type="button" class="btn btn-xs btn-outline-warning rounded px-1.5 py-0.5 btn-edit-tp" 
+                                                                    title="Edit TP"
+                                                                    data-bs-toggle="modal" data-bs-target="#modalEditTP"
+                                                                    data-id="<?= $tp['id'] ?>"
+                                                                    data-cp-id="<?= $tp['cp_id'] ?>"
+                                                                    data-kode="<?= htmlspecialchars($tp['kode_tp']) ?>"
+                                                                    data-materi="<?= htmlspecialchars($tp['materi_pokok'] ?? '') ?>"
+                                                                    data-deskripsi="<?= htmlspecialchars($tp['deskripsi']) ?>">
+                                                                    <i class="bi bi-pencil" style="font-size: 0.75rem;"></i>
+                                                                </button>
+                                                                <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST" class="d-inline" onsubmit="return confirm('Hapus Tujuan Pembelajaran (TP) ini?');">
+                                                                    <?= Security::csrfField() ?>
+                                                                    <input type="hidden" name="action" value="delete_tp">
+                                                                    <input type="hidden" name="redirect_tab" value="cptp">
+                                                                    <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
+                                                                    <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
+                                                                    <input type="hidden" name="id" value="<?= $tp['id'] ?>">
+                                                                    <button type="submit" class="btn btn-xs btn-outline-danger rounded px-1.5 py-0.5" title="Hapus TP"><i class="bi bi-trash" style="font-size: 0.75rem;"></i></button>
+                                                                </form>
+                                                            </div>
+                                                        </div>
                                                     <?php endforeach; ?>
-                                                </ul>
+                                                </div>
                                             <?php endif; ?>
+                                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill fw-semibold btn-add-tp-for-cp px-2 py-1"
+                                                data-bs-toggle="modal" data-bs-target="#modalAddTP"
+                                                data-cp-id="<?= $cp['id'] ?>"
+                                                data-cp-title="[<?= htmlspecialchars($cp['kode_cp']) ?>] <?= htmlspecialchars($cp['nama_mapel']) ?>">
+                                                <i class="bi bi-plus-circle me-1"></i>+ Tambah TP
+                                            </button>
                                         </td>
                                         <td class="text-center">
-                                            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST" class="d-inline" onsubmit="return confirm('Hapus CP ini beserta seluruh TP turunannya?');">
-                                                <?= Security::csrfField() ?>
-                                                <input type="hidden" name="action" value="delete_cp">
-                                                <input type="hidden" name="redirect_tab" value="cptp">
-                                                <input type="hidden" name="id" value="<?= $cp['id'] ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus"><i class="bi bi-trash"></i></button>
-                                            </form>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" class="btn btn-outline-primary btn-edit-cp" 
+                                                    title="Edit CP"
+                                                    data-bs-toggle="modal" data-bs-target="#modalEditCP"
+                                                    data-id="<?= $cp['id'] ?>"
+                                                    data-kurikulum-id="<?= $cp['kurikulum_id'] ?>"
+                                                    data-mapel-id="<?= $cp['mapel_id'] ?>"
+                                                    data-fase-id="<?= $cp['fase_id'] ?? '' ?>"
+                                                    data-kode="<?= htmlspecialchars($cp['kode_cp']) ?>"
+                                                    data-elemen="<?= htmlspecialchars($cp['elemen'] ?? '') ?>"
+                                                    data-deskripsi="<?= htmlspecialchars($cp['deskripsi']) ?>">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST" class="d-inline" onsubmit="return confirm('Hapus CP ini beserta seluruh TP turunannya?');">
+                                                    <?= Security::csrfField() ?>
+                                                    <input type="hidden" name="action" value="delete_cp">
+                                                    <input type="hidden" name="redirect_tab" value="cptp">
+                                                    <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
+                                                    <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
+                                                    <input type="hidden" name="id" value="<?= $cp['id'] ?>">
+                                                    <button type="submit" class="btn btn-outline-danger" title="Hapus CP"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -998,8 +1098,10 @@
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="create_cp">
                 <input type="hidden" name="redirect_tab" value="cptp">
+                <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
+                <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="fw-bold mb-0">Tambah Capaian Pembelajaran (CP)</h5>
+                    <h5 class="fw-bold mb-0"><i class="bi bi-plus-circle text-primary me-2"></i>Tambah Capaian Pembelajaran (CP)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -1007,7 +1109,9 @@
                         <label class="form-label small fw-bold">Pilih Kurikulum</label>
                         <select name="kurikulum_id" class="form-select" required>
                             <?php foreach ($kurikulumList as $kur): ?>
-                                <option value="<?= $kur['id'] ?>"><?= htmlspecialchars($kur['nama']) ?></option>
+                                <option value="<?= $kur['id'] ?>" <?= ($filterCpKurId == $kur['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -1015,7 +1119,9 @@
                         <label class="form-label small fw-bold">Pilih Mata Pelajaran</label>
                         <select name="mapel_id" class="form-select" required>
                             <?php foreach ($mapelList as $mp): ?>
-                                <option value="<?= $mp['id'] ?>"><?= htmlspecialchars($mp['nama_mapel']) ?></option>
+                                <option value="<?= $mp['id'] ?>" <?= ($filterCpMapelId == $mp['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($mp['nama_mapel']) ?> (<?= htmlspecialchars($mp['kode_mapel']) ?>)
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -1024,7 +1130,9 @@
                         <select name="fase_id" class="form-select">
                             <option value="">-- Tanpa Fase Khusus --</option>
                             <?php foreach ($allFaseList as $f): ?>
-                                <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)</option>
+                                <option value="<?= $f['id'] ?>" <?= ($filterCpFaseId == $f['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -1040,12 +1148,77 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Deskripsi Capaian Pembelajaran</label>
-                        <textarea name="deskripsi" class="form-control" rows="3" required placeholder="Peserta didik mampu..."></textarea>
+                        <textarea name="deskripsi" class="form-control" rows="3" required placeholder="Peserta didik mampu memahami..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary fw-bold px-4">Simpan CP</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit CP -->
+<div class="modal fade" id="modalEditCP" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="update_cp">
+                <input type="hidden" name="redirect_tab" value="cptp">
+                <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
+                <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
+                <input type="hidden" name="id" id="edit_cp_id">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Capaian Pembelajaran (CP)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Kurikulum</label>
+                        <select name="kurikulum_id" id="edit_cp_kurikulum_id" class="form-select" required>
+                            <?php foreach ($kurikulumList as $kur): ?>
+                                <option value="<?= $kur['id'] ?>"><?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Mata Pelajaran</label>
+                        <select name="mapel_id" id="edit_cp_mapel_id" class="form-select" required>
+                            <?php foreach ($mapelList as $mp): ?>
+                                <option value="<?= $mp['id'] ?>"><?= htmlspecialchars($mp['nama_mapel']) ?> (<?= htmlspecialchars($mp['kode_mapel']) ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Fase</label>
+                        <select name="fase_id" id="edit_cp_fase_id" class="form-select">
+                            <option value="">-- Tanpa Fase Khusus --</option>
+                            <?php foreach ($allFaseList as $f): ?>
+                                <option value="<?= $f['id'] ?>"><?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Kode CP</label>
+                            <input type="text" name="kode_cp" id="edit_cp_kode" class="form-control font-monospace" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Elemen / Ranah</label>
+                            <input type="text" name="elemen" id="edit_cp_elemen" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Deskripsi Capaian Pembelajaran</label>
+                        <textarea name="deskripsi" id="edit_cp_deskripsi" class="form-control" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Perbarui CP</button>
                 </div>
             </form>
         </div>
@@ -1060,16 +1233,18 @@
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="create_tp">
                 <input type="hidden" name="redirect_tab" value="cptp">
+                <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
+                <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="fw-bold mb-0">Tambah Tujuan Pembelajaran (TP)</h5>
+                    <h5 class="fw-bold mb-0"><i class="bi bi-plus-circle text-primary me-2"></i>Tambah Tujuan Pembelajaran (TP)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Pilih Induk Capaian Pembelajaran (CP)</label>
-                        <select name="cp_id" class="form-select" required>
-                            <?php foreach ($cpList as $c): ?>
-                                <option value="<?= $c['id'] ?>">[<?= $c['kode_cp'] ?>] <?= htmlspecialchars($c['nama_mapel']) ?> - <?= htmlspecialchars(substr($c['deskripsi'], 0, 50)) ?>...</option>
+                        <select name="cp_id" id="add_tp_cp_id" class="form-select" required>
+                            <?php foreach (($allCpForDropdown ?? $cpList) as $c): ?>
+                                <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_kurikulum'] ?? '') ?> | <?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel']) ?> - <?= htmlspecialchars(substr($c['deskripsi'], 0, 45)) ?>...</option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -1085,12 +1260,60 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Deskripsi Tujuan Pembelajaran</label>
-                        <textarea name="deskripsi" class="form-control" rows="3" required placeholder="Memahami dan mempraktikkan..."></textarea>
+                        <textarea name="deskripsi" class="form-control" rows="3" required placeholder="Memahami dan mempraktikkan konfigurasi..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary fw-bold px-4">Simpan TP</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit TP -->
+<div class="modal fade" id="modalEditTP" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="update_tp">
+                <input type="hidden" name="redirect_tab" value="cptp">
+                <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
+                <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
+                <input type="hidden" name="id" id="edit_tp_id">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Tujuan Pembelajaran (TP)</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Induk Capaian Pembelajaran (CP)</label>
+                        <select name="cp_id" id="edit_tp_cp_id" class="form-select" required>
+                            <?php foreach (($allCpForDropdown ?? $cpList) as $c): ?>
+                                <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_kurikulum'] ?? '') ?> | <?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel']) ?> - <?= htmlspecialchars(substr($c['deskripsi'], 0, 45)) ?>...</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Kode TP</label>
+                            <input type="text" name="kode_tp" id="edit_tp_kode" class="form-control font-monospace" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Materi Pokok</label>
+                            <input type="text" name="materi_pokok" id="edit_tp_materi" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Deskripsi Tujuan Pembelajaran</label>
+                        <textarea name="deskripsi" id="edit_tp_deskripsi" class="form-control" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Perbarui TP</button>
                 </div>
             </form>
         </div>
@@ -1109,25 +1332,34 @@ function recalcTotalBobot() {
     const badge = document.getElementById('badgeBobotStatus');
     const submitBtn = document.getElementById('btnSubmitBobot');
 
-    display.value = total.toFixed(1) + '%';
+    if (display) {
+        display.value = total.toFixed(1) + '%';
+    }
 
-    if (Math.abs(total - 100.0) < 0.1) {
-        badge.className = 'badge bg-success py-1.5 px-3';
-        badge.textContent = '✓ Total Tepat 100%';
-        display.classList.remove('text-danger');
-        display.classList.add('text-success');
-        submitBtn.disabled = false;
-    } else {
-        badge.className = 'badge bg-danger py-1.5 px-3';
-        badge.textContent = '⚠️ Wajib 100% (Selisih: ' + (100 - total).toFixed(1) + '%)';
-        display.classList.remove('text-success');
-        display.classList.add('text-danger');
-        submitBtn.disabled = true;
+    if (badge && submitBtn) {
+        if (Math.abs(total - 100.0) < 0.1) {
+            badge.className = 'badge bg-success py-1.5 px-3';
+            badge.textContent = '✓ Total Tepat 100%';
+            if (display) {
+                display.classList.remove('text-danger');
+                display.classList.add('text-success');
+            }
+            submitBtn.disabled = false;
+        } else {
+            badge.className = 'badge bg-danger py-1.5 px-3';
+            badge.textContent = '⚠️ Wajib 100% (Selisih: ' + (100 - total).toFixed(1) + '%)';
+            if (display) {
+                display.classList.remove('text-success');
+                display.classList.add('text-danger');
+            }
+            submitBtn.disabled = true;
+        }
     }
 }
 
 function addKomponenRow() {
     const tbody = document.querySelector('#tableKomponen tbody');
+    if (!tbody) return;
     const tr = document.createElement('tr');
     tr.innerHTML = `
         <td><input type="text" name="kode_komponen[]" class="form-control form-control-sm font-monospace" placeholder="kode" required></td>
@@ -1147,6 +1379,49 @@ function addKomponenRow() {
 
 document.addEventListener('DOMContentLoaded', () => {
     recalcTotalBobot();
+
+    // Direct "+ Tambah TP" from CP row
+    document.querySelectorAll('.btn-add-tp-for-cp').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const cpId = this.dataset.cpId;
+            const select = document.getElementById('add_tp_cp_id');
+            if (select && cpId) {
+                select.value = cpId;
+            }
+        });
+    });
+
+    // Populate Edit CP Modal
+    document.querySelectorAll('.btn-edit-cp').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('edit_cp_id').value = this.dataset.id || '';
+            document.getElementById('edit_cp_kode').value = this.dataset.kode || '';
+            document.getElementById('edit_cp_elemen').value = this.dataset.elemen || '';
+            document.getElementById('edit_cp_deskripsi').value = this.dataset.deskripsi || '';
+            
+            const selKur = document.getElementById('edit_cp_kurikulum_id');
+            if (selKur && this.dataset.kurikulumId) selKur.value = this.dataset.kurikulumId;
+
+            const selMapel = document.getElementById('edit_cp_mapel_id');
+            if (selMapel && this.dataset.mapelId) selMapel.value = this.dataset.mapelId;
+
+            const selFase = document.getElementById('edit_cp_fase_id');
+            if (selFase) selFase.value = this.dataset.faseId || '';
+        });
+    });
+
+    // Populate Edit TP Modal
+    document.querySelectorAll('.btn-edit-tp').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.getElementById('edit_tp_id').value = this.dataset.id || '';
+            document.getElementById('edit_tp_kode').value = this.dataset.kode || '';
+            document.getElementById('edit_tp_materi').value = this.dataset.materi || '';
+            document.getElementById('edit_tp_deskripsi').value = this.dataset.deskripsi || '';
+
+            const selCp = document.getElementById('edit_tp_cp_id');
+            if (selCp && this.dataset.cpId) selCp.value = this.dataset.cpId;
+        });
+    });
 });
 </script>
 
