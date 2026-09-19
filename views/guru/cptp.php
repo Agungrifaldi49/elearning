@@ -1068,7 +1068,43 @@ if (!function_exists('formatTpDescriptionHtml')) {
     </div>
 </div>
 
+<?php
+// Build compact lookup maps for JS: keyed by ID
+$cpDataForJs = [];
+$combinedCp = array_merge($cpList ?? [], $allCpForDropdown ?? []);
+foreach ($combinedCp as $cp) {
+    if (isset($cp['id'])) {
+        $cpDataForJs[(int)$cp['id']] = [
+            'id'           => (int)$cp['id'],
+            'kurikulum_id' => (int)$cp['kurikulum_id'],
+            'mapel_id'     => (int)$cp['mapel_id'],
+            'fase_id'      => !empty($cp['fase_id']) ? (int)$cp['fase_id'] : '',
+            'kode_cp'      => (string)$cp['kode_cp'],
+            'elemen'       => (string)($cp['elemen'] ?? ''),
+            'deskripsi'    => (string)$cp['deskripsi'],
+        ];
+    }
+}
+$tpDataForJs = [];
+if (!empty($tpList)) {
+    foreach ($tpList as $tp) {
+        if (isset($tp['id'])) {
+            $tpDataForJs[(int)$tp['id']] = [
+                'id'           => (int)$tp['id'],
+                'cp_id'        => (int)$tp['cp_id'],
+                'kode_tp'      => (string)$tp['kode_tp'],
+                'materi_pokok' => (string)($tp['materi_pokok'] ?? ''),
+                'deskripsi'    => (string)$tp['deskripsi'],
+            ];
+        }
+    }
+}
+?>
 <script>
+// Embedded data lookup maps (avoids HTML data attribute encoding issues with long text/newlines)
+const _cpData = <?= json_encode($cpDataForJs, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?: '{}' ?>;
+const _tpData = <?= json_encode($tpDataForJs, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?: '{}' ?>;
+
 // Quick List Toolbar Formatter
 function insertTpListFormat(textareaId, type) {
     const textarea = document.getElementById(textareaId);
@@ -1099,9 +1135,9 @@ function insertTpListFormat(textareaId, type) {
         let letterCode = 97; // 'a'
         const formatted = lines.map(line => {
             if (line.trim() === '') return line;
-            if (type === 'number') return (counter++) + '. ' + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪→\x{2022}\x{25AA}\x{2713}])\s*/u, '');
-            if (type === 'letter') return String.fromCharCode(letterCode++) + '. ' + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪→\x{2022}\x{25AA}\x{2713}])\s*/u, '');
-            return prefix + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪→\x{2022}\x{25AA}\x{2713}])\s*/u, '');
+            if (type === 'number') return (counter++) + '. ' + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪→\u2022\u25AA\u2713])\s*/u, '');
+            if (type === 'letter') return String.fromCharCode(letterCode++) + '. ' + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪→\u2022\u25AA\u2713])\s*/u, '');
+            return prefix + line.replace(/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓▪→\u2022\u25AA\u2713])\s*/u, '');
         }).join('\n');
 
         textarea.value = val.substring(0, start) + formatted + val.substring(end);
@@ -1166,7 +1202,7 @@ function setupSmartListTextarea(textareaId) {
             }
 
             // Match Bullet / Symbol: e.g. "• ", "- ", "* ", "✓ ", "→ "
-            const matchSymbol = currentLine.match(/^([•\-\*✓▪▫►▶→➔➢+~–—\x{2022}\x{25AA}\x{2713}])\s*(.*)$/u);
+            const matchSymbol = currentLine.match(/^([•\-\*✓▪▫►▶→➔➢+~–—\u2022\u25aa\u2713])\s*(.*)$/u);
             if (matchSymbol) {
                 e.preventDefault();
                 const sym = matchSymbol[1];
@@ -1313,6 +1349,74 @@ function filterFaseDropdown(kurikulumSelectId, faseSelectId) {
     }
 }
 
+// Populate Edit CP Modal — robust helper supporting both JSON lookup & HTML data-attribute fallback
+function populateEditCpModal(btn) {
+    if (!btn) return;
+    const cpId = parseInt(btn.getAttribute('data-id') || '0', 10);
+    const cp = (typeof _cpData !== 'undefined' && _cpData && _cpData[cpId]) ? _cpData[cpId] : null;
+
+    const id = cp ? cp.id : (btn.getAttribute('data-id') || '');
+    const kode = cp ? cp.kode_cp : (btn.getAttribute('data-kode') || '');
+    const elemen = cp ? (cp.elemen || '') : (btn.getAttribute('data-elemen') || '');
+    const deskripsi = cp ? (cp.deskripsi || '') : (btn.getAttribute('data-deskripsi') || '');
+    const kurikulumId = cp ? cp.kurikulum_id : (btn.getAttribute('data-kurikulum-id') || '');
+    const mapelId = cp ? cp.mapel_id : (btn.getAttribute('data-mapel-id') || '');
+    const faseId = cp ? (cp.fase_id || '') : (btn.getAttribute('data-fase-id') || '');
+
+    const idInp = document.getElementById('edit_cp_id');
+    const kodeInp = document.getElementById('edit_cp_kode');
+    const elemenInp = document.getElementById('edit_cp_elemen');
+    const deskInp = document.getElementById('edit_cp_deskripsi');
+
+    if (idInp) idInp.value = id;
+    if (kodeInp) kodeInp.value = kode;
+    if (elemenInp) elemenInp.value = elemen;
+    if (deskInp) deskInp.value = deskripsi;
+
+    const selKur = document.getElementById('edit_cp_kurikulum_id');
+    if (selKur && kurikulumId) {
+        selKur.value = kurikulumId;
+        filterFaseDropdown('edit_cp_kurikulum_id', 'edit_cp_fase_id');
+    }
+
+    const selMapel = document.getElementById('edit_cp_mapel_id');
+    if (selMapel && mapelId) selMapel.value = mapelId;
+
+    const selFase = document.getElementById('edit_cp_fase_id');
+    if (selFase) selFase.value = faseId;
+}
+
+// Populate Edit TP Modal — robust helper supporting both JSON lookup & HTML data-attribute fallback
+function populateEditTpModal(btn) {
+    if (!btn) return;
+    const tpId = parseInt(btn.getAttribute('data-id') || '0', 10);
+    const tp = (typeof _tpData !== 'undefined' && _tpData && _tpData[tpId]) ? _tpData[tpId] : null;
+
+    const id = tp ? tp.id : (btn.getAttribute('data-id') || '');
+    const kode = tp ? tp.kode_tp : (btn.getAttribute('data-kode') || '');
+    const materi = tp ? (tp.materi_pokok || '') : (btn.getAttribute('data-materi') || '');
+    const deskripsi = tp ? (tp.deskripsi || '') : (btn.getAttribute('data-deskripsi') || '');
+    const cpId = tp ? tp.cp_id : (btn.getAttribute('data-cp-id') || '');
+
+    const idInp = document.getElementById('edit_tp_id');
+    const kodeInp = document.getElementById('edit_tp_kode');
+    const materiInp = document.getElementById('edit_tp_materi');
+    const deskInp = document.getElementById('edit_tp_deskripsi');
+    const selCp = document.getElementById('edit_tp_cp_id');
+
+    if (idInp) idInp.value = id;
+    if (kodeInp) kodeInp.value = kode;
+    if (materiInp) materiInp.value = materi;
+    if (deskInp) deskInp.value = deskripsi;
+
+    if (selCp && cpId) {
+        selCp.value = cpId;
+    }
+
+    // Trigger CP preview update after values are set
+    updateEditParentCpPreview();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Character counters for textareas
     const addCpDesk = document.getElementById('add_cp_deskripsi');
@@ -1376,6 +1480,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectAddTpCp = document.getElementById('add_tp_cp_id');
     if (selectAddTpCp) {
         selectAddTpCp.addEventListener('change', updateAutoTpCode);
+    }
+
+    const selectEditTpCp = document.getElementById('edit_tp_cp_id');
+    if (selectEditTpCp) {
+        selectEditTpCp.addEventListener('change', updateEditParentCpPreview);
     }
 
     const btnRegenTp = document.getElementById('btn_regen_tp_code');
@@ -1455,85 +1564,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Populate Edit CP Modal — use show.bs.modal for reliable DataTables support
+    // Populate Edit CP Modal — show.bs.modal handler
     const modalEditCpEl = document.getElementById('modalEditCP');
     if (modalEditCpEl) {
         modalEditCpEl.addEventListener('show.bs.modal', function(e) {
-            const btn = e.relatedTarget;
-            if (!btn || !btn.classList.contains('btn-edit-cp')) return;
-
-            const id = btn.getAttribute('data-id') || '';
-            const kode = btn.getAttribute('data-kode') || '';
-            const elemen = btn.getAttribute('data-elemen') || '';
-            const deskripsi = btn.getAttribute('data-deskripsi') || '';
-            const kurikulumId = btn.getAttribute('data-kurikulum-id') || '';
-            const mapelId = btn.getAttribute('data-mapel-id') || '';
-            const faseId = btn.getAttribute('data-fase-id') || '';
-
-            const idInp = document.getElementById('edit_cp_id');
-            const kodeInp = document.getElementById('edit_cp_kode');
-            const elemenInp = document.getElementById('edit_cp_elemen');
-            const deskInp = document.getElementById('edit_cp_deskripsi');
-
-            if (idInp) idInp.value = id;
-            if (kodeInp) kodeInp.value = kode;
-            if (elemenInp) elemenInp.value = elemen;
-            if (deskInp) deskInp.value = deskripsi;
-
-            const selKur = document.getElementById('edit_cp_kurikulum_id');
-            if (selKur && kurikulumId) {
-                selKur.value = kurikulumId;
-                filterFaseDropdown('edit_cp_kurikulum_id', 'edit_cp_fase_id');
+            const btn = e.relatedTarget ? (e.relatedTarget.closest('.btn-edit-cp') || e.relatedTarget) : null;
+            if (btn && btn.classList && btn.classList.contains('btn-edit-cp')) {
+                populateEditCpModal(btn);
             }
-
-            const selMapel = document.getElementById('edit_cp_mapel_id');
-            if (selMapel && mapelId) selMapel.value = mapelId;
-
-            const selFase = document.getElementById('edit_cp_fase_id');
-            if (selFase) selFase.value = faseId;
         });
     }
 
-    // Edit TP Modal — use show.bs.modal to reliably populate fields from relatedTarget
-    // This also works when DataTables re-renders rows (event delegation via modal show event)
+    // Populate Edit TP Modal — show.bs.modal handler
     const modalEditTpEl = document.getElementById('modalEditTP');
     if (modalEditTpEl) {
         modalEditTpEl.addEventListener('show.bs.modal', function(e) {
-            const btn = e.relatedTarget;
-            if (!btn) return;
-
-            const id = btn.getAttribute('data-id') || '';
-            const kode = btn.getAttribute('data-kode') || '';
-            const materi = btn.getAttribute('data-materi') || '';
-            const deskripsi = btn.getAttribute('data-deskripsi') || '';
-            const cpId = btn.getAttribute('data-cp-id') || '';
-
-            const idInp = document.getElementById('edit_tp_id');
-            const kodeInp = document.getElementById('edit_tp_kode');
-            const materiInp = document.getElementById('edit_tp_materi');
-            const deskInp = document.getElementById('edit_tp_deskripsi');
-            const selCp = document.getElementById('edit_tp_cp_id');
-
-            if (idInp) idInp.value = id;
-            if (kodeInp) kodeInp.value = kode;
-            if (materiInp) materiInp.value = materi;
-            if (deskInp) deskInp.value = deskripsi;
-
-            if (selCp && cpId) {
-                selCp.value = cpId;
+            const btn = e.relatedTarget ? (e.relatedTarget.closest('.btn-edit-tp') || e.relatedTarget) : null;
+            if (btn) {
+                populateEditTpModal(btn);
             }
-
-            // Trigger CP preview update after values are set
-            updateEditParentCpPreview();
         });
     }
 
-    // Fallback: also keep click delegation for any non-data-bs-toggle triggered opens
+    // Direct click event delegation for Edit buttons (guarantees data populates even before/outside Bootstrap show event)
     document.addEventListener('click', function(e) {
-        const btn = e.target.closest('.btn-edit-tp');
-        if (!btn) return;
-        // Data will be populated by show.bs.modal above via relatedTarget
-        // Nothing extra needed here — just ensure the modal opens
+        const cpBtn = e.target.closest('.btn-edit-cp');
+        if (cpBtn) {
+            populateEditCpModal(cpBtn);
+        }
+        const tpBtn = e.target.closest('.btn-edit-tp');
+        if (tpBtn) {
+            populateEditTpModal(tpBtn);
+        }
     });
 
     // Auto adjust datatables on window resize
