@@ -642,7 +642,10 @@
                                             <button type="button" class="btn btn-xs btn-outline-primary rounded-pill fw-semibold btn-add-tp-for-cp px-2 py-1"
                                                 data-bs-toggle="modal" data-bs-target="#modalAddTP"
                                                 data-cp-id="<?= $cp['id'] ?>"
-                                                data-cp-title="[<?= htmlspecialchars($cp['kode_cp']) ?>] <?= htmlspecialchars($cp['nama_mapel']) ?>">
+                                                data-cp-kode="<?= htmlspecialchars($cp['kode_cp']) ?>"
+                                                data-cp-mapel="<?= htmlspecialchars($cp['nama_mapel']) ?>"
+                                                data-cp-elemen="<?= htmlspecialchars($cp['elemen'] ?? '') ?>"
+                                                data-cp-deskripsi="<?= htmlspecialchars($cp['deskripsi']) ?>">
                                                 <i class="bi bi-plus-circle me-1"></i>+ Tambah TP
                                             </button>
                                         </td>
@@ -1314,11 +1317,37 @@
                             foreach ($groupedCpAdd as $grpName => $cList): ?>
                                 <optgroup label="<?= htmlspecialchars($grpName) ?>">
                                     <?php foreach ($cList as $c): ?>
-                                        <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel'] ?? '') ?> — <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 75, '...')) ?></option>
+                                        <option value="<?= $c['id'] ?>"
+                                                data-kode="<?= htmlspecialchars($c['kode_cp']) ?>"
+                                                data-mapel="<?= htmlspecialchars($c['nama_mapel'] ?? '') ?>"
+                                                data-elemen="<?= htmlspecialchars($c['elemen'] ?? '') ?>"
+                                                data-deskripsi="<?= htmlspecialchars($c['deskripsi']) ?>">
+                                            [<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel'] ?? '') ?> — <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 75, '...')) ?>
+                                        </option>
                                     <?php endforeach; ?>
                                 </optgroup>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+
+                    <!-- Complete Parent CP Reference Card in Admin Modal -->
+                    <div class="card border border-success border-opacity-25 rounded-3 mb-3.5 bg-light overflow-hidden shadow-xs">
+                        <div class="card-header bg-success bg-opacity-10 py-2.5 px-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-success text-white font-monospace px-2.5 py-1.5 shadow-xs" id="admin_preview_cp_kode">CP-...</span>
+                                <span class="fw-bold text-dark fs-6" id="admin_preview_cp_mapel">Mata Pelajaran</span>
+                            </div>
+                            <span class="badge bg-white text-dark border px-2.5 py-1 rounded-pill small" id="admin_preview_cp_elemen" style="display: none;">Elemen</span>
+                        </div>
+                        <div class="card-body p-3 bg-white">
+                            <div class="small fw-bold text-success text-uppercase mb-1.5 d-flex align-items-center gap-1.5" style="font-size:0.75rem; letter-spacing:0.5px;">
+                                <i class="bi bi-journal-text fs-6"></i>
+                                <span>Rumusan Capaian Pembelajaran (CP) Acuan:</span>
+                            </div>
+                            <div class="p-3 rounded-3 text-dark border border-success-subtle" id="admin_preview_cp_deskripsi" style="line-height: 1.7; font-size: 0.92rem; background-color: #f0fdf4; white-space: pre-wrap; word-break: break-word;">
+                                Memuat rumusan CP acuan...
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row g-3 mb-3">
@@ -1834,6 +1863,37 @@ function updateAutoTpCode() {
             kodeInp.value = nextTpCodeMap[cpId];
         }
     }
+    updateParentCpPreviewAdmin();
+}
+
+function updateParentCpPreviewAdmin() {
+    const cpSelect = document.getElementById('add_tp_cp_id');
+    const previewKode = document.getElementById('admin_preview_cp_kode');
+    const previewMapel = document.getElementById('admin_preview_cp_mapel');
+    const previewElemen = document.getElementById('admin_preview_cp_elemen');
+    const previewDeskripsi = document.getElementById('admin_preview_cp_deskripsi');
+
+    if (!cpSelect) return;
+
+    const opt = cpSelect.options[cpSelect.selectedIndex];
+    if (opt) {
+        const kode = opt.getAttribute('data-kode') || (opt.text.match(/^\[(.*?)\]/) ? opt.text.match(/^\[(.*?)\]/)[1] : 'CP Induk');
+        const mapel = opt.getAttribute('data-mapel') || '';
+        const elem = opt.getAttribute('data-elemen') || '';
+        const desk = opt.getAttribute('data-deskripsi') || opt.text || '';
+
+        if (previewKode) previewKode.textContent = kode;
+        if (previewMapel) previewMapel.textContent = mapel ? mapel : 'Mata Pelajaran';
+        if (previewElemen) {
+            if (elem) {
+                previewElemen.textContent = 'Elemen: ' + elem;
+                previewElemen.style.display = 'inline-block';
+            } else {
+                previewElemen.style.display = 'none';
+            }
+        }
+        if (previewDeskripsi) previewDeskripsi.textContent = desk ? desk : 'Deskripsi CP belum tersedia.';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1913,7 +1973,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const modalAddTpEl = document.getElementById('modalAddTP');
-    function resetAdminAddTpForm(targetCpId = null) {
+    function resetAdminAddTpForm(targetCpId = null, btnEl = null) {
         const select = document.getElementById('add_tp_cp_id');
         if (select && targetCpId) {
             select.value = targetCpId;
@@ -1926,13 +1986,39 @@ document.addEventListener('DOMContentLoaded', () => {
         if (deskInp) deskInp.value = '';
 
         updateAutoTpCode();
+
+        if (btnEl && (btnEl.getAttribute('data-cp-deskripsi') || btnEl.dataset.cpDeskripsi)) {
+            const previewKode = document.getElementById('admin_preview_cp_kode');
+            const previewMapel = document.getElementById('admin_preview_cp_mapel');
+            const previewElemen = document.getElementById('admin_preview_cp_elemen');
+            const previewDeskripsi = document.getElementById('admin_preview_cp_deskripsi');
+
+            const kode = btnEl.getAttribute('data-cp-kode') || btnEl.dataset.cpKode;
+            const mapel = btnEl.getAttribute('data-cp-mapel') || btnEl.dataset.cpMapel;
+            const elem = btnEl.getAttribute('data-cp-elemen') || btnEl.dataset.cpElemen;
+            const desk = btnEl.getAttribute('data-cp-deskripsi') || btnEl.dataset.cpDeskripsi;
+
+            if (previewKode && kode) previewKode.textContent = kode;
+            if (previewMapel && mapel) previewMapel.textContent = mapel;
+            if (previewElemen) {
+                if (elem) {
+                    previewElemen.textContent = 'Elemen: ' + elem;
+                    previewElemen.style.display = 'inline-block';
+                } else {
+                    previewElemen.style.display = 'none';
+                }
+            }
+            if (previewDeskripsi && desk) previewDeskripsi.textContent = desk;
+        } else {
+            updateParentCpPreviewAdmin();
+        }
     }
 
     if (modalAddTpEl) {
         modalAddTpEl.addEventListener('show.bs.modal', function(e) {
             const button = e.relatedTarget;
             const targetCpId = button ? button.getAttribute('data-cp-id') : null;
-            resetAdminAddTpForm(targetCpId);
+            resetAdminAddTpForm(targetCpId, button);
         });
     }
 
@@ -1940,7 +2026,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.btn-add-tp-for-cp').forEach(btn => {
         btn.addEventListener('click', function() {
             const cpId = this.dataset.cpId;
-            resetAdminAddTpForm(cpId);
+            resetAdminAddTpForm(cpId, this);
         });
     });
 

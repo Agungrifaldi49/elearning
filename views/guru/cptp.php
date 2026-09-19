@@ -2,6 +2,40 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<style>
+/* Modern & Responsive Aesthetics for CP/TP Management */
+.card {
+    transition: all 0.2s ease-in-out;
+}
+.shadow-xs {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+}
+.table td, .table th {
+    vertical-align: top !important;
+}
+.tp-item-card {
+    border-left: 3px solid #0d6efd !important;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.tp-item-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.05) !important;
+}
+.modal-body {
+    max-height: calc(85vh - 120px);
+    overflow-y: auto;
+}
+@media (max-width: 767.98px) {
+    .main-content {
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+    .modal-body {
+        padding: 1rem !important;
+    }
+}
+</style>
+
 <main class="main-content px-3 px-md-4 py-3">
 <div class="container-fluid">
 
@@ -25,7 +59,7 @@
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <button type="button" class="btn btn-outline-primary shadow-sm fw-semibold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalAddTP">
-                <i class="bi bi-bullseye fs-5"></i>
+                <i class="bi bi-plus-circle fs-5"></i>
                 <span>+ Tambah TP Baru</span>
             </button>
             <button type="button" class="btn btn-primary shadow-sm fw-semibold px-3.5 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalAddCP">
@@ -57,25 +91,25 @@
         <?php endif; ?>
     <?php endif; ?>
 
-    <!-- Summary Metrics & Teacher Banner -->
+    <!-- Summary Metrics & Teacher Banner (Balanced Grid) -->
     <div class="row g-3 mb-4">
         <!-- Teacher Profile & Mapel Card -->
-        <div class="col-12 col-lg-6">
+        <div class="col-12 col-xl-6">
             <div class="card h-100 border-0 shadow-sm rounded-4 p-3.5" style="background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%); border-left: 5px solid #0284c7 !important;">
                 <div class="d-flex align-items-center gap-3">
                     <div class="bg-primary text-white p-3 rounded-4 shadow-sm flex-shrink-0">
                         <i class="bi bi-person-workspace fs-3"></i>
                     </div>
                     <div class="flex-grow-1 min-w-0">
-                        <div class="d-flex align-items-center gap-2 mb-1">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                             <span class="badge bg-primary text-white rounded-pill px-2.5 py-0.5 small fw-normal">Guru Pengampu</span>
-                            <span class="badge bg-white text-primary border rounded-pill px-2 py-0.5 small"><?= htmlspecialchars($kurikulumList[0]['kode'] ?? 'Kurikulum') ?></span>
+                            <span class="badge bg-white text-primary border rounded-pill px-2 py-0.5 small fw-bold"><?= htmlspecialchars($kurikulumList[0]['kode'] ?? 'Kurikulum') ?></span>
                         </div>
-                        <h6 class="fw-bold text-dark mb-1 text-truncate">
+                        <h5 class="fw-bold text-dark mb-1 text-truncate">
                             <?= htmlspecialchars($guru['nama_lengkap'] ?? 'Bpk/Ibu Guru') ?>
-                        </h6>
-                        <div class="text-secondary small d-flex flex-wrap align-items-center gap-1.5 mt-1">
-                            <span class="text-muted"><i class="bi bi-book me-1"></i>Mapel Anda:</span>
+                        </h5>
+                        <div class="text-secondary small d-flex flex-wrap align-items-center gap-1.5 mt-1.5">
+                            <span class="text-muted fw-semibold"><i class="bi bi-book me-1 text-primary"></i>Mapel Anda:</span>
                             <?php if (!empty($teacherMapelList)): ?>
                                 <?php foreach ($teacherMapelList as $tmp): ?>
                                     <span class="badge bg-white text-primary border shadow-xs px-2 py-1 rounded-2">
@@ -92,39 +126,43 @@
         </div>
 
         <!-- Metric CP Card -->
-        <div class="col-6 col-lg-3">
-            <div class="card h-100 border-0 shadow-sm rounded-4 p-3.5 bg-white">
-                <div class="d-flex justify-content-between align-items-center">
+        <div class="col-6 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm rounded-4 p-3.5 bg-white d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size:0.75rem; letter-spacing: 0.5px;">Capaian (CP)</span>
-                        <h3 class="fw-bold text-primary mb-0"><?= count($cpList) ?></h3>
-                        <span class="text-muted" style="font-size:0.75rem;"><i class="bi bi-check-all text-primary me-1"></i>Tersedia dalam kurikulum</span>
+                        <h2 class="fw-bold text-primary mb-0"><?= count($cpList) ?></h2>
                     </div>
-                    <div class="rounded-circle p-3 bg-primary-subtle text-primary">
+                    <div class="rounded-circle p-2.5 bg-primary-subtle text-primary">
                         <i class="bi bi-journal-check fs-4"></i>
                     </div>
+                </div>
+                <div class="text-muted small mt-2" style="font-size:0.75rem;">
+                    <i class="bi bi-check-circle-fill text-primary me-1"></i>Tersedia dalam kurikulum
                 </div>
             </div>
         </div>
 
         <!-- Metric TP Card -->
-        <div class="col-6 col-lg-3">
-            <div class="card h-100 border-0 shadow-sm rounded-4 p-3.5 bg-white">
-                <div class="d-flex justify-content-between align-items-center">
+        <div class="col-6 col-xl-3">
+            <div class="card h-100 border-0 shadow-sm rounded-4 p-3.5 bg-white d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size:0.75rem; letter-spacing: 0.5px;">Tujuan (TP)</span>
-                        <h3 class="fw-bold text-success mb-0"><?= count($tpList) ?></h3>
-                        <span class="text-muted" style="font-size:0.75rem;"><i class="bi bi-bullseye text-success me-1"></i>Siap untuk asesmen/rapor</span>
+                        <h2 class="fw-bold text-success mb-0"><?= count($tpList) ?></h2>
                     </div>
-                    <div class="rounded-circle p-3 bg-success-subtle text-success">
+                    <div class="rounded-circle p-2.5 bg-success-subtle text-success">
                         <i class="bi bi-bullseye fs-4"></i>
                     </div>
+                </div>
+                <div class="text-muted small mt-2" style="font-size:0.75rem;">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i>Siap untuk asesmen & rapor
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Filter Bar Card -->
+    <!-- Filter Bar Card (Uniform 42px Alignment) -->
     <div class="card border-0 shadow-sm rounded-4 p-3.5 mb-4 bg-white">
         <form method="GET" action="<?= BASE_URL ?>index.php" class="row g-2.5 align-items-end">
             <input type="hidden" name="url" value="guru/cptp">
@@ -134,7 +172,7 @@
                     <i class="bi bi-book text-primary"></i>
                     <span>Mata Pelajaran:</span>
                 </label>
-                <select name="filter_mapel_id" class="form-select rounded-3 py-2" onchange="this.form.submit()">
+                <select name="filter_mapel_id" class="form-select rounded-3" style="height: 42px;" onchange="this.form.submit()">
                     <option value="">-- Semua Mata Pelajaran Saya --</option>
                     <?php foreach ($teacherMapelList as $mp): ?>
                         <option value="<?= $mp['id'] ?>" <?= ($filterMapelId == $mp['id']) ? 'selected' : '' ?>>
@@ -149,7 +187,7 @@
                     <i class="bi bi-mortarboard text-primary"></i>
                     <span>Kurikulum:</span>
                 </label>
-                <select name="filter_kurikulum_id" class="form-select rounded-3 py-2" onchange="this.form.submit()">
+                <select name="filter_kurikulum_id" class="form-select rounded-3" style="height: 42px;" onchange="this.form.submit()">
                     <?php foreach ($kurikulumList as $kur): ?>
                         <option value="<?= $kur['id'] ?>" <?= ($filterKurId == $kur['id']) ? 'selected' : '' ?>>
                             <?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)
@@ -163,7 +201,7 @@
                     <i class="bi bi-layers text-primary"></i>
                     <span>Fase / Jenjang:</span>
                 </label>
-                <select name="filter_fase_id" class="form-select rounded-3 py-2" onchange="this.form.submit()">
+                <select name="filter_fase_id" class="form-select rounded-3" style="height: 42px;" onchange="this.form.submit()">
                     <option value="">-- Semua Fase --</option>
                     <?php foreach ($allFaseList as $f): ?>
                         <option value="<?= $f['id'] ?>" <?= ($filterFaseId == $f['id']) ? 'selected' : '' ?>>
@@ -174,12 +212,12 @@
             </div>
 
             <div class="col-12 col-md-2 d-flex gap-1.5">
-                <button type="submit" class="btn btn-primary flex-fill fw-semibold rounded-3 py-2 d-flex align-items-center justify-content-center gap-1">
+                <button type="submit" class="btn btn-primary flex-fill fw-semibold rounded-3 d-flex align-items-center justify-content-center gap-1" style="height: 42px;">
                     <i class="bi bi-funnel-fill"></i>
                     <span>Filter</span>
                 </button>
                 <?php if ($filterMapelId || $filterFaseId): ?>
-                    <a href="<?= BASE_URL ?>index.php?url=guru/cptp" class="btn btn-outline-secondary rounded-3 py-2 px-3" title="Reset Filter">
+                    <a href="<?= BASE_URL ?>index.php?url=guru/cptp" class="btn btn-outline-secondary rounded-3 px-3 d-flex align-items-center justify-content-center" style="height: 42px;" title="Reset Filter">
                         <i class="bi bi-arrow-counterclockwise"></i>
                     </a>
                 <?php endif; ?>
@@ -187,7 +225,7 @@
         </form>
     </div>
 
-    <!-- CP & TP Table Card -->
+    <!-- CP & TP Table Card (Roomy 6-Column Responsive Layout) -->
     <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
         <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
@@ -212,18 +250,17 @@
                 <thead class="table-light">
                     <tr>
                         <th class="text-center" style="width:40px;">No</th>
-                        <th style="width:130px;">Kurikulum & Fase</th>
+                        <th style="width:120px;">Kurikulum & Fase</th>
                         <th style="width:180px;">Mata Pelajaran</th>
-                        <th style="width:170px;">Kode & Elemen CP</th>
-                        <th>Deskripsi Capaian Pembelajaran</th>
-                        <th style="min-width:360px;">Tujuan Pembelajaran (TP) Terkait</th>
-                        <th class="text-center" style="width:100px;">Aksi CP</th>
+                        <th style="min-width:320px;">Capaian Pembelajaran (CP)</th>
+                        <th style="min-width:340px;">Tujuan Pembelajaran (TP) Terkait</th>
+                        <th class="text-center" style="width:80px;">Aksi CP</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($cpList)): ?>
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="6" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary opacity-50"></i>
                                 <span class="fw-semibold">Belum ada data Capaian Pembelajaran (CP) untuk filter ini.</span><br>
                                 <small class="text-muted">Klik tombol <strong>Tambah CP Baru</strong> di atas untuk mulai merumuskan CP.</small>
@@ -262,20 +299,19 @@
                                         </span>
                                     <?php endif; ?>
                                 </td>
+                                <!-- Merged Spacious CP Column (Kode, Elemen, Full Deskripsi) -->
                                 <td>
-                                    <span class="badge bg-primary text-white font-monospace px-2.5 py-1 rounded-2 mb-1 d-inline-block shadow-xs">
-                                        <?= htmlspecialchars($cp['kode_cp']) ?>
-                                    </span>
-                                    <?php if (!empty($cp['elemen'])): ?>
-                                        <div class="mt-1">
-                                            <span class="badge bg-light text-secondary border px-2 py-0.5 rounded-2 small">
-                                                <i class="bi bi-tag-fill me-1 text-primary" style="font-size:0.7rem;"></i><?= htmlspecialchars($cp['elemen']) ?>
+                                    <div class="d-flex align-items-center gap-1.5 flex-wrap mb-2">
+                                        <span class="badge bg-primary text-white font-monospace px-2.5 py-1 rounded-2 shadow-xs">
+                                            <?= htmlspecialchars($cp['kode_cp']) ?>
+                                        </span>
+                                        <?php if (!empty($cp['elemen'])): ?>
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 rounded-2 small">
+                                                <i class="bi bi-tag-fill me-1"></i><?= htmlspecialchars($cp['elemen']) ?>
                                             </span>
-                                        </div>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <div class="p-2.5 rounded-3 bg-light border-0 text-dark small" style="line-height: 1.6; max-height: 140px; overflow-y: auto; background-color: #f8fafc;">
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="text-dark small" style="line-height: 1.65; color: #1e293b;">
                                         <?= nl2br(htmlspecialchars($cp['deskripsi'])) ?>
                                     </div>
                                 </td>
@@ -286,7 +322,7 @@
                                             <i class="bi bi-info-circle me-1"></i> Belum ada TP turunan untuk CP ini.
                                         </div>
                                     <?php else: ?>
-                                        <div class="tp-container d-flex flex-column gap-2 mb-2" style="max-height: 220px; overflow-y: auto;">
+                                        <div class="tp-container d-flex flex-column gap-2 mb-2">
                                             <?php foreach ($childTps as $tp): ?>
                                                 <div class="p-2.5 rounded-3 bg-white border shadow-xs d-flex justify-content-between align-items-start gap-2" style="border-left: 3px solid #0d6efd !important;">
                                                     <div class="small flex-grow-1 min-w-0">
@@ -296,7 +332,7 @@
                                                             </span>
                                                             <?php if (!empty($tp['materi_pokok'])): ?>
                                                                 <span class="badge bg-light text-dark border px-2 py-0.5 rounded" style="font-size:0.72rem;">
-                                                                    <i class="bi bi-bookmark text-primary me-0.5"></i><?= htmlspecialchars($tp['materi_pokok']) ?>
+                                                                    <i class="bi bi-tag text-primary me-0.5"></i><?= htmlspecialchars($tp['materi_pokok']) ?>
                                                                 </span>
                                                             <?php endif; ?>
                                                         </div>
@@ -333,10 +369,16 @@
                                     <?php endif; ?>
 
                                     <!-- Button to Add TP for this specific CP -->
-                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-semibold btn-add-tp-for-cp px-3 py-1 d-inline-flex align-items-center gap-1"
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill fw-semibold btn-add-tp-for-cp px-3 py-1 d-inline-flex align-items-center gap-1 mt-1"
                                         data-bs-toggle="modal" data-bs-target="#modalAddTP"
                                         data-cp-id="<?= $cp['id'] ?>"
-                                        data-cp-title="[<?= htmlspecialchars($cp['kode_cp']) ?>] <?= htmlspecialchars($cp['nama_mapel']) ?>">
+                                        data-cp-kode="<?= htmlspecialchars($cp['kode_cp']) ?>"
+                                        data-cp-mapel="<?= htmlspecialchars($cp['nama_mapel']) ?>"
+                                        data-cp-fase="<?= htmlspecialchars($cp['nama_fase'] ?? '') ?>"
+                                        data-cp-kurikulum="<?= htmlspecialchars($cp['kode_kurikulum'] ?? '') ?>"
+                                        data-cp-elemen="<?= htmlspecialchars($cp['elemen'] ?? '') ?>"
+                                        data-cp-deskripsi="<?= htmlspecialchars($cp['deskripsi']) ?>"
+                                        title="Rumuskan Tujuan Pembelajaran baru berdasarkan CP ini">
                                         <i class="bi bi-plus-circle"></i> Tambah TP Turunan
                                     </button>
                                 </td>
@@ -400,7 +442,10 @@
                             <i class="bi bi-plus-circle-fill fs-5"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold text-dark mb-0" id="modalAddCPLabel">Tambah Capaian Pembelajaran (CP)</h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="modal-title fw-bold text-dark mb-0" id="modalAddCPLabel">Tambah Capaian Pembelajaran (CP) Baru</h5>
+                                <span class="badge bg-primary text-white rounded-pill px-2 py-0.5" style="font-size:0.68rem;">Formulir Baru</span>
+                            </div>
                             <small class="text-muted">Rumuskan kompetensi akhir mata pelajaran untuk tingkat atau fase kurikulum tertentu.</small>
                         </div>
                     </div>
@@ -461,7 +506,7 @@
                             <label class="form-label small fw-bold text-secondary mb-1.5">
                                 <i class="bi bi-tags text-primary me-1"></i>Elemen / Ranah Pembelajaran
                             </label>
-                            <input type="text" name="elemen" class="form-control rounded-3 py-2" placeholder="Contoh: Pemrograman Dasar / Analisis Data">
+                            <input type="text" name="elemen" id="add_cp_elemen" class="form-control rounded-3 py-2" placeholder="Contoh: Pemrograman Dasar / Analisis Data">
                             <div class="form-text small text-muted">Domain materi inti capaian pembelajaran.</div>
                         </div>
 
@@ -532,7 +577,10 @@
                             <i class="bi bi-pencil-square fs-5"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold text-dark mb-0" id="modalEditCPLabel">Perbarui Capaian Pembelajaran (CP)</h5>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="modal-title fw-bold text-dark mb-0" id="modalEditCPLabel">Perbarui Capaian Pembelajaran (CP)</h5>
+                                <span class="badge bg-warning text-dark rounded-pill px-2 py-0.5" style="font-size:0.68rem;">Mode Perubahan Data</span>
+                            </div>
                             <small class="text-muted">Edit informasi atau redaksi kompetensi capaian pembelajaran yang telah dibuat.</small>
                         </div>
                     </div>
@@ -614,7 +662,7 @@
     </div>
 </div>
 
-<!-- Modal Add TP (Spacious Large Modal, Always Fresh Clean Inputs) -->
+<!-- Modal Add TP (With COMPLETE Parent CP Reference Card & Clean Inputs) -->
 <div class="modal fade" id="modalAddTP" tabindex="-1" aria-labelledby="modalAddTPLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -646,10 +694,12 @@
                 <div class="modal-body p-4">
                     <!-- Step 1: Parent CP Selection -->
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary mb-1">
-                            <i class="bi bi-diagram-3 text-success me-1"></i>Pilih Induk Capaian Pembelajaran (CP) <span class="text-danger">*</span>
+                        <label class="form-label small fw-bold text-secondary mb-1.5 d-flex align-items-center gap-1">
+                            <i class="bi bi-diagram-3-fill text-success"></i>
+                            <span>Pilih Induk Capaian Pembelajaran (CP) Acuan:</span>
+                            <span class="text-danger">*</span>
                         </label>
-                        <select name="cp_id" id="add_tp_cp_id" class="form-select rounded-3 py-2" required>
+                        <select name="cp_id" id="add_tp_cp_id" class="form-select rounded-3 py-2 border-primary-subtle" required>
                             <?php 
                             $groupedCpAdd = [];
                             foreach (($allCpForDropdown ?? $cpList) as $c) {
@@ -659,70 +709,95 @@
                             foreach ($groupedCpAdd as $grpName => $cList): ?>
                                 <optgroup label="<?= htmlspecialchars($grpName) ?>">
                                     <?php foreach ($cList as $c): ?>
-                                        <option value="<?= $c['id'] ?>" data-deskripsi="<?= htmlspecialchars($c['deskripsi']) ?>" data-elemen="<?= htmlspecialchars($c['elemen'] ?? '') ?>" data-mapel="<?= htmlspecialchars($c['nama_mapel'] ?? '') ?>">
+                                        <option value="<?= $c['id'] ?>" 
+                                                data-kode="<?= htmlspecialchars($c['kode_cp']) ?>"
+                                                data-mapel="<?= htmlspecialchars($c['nama_mapel'] ?? '') ?>"
+                                                data-kurikulum="<?= htmlspecialchars($c['nama_kurikulum'] ?? '') ?> (<?= htmlspecialchars($c['kode_kurikulum'] ?? '') ?>)"
+                                                data-fase="<?= htmlspecialchars($c['nama_fase'] ?? '') ?>"
+                                                data-elemen="<?= htmlspecialchars($c['elemen'] ?? '') ?>"
+                                                data-deskripsi="<?= htmlspecialchars($c['deskripsi']) ?>">
                                             [<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel'] ?? '') ?> — <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 75, '...')) ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </optgroup>
                             <?php endforeach; ?>
                         </select>
-                        <div class="form-text text-muted small mt-1 d-flex align-items-center gap-1.5 flex-wrap" id="preview_cp_meta_line">
-                            <i class="bi bi-info-circle text-primary"></i>
-                            <span>Induk Terpilih:</span>
-                            <span class="badge bg-primary-subtle text-primary border font-monospace px-1.5 py-0.5 rounded" id="preview_cp_kode">CP-...</span>
-                            <span class="badge bg-light text-secondary border px-1.5 py-0.5 rounded" id="preview_cp_elemen">Elemen Ranah</span>
+                    </div>
+
+                    <!-- Step 2: COMPLETE Parent CP Reference Card ("Kumplit & Terlihat") -->
+                    <div class="card border border-primary border-opacity-25 rounded-3 mb-3.5 bg-light overflow-hidden shadow-xs">
+                        <div class="card-header bg-primary bg-opacity-10 py-2.5 px-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-primary text-white font-monospace px-2.5 py-1.5 shadow-xs" id="preview_cp_kode">CP-...</span>
+                                <span class="fw-bold text-dark fs-6" id="preview_cp_mapel">Mata Pelajaran</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-pill small" id="preview_cp_fase" style="display: none;">Fase</span>
+                                <span class="badge bg-white text-dark border px-2.5 py-1 rounded-pill small" id="preview_cp_elemen" style="display: none;">Elemen</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-3 bg-white">
+                            <div class="small fw-bold text-primary text-uppercase mb-2 d-flex align-items-center gap-1.5" style="font-size:0.75rem; letter-spacing:0.5px;">
+                                <i class="bi bi-journal-text fs-6"></i>
+                                <span>Rumusan Capaian Pembelajaran (CP) Acuan:</span>
+                            </div>
+                            <div class="p-3.5 rounded-3 text-dark border border-primary-subtle" id="preview_cp_deskripsi" style="line-height: 1.75; font-size: 0.93rem; background-color: #f8fafc; white-space: pre-wrap; word-break: break-word;">
+                                Pilih Capaian Pembelajaran (CP) di atas untuk menampilkan rumusan capaian acuan...
+                            </div>
+                            <div class="text-secondary small mt-2 d-flex align-items-center gap-1.5" style="font-size: 0.78rem;">
+                                <i class="bi bi-info-circle-fill text-primary"></i>
+                                <span>Gunakan capaian di atas sebagai pedoman kompetensi dasar untuk merumuskan butir-butir <strong>Tujuan Pembelajaran (TP) turunan</strong> pada formulir baru di bawah ini:</span>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Divider Section: New TP Inputs (Explicitly clean & fresh) -->
-                    <div class="d-flex align-items-center justify-content-between pb-2 mb-3 mt-2 border-bottom">
-                        <span class="fw-bold text-success d-flex align-items-center gap-1.5 small text-uppercase" style="letter-spacing: 0.5px;">
-                            <i class="bi bi-file-earmark-plus-fill"></i> Formulir TP Baru (Ketik Data Di Bawah Ini)
-                        </span>
-                        <span class="badge bg-light text-muted border rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
-                            Kondisi Bersih / Kosong
-                        </span>
-                    </div>
+                    <!-- Step 3: Clean New TP Input Card -->
+                    <div class="card border border-success border-opacity-25 rounded-3 p-3 bg-white shadow-xs">
+                        <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
+                            <span class="fw-bold text-success d-flex align-items-center gap-1.5 small text-uppercase" style="letter-spacing: 0.5px;">
+                                <i class="bi bi-file-earmark-plus-fill"></i> Formulir Input TP Baru (Ketik Data Di Sini)
+                            </span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                Input Bersih / Siap Diisi
+                            </span>
+                        </div>
 
-                    <div class="row g-3 mb-3">
-                        <!-- Kode TP Auto -->
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 rounded-3 border bg-light h-100">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label class="form-label small fw-bold text-dark mb-0 d-flex align-items-center gap-1">
-                                        <i class="bi bi-upc-scan text-success"></i> Kode TP (Otomatis)
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-1.5 py-0.5 ms-1" style="font-size:0.68rem;">Otomatis</span>
-                                    </label>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded" id="btn_regen_tp_code" title="Generate ulang kode TP">
+                        <div class="row g-3">
+                            <!-- Kode TP Auto -->
+                            <div class="col-12 col-md-5">
+                                <label class="form-label small fw-bold text-dark mb-1 d-flex align-items-center gap-1">
+                                    <i class="bi bi-upc-scan text-success"></i> Kode TP (Otomatis)
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-1.5 py-0.5 ms-1" style="font-size:0.68rem;">Otomatis</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 font-monospace text-muted"><i class="bi bi-hash"></i></span>
+                                    <input type="text" name="kode_tp" id="add_tp_kode" class="form-control font-monospace fw-bold border-start-0 py-2" placeholder="TP-..." value="" required>
+                                    <button type="button" class="btn btn-outline-secondary" id="btn_regen_tp_code" title="Generate ulang kode TP">
                                         <i class="bi bi-arrow-clockwise"></i>
                                     </button>
                                 </div>
-                                <div class="input-group mt-1">
-                                    <span class="input-group-text bg-white border-end-0 font-monospace text-muted"><i class="bi bi-hash"></i></span>
-                                    <input type="text" name="kode_tp" id="add_tp_kode" class="form-control font-monospace fw-bold border-start-0 py-2" placeholder="TP-..." value="" required>
-                                </div>
                                 <div class="form-text small text-muted mt-1" style="font-size:0.75rem;">Turunan terstandar dari kode CP induk.</div>
                             </div>
-                        </div>
 
-                        <!-- Materi Pokok -->
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold text-secondary mb-1.5">
-                                <i class="bi bi-bookmark text-success me-1"></i>Materi Pokok / Pokok Bahasan
-                            </label>
-                            <input type="text" name="materi_pokok" id="add_tp_materi" class="form-control rounded-3 py-2" placeholder="Ketik topik atau materi pokok baru...">
-                            <div class="form-text small text-muted">Subjek materi pembelajaran yang akan diujikan.</div>
-                        </div>
+                            <!-- Materi Pokok -->
+                            <div class="col-12 col-md-7">
+                                <label class="form-label small fw-bold text-dark mb-1">
+                                    <i class="bi bi-bookmark text-success me-1"></i>Materi Pokok / Pokok Bahasan
+                                </label>
+                                <input type="text" name="materi_pokok" id="add_tp_materi" class="form-control rounded-3 py-2" placeholder="Ketik topik atau materi pokok baru...">
+                                <div class="form-text small text-muted mt-1" style="font-size:0.75rem;">Subjek materi pembelajaran yang akan diujikan.</div>
+                            </div>
 
-                        <!-- Deskripsi TP -->
-                        <div class="col-12">
-                            <label class="form-label small fw-bold text-secondary mb-1.5">
-                                <i class="bi bi-card-text text-success me-1"></i>Deskripsi Rumusan Tujuan Pembelajaran (TP) Baru <span class="text-danger">*</span>
-                            </label>
-                            <textarea name="deskripsi" id="add_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Ketik rumusan Tujuan Pembelajaran baru di sini... Contoh: Peserta didik mampu mengimplementasikan fungsi rekursif secara tepat melalui latihan pemrograman mandiri."></textarea>
-                            <div class="d-flex justify-content-between align-items-center mt-1">
-                                <span class="form-text small text-muted"><i class="bi bi-lightbulb text-warning me-1"></i>Tips ABCD: <strong>A</strong>udience, <strong>B</strong>ehavior, <strong>C</strong>ondition, <strong>D</strong>egree.</span>
-                                <span class="form-text small text-muted" id="add_tp_char_count">0 karakter</span>
+                            <!-- Deskripsi TP -->
+                            <div class="col-12">
+                                <label class="form-label small fw-bold text-dark mb-1">
+                                    <i class="bi bi-card-text text-success me-1"></i>Deskripsi Rumusan Tujuan Pembelajaran (TP) Baru <span class="text-danger">*</span>
+                                </label>
+                                <textarea name="deskripsi" id="add_tp_deskripsi" class="form-control rounded-3 p-3" rows="4" required placeholder="Tuliskan rumusan Tujuan Pembelajaran baru di sini... Contoh: Peserta didik mampu mengimplementasikan fungsi rekursif secara tepat melalui latihan pemrograman mandiri."></textarea>
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <span class="form-text small text-muted"><i class="bi bi-lightbulb text-warning me-1"></i>Tips ABCD: <strong>A</strong>udience, <strong>B</strong>ehavior, <strong>C</strong>ondition, <strong>D</strong>egree.</span>
+                                    <span class="form-text small text-muted" id="add_tp_char_count">0 karakter</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -780,11 +855,39 @@
                             <?php foreach ($groupedCpAdd as $grpName => $cList): ?>
                                 <optgroup label="<?= htmlspecialchars($grpName) ?>">
                                     <?php foreach ($cList as $c): ?>
-                                        <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel'] ?? '') ?> — <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 75, '...')) ?></option>
+                                        <option value="<?= $c['id'] ?>"
+                                                data-kode="<?= htmlspecialchars($c['kode_cp']) ?>"
+                                                data-mapel="<?= htmlspecialchars($c['nama_mapel'] ?? '') ?>"
+                                                data-fase="<?= htmlspecialchars($c['nama_fase'] ?? '') ?>"
+                                                data-elemen="<?= htmlspecialchars($c['elemen'] ?? '') ?>"
+                                                data-deskripsi="<?= htmlspecialchars($c['deskripsi']) ?>">
+                                            [<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel'] ?? '') ?> — <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 75, '...')) ?>
+                                        </option>
                                     <?php endforeach; ?>
                                 </optgroup>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+
+                    <!-- Parent CP Reference Card in Edit Modal -->
+                    <div class="card border border-warning border-opacity-25 rounded-3 mb-3.5 bg-light overflow-hidden shadow-xs">
+                        <div class="card-header bg-warning bg-opacity-10 py-2.5 px-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-warning text-dark font-monospace px-2.5 py-1.5 shadow-xs" id="edit_preview_cp_kode">CP-...</span>
+                                <span class="fw-bold text-dark fs-6" id="edit_preview_cp_mapel">Mata Pelajaran</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <span class="badge bg-white text-dark border px-2.5 py-1 rounded-pill small" id="edit_preview_cp_elemen" style="display: none;">Elemen</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-3 bg-white">
+                            <div class="small fw-bold text-warning-emphasis text-uppercase mb-1.5" style="font-size:0.75rem; letter-spacing:0.5px;">
+                                <i class="bi bi-journal-text me-1"></i>Rumusan Capaian Pembelajaran (CP) Acuan:
+                            </div>
+                            <div class="p-3.5 rounded-3 text-dark border border-warning-subtle" id="edit_preview_cp_deskripsi" style="line-height: 1.7; font-size: 0.92rem; background-color: #fffdf5; white-space: pre-wrap; word-break: break-word;">
+                                Memuat CP acuan...
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row g-3 mb-3">
@@ -852,18 +955,73 @@ function updateAutoTpCode() {
 function updateParentCpPreview() {
     const cpSelect = document.getElementById('add_tp_cp_id');
     const previewKode = document.getElementById('preview_cp_kode');
+    const previewMapel = document.getElementById('preview_cp_mapel');
+    const previewFase = document.getElementById('preview_cp_fase');
     const previewElemen = document.getElementById('preview_cp_elemen');
+    const previewDeskripsi = document.getElementById('preview_cp_deskripsi');
 
     if (!cpSelect) return;
 
     const opt = cpSelect.options[cpSelect.selectedIndex];
     if (opt) {
-        const elem = opt.getAttribute('data-elemen') || 'Elemen Umum';
-        const match = opt.text.match(/^\[(.*?)\]/);
-        const kode = match ? match[1] : 'CP Induk';
+        const kode = opt.getAttribute('data-kode') || (opt.text.match(/^\[(.*?)\]/) ? opt.text.match(/^\[(.*?)\]/)[1] : 'CP Induk');
+        const mapel = opt.getAttribute('data-mapel') || '';
+        const fase = opt.getAttribute('data-fase') || '';
+        const elem = opt.getAttribute('data-elemen') || '';
+        const desk = opt.getAttribute('data-deskripsi') || opt.text || '';
 
         if (previewKode) previewKode.textContent = kode;
-        if (previewElemen) previewElemen.textContent = elem ? elem : 'Elemen Umum';
+        if (previewMapel) previewMapel.textContent = mapel ? mapel : 'Mata Pelajaran';
+        
+        if (previewFase) {
+            if (fase) {
+                previewFase.textContent = fase;
+                previewFase.style.display = 'inline-block';
+            } else {
+                previewFase.style.display = 'none';
+            }
+        }
+
+        if (previewElemen) {
+            if (elem) {
+                previewElemen.textContent = 'Elemen: ' + elem;
+                previewElemen.style.display = 'inline-block';
+            } else {
+                previewElemen.style.display = 'none';
+            }
+        }
+
+        if (previewDeskripsi) previewDeskripsi.textContent = desk ? desk : 'Deskripsi CP belum tersedia.';
+    }
+}
+
+function updateEditParentCpPreview() {
+    const cpSelect = document.getElementById('edit_tp_cp_id');
+    const previewKode = document.getElementById('edit_preview_cp_kode');
+    const previewMapel = document.getElementById('edit_preview_cp_mapel');
+    const previewElemen = document.getElementById('edit_preview_cp_elemen');
+    const previewDeskripsi = document.getElementById('edit_preview_cp_deskripsi');
+
+    if (!cpSelect) return;
+
+    const opt = cpSelect.options[cpSelect.selectedIndex];
+    if (opt) {
+        const kode = opt.getAttribute('data-kode') || (opt.text.match(/^\[(.*?)\]/) ? opt.text.match(/^\[(.*?)\]/)[1] : 'CP Induk');
+        const mapel = opt.getAttribute('data-mapel') || '';
+        const elem = opt.getAttribute('data-elemen') || '';
+        const desk = opt.getAttribute('data-deskripsi') || opt.text || '';
+
+        if (previewKode) previewKode.textContent = kode;
+        if (previewMapel) previewMapel.textContent = mapel ? mapel : 'Mata Pelajaran';
+        if (previewElemen) {
+            if (elem) {
+                previewElemen.textContent = 'Elemen: ' + elem;
+                previewElemen.style.display = 'inline-block';
+            } else {
+                previewElemen.style.display = 'none';
+            }
+        }
+        if (previewDeskripsi) previewDeskripsi.textContent = desk ? desk : 'Deskripsi CP belum tersedia.';
     }
 }
 
@@ -954,7 +1112,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectAddTpCp = document.getElementById('add_tp_cp_id');
     if (selectAddTpCp) {
         selectAddTpCp.addEventListener('change', updateAutoTpCode);
-        updateParentCpPreview();
     }
 
     const btnRegenTp = document.getElementById('btn_regen_tp_code');
@@ -962,9 +1119,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btnRegenTp.addEventListener('click', updateAutoTpCode);
     }
 
-    // Always reset modalAddTP to blank state when opened
+    // Always reset modalAddTP to blank input state while showing complete parent CP
     const modalAddTpEl = document.getElementById('modalAddTP');
-    function resetAddTpForm(targetCpId = null) {
+    function resetAddTpForm(targetCpId = null, btnEl = null) {
         const select = document.getElementById('add_tp_cp_id');
         if (select && targetCpId) {
             select.value = targetCpId;
@@ -980,14 +1137,49 @@ document.addEventListener('DOMContentLoaded', () => {
         if (countSpan) countSpan.textContent = '0 karakter';
 
         updateAutoTpCode();
-        updateParentCpPreview();
+
+        if (btnEl && (btnEl.getAttribute('data-cp-deskripsi') || btnEl.dataset.cpDeskripsi)) {
+            const previewKode = document.getElementById('preview_cp_kode');
+            const previewMapel = document.getElementById('preview_cp_mapel');
+            const previewFase = document.getElementById('preview_cp_fase');
+            const previewElemen = document.getElementById('preview_cp_elemen');
+            const previewDeskripsi = document.getElementById('preview_cp_deskripsi');
+
+            const kode = btnEl.getAttribute('data-cp-kode') || btnEl.dataset.cpKode;
+            const mapel = btnEl.getAttribute('data-cp-mapel') || btnEl.dataset.cpMapel;
+            const fase = btnEl.getAttribute('data-cp-fase') || btnEl.dataset.cpFase;
+            const elem = btnEl.getAttribute('data-cp-elemen') || btnEl.dataset.cpElemen;
+            const desk = btnEl.getAttribute('data-cp-deskripsi') || btnEl.dataset.cpDeskripsi;
+
+            if (previewKode && kode) previewKode.textContent = kode;
+            if (previewMapel && mapel) previewMapel.textContent = mapel;
+            if (previewFase) {
+                if (fase) {
+                    previewFase.textContent = fase;
+                    previewFase.style.display = 'inline-block';
+                } else {
+                    previewFase.style.display = 'none';
+                }
+            }
+            if (previewElemen) {
+                if (elem) {
+                    previewElemen.textContent = 'Elemen: ' + elem;
+                    previewElemen.style.display = 'inline-block';
+                } else {
+                    previewElemen.style.display = 'none';
+                }
+            }
+            if (previewDeskripsi && desk) previewDeskripsi.textContent = desk;
+        } else {
+            updateParentCpPreview();
+        }
     }
 
     if (modalAddTpEl) {
         modalAddTpEl.addEventListener('show.bs.modal', function(e) {
             const button = e.relatedTarget;
             const targetCpId = button ? button.getAttribute('data-cp-id') : null;
-            resetAddTpForm(targetCpId);
+            resetAddTpForm(targetCpId, button);
         });
     }
 
@@ -995,7 +1187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.btn-add-tp-for-cp').forEach(btn => {
         btn.addEventListener('click', function() {
             const cpId = this.dataset.cpId;
-            resetAddTpForm(cpId);
+            resetAddTpForm(cpId, this);
         });
     });
 
@@ -1021,6 +1213,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // Edit TP Modal Listeners
+    const selectEditTpCp = document.getElementById('edit_tp_cp_id');
+    if (selectEditTpCp) {
+        selectEditTpCp.addEventListener('change', updateEditParentCpPreview);
+    }
+
     // Populate Edit TP Modal
     document.querySelectorAll('.btn-edit-tp').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -1030,7 +1228,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('edit_tp_deskripsi').value = this.dataset.deskripsi || '';
 
             const selCp = document.getElementById('edit_tp_cp_id');
-            if (selCp && this.dataset.cpId) selCp.value = this.dataset.cpId;
+            if (selCp && this.dataset.cpId) {
+                selCp.value = this.dataset.cpId;
+            }
+            updateEditParentCpPreview();
         });
     });
 
