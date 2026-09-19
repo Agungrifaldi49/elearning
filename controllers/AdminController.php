@@ -1828,9 +1828,7 @@ class AdminController {
             exit();
         }
 
-        // Trigger auto sync on load so Admin always sees fresh 100% synchronized data
-        $nilaiModel->syncAllNilaiRapor();
-
+        // Auto sync is performed on demand via POST action=sync_all or when grades are updated
         $kelasList = $academicModel->getKelas();
         $mapelList = $academicModel->getMapel();
 

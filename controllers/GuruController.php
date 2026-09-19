@@ -1418,6 +1418,13 @@ class GuruController {
         } else {
             $kelasList = $academicModel->getKelasByGuru($guruId);
             $mapelList = $academicModel->getMapelByGuru($guruId);
+            // Fallback: If guru has no specific kelas or mapel in assignment records, provide all active kelas & mapel so guru is never stuck
+            if (empty($kelasList)) {
+                $kelasList = $academicModel->getKelas();
+            }
+            if (empty($mapelList)) {
+                $mapelList = $academicModel->getMapel();
+            }
         }
 
         $selectedKelasId = isset($_GET['kelas_id']) && $_GET['kelas_id'] !== '' ? (int)$_GET['kelas_id'] : ($kelasList[0]['id'] ?? 0);
@@ -1425,15 +1432,16 @@ class GuruController {
 
         if (!$selectedMapelId && $selectedKelasId) {
             $db = Database::getConnection();
-            $stmtActiveMapel = $db->query("
+            $stmtActiveMapel = $db->prepare("
                 SELECT nr.mapel_id 
                 FROM nilai_rapor nr
                 JOIN siswa s ON nr.siswa_id = s.id
-                WHERE s.kelas_id = {$selectedKelasId} 
+                WHERE s.kelas_id = ? 
                   AND (nr.nilai_tugas > 0 OR nr.nilai_quiz > 0 OR nr.nilai_uts > 0 OR nr.nilai_uas > 0)
                 LIMIT 1
             ");
-            $activeMapelId = $stmtActiveMapel ? $stmtActiveMapel->fetchColumn() : null;
+            $stmtActiveMapel->execute([$selectedKelasId]);
+            $activeMapelId = $stmtActiveMapel->fetchColumn();
             if ($activeMapelId) {
                 $selectedMapelId = (int)$activeMapelId;
             } else {
@@ -1457,7 +1465,7 @@ class GuruController {
                     $quiz  = min(100.0, max(0.0, (float)($data['quiz'] ?? 0)));
                     $uts   = min(100.0, max(0.0, (float)($data['uts'] ?? 0)));
                     $uas   = min(100.0, max(0.0, (float)($data['uas'] ?? 0)));
-                    $nilaiModel->saveNilai($siswaId, $selectedMapelId, 1, 1, $tugas, $quiz, $uts, $uas);
+                    $nilaiModel->saveNilai((int)$siswaId, $selectedMapelId, 1, 1, $tugas, $quiz, $uts, $uas);
                     $countSaved++;
                 }
                 FlashHelper::setSuccess("Berhasil memperbarui E-Rapor batch untuk {$countSaved} siswa kelas ini.");
@@ -1478,7 +1486,7 @@ class GuruController {
             exit();
         }
 
-        $siswaList = $siswaModel->getAll($selectedKelasId);
+        $siswaList = ($selectedKelasId > 0) ? $siswaModel->getAll($selectedKelasId) : [];
 
         $existingNilai = [];
         if ($selectedKelasId && $selectedMapelId) {
@@ -1486,10 +1494,11 @@ class GuruController {
         }
 
         $selectedKelasInfo = null;
-        if ($selectedKelasId) {
+        if ($selectedKelasId > 0) {
             $db = Database::getConnection();
-            $stmtK = $db->query("SELECT k.*, j.nama_jurusan FROM kelas k LEFT JOIN jurusan j ON k.jurusan_id = j.id WHERE k.id = {$selectedKelasId}");
-            $selectedKelasInfo = $stmtK ? $stmtK->fetch() : null;
+            $stmtK = $db->prepare("SELECT k.*, j.nama_jurusan FROM kelas k LEFT JOIN jurusan j ON k.jurusan_id = j.id WHERE k.id = ?");
+            $stmtK->execute([$selectedKelasId]);
+            $selectedKelasInfo = $stmtK ? $stmtK->fetch(PDO::FETCH_ASSOC) : null;
         }
 
         require_once ROOT_PATH . 'views/guru/input_nilai.php';

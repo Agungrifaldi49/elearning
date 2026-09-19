@@ -7,16 +7,22 @@ require_once ROOT_PATH . 'models/CurriculumModel.php';
 
 class NilaiModel {
     private $db;
+    private static $tableEnsured = false;
 
     public function __construct() {
         $this->db = Database::getConnection();
-        $this->ensureTableExists();
-        $this->sanitizeAndCapAllRaporNilai();
+        if (!self::$tableEnsured) {
+            $this->ensureTableExists();
+            self::$tableEnsured = true;
+        }
     }
 
     private function ensureTableExists() {
         try {
-            $this->db->exec("ALTER TABLE mata_pelajaran ADD COLUMN IF NOT EXISTS kkm INT DEFAULT 75");
+            $cols = $this->db->query("SHOW COLUMNS FROM mata_pelajaran LIKE 'kkm'")->fetch();
+            if (!$cols) {
+                $this->db->exec("ALTER TABLE mata_pelajaran ADD COLUMN kkm INT DEFAULT 75");
+            }
         } catch (Exception $e) {}
         try {
             $sql = "CREATE TABLE IF NOT EXISTS nilai_rapor (
@@ -177,9 +183,9 @@ class NilaiModel {
         try {
             require_once ROOT_PATH . 'models/CurriculumModel.php';
             $currModel = new CurriculumModel();
-            $stmtTa = $this->db->query("SELECT id, semester FROM tahun_ajaran WHERE is_active = 1 LIMIT 1");
-            $ta = $stmtTa->fetch(PDO::FETCH_ASSOC);
-            $taId = $ta['id'] ?? 4;
+            $stmtTa = $this->db->query("SELECT id, semester FROM tahun_ajaran WHERE status = 'aktif' OR is_active = 1 ORDER BY id DESC LIMIT 1");
+            $ta = $stmtTa ? $stmtTa->fetch(PDO::FETCH_ASSOC) : null;
+            $taId = $ta['id'] ?? 1;
             $sem = $ta['semester'] ?? 'Ganjil';
             $currModel->generateOrSyncRaporSiswa($siswaId, $taId, $sem);
         } catch (\Throwable $e) {}
@@ -346,19 +352,6 @@ class NilaiModel {
     }
 
     public function getNilaiByKelasAndMapel(int $kelasId, int $mapelId = 0): array {
-        $stmtSiswa = $this->db->prepare("SELECT id FROM siswa WHERE kelas_id = ?");
-        $stmtSiswa->execute([$kelasId]);
-        $siswas = $stmtSiswa->fetchAll(PDO::FETCH_COLUMN);
-
-        $stmtMapel = $this->db->query("SELECT id FROM mata_pelajaran");
-        $allMapels = $stmtMapel->fetchAll(PDO::FETCH_COLUMN);
-
-        foreach ($siswas as $sId) {
-            foreach ($allMapels as $mId) {
-                $this->syncSiswaMapelNilai((int)$sId, (int)$mId);
-            }
-        }
-
         $sql = "
             SELECT n.*, mp.nama_mapel
             FROM nilai_rapor n

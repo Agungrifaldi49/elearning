@@ -504,7 +504,27 @@ class CurriculumModel extends BaseModel {
     public function getActiveKurikulumForRombel($rombelId, $tahunAjaranId = null) {
         $rombelId = (int)$rombelId;
         if (!$tahunAjaranId) {
-            $tahunAjaranId = (int)$this->db->query("SELECT id FROM tahun_ajaran WHERE is_active = 1 LIMIT 1")->fetchColumn();
+            try {
+                $stmtTa = $this->db->query("SELECT id FROM tahun_ajaran WHERE status = 'aktif' OR is_active = 1 ORDER BY id DESC LIMIT 1");
+                $tahunAjaranId = (int)($stmtTa ? $stmtTa->fetchColumn() : 0);
+            } catch (\Throwable $e) {
+                $tahunAjaranId = 1;
+            }
+            if (!$tahunAjaranId) {
+                $tahunAjaranId = 1;
+            }
+        }
+
+        if ($rombelId <= 0) {
+            $defaultKur = $this->getActiveKurikulum();
+            return [
+                'kurikulum_id' => $defaultKur['id'] ?? 1,
+                'nama_kurikulum' => $defaultKur['nama'] ?? 'Kurikulum Merdeka SMK',
+                'kode_kurikulum' => $defaultKur['kode'] ?? 'KMDK',
+                'fase_id' => 1,
+                'kode_fase' => 'E',
+                'nama_fase' => 'Fase E (Kelas X)'
+            ];
         }
 
         // Ambil info tingkat kelas dari rombel
@@ -1267,8 +1287,12 @@ class CurriculumModel extends BaseModel {
     public function getRaporSiswa($siswaId, $tahunAjaranId = null, $semester = null) {
         $sId = (int)$siswaId;
         if (!$tahunAjaranId) {
-            $activeTa = $this->db->query("SELECT id, tahun_ajaran, semester FROM tahun_ajaran WHERE is_active = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-            $tahunAjaranId = $activeTa['id'] ?? 4;
+            try {
+                $activeTa = $this->db->query("SELECT id, COALESCE(tahun_ajaran, tahun) as tahun_ajaran, COALESCE(semester, 'Ganjil') as semester FROM tahun_ajaran WHERE status = 'aktif' OR is_active = 1 ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            } catch (\Throwable $e) {
+                $activeTa = null;
+            }
+            $tahunAjaranId = $activeTa['id'] ?? 1;
             if (!$semester) {
                 $semester = $activeTa['semester'] ?? 'Ganjil';
             }

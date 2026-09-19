@@ -153,7 +153,15 @@ class Database {
             "idx_hasil_ujian_siswa_ujian" => "ALTER TABLE hasil_ujian ADD INDEX idx_hasil_ujian_siswa_ujian (siswa_id, ujian_id)",
             "idx_hasil_quiz_siswa_quiz" => "ALTER TABLE hasil_quiz ADD INDEX idx_hasil_quiz_siswa_quiz (siswa_id, quiz_id)",
             "idx_notifikasi_user_read" => "ALTER TABLE notifikasi ADD INDEX idx_notifikasi_user_read (user_id, is_read)",
-            "idx_chat_sender_receiver" => "ALTER TABLE chat ADD INDEX idx_chat_sender_receiver (sender_id, receiver_id, is_read)"
+            "idx_chat_sender_receiver" => "ALTER TABLE chat ADD INDEX idx_chat_sender_receiver (sender_id, receiver_id, is_read)",
+            "idx_nr_siswa_mapel" => "ALTER TABLE nilai_rapor ADD INDEX idx_nr_siswa_mapel (siswa_id, mapel_id)",
+            "idx_nr_mapel_siswa" => "ALTER TABLE nilai_rapor ADD INDEX idx_nr_mapel_siswa (mapel_id, siswa_id)",
+            "idx_siswa_kelas" => "ALTER TABLE siswa ADD INDEX idx_siswa_kelas (kelas_id)",
+            "idx_jadwal_guru_kelas" => "ALTER TABLE jadwal ADD INDEX idx_jadwal_guru_kelas (guru_id, kelas_id)",
+            "idx_materi_guru_kelas" => "ALTER TABLE materi ADD INDEX idx_materi_guru_kelas (guru_id, kelas_id)",
+            "idx_tugas_guru_kelas" => "ALTER TABLE tugas ADD INDEX idx_tugas_guru_kelas (guru_id, kelas_id)",
+            "idx_quiz_guru_kelas" => "ALTER TABLE quiz ADD INDEX idx_quiz_guru_kelas (guru_id, kelas_id)",
+            "idx_sme_guru_siswa" => "ALTER TABLE siswa_mapel_enrollment ADD INDEX idx_sme_guru_siswa (guru_id, siswa_id)"
         ];
 
         foreach ($indexes as $name => $sql) {

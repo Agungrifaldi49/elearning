@@ -209,7 +209,7 @@ foreach ($kompList as $kp) {
                                     </td>
                                     <?php if (!$isReadOnly): ?>
                                         <td class="text-center">
-                                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalEditNilai<?= $s['id'] ?>">
+                                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" onclick="openEditModal(<?= (int)$s['id'] ?>, <?= htmlspecialchars(json_encode($s['nama_lengkap']), ENT_QUOTES, 'UTF-8') ?>, <?= htmlspecialchars(json_encode('NIS: ' . ($s['nis'] ?? '-') . ' | Jurusan: ' . ($s['nama_jurusan'] ?? '-')), ENT_QUOTES, 'UTF-8') ?>, <?= (float)$nTugas ?>, <?= (float)$nQuiz ?>, <?= (float)$nUts ?>, <?= (float)$nUas ?>)">
                                                 <i class="bi bi-pencil-square me-1"></i> Edit
                                             </button>
                                         </td>
@@ -234,67 +234,59 @@ foreach ($kompList as $kp) {
 </div>
 </main>
 
-<?php if (!$isReadOnly && !empty($siswaList)): ?>
-    <!-- Modal Edit Nilai Per Siswa -->
-    <?php foreach ($siswaList as $s): 
-        $nData = $existingNilai[$s['id']] ?? [];
-        $nTugas = $nData['nilai_tugas'] ?? 0;
-        $nQuiz  = $nData['nilai_quiz'] ?? 0;
-        $nUts   = $nData['nilai_uts'] ?? 0;
-        $nUas   = $nData['nilai_uas'] ?? 0;
-    ?>
-        <div class="modal fade" id="modalEditNilai<?= $s['id'] ?>" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content rounded-4 border-0 shadow">
-                    <div class="modal-header border-0 bg-primary text-white p-3.5" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
-                        <h6 class="modal-title fw-bold text-white mb-0">
-                            <i class="bi bi-pencil-square me-2"></i>Edit Nilai E-Rapor Siswa
-                        </h6>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <form action="<?= BASE_URL ?>index.php?url=<?= $formTargetUrl ?>&kelas_id=<?= $selectedKelasId ?>&mapel_id=<?= $selectedMapelId ?>" method="POST">
-                        <div class="modal-body p-4 bg-light">
-                            <?= Security::csrfField() ?>
-                            <input type="hidden" name="action" value="single_save">
-                            <input type="hidden" name="siswa_id" value="<?= $s['id'] ?>">
-                            <input type="hidden" name="mapel_id" value="<?= $selectedMapelId ?>">
-
-                            <div class="p-3 bg-white rounded-3 border mb-3">
-                                <small class="text-muted d-block">Siswa Target:</small>
-                                <h6 class="fw-bold text-dark mb-0"><?= htmlspecialchars($s['nama_lengkap']) ?></h6>
-                                <small class="text-muted">NIS: <?= htmlspecialchars($s['nis'] ?? '-') ?> | Jurusan: <?= htmlspecialchars($s['nama_jurusan'] ?? '-') ?></small>
-                            </div>
-
-                            <div class="row g-3">
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelTugas) ?> (<?= $wTugas ?>%)</label>
-                                    <input type="number" name="nilai_tugas" class="form-control rounded-3" min="0" max="100" step="0.5" value="<?= $nTugas ?>" required>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelQuiz) ?> (<?= $wQuiz ?>%)</label>
-                                    <input type="number" name="nilai_quiz" class="form-control rounded-3" min="0" max="100" step="0.5" value="<?= $nQuiz ?>" required>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelUts) ?> (<?= $wUts ?>%)</label>
-                                    <input type="number" name="nilai_uts" class="form-control rounded-3" min="0" max="100" step="0.5" value="<?= $nUts ?>" required>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelUas) ?> (<?= $wUas ?>%)</label>
-                                    <input type="number" name="nilai_uas" class="form-control rounded-3" min="0" max="100" step="0.5" value="<?= $nUas ?>" required>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer border-0 p-3.5 justify-content-between bg-white border-top">
-                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
-                            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
-                                <i class="bi bi-floppy-fill me-1.5"></i> Simpan Perubahan Nilai
-                            </button>
-                        </div>
-                    </form>
+<?php if (!$isReadOnly): ?>
+    <!-- Single Dynamic Reusable Modal Edit Nilai Per Siswa -->
+    <div class="modal fade" id="modalEditNilai" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 bg-primary text-white p-3.5" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                    <h6 class="modal-title fw-bold text-white mb-0">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Nilai E-Rapor Siswa
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+                <form action="<?= BASE_URL ?>index.php?url=<?= $formTargetUrl ?>&kelas_id=<?= $selectedKelasId ?>&mapel_id=<?= $selectedMapelId ?>" method="POST">
+                    <div class="modal-body p-4 bg-light">
+                        <?= Security::csrfField() ?>
+                        <input type="hidden" name="action" value="single_save">
+                        <input type="hidden" name="siswa_id" id="editModalSiswaId" value="">
+                        <input type="hidden" name="mapel_id" value="<?= $selectedMapelId ?>">
+
+                        <div class="p-3 bg-white rounded-3 border mb-3 shadow-xs">
+                            <small class="text-muted d-block fw-semibold">Siswa Target:</small>
+                            <h6 class="fw-bold text-dark mb-0" id="editModalNamaSiswa">-</h6>
+                            <small class="text-muted" id="editModalInfoSiswa">-</small>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelTugas) ?> (<?= $wTugas ?>%)</label>
+                                <input type="number" name="nilai_tugas" id="editModalTugas" class="form-control rounded-3" min="0" max="100" step="0.5" value="0" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelQuiz) ?> (<?= $wQuiz ?>%)</label>
+                                <input type="number" name="nilai_quiz" id="editModalQuiz" class="form-control rounded-3" min="0" max="100" step="0.5" value="0" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelUts) ?> (<?= $wUts ?>%)</label>
+                                <input type="number" name="nilai_uts" id="editModalUts" class="form-control rounded-3" min="0" max="100" step="0.5" value="0" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-dark"><?= htmlspecialchars($labelUas) ?> (<?= $wUas ?>%)</label>
+                                <input type="number" name="nilai_uas" id="editModalUas" class="form-control rounded-3" min="0" max="100" step="0.5" value="0" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 p-3.5 justify-content-between bg-white border-top">
+                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                            <i class="bi bi-floppy-fill me-1.5"></i> Simpan Perubahan Nilai
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-    <?php endforeach; ?>
+    </div>
 <?php endif; ?>
 
 <?php if (!$isReadOnly): ?>
@@ -360,6 +352,29 @@ foreach ($kompList as $kp) {
 <?php endif; ?>
 
 <script>
+function openEditModal(id, nama, info, tugas, quiz, uts, uas) {
+    var sIdInput = document.getElementById('editModalSiswaId');
+    if (sIdInput) sIdInput.value = id;
+    var namaEl = document.getElementById('editModalNamaSiswa');
+    if (namaEl) namaEl.textContent = nama;
+    var infoEl = document.getElementById('editModalInfoSiswa');
+    if (infoEl) infoEl.textContent = info;
+    var tInput = document.getElementById('editModalTugas');
+    if (tInput) tInput.value = tugas;
+    var qInput = document.getElementById('editModalQuiz');
+    if (qInput) qInput.value = quiz;
+    var uInput = document.getElementById('editModalUts');
+    if (uInput) uInput.value = uts;
+    var aInput = document.getElementById('editModalUas');
+    if (aInput) aInput.value = uas;
+
+    var modalEl = document.getElementById('modalEditNilai');
+    if (modalEl) {
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
+}
+
 function calcRow(siswaId) {
     const inputs = document.querySelectorAll(`input[data-siswa="${siswaId}"]`);
     if (inputs.length < 4) return;

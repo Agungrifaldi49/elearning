@@ -482,16 +482,28 @@ class AcademicModel extends BaseModel {
     }
 
     // --- TAHUN AJARAN & SEMESTER ---
-    // --- TAHUN AJARAN & SEMESTER ---
     private function ensureTahunAjaranTable() {
+        static $taEnsured = false;
+        if ($taEnsured) return;
+        $taEnsured = true;
+
         try {
-            $this->db->exec("ALTER TABLE tahun_ajaran ADD COLUMN IF NOT EXISTS tahun_ajaran VARCHAR(20) NULL");
-            $this->db->exec("ALTER TABLE tahun_ajaran ADD COLUMN IF NOT EXISTS semester VARCHAR(20) DEFAULT 'Ganjil'");
-            $this->db->exec("ALTER TABLE tahun_ajaran ADD COLUMN IF NOT EXISTS is_active TINYINT(1) DEFAULT 0");
-            $this->db->exec("ALTER TABLE tahun_ajaran ADD COLUMN IF NOT EXISTS created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+            $existingCols = $this->db->query("SHOW COLUMNS FROM tahun_ajaran")->fetchAll(PDO::FETCH_COLUMN);
+            if (!in_array('tahun_ajaran', $existingCols)) {
+                $this->db->exec("ALTER TABLE tahun_ajaran ADD COLUMN tahun_ajaran VARCHAR(20) NULL");
+            }
+            if (!in_array('semester', $existingCols)) {
+                $this->db->exec("ALTER TABLE tahun_ajaran ADD COLUMN semester VARCHAR(20) DEFAULT 'Ganjil'");
+            }
+            if (!in_array('is_active', $existingCols)) {
+                $this->db->exec("ALTER TABLE tahun_ajaran ADD COLUMN is_active TINYINT(1) DEFAULT 0");
+            }
+            if (!in_array('created_at', $existingCols)) {
+                $this->db->exec("ALTER TABLE tahun_ajaran ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+            }
 
             $this->db->exec("UPDATE tahun_ajaran SET tahun_ajaran = tahun WHERE (tahun_ajaran IS NULL OR tahun_ajaran = '') AND tahun IS NOT NULL");
-            $this->db->exec("UPDATE tahun_ajaran SET is_active = 1 WHERE status = 'aktif' AND is_active = 0");
+            $this->db->exec("UPDATE tahun_ajaran SET is_active = 1 WHERE status = 'aktif'");
 
             // Drop UNIQUE constraint on legacy 'tahun' column if present so multiple semesters can be saved
             $indexes = $this->db->query("SHOW INDEX FROM tahun_ajaran WHERE Key_name = 'tahun'")->fetchAll();
@@ -619,6 +631,10 @@ class AcademicModel extends BaseModel {
 
     // --- ENROLLMENT KEY & KODE AKSES MAPEL PER GURU ---
     public function ensureEnrollmentTables() {
+        static $ensured = false;
+        if ($ensured) return;
+        $ensured = true;
+
         try {
             $this->db->exec("
                 CREATE TABLE IF NOT EXISTS mapel_enrollment_keys (
