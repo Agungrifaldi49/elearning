@@ -296,24 +296,28 @@ class Database {
                     kurikulum_id INT NOT NULL,
                     mapel_id INT NOT NULL,
                     fase_id INT NULL,
+                    guru_id INT NULL,
                     kode_cp VARCHAR(50) NOT NULL,
                     elemen VARCHAR(150) NULL,
                     deskripsi TEXT NOT NULL,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     INDEX idx_cp_kur (kurikulum_id),
-                    INDEX idx_cp_mapel (mapel_id)
+                    INDEX idx_cp_mapel (mapel_id),
+                    INDEX idx_cp_guru (guru_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
                 CREATE TABLE IF NOT EXISTS tujuan_pembelajaran (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     cp_id INT NOT NULL,
+                    guru_id INT NULL,
                     kode_tp VARCHAR(50) NOT NULL,
                     materi_pokok VARCHAR(255) NULL,
                     deskripsi TEXT NOT NULL,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    INDEX idx_tp_cp (cp_id)
+                    INDEX idx_tp_cp (cp_id),
+                    INDEX idx_tp_guru (guru_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
                 CREATE TABLE IF NOT EXISTS komponen_penilaian (
@@ -428,6 +432,16 @@ class Database {
                     (1, 'Sumatif Tengah Semester (STS)', 'uts', 30.00, 1, 'Ujian evaluasi capaian tengah semester.'),
                     (1, 'Sumatif Akhir Semester (SAS)', 'uas', 30.00, 1, 'Ujian akhir evaluasi kompetensi semester.');
                 ");
+            }
+            
+            // Ensure guru_id column exists on existing installations
+            $colsCp = self::$conn->query("SHOW COLUMNS FROM capaian_pembelajaran LIKE 'guru_id'")->fetchAll();
+            if (empty($colsCp)) {
+                self::$conn->exec("ALTER TABLE capaian_pembelajaran ADD COLUMN guru_id INT NULL AFTER fase_id, ADD INDEX idx_cp_guru (guru_id)");
+            }
+            $colsTp = self::$conn->query("SHOW COLUMNS FROM tujuan_pembelajaran LIKE 'guru_id'")->fetchAll();
+            if (empty($colsTp)) {
+                self::$conn->exec("ALTER TABLE tujuan_pembelajaran ADD COLUMN guru_id INT NULL AFTER cp_id, ADD INDEX idx_tp_guru (guru_id)");
             }
         } catch (\Throwable $e) {
             // Silently ignore if table already exists or DDL restricted

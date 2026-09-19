@@ -583,17 +583,19 @@ class CurriculumModel extends BaseModel {
     // 5. CAPAIAN PEMBELAJARAN (CP) & TUJUAN PEMBELAJARAN (TP)
     // =========================================================================
 
-    public function getCPList($kurikulumId = null, $mapelId = null, $faseId = null) {
+    public function getCPList($kurikulumId = null, $mapelId = null, $faseId = null, $guruId = null) {
         $sql = "
             SELECT cp.*,
                    kur.nama as nama_kurikulum, kur.kode as kode_kurikulum,
                    mp.nama_mapel, mp.kode_mapel,
                    f.kode as kode_fase, f.nama as nama_fase,
+                   g.nama_lengkap as nama_guru, g.nip as nip_guru,
                    (SELECT COUNT(*) FROM tujuan_pembelajaran tp WHERE tp.cp_id = cp.id) as total_tp
             FROM capaian_pembelajaran cp
             JOIN kurikulum kur ON cp.kurikulum_id = kur.id
             JOIN mata_pelajaran mp ON cp.mapel_id = mp.id
             LEFT JOIN fase f ON cp.fase_id = f.id
+            LEFT JOIN guru g ON cp.guru_id = g.id
             WHERE 1=1
         ";
         $params = [];
@@ -602,12 +604,24 @@ class CurriculumModel extends BaseModel {
             $params[] = (int)$kurikulumId;
         }
         if ($mapelId) {
-            $sql .= " AND cp.mapel_id = ?";
-            $params[] = (int)$mapelId;
+            if (is_array($mapelId)) {
+                if (!empty($mapelId)) {
+                    $inPlaceholders = implode(',', array_fill(0, count($mapelId), '?'));
+                    $sql .= " AND cp.mapel_id IN ({$inPlaceholders})";
+                    foreach ($mapelId as $mId) $params[] = (int)$mId;
+                }
+            } else {
+                $sql .= " AND cp.mapel_id = ?";
+                $params[] = (int)$mapelId;
+            }
         }
         if ($faseId) {
             $sql .= " AND cp.fase_id = ?";
             $params[] = (int)$faseId;
+        }
+        if ($guruId) {
+            $sql .= " AND cp.guru_id = ?";
+            $params[] = (int)$guruId;
         }
         $sql .= " ORDER BY mp.nama_mapel ASC, cp.kode_cp ASC";
 
@@ -735,22 +749,26 @@ class CurriculumModel extends BaseModel {
             }
         }
 
+        $guruId = !empty($data['guru_id']) ? (int)$data['guru_id'] : null;
+
         $stmt = $this->db->prepare("
-            INSERT INTO capaian_pembelajaran (kurikulum_id, mapel_id, fase_id, kode_cp, elemen, deskripsi)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO capaian_pembelajaran (kurikulum_id, mapel_id, fase_id, guru_id, kode_cp, elemen, deskripsi)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
-        $res = $stmt->execute([$kurikulumId, $mapelId, $faseId, $kodeCp, $elemen, $deskripsi]);
+        $res = $stmt->execute([$kurikulumId, $mapelId, $faseId, $guruId, $kodeCp, $elemen, $deskripsi]);
         return ['status' => (bool)$res, 'message' => "Capaian Pembelajaran (CP) '{$kodeCp}' berhasil ditambahkan."];
     }
 
     public function getCPById($id) {
         $stmt = $this->db->prepare("
             SELECT cp.*, kur.nama as nama_kurikulum, kur.kode as kode_kurikulum,
-                   mp.nama_mapel, mp.kode_mapel, f.nama as nama_fase, f.kode as kode_fase
+                   mp.nama_mapel, mp.kode_mapel, f.nama as nama_fase, f.kode as kode_fase,
+                   g.nama_lengkap as nama_guru, g.nip as nip_guru
             FROM capaian_pembelajaran cp
             JOIN kurikulum kur ON cp.kurikulum_id = kur.id
             JOIN mata_pelajaran mp ON cp.mapel_id = mp.id
             LEFT JOIN fase f ON cp.fase_id = f.id
+            LEFT JOIN guru g ON cp.guru_id = g.id
             WHERE cp.id = ?
         ");
         $stmt->execute([(int)$id]);
@@ -763,12 +781,13 @@ class CurriculumModel extends BaseModel {
         $elemen = trim($data['elemen'] ?? '');
         $deskripsi = trim($data['deskripsi'] ?? '');
         $faseId = !empty($data['fase_id']) ? (int)$data['fase_id'] : null;
+        $guruId = !empty($data['guru_id']) ? (int)$data['guru_id'] : null;
 
         if (empty($kodeCp) || empty($deskripsi)) {
             return ['status' => false, 'message' => 'Kode CP dan Deskripsi Capaian Pembelajaran tidak boleh kosong.'];
         }
 
-        $stmtCurrent = $this->db->prepare("SELECT kurikulum_id, mapel_id FROM capaian_pembelajaran WHERE id = ?");
+        $stmtCurrent = $this->db->prepare("SELECT kurikulum_id, mapel_id, guru_id FROM capaian_pembelajaran WHERE id = ?");
         $stmtCurrent->execute([$id]);
         $current = $stmtCurrent->fetch(PDO::FETCH_ASSOC);
         if (!$current) {
@@ -777,6 +796,7 @@ class CurriculumModel extends BaseModel {
 
         $targetKurId = !empty($data['kurikulum_id']) ? (int)$data['kurikulum_id'] : (int)$current['kurikulum_id'];
         $targetMapelId = !empty($data['mapel_id']) ? (int)$data['mapel_id'] : (int)$current['mapel_id'];
+        $targetGuruId = $guruId ?: (!empty($current['guru_id']) ? (int)$current['guru_id'] : null);
 
         $chk = $this->db->prepare("SELECT id FROM capaian_pembelajaran WHERE kurikulum_id = ? AND mapel_id = ? AND kode_cp = ? AND id != ?");
         $chk->execute([$targetKurId, $targetMapelId, $kodeCp, $id]);
@@ -793,8 +813,8 @@ class CurriculumModel extends BaseModel {
             }
         }
 
-        $updates = ["kode_cp = ?", "elemen = ?", "deskripsi = ?", "fase_id = ?", "kurikulum_id = ?", "mapel_id = ?"];
-        $params = [$kodeCp, $elemen, $deskripsi, $faseId, $targetKurId, $targetMapelId, $id];
+        $updates = ["kode_cp = ?", "elemen = ?", "deskripsi = ?", "fase_id = ?", "kurikulum_id = ?", "mapel_id = ?", "guru_id = ?"];
+        $params = [$kodeCp, $elemen, $deskripsi, $faseId, $targetKurId, $targetMapelId, $targetGuruId, $id];
 
         $stmt = $this->db->prepare("UPDATE capaian_pembelajaran SET " . implode(', ', $updates) . " WHERE id = ?");
         $res = $stmt->execute($params);
@@ -811,19 +831,25 @@ class CurriculumModel extends BaseModel {
         return ['status' => (bool)$res, 'message' => 'Capaian Pembelajaran beserta TP turunannya berhasil dihapus.'];
     }
 
-    public function getTPList($cpId = null) {
+    public function getTPList($cpId = null, $guruId = null) {
         $sql = "
-            SELECT tp.*, cp.kode_cp, cp.elemen, cp.kurikulum_id, cp.mapel_id, mp.nama_mapel, kur.kode as kode_kurikulum
+            SELECT tp.*, cp.kode_cp, cp.elemen, cp.kurikulum_id, cp.mapel_id, mp.nama_mapel, kur.kode as kode_kurikulum,
+                   g.nama_lengkap as nama_guru, g.nip as nip_guru
             FROM tujuan_pembelajaran tp
             JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id
             JOIN kurikulum kur ON cp.kurikulum_id = kur.id
             JOIN mata_pelajaran mp ON cp.mapel_id = mp.id
+            LEFT JOIN guru g ON tp.guru_id = g.id
             WHERE 1=1
         ";
         $params = [];
         if ($cpId) {
             $sql .= " AND tp.cp_id = ?";
             $params[] = (int)$cpId;
+        }
+        if ($guruId) {
+            $sql .= " AND tp.guru_id = ?";
+            $params[] = (int)$guruId;
         }
         $sql .= " ORDER BY tp.kode_tp ASC";
 
@@ -834,10 +860,12 @@ class CurriculumModel extends BaseModel {
 
     public function getTPById($id) {
         $stmt = $this->db->prepare("
-            SELECT tp.*, cp.kode_cp, cp.elemen, cp.kurikulum_id, cp.mapel_id, mp.nama_mapel
+            SELECT tp.*, cp.kode_cp, cp.elemen, cp.kurikulum_id, cp.mapel_id, mp.nama_mapel,
+                   g.nama_lengkap as nama_guru
             FROM tujuan_pembelajaran tp
             JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id
             JOIN mata_pelajaran mp ON cp.mapel_id = mp.id
+            LEFT JOIN guru g ON tp.guru_id = g.id
             WHERE tp.id = ?
         ");
         $stmt->execute([(int)$id]);
@@ -849,6 +877,7 @@ class CurriculumModel extends BaseModel {
         $kodeTp = strtoupper(trim($data['kode_tp'] ?? ''));
         $materiPokok = trim($data['materi_pokok'] ?? '');
         $deskripsi = trim($data['deskripsi'] ?? '');
+        $guruId = !empty($data['guru_id']) ? (int)$data['guru_id'] : null;
 
         if ($cpId <= 0) {
             return ['status' => false, 'message' => 'Induk Capaian Pembelajaran (CP) wajib dipilih.'];
@@ -870,10 +899,10 @@ class CurriculumModel extends BaseModel {
         }
 
         $stmt = $this->db->prepare("
-            INSERT INTO tujuan_pembelajaran (cp_id, kode_tp, materi_pokok, deskripsi)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO tujuan_pembelajaran (cp_id, guru_id, kode_tp, materi_pokok, deskripsi)
+            VALUES (?, ?, ?, ?, ?)
         ");
-        $res = $stmt->execute([$cpId, $kodeTp, $materiPokok, $deskripsi]);
+        $res = $stmt->execute([$cpId, $guruId, $kodeTp, $materiPokok, $deskripsi]);
         return ['status' => (bool)$res, 'message' => "Tujuan Pembelajaran (TP) '{$kodeTp}' berhasil ditambahkan."];
     }
 
@@ -882,28 +911,34 @@ class CurriculumModel extends BaseModel {
         $kodeTp = strtoupper(trim($data['kode_tp'] ?? ''));
         $materiPokok = trim($data['materi_pokok'] ?? '');
         $deskripsi = trim($data['deskripsi'] ?? '');
+        $guruId = !empty($data['guru_id']) ? (int)$data['guru_id'] : null;
 
         if (empty($kodeTp) || empty($deskripsi)) {
             return ['status' => false, 'message' => 'Kode TP dan Deskripsi Tujuan Pembelajaran tidak boleh kosong.'];
         }
 
-        $stmtCurrent = $this->db->prepare("SELECT cp_id FROM tujuan_pembelajaran WHERE id = ?");
+        $stmtCurrent = $this->db->prepare("SELECT cp_id, guru_id FROM tujuan_pembelajaran WHERE id = ?");
         $stmtCurrent->execute([$id]);
-        $currentCpId = $stmtCurrent->fetchColumn();
-        if (!$currentCpId) {
+        $current = $stmtCurrent->fetch(PDO::FETCH_ASSOC);
+        if (!$current) {
             return ['status' => false, 'message' => 'Data Tujuan Pembelajaran tidak ditemukan.'];
         }
 
-        $targetCpId = !empty($data['cp_id']) ? (int)$data['cp_id'] : (int)$currentCpId;
+        $targetCpId = !empty($data['cp_id']) ? (int)$data['cp_id'] : (int)$current['cp_id'];
+        $targetGuruId = $guruId ?: (!empty($current['guru_id']) ? (int)$current['guru_id'] : null);
 
         $chk = $this->db->prepare("SELECT id FROM tujuan_pembelajaran WHERE cp_id = ? AND kode_tp = ? AND id != ?");
         $chk->execute([$targetCpId, $kodeTp, $id]);
         if ($chk->fetch()) {
-            return ['status' => false, 'message' => "Kode TP '{$kodeTp}' sudah ada untuk Capaian Pembelajaran ini."];
+            return ['status' => false, 'message' => "Kode TP '{$kodeTp}' sudah terdaftar untuk Capaian Pembelajaran ini."];
         }
 
-        $stmt = $this->db->prepare("UPDATE tujuan_pembelajaran SET cp_id = ?, kode_tp = ?, materi_pokok = ?, deskripsi = ? WHERE id = ?");
-        $res = $stmt->execute([$targetCpId, $kodeTp, $materiPokok, $deskripsi, $id]);
+        $stmt = $this->db->prepare("
+            UPDATE tujuan_pembelajaran
+            SET cp_id = ?, kode_tp = ?, materi_pokok = ?, deskripsi = ?, guru_id = ?
+            WHERE id = ?
+        ");
+        $res = $stmt->execute([$targetCpId, $kodeTp, $materiPokok, $deskripsi, $targetGuruId, $id]);
         return ['status' => (bool)$res, 'message' => 'Tujuan Pembelajaran (TP) berhasil diperbarui.'];
     }
 

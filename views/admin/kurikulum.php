@@ -575,7 +575,18 @@
                                                 <span class="badge bg-secondary-subtle text-dark border d-block"><?= htmlspecialchars($cp['nama_fase']) ?></span>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="fw-bold text-dark"><?= htmlspecialchars($cp['nama_mapel']) ?></td>
+                                        <td class="fw-bold text-dark">
+                                            <div><?= htmlspecialchars($cp['nama_mapel']) ?></div>
+                                            <?php if (!empty($cp['nama_guru'])): ?>
+                                                <span class="badge bg-info-subtle text-primary border mt-1.5 d-inline-block" style="font-size:0.75rem; font-weight:500;">
+                                                    <i class="bi bi-person-badge-fill me-1"></i>Penyusun: <?= htmlspecialchars($cp['nama_guru']) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge bg-light text-muted border mt-1.5 d-inline-block" style="font-size:0.72rem; font-weight:normal;">
+                                                    <i class="bi bi-shield-check me-1"></i>Penyusun: Kurikulum / Admin
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td>
                                             <div class="fw-bold font-monospace text-primary"><?= htmlspecialchars($cp['kode_cp']) ?></div>
                                             <?php if (!empty($cp['elemen'])): ?>
@@ -596,6 +607,11 @@
                                                                     <span class="text-muted fw-semibold">(<?= htmlspecialchars($tp['materi_pokok']) ?>):</span>
                                                                 <?php endif; ?>
                                                                 <span class="text-secondary"><?= htmlspecialchars($tp['deskripsi']) ?></span>
+                                                                <?php if (!empty($tp['nama_guru'])): ?>
+                                                                    <span class="badge bg-light text-secondary border ms-1" style="font-size:0.68rem;" title="Penyusun TP">
+                                                                        <i class="bi bi-person me-0.5"></i><?= htmlspecialchars($tp['nama_guru']) ?>
+                                                                    </span>
+                                                                <?php endif; ?>
                                                             </div>
                                                             <div class="d-flex gap-1 flex-shrink-0">
                                                                 <button type="button" class="btn btn-xs btn-outline-warning rounded px-1.5 py-0.5 btn-edit-tp" 

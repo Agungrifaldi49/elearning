@@ -212,6 +212,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'guru/jadwal') ?>" href="<?= BASE_URL ?>index.php?url=guru/jadwal">
                 <i class="bi bi-clock-history text-warning"></i> Jadwal Mengajar Saya
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'guru/cptp') ?>" href="<?= BASE_URL ?>index.php?url=guru/cptp">
+                <i class="bi bi-card-checklist text-primary"></i> Penyusunan CP & TP
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'guru/inputNilai') ?>" href="<?= BASE_URL ?>index.php?url=guru/inputNilai">
                 <i class="bi bi-pencil-fill"></i> Input Nilai E-Rapor
             </a></li>

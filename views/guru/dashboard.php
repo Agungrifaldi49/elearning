@@ -251,6 +251,12 @@
                             </a>
                         </div>
                         <div class="col-6">
+                            <a href="<?= BASE_URL ?>index.php?url=guru/cptp" class="btn btn-outline-primary w-100 text-start p-3 rounded-4 shadow-xs">
+                                <i class="bi bi-card-checklist fs-3 d-block mb-1 text-primary"></i>
+                                <span class="fw-bold text-dark d-block" style="font-size:0.85rem;">Susun CP & TP</span>
+                            </a>
+                        </div>
+                        <div class="col-6">
                             <a href="<?= BASE_URL ?>index.php?url=guru/inputNilai" class="btn btn-outline-danger w-100 text-start p-3 rounded-4 shadow-xs">
                                 <i class="bi bi-pencil-square fs-3 d-block mb-1 text-danger"></i>
                                 <span class="fw-bold text-dark d-block" style="font-size:0.85rem;">Input Nilai</span>

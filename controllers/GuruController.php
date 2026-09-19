@@ -2412,4 +2412,151 @@ class GuruController {
             exit();
         }
     }
+
+    /**
+     * Modul Penyusunan Capaian Pembelajaran (CP) & Tujuan Pembelajaran (TP) oleh Guru
+     */
+    public function cptp() {
+        $guru = $this->getGuruInfo();
+        $guruId = (int)($guru['id'] ?? 0);
+        $currModel = new CurriculumModel();
+        $academicModel = new AcademicModel();
+
+        // Handle POST Actions (Create, Update, Delete CP & TP)
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('Sesi keamanan tidak valid (CSRF token invalid). Silakan muat ulang.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/cptp');
+                exit();
+            }
+
+            $action = $_POST['action'] ?? '';
+
+            if ($action === 'create_cp') {
+                $kurId = (int)$_POST['kurikulum_id'];
+                $mapelId = (int)$_POST['mapel_id'];
+                $kodeCp = Security::sanitize($_POST['kode_cp'] ?? '');
+                if (empty($kodeCp)) {
+                    $kodeCp = $currModel->generateNextCPCode($kurId, $mapelId);
+                }
+
+                $res = $currModel->addCP([
+                    'kurikulum_id' => $kurId,
+                    'mapel_id' => $mapelId,
+                    'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
+                    'guru_id' => $guruId,
+                    'kode_cp' => $kodeCp,
+                    'elemen' => Security::sanitize($_POST['elemen'] ?? ''),
+                    'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'update_cp') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->updateCP($id, [
+                    'kurikulum_id' => !empty($_POST['kurikulum_id']) ? (int)$_POST['kurikulum_id'] : null,
+                    'mapel_id' => !empty($_POST['mapel_id']) ? (int)$_POST['mapel_id'] : null,
+                    'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
+                    'guru_id' => $guruId,
+                    'kode_cp' => Security::sanitize($_POST['kode_cp']),
+                    'elemen' => Security::sanitize($_POST['elemen'] ?? ''),
+                    'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'delete_cp') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->deleteCP($id);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'create_tp') {
+                $cpId = (int)$_POST['cp_id'];
+                $kodeTp = Security::sanitize($_POST['kode_tp'] ?? '');
+                if (empty($kodeTp)) {
+                    $kodeTp = $currModel->generateNextTPCode($cpId);
+                }
+
+                $res = $currModel->addTP([
+                    'cp_id' => $cpId,
+                    'guru_id' => $guruId,
+                    'kode_tp' => $kodeTp,
+                    'materi_pokok' => Security::sanitize($_POST['materi_pokok'] ?? ''),
+                    'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'update_tp') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->updateTP($id, [
+                    'cp_id' => !empty($_POST['cp_id']) ? (int)$_POST['cp_id'] : null,
+                    'guru_id' => $guruId,
+                    'kode_tp' => Security::sanitize($_POST['kode_tp']),
+                    'materi_pokok' => Security::sanitize($_POST['materi_pokok'] ?? ''),
+                    'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? '')
+                ]);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+
+            } elseif ($action === 'delete_tp') {
+                $id = (int)$_POST['id'];
+                $res = $currModel->deleteTP($id);
+                if ($res['status']) FlashHelper::setSuccess($res['message']);
+                else FlashHelper::setError($res['message']);
+            }
+
+            $extra = '';
+            if (!empty($_POST['filter_mapel_id'])) $extra .= '&filter_mapel_id=' . (int)$_POST['filter_mapel_id'];
+            if (!empty($_POST['filter_kurikulum_id'])) $extra .= '&filter_kurikulum_id=' . (int)$_POST['filter_kurikulum_id'];
+            if (!empty($_POST['filter_fase_id'])) $extra .= '&filter_fase_id=' . (int)$_POST['filter_fase_id'];
+
+            header('Location: ' . BASE_URL . 'index.php?url=guru/cptp' . $extra);
+            exit();
+        }
+
+        // Mata Pelajaran yang diampu guru ini
+        $teacherMapelList = $academicModel->getMapelByGuru($guruId);
+        if (empty($teacherMapelList)) {
+            $teacherMapelList = $academicModel->getMapel(); // Fallback jika belum diplot jadwal
+        }
+        $allMapelList = $academicModel->getMapel();
+
+        // Kelas yang diajar guru
+        $teacherKelasList = $academicModel->getKelasByGuru($guruId);
+
+        // Master Kurikulum & Fase
+        $kurikulumList = $currModel->getAllKurikulum();
+        $allFaseList = $currModel->getAllFase();
+
+        // Filter state
+        $filterMapelId = isset($_GET['filter_mapel_id']) && $_GET['filter_mapel_id'] !== '' ? (int)$_GET['filter_mapel_id'] : null;
+        $filterKurId = !empty($_GET['filter_kurikulum_id']) ? (int)$_GET['filter_kurikulum_id'] : ($kurikulumList[0]['id'] ?? null);
+        $filterFaseId = !empty($_GET['filter_fase_id']) ? (int)$_GET['filter_fase_id'] : null;
+
+        $teacherMapelIds = array_column($teacherMapelList, 'id');
+        $effectiveMapelFilter = $filterMapelId ?: ($teacherMapelIds ?: null);
+
+        // CP & TP data
+        $cpList = $currModel->getCPList($filterKurId, $effectiveMapelFilter, $filterFaseId);
+        $allCpForDropdown = $currModel->getCPList($filterKurId, $teacherMapelIds ?: null);
+        $tpList = $currModel->getTPList();
+
+        // Precompute auto-code maps for instant preview in modals
+        $nextCpCodeMap = [];
+        foreach ($kurikulumList as $kur) {
+            $nextCpCodeMap[$kur['id']] = [];
+            foreach ($teacherMapelList as $mp) {
+                $nextCpCodeMap[$kur['id']][$mp['id']] = $currModel->generateNextCPCode($kur['id'], $mp['id']);
+            }
+        }
+        $nextTpCodeMap = [];
+        foreach ($allCpForDropdown as $c) {
+            $nextTpCodeMap[$c['id']] = $currModel->generateNextTPCode($c['id']);
+        }
+
+        require_once ROOT_PATH . 'views/guru/cptp.php';
+    }
 }
