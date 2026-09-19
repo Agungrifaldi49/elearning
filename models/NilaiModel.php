@@ -3,6 +3,8 @@
  * NilaiModel.php
  * Model untuk E-Rapor: Input Nilai, Hitung Nilai Akhir, Predikat
  */
+require_once ROOT_PATH . 'models/CurriculumModel.php';
+
 class NilaiModel {
     private $db;
 

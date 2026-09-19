@@ -12,6 +12,7 @@ require_once ROOT_PATH . 'models/SiswaModel.php';
 require_once ROOT_PATH . 'models/AcademicModel.php';
 require_once ROOT_PATH . 'models/CommunicationModel.php';
 require_once ROOT_PATH . 'models/NilaiModel.php';
+require_once ROOT_PATH . 'models/CurriculumModel.php';
 
 class SiswaController {
 

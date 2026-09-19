@@ -78,4 +78,23 @@ define('LOGIN_LOCKOUT_TIME', 300); // 5 minutes lockout
 define('FCM_CREDENTIALS_PATH', __DIR__ . '/firebase_credentials.json');
 define('FCM_PROJECT_ID', 'elearning-ff3d0');
 
+// Universal Class Autoloader (Models, Helpers, Controllers)
+spl_autoload_register(function ($class) {
+    // Sanitize class name to prevent directory traversal
+    $cleanClass = str_replace(['..', '/', '\\'], '', $class);
+    $searchDirectories = [
+        ROOT_PATH . 'models/',
+        ROOT_PATH . 'helpers/',
+        ROOT_PATH . 'controllers/'
+    ];
+    foreach ($searchDirectories as $dir) {
+        $file = $dir . $cleanClass . '.php';
+        if (file_exists($file)) {
+            require_once $file;
+            return;
+        }
+    }
+});
+
+
 

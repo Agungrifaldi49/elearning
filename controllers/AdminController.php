@@ -15,6 +15,7 @@ require_once ROOT_PATH . 'models/LearningModel.php';
 require_once ROOT_PATH . 'models/ExamModel.php';
 require_once ROOT_PATH . 'models/AbsensiModel.php';
 require_once ROOT_PATH . 'models/NilaiModel.php';
+require_once ROOT_PATH . 'models/CurriculumModel.php';
 require_once ROOT_PATH . 'models/SettingsModel.php';
 require_once ROOT_PATH . 'helpers/UploadHelper.php';
 

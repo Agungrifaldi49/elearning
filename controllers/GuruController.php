@@ -13,6 +13,7 @@ require_once ROOT_PATH . 'models/AbsensiModel.php';
 require_once ROOT_PATH . 'models/GuruModel.php';
 require_once ROOT_PATH . 'models/SiswaModel.php';
 require_once ROOT_PATH . 'models/NilaiModel.php';
+require_once ROOT_PATH . 'models/CurriculumModel.php';
 require_once ROOT_PATH . 'models/CommunicationModel.php';
 
 class GuruController {
