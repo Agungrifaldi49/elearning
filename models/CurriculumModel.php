@@ -884,7 +884,8 @@ class CurriculumModel extends BaseModel {
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ");
         $res = $stmt->execute([$kurikulumId, $mapelId, $faseId, $guruId, $kodeCp, $elemen, $deskripsi]);
-        return ['status' => (bool)$res, 'message' => "Capaian Pembelajaran (CP) '{$kodeCp}' berhasil ditambahkan."];
+        $newId = (int)$this->db->lastInsertId();
+        return ['status' => (bool)$res, 'message' => "Capaian Pembelajaran (CP) '{$kodeCp}' berhasil ditambahkan.", 'id' => $newId];
     }
 
     public function getCPById($id) {

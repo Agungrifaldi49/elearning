@@ -141,6 +141,10 @@ if (!function_exists('formatTpDescriptionHtml')) {
             <p class="text-muted small mb-0">Kelola dan rumuskan Capaian Pembelajaran (CP) serta Tujuan Pembelajaran (TP) untuk mata pelajaran yang Anda ampu secara terstruktur.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-warning text-dark shadow-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalTemplateCatalog" title="Gunakan paket template CP & TP standar BSKAP Kurikulum Merdeka">
+                <i class="bi bi-magic fs-5 text-dark"></i>
+                <span>💡 Template CP & TP</span>
+            </button>
             <button type="button" class="btn btn-outline-success shadow-sm fw-semibold px-3 py-2 rounded-3 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#modalCopyTP" title="Salin Tujuan Pembelajaran dari CP lain / Tahun Ajaran Sebelumnya">
                 <i class="bi bi-box-arrow-in-down fs-5"></i>
                 <span>Salin dari Bank TP</span>
@@ -573,6 +577,221 @@ if (!function_exists('formatTpDescriptionHtml')) {
 <!-- MODALS CP & TP GURU (ENLARGED, SPACIOUS & PROFESSIONAL) -->
 <!-- =========================================================================== -->
 
+<!-- =========================================================================== -->
+<!-- MODAL KATALOG PAKET TEMPLATE CP & TP (BSKAP KURIKULUM MERDEKA) -->
+<!-- =========================================================================== -->
+<div class="modal fade" id="modalTemplateCatalog" tabindex="-1" aria-labelledby="modalTemplateCatalogLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl" style="max-width: 1140px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="modal-header py-3.5 px-4 text-white" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle p-2.5 bg-warning text-dark shadow-sm">
+                        <i class="bi bi-magic fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h5 class="modal-title fw-bold text-white mb-0" id="modalTemplateCatalogLabel">Bank Template CP & TP Kurikulum Merdeka</h5>
+                            <span class="badge bg-warning text-dark fw-bold rounded-pill px-2.5 py-1" style="font-size:0.72rem;">Standar BSKAP Kemendikbud</span>
+                        </div>
+                        <small class="text-white-50">Terapkan paket Capaian & Tujuan Pembelajaran resmi secara instan atau gunakan sebagai acuan perumusan mandiri.</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-4 bg-light">
+                <!-- Info Banner -->
+                <div class="alert alert-info border-0 border-start border-info border-4 rounded-3 shadow-xs bg-white mb-4">
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="bi bi-lightbulb-fill text-warning fs-4 flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">Fleksibilitas Pengisian (Template & Manual)</h6>
+                            <p class="small text-muted mb-0" style="line-height: 1.6;">
+                                Anda dapat memilih paket template di bawah ini untuk mengisi seluruh CP beserta butir TP-nya secara otomatis ke mata pelajaran Anda. Setelah diterapkan, <strong>Anda tetap memiliki kendali penuh untuk mengedit, menambah, atau menghapus butir CP & TP secara manual</strong> kapan saja melalui tabel manajemen.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter & Search Bar -->
+                <div class="card border-0 shadow-xs rounded-3 p-3 bg-white mb-4">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-md-5">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                <input type="text" id="template_search_input" class="form-control border-start-0" placeholder="Cari berdasarkan nama mapel, topik, atau kompetensi...">
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-7">
+                            <div class="d-flex gap-1.5 flex-wrap" id="template_category_filters">
+                                <button type="button" class="btn btn-sm btn-primary active rounded-pill px-3 py-1 fw-semibold tpl-filter-btn" data-filter="all">Semua Template</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold tpl-filter-btn" data-filter="rpl">PPLG / RPL</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold tpl-filter-btn" data-filter="tkj">TKJ / Jaringan</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold tpl-filter-btn" data-filter="dkv">DKV / Desain</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold tpl-filter-btn" data-filter="tbsm">TBSM / Otomotif</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold tpl-filter-btn" data-filter="umum">Mapel Umum</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid Template Items -->
+                <div class="row g-3" id="template_cards_container">
+                    <?php if (!empty($allTemplates)): ?>
+                        <?php foreach ($allTemplates as $tplIdx => $tpl): 
+                            $totalCpInTpl = count($tpl['cp_items']);
+                            $totalTpInTpl = 0;
+                            foreach ($tpl['cp_items'] as $cpI) {
+                                $totalTpInTpl += count($cpI['tp_items'] ?? []);
+                            }
+                            // Tentukan kategori filter untuk tag HTML
+                            $catTag = 'umum';
+                            if (stripos($tpl['id'], 'rpl') !== false || stripos($tpl['id'], 'pwpb') !== false || stripos($tpl['id'], 'ppl') !== false || stripos($tpl['id'], 'ai') !== false) {
+                                $catTag = 'rpl';
+                            } elseif (stripos($tpl['id'], 'tkj') !== false || stripos($tpl['id'], 'aij') !== false) {
+                                $catTag = 'tkj';
+                            } elseif (stripos($tpl['id'], 'dkv') !== false || stripos($tpl['id'], 'dgp') !== false) {
+                                $catTag = 'dkv';
+                            } elseif (stripos($tpl['id'], 'tbsm') !== false || stripos($tpl['id'], 'otomotif') !== false) {
+                                $catTag = 'tbsm';
+                            }
+                        ?>
+                            <div class="col-12 col-lg-6 template-card-item" data-category="<?= $catTag ?>" data-title="<?= strtolower(htmlspecialchars($tpl['judul'] . ' ' . $tpl['deskripsi_singkat'] . ' ' . implode(' ', $tpl['keywords']))) ?>">
+                                <div class="card h-100 border-0 shadow-sm rounded-4 p-3.5 bg-white position-relative d-flex flex-column justify-content-between">
+                                    <div>
+                                        <!-- Top Badges -->
+                                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-bold" style="font-size: 0.72rem;">
+                                                    Fase <?= htmlspecialchars($tpl['fase_kode']) ?>
+                                                </span>
+                                                <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1" style="font-size: 0.72rem;">
+                                                    <?= htmlspecialchars($tpl['bidang']) ?>
+                                                </span>
+                                            </div>
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.68rem;">
+                                                <i class="bi bi-check2-circle me-1"></i>BSKAP Terverifikasi
+                                            </span>
+                                        </div>
+
+                                        <!-- Title -->
+                                        <h5 class="fw-bold text-dark mb-1.5 fs-6">
+                                            <?= htmlspecialchars($tpl['judul']) ?>
+                                        </h5>
+                                        <p class="text-muted small mb-3" style="font-size:0.82rem; line-height: 1.5;">
+                                            <?= htmlspecialchars($tpl['deskripsi_singkat']) ?>
+                                        </p>
+
+                                        <!-- Metrics Overview -->
+                                        <div class="d-flex align-items-center gap-3 py-2 px-3 bg-light rounded-3 mb-3" style="font-size:0.8rem;">
+                                            <div class="d-flex align-items-center gap-1.5 text-primary fw-semibold">
+                                                <i class="bi bi-journal-text fs-6"></i>
+                                                <span><?= $totalCpInTpl ?> Capaian (CP)</span>
+                                            </div>
+                                            <span class="text-muted">•</span>
+                                            <div class="d-flex align-items-center gap-1.5 text-success fw-semibold">
+                                                <i class="bi bi-card-checklist fs-6"></i>
+                                                <span><?= $totalTpInTpl ?> Tujuan (TP)</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Accordion Preview CP & TP -->
+                                        <div class="accordion accordion-flush mb-3" id="accPreview_<?= $tplIdx ?>">
+                                            <div class="accordion-item border rounded-3 overflow-hidden">
+                                                <h2 class="accordion-header" id="heading_<?= $tplIdx ?>">
+                                                    <button class="accordion-button collapsed py-2 px-3 bg-white small fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapse_<?= $tplIdx ?>" aria-expanded="false" aria-controls="collapse_<?= $tplIdx ?>">
+                                                        <i class="bi bi-eye text-primary me-2"></i>Pratinjau Butir CP & TP Dalam Paket
+                                                    </button>
+                                                </h2>
+                                                <div id="collapse_<?= $tplIdx ?>" class="accordion-collapse collapse" aria-labelledby="heading_<?= $tplIdx ?>" data-bs-parent="#accPreview_<?= $tplIdx ?>">
+                                                    <div class="accordion-body p-3 bg-light small" style="max-height: 250px; overflow-y: auto;">
+                                                        <?php foreach ($tpl['cp_items'] as $cIdx => $cItem): ?>
+                                                            <div class="mb-2.5 pb-2.5 border-bottom">
+                                                                <div class="fw-bold text-primary mb-1 d-flex align-items-center gap-1">
+                                                                    <span class="badge bg-primary text-white font-monospace" style="font-size: 0.65rem;">CP <?= $cIdx + 1 ?></span>
+                                                                    <span><?= htmlspecialchars($cItem['elemen']) ?></span>
+                                                                </div>
+                                                                <div class="text-muted mb-2" style="font-size: 0.78rem; line-height: 1.5;">
+                                                                    <?= htmlspecialchars($cItem['deskripsi']) ?>
+                                                                </div>
+                                                                <?php if (!empty($cItem['tp_items'])): ?>
+                                                                    <div class="ps-2 border-start border-success border-2">
+                                                                        <span class="fw-bold text-success d-block mb-1" style="font-size:0.72rem;">Butir TP:</span>
+                                                                        <?php foreach ($cItem['tp_items'] as $tIdx => $tItem): ?>
+                                                                            <div class="mb-1 text-dark" style="font-size:0.76rem;">
+                                                                                <strong>• <?= htmlspecialchars($tItem['materi_pokok']) ?>:</strong>
+                                                                                <div class="text-muted ps-2" style="white-space: pre-line;"><?= htmlspecialchars($tItem['deskripsi']) ?></div>
+                                                                            </div>
+                                                                        <?php endforeach; ?>
+                                                                    </div>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Action Apply Form -->
+                                    <form action="<?= BASE_URL ?>index.php?url=guru/cptp" method="POST" class="mt-2 pt-2 border-top form-apply-template" onsubmit="return confirm('Apakah Anda yakin ingin menerapkan paket template ini ke mata pelajaran yang dipilih? CP & TP baru akan otomatis ditambahkan ke akun Anda.');">
+                                        <?= Security::csrfField() ?>
+                                        <input type="hidden" name="action" value="apply_cptp_template">
+                                        <input type="hidden" name="template_id" value="<?= htmlspecialchars($tpl['id']) ?>">
+                                        <input type="hidden" name="filter_kurikulum_id" value="<?= $filterKurId ?? '' ?>">
+                                        <input type="hidden" name="filter_mapel_id" value="<?= $filterMapelId ?? '' ?>">
+
+                                        <div class="row g-2 align-items-center">
+                                            <div class="col-12 col-sm-6">
+                                                <label class="form-label small fw-semibold text-secondary mb-1" style="font-size:0.75rem;">
+                                                    Pilih Mapel Penerima:
+                                                </label>
+                                                <select name="target_mapel_id" class="form-select form-select-sm rounded-3" required>
+                                                    <?php foreach ($teacherMapelList as $tmp): ?>
+                                                        <option value="<?= $tmp['id'] ?>" <?= ($filterMapelId == $tmp['id']) ? 'selected' : '' ?>>
+                                                            <?= htmlspecialchars($tmp['nama_mapel']) ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <div class="col-12 col-sm-6">
+                                                <label class="form-label small fw-semibold text-secondary mb-1" style="font-size:0.75rem;">
+                                                    Kurikulum:
+                                                </label>
+                                                <select name="target_kurikulum_id" class="form-select form-select-sm rounded-3" required>
+                                                    <?php foreach ($kurikulumList as $kur): ?>
+                                                        <option value="<?= $kur['id'] ?>" <?= ($filterKurId == $kur['id']) ? 'selected' : '' ?>>
+                                                            <?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                            <div class="col-12 mt-2">
+                                                <button type="submit" class="btn btn-primary btn-sm w-100 rounded-3 py-2 fw-semibold shadow-xs d-flex align-items-center justify-content-center gap-1.5">
+                                                    <i class="bi bi-box-arrow-in-down-right"></i>
+                                                    <span>Terapkan Paket Template Ini</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer py-2.5 px-4 bg-white border-top">
+                <span class="text-muted small me-auto"><i class="bi bi-info-circle me-1"></i>Template disediakan oleh Tim Pengembang E-Learning SMK Merdeka.</span>
+                <button type="button" class="btn btn-outline-secondary rounded-3 px-4 py-1.5 fw-semibold" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Add CP (Spacious Large Modal) -->
 <div class="modal fade" id="modalAddCP" tabindex="-1" aria-labelledby="modalAddCPLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
@@ -603,6 +822,45 @@ if (!function_exists('formatTpDescriptionHtml')) {
 
                 <!-- Modal Body -->
                 <div class="modal-body p-4">
+                    <!-- Quick Template Selector for CP -->
+                    <div class="card border border-primary border-opacity-25 rounded-3 mb-3.5 bg-primary bg-opacity-10 shadow-xs">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-2">
+                                <label class="form-label small fw-bold text-primary mb-0 d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-magic fs-6"></i>
+                                    <span>Gunakan Template Capaian Pembelajaran (BSKAP Kemendikbud):</span>
+                                </label>
+                                <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2.5 py-0.5" id="btn_clear_cp_template" title="Kosongkan formulir untuk ketik manual mandiri">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reset / Ketik Manual
+                                </button>
+                            </div>
+                            <select id="select_cp_template" class="form-select rounded-3 py-2 border-primary-subtle bg-white shadow-xs">
+                                <option value="">-- Ketik Manual Mandiri (Tanpa Template) --</option>
+                                <?php 
+                                $groupedFlatCp = [];
+                                foreach (($flatCpTemplates ?? []) as $idx => $fcp) {
+                                    $groupedFlatCp[$fcp['tpl_judul']][] = array_merge($fcp, ['idx' => $idx]);
+                                }
+                                foreach ($groupedFlatCp as $grpTitle => $items): ?>
+                                    <optgroup label="<?= htmlspecialchars($grpTitle) ?>">
+                                        <?php foreach ($items as $it): ?>
+                                            <option value="<?= $it['idx'] ?>" 
+                                                    data-elemen="<?= htmlspecialchars($it['elemen']) ?>"
+                                                    data-deskripsi="<?= htmlspecialchars($it['deskripsi']) ?>"
+                                                    data-fase="<?= htmlspecialchars($it['fase_kode']) ?>">
+                                                [Elemen] <?= htmlspecialchars($it['elemen']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="small text-muted mt-1.5 d-flex align-items-center gap-1.5" style="font-size:0.77rem;">
+                                <i class="bi bi-info-circle-fill text-primary"></i>
+                                <span>Pilih template di atas untuk mengisi <strong>Elemen</strong> & <strong>Deskripsi CP</strong> otomatis. Anda tetap bebas menyunting atau menambah teks sesuai kebutuhan.</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="row g-3 mb-3">
                         <!-- Kurikulum -->
                         <div class="col-12 col-md-6">
@@ -909,6 +1167,42 @@ if (!function_exists('formatTpDescriptionHtml')) {
                             <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
                                 Input Bersih / Siap Diisi
                             </span>
+                        </div>
+
+                        <!-- Quick Template Selector for TP -->
+                        <div class="p-2.5 rounded-3 mb-3 bg-success bg-opacity-10 border border-success border-opacity-25">
+                            <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-2">
+                                <label class="form-label small fw-bold text-success mb-0 d-flex align-items-center gap-1.5">
+                                    <i class="bi bi-magic fs-6"></i>
+                                    <span>Gunakan Template Butir TP (Opsi Cepat & Siap Disesuaikan):</span>
+                                </label>
+                                <button type="button" class="btn btn-xs btn-outline-secondary bg-white rounded-pill px-2 py-0.5" id="btn_clear_tp_template" title="Kembalikan ke isian manual kosong">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reset / Ketik Manual
+                                </button>
+                            </div>
+                            <select id="select_tp_template" class="form-select form-select-sm rounded-3 py-1.5 border-success-subtle bg-white shadow-xs">
+                                <option value="">-- Ketik Manual Mandiri (Tanpa Template) --</option>
+                                <?php if (!empty($allTemplates)): ?>
+                                    <?php foreach ($allTemplates as $t): ?>
+                                        <optgroup label="<?= htmlspecialchars($t['judul']) ?>">
+                                            <?php foreach ($t['cp_items'] as $cItem): ?>
+                                                <?php foreach ($cItem['tp_items'] as $tItem): ?>
+                                                    <option value=""
+                                                            data-parent-elemen="<?= htmlspecialchars($cItem['elemen']) ?>"
+                                                            data-materi="<?= htmlspecialchars($tItem['materi_pokok']) ?>"
+                                                            data-deskripsi="<?= htmlspecialchars($tItem['deskripsi']) ?>">
+                                                        [<?= htmlspecialchars($cItem['elemen']) ?>] <?= htmlspecialchars($tItem['materi_pokok']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            <?php endforeach; ?>
+                                        </optgroup>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <div class="small text-muted mt-1 d-flex align-items-center gap-1" style="font-size:0.75rem;">
+                                <i class="bi bi-info-circle text-success"></i>
+                                <span>Pilihan di atas otomatis mengisi <strong>Materi Pokok</strong> dan <strong>Deskripsi TP</strong> di bawah yang dapat Anda edit secara leluasa.</span>
+                            </div>
                         </div>
 
                         <div class="row g-3">
@@ -1787,10 +2081,147 @@ document.addEventListener('DOMContentLoaded', () => {
         btnRegenCp.addEventListener('click', updateAutoCpCode);
     }
 
+    // =========================================================================
+    // FITUR TEMPLATE CP & TP KURIKULUM MERDEKA (KATALOG & AUTO-FILL)
+    // =========================================================================
+    
+    // 1. Filter Kategori & Pencarian Langsung di Modal Katalog Template
+    const filterBtns = document.querySelectorAll('.tpl-filter-btn');
+    const templateCards = document.querySelectorAll('.template-card-item');
+    const searchInput = document.getElementById('template_search_input');
+
+    function applyTemplateCatalogFilters() {
+        const activeBtn = document.querySelector('.tpl-filter-btn.active');
+        const activeCategory = activeBtn ? activeBtn.getAttribute('data-filter') : 'all';
+        const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+
+        templateCards.forEach(card => {
+            const cardCat = card.getAttribute('data-category') || '';
+            const cardTitle = card.getAttribute('data-title') || '';
+
+            const matchCat = (activeCategory === 'all' || cardCat === activeCategory);
+            const matchQuery = (!query || cardTitle.includes(query));
+
+            if (matchCat && matchQuery) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    if (filterBtns.length > 0) {
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                filterBtns.forEach(b => {
+                    b.classList.remove('active', 'btn-primary');
+                    b.classList.add('btn-outline-secondary');
+                });
+                this.classList.add('active', 'btn-primary');
+                this.classList.remove('btn-outline-secondary');
+                applyTemplateCatalogFilters();
+            });
+        });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', applyTemplateCatalogFilters);
+    }
+
+    // 2. Quick Fill Template CP di Formulir Tambah CP (#modalAddCP)
+    const selectCpTpl = document.getElementById('select_cp_template');
+    const btnClearCpTpl = document.getElementById('btn_clear_cp_template');
+
+    if (selectCpTpl) {
+        selectCpTpl.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            const elemenInp = document.getElementById('add_cp_elemen');
+            const deskInp = document.getElementById('add_cp_deskripsi');
+            const faseSelect = document.getElementById('add_cp_fase_id');
+
+            if (!opt || opt.value === '') {
+                return;
+            }
+
+            const elemen = opt.getAttribute('data-elemen') || '';
+            const deskripsi = opt.getAttribute('data-deskripsi') || '';
+            const faseKode = opt.getAttribute('data-fase') || '';
+
+            if (elemenInp) elemenInp.value = elemen;
+            if (deskInp) {
+                deskInp.value = deskripsi;
+                deskInp.dispatchEvent(new Event('input'));
+            }
+
+            // Auto-select Fase bila cocok
+            if (faseSelect && faseKode) {
+                for (let i = 0; i < faseSelect.options.length; i++) {
+                    const fOpt = faseSelect.options[i];
+                    if (fOpt.text.toLowerCase().includes('fase ' + faseKode.toLowerCase())) {
+                        faseSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
+    if (btnClearCpTpl) {
+        btnClearCpTpl.addEventListener('click', function() {
+            if (selectCpTpl) selectCpTpl.value = '';
+            const elemenInp = document.getElementById('add_cp_elemen');
+            const deskInp = document.getElementById('add_cp_deskripsi');
+            if (elemenInp) elemenInp.value = '';
+            if (deskInp) {
+                deskInp.value = '';
+                deskInp.dispatchEvent(new Event('input'));
+            }
+        });
+    }
+
+    // 3. Quick Fill Template TP di Formulir Tambah TP (#modalAddTP)
+    const selectTpTpl = document.getElementById('select_tp_template');
+    const btnClearTpTpl = document.getElementById('btn_clear_tp_template');
+
+    if (selectTpTpl) {
+        selectTpTpl.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            const materiInp = document.getElementById('add_tp_materi');
+            const deskInp = document.getElementById('add_tp_deskripsi');
+
+            if (!opt || !opt.getAttribute('data-materi')) {
+                return;
+            }
+
+            const materi = opt.getAttribute('data-materi') || '';
+            const deskripsi = opt.getAttribute('data-deskripsi') || '';
+
+            if (materiInp) materiInp.value = materi;
+            if (deskInp) {
+                deskInp.value = deskripsi;
+                deskInp.dispatchEvent(new Event('input'));
+            }
+        });
+    }
+
+    if (btnClearTpTpl) {
+        btnClearTpTpl.addEventListener('click', function() {
+            if (selectTpTpl) selectTpTpl.value = '';
+            const materiInp = document.getElementById('add_tp_materi');
+            const deskInp = document.getElementById('add_tp_deskripsi');
+            if (materiInp) materiInp.value = '';
+            if (deskInp) {
+                deskInp.value = '';
+                deskInp.dispatchEvent(new Event('input'));
+            }
+        });
+    }
+
     // Always reset modalAddCP to blank state when opened
     const modalAddCpEl = document.getElementById('modalAddCP');
     if (modalAddCpEl) {
         modalAddCpEl.addEventListener('show.bs.modal', () => {
+            if (selectCpTpl) selectCpTpl.value = '';
             const elemenInp = document.getElementById('add_cp_elemen');
             if (elemenInp) elemenInp.value = '';
 
@@ -1827,6 +2258,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (select && targetCpId) {
             select.value = targetCpId;
         }
+
+        if (selectTpTpl) selectTpTpl.value = '';
 
         const materiInp = document.getElementById('add_tp_materi');
         if (materiInp) materiInp.value = '';
