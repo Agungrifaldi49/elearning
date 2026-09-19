@@ -2656,73 +2656,6 @@ class GuruController {
                 $res = $assessModel->copyTp($sourceCpId, $targetCpId, $guruId);
                 if ($res['status']) FlashHelper::setSuccess($res['message']);
                 else FlashHelper::setError($res['message']);
-            } elseif ($action === 'apply_cptp_template') {
-                require_once ROOT_PATH . 'helpers/CpTpTemplate.php';
-                $templateId = Security::sanitize($_POST['template_id'] ?? '');
-                $mapelId = (int)($_POST['target_mapel_id'] ?? 0);
-                $kurikulumId = (int)($_POST['target_kurikulum_id'] ?? 0);
-                $faseId = !empty($_POST['target_fase_id']) ? (int)$_POST['target_fase_id'] : null;
-
-                $tpl = CpTpTemplate::getTemplateById($templateId);
-                if (!$tpl) {
-                    FlashHelper::setError('Template CP & TP yang dipilih tidak ditemukan.');
-                } elseif ($mapelId <= 0 || $kurikulumId <= 0) {
-                    FlashHelper::setError('Silakan pilih Mata Pelajaran dan Kurikulum tujuan penerapan template.');
-                } else {
-                    // Jika faseId belum dipilih, coba cocokkan fase berdasarkan fase_kode dari template (E atau F)
-                    if (!$faseId && !empty($tpl['fase_kode'])) {
-                        $allFases = $currModel->getAllFase();
-                        foreach ($allFases as $f) {
-                            if ($f['kurikulum_id'] == $kurikulumId && strtoupper(trim($f['kode'])) === strtoupper(trim($tpl['fase_kode']))) {
-                                $faseId = (int)$f['id'];
-                                break;
-                            }
-                        }
-                    }
-
-                    $cpCreatedCount = 0;
-                    $tpCreatedCount = 0;
-
-                    foreach ($tpl['cp_items'] as $cpItem) {
-                        $kodeCp = $currModel->generateNextCPCode($kurikulumId, $mapelId);
-                        $resCp = $currModel->addCP([
-                            'kurikulum_id' => $kurikulumId,
-                            'mapel_id' => $mapelId,
-                            'fase_id' => $faseId,
-                            'guru_id' => $guruId,
-                            'kode_cp' => $kodeCp,
-                            'elemen' => $cpItem['elemen'],
-                            'deskripsi' => $cpItem['deskripsi']
-                        ]);
-
-                        if ($resCp['status'] && !empty($resCp['id'])) {
-                            $cpCreatedCount++;
-                            $newCpId = (int)$resCp['id'];
-
-                            if (!empty($cpItem['tp_items'])) {
-                                foreach ($cpItem['tp_items'] as $tpItem) {
-                                    $kodeTp = $currModel->generateNextTPCode($newCpId);
-                                    $resTp = $currModel->addTP([
-                                        'cp_id' => $newCpId,
-                                        'guru_id' => $guruId,
-                                        'kode_tp' => $kodeTp,
-                                        'materi_pokok' => $tpItem['materi_pokok'],
-                                        'deskripsi' => $tpItem['deskripsi']
-                                    ]);
-                                    if ($resTp['status']) {
-                                        $tpCreatedCount++;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if ($cpCreatedCount > 0) {
-                        FlashHelper::setSuccess("Berhasil menerapkan paket template '{$tpl['judul']}'! Sebanyak {$cpCreatedCount} Capaian Pembelajaran (CP) dan {$tpCreatedCount} Tujuan Pembelajaran (TP) berhasil ditambahkan ke mata pelajaran Anda.");
-                    } else {
-                        FlashHelper::setError("Gagal menerapkan template CP & TP. Silakan periksa kembali konfigurasi mata pelajaran.");
-                    }
-                }
             } elseif ($action === 'import_cptp_excel') {
                 $kurId = (int)($_POST['kurikulum_id'] ?? 0);
                 $mapelId = (int)($_POST['mapel_id'] ?? 0);
@@ -2948,11 +2881,6 @@ class GuruController {
         foreach ($allCpForDropdown as $c) {
             $nextTpCodeMap[$c['id']] = $currModel->generateNextTPCode($c['id']);
         }
-
-        // Template CP & TP Kurikulum Merdeka
-        require_once ROOT_PATH . 'helpers/CpTpTemplate.php';
-        $allTemplates = CpTpTemplate::getAllTemplates();
-        $flatCpTemplates = CpTpTemplate::getFlatCpTemplates();
 
         require_once ROOT_PATH . 'views/guru/cptp.php';
     }
