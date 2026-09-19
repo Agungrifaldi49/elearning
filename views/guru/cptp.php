@@ -1477,26 +1477,46 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Edit TP Modal Listeners
-    const selectEditTpCp = document.getElementById('edit_tp_cp_id');
-    if (selectEditTpCp) {
-        selectEditTpCp.addEventListener('change', updateEditParentCpPreview);
-    }
+    // Edit TP Modal — use show.bs.modal to reliably populate fields from relatedTarget
+    // This also works when DataTables re-renders rows (event delegation via modal show event)
+    const modalEditTpEl = document.getElementById('modalEditTP');
+    if (modalEditTpEl) {
+        modalEditTpEl.addEventListener('show.bs.modal', function(e) {
+            const btn = e.relatedTarget;
+            if (!btn) return;
 
-    // Populate Edit TP Modal
-    document.querySelectorAll('.btn-edit-tp').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.getElementById('edit_tp_id').value = this.dataset.id || '';
-            document.getElementById('edit_tp_kode').value = this.dataset.kode || '';
-            document.getElementById('edit_tp_materi').value = this.dataset.materi || '';
-            document.getElementById('edit_tp_deskripsi').value = this.dataset.deskripsi || '';
+            const id = btn.getAttribute('data-id') || '';
+            const kode = btn.getAttribute('data-kode') || '';
+            const materi = btn.getAttribute('data-materi') || '';
+            const deskripsi = btn.getAttribute('data-deskripsi') || '';
+            const cpId = btn.getAttribute('data-cp-id') || '';
 
+            const idInp = document.getElementById('edit_tp_id');
+            const kodeInp = document.getElementById('edit_tp_kode');
+            const materiInp = document.getElementById('edit_tp_materi');
+            const deskInp = document.getElementById('edit_tp_deskripsi');
             const selCp = document.getElementById('edit_tp_cp_id');
-            if (selCp && this.dataset.cpId) {
-                selCp.value = this.dataset.cpId;
+
+            if (idInp) idInp.value = id;
+            if (kodeInp) kodeInp.value = kode;
+            if (materiInp) materiInp.value = materi;
+            if (deskInp) deskInp.value = deskripsi;
+
+            if (selCp && cpId) {
+                selCp.value = cpId;
             }
+
+            // Trigger CP preview update after values are set
             updateEditParentCpPreview();
         });
+    }
+
+    // Fallback: also keep click delegation for any non-data-bs-toggle triggered opens
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-edit-tp');
+        if (!btn) return;
+        // Data will be populated by show.bs.modal above via relatedTarget
+        // Nothing extra needed here — just ensure the modal opens
     });
 
     // Auto adjust datatables on window resize
