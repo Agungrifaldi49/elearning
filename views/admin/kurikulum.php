@@ -1123,7 +1123,7 @@
                             <label class="form-label small fw-bold text-secondary mb-1.5">
                                 <i class="bi bi-tags text-primary me-1"></i>Elemen / Ranah Pembelajaran
                             </label>
-                            <input type="text" name="elemen" class="form-control rounded-3 py-2" placeholder="Algoritma / Desain / Literasi">
+                            <input type="text" name="elemen" id="add_cp_elemen" class="form-control rounded-3 py-2" placeholder="Algoritma / Desain / Literasi">
                             <div class="form-text small text-muted">Domain ranah materi kompetensi pembelajaran.</div>
                         </div>
 
@@ -1151,7 +1151,7 @@
                             <label class="form-label small fw-bold text-secondary mb-1.5">
                                 <i class="bi bi-card-text text-primary me-1"></i>Deskripsi Capaian Pembelajaran <span class="text-danger">*</span>
                             </label>
-                            <textarea name="deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Tuliskan rumusan capaian pembelajaran secara lengkap... Contoh: Peserta didik mampu memahami dan menerapkan proses bisnis pada bidang keahlian dengan benar."></textarea>
+                            <textarea name="deskripsi" id="add_cp_deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Tuliskan rumusan capaian pembelajaran secara lengkap... Contoh: Peserta didik mampu memahami dan menerapkan proses bisnis pada bidang keahlian dengan benar."></textarea>
                             <div class="form-text small text-muted mt-1">Gunakan redaksi kompetensi yang jelas dan terukur.</div>
                         </div>
                     </div>
@@ -1345,7 +1345,7 @@
                             <label class="form-label small fw-bold text-secondary mb-1.5">
                                 <i class="bi bi-bookmark text-success me-1"></i>Materi Pokok / Pokok Bahasan
                             </label>
-                            <input type="text" name="materi_pokok" class="form-control rounded-3 py-2" placeholder="Topik Utama / Pokok Bahasan">
+                            <input type="text" name="materi_pokok" id="add_tp_materi" class="form-control rounded-3 py-2" placeholder="Topik Utama / Pokok Bahasan">
                             <div class="form-text small text-muted">Materi pokok yang diujikan dalam TP ini.</div>
                         </div>
 
@@ -1353,7 +1353,7 @@
                             <label class="form-label small fw-bold text-secondary mb-1.5">
                                 <i class="bi bi-card-text text-success me-1"></i>Deskripsi Tujuan Pembelajaran (TP) <span class="text-danger">*</span>
                             </label>
-                            <textarea name="deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Tuliskan tujuan pembelajaran yang spesifik dan terukur..."></textarea>
+                            <textarea name="deskripsi" id="add_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Tuliskan tujuan pembelajaran yang spesifik dan terukur..."></textarea>
                             <div class="form-text small text-muted mt-1"><i class="bi bi-lightbulb text-warning me-1"></i>Tips ABCD: <strong>A</strong>udience, <strong>B</strong>ehavior, <strong>C</strong>ondition, <strong>D</strong>egree.</div>
                         </div>
                     </div>
@@ -1890,11 +1890,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const modalAddCpEl = document.getElementById('modalAddCP');
     if (modalAddCpEl) {
-        modalAddCpEl.addEventListener('shown.bs.modal', () => {
-            const kodeInp = document.getElementById('add_cp_kode');
-            if (kodeInp && !kodeInp.value) {
-                updateAutoCpCode();
-            }
+        modalAddCpEl.addEventListener('show.bs.modal', () => {
+            const elemenInp = document.getElementById('add_cp_elemen');
+            if (elemenInp) elemenInp.value = '';
+
+            const deskInp = document.getElementById('add_cp_deskripsi');
+            if (deskInp) deskInp.value = '';
+
+            updateAutoCpCode();
         });
     }
 
@@ -1910,14 +1913,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const modalAddTpEl = document.getElementById('modalAddTP');
+    function resetAdminAddTpForm(targetCpId = null) {
+        const select = document.getElementById('add_tp_cp_id');
+        if (select && targetCpId) {
+            select.value = targetCpId;
+        }
+
+        const materiInp = document.getElementById('add_tp_materi');
+        if (materiInp) materiInp.value = '';
+
+        const deskInp = document.getElementById('add_tp_deskripsi');
+        if (deskInp) deskInp.value = '';
+
+        updateAutoTpCode();
+    }
+
     if (modalAddTpEl) {
-        modalAddTpEl.addEventListener('shown.bs.modal', () => {
-            const kodeInp = document.getElementById('add_tp_kode');
-            if (kodeInp && !kodeInp.value) {
-                updateAutoTpCode();
-            }
+        modalAddTpEl.addEventListener('show.bs.modal', function(e) {
+            const button = e.relatedTarget;
+            const targetCpId = button ? button.getAttribute('data-cp-id') : null;
+            resetAdminAddTpForm(targetCpId);
         });
     }
+
+    // Direct "+ Tambah TP" from CP row in admin
+    document.querySelectorAll('.btn-add-tp-for-cp').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const cpId = this.dataset.cpId;
+            resetAdminAddTpForm(cpId);
+        });
+    });
 
     const kurEditCp = document.getElementById('edit_cp_kurikulum_id');
     if (kurEditCp) {

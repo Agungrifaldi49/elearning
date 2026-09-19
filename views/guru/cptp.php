@@ -614,7 +614,7 @@
     </div>
 </div>
 
-<!-- Modal Add TP (Spacious Large Modal with Parent CP Context Preview) -->
+<!-- Modal Add TP (Spacious Large Modal, Always Fresh Clean Inputs) -->
 <div class="modal fade" id="modalAddTP" tabindex="-1" aria-labelledby="modalAddTPLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -629,11 +629,14 @@
                 <div class="modal-header py-3.5 px-4 border-bottom" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
                     <div class="d-flex align-items-center gap-3">
                         <div class="rounded-circle p-2.5 bg-success text-white shadow-xs">
-                            <i class="bi bi-bullseye fs-5"></i>
+                            <i class="bi bi-plus-circle-fill fs-5"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold text-dark mb-0" id="modalAddTPLabel">Tambah Tujuan Pembelajaran (TP)</h5>
-                            <small class="text-muted">Rumuskan tujuan pembelajaran spesifik sebagai turunan operasional dari Capaian Pembelajaran.</small>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="modal-title fw-bold text-dark mb-0" id="modalAddTPLabel">Tambah Tujuan Pembelajaran (TP) Baru</h5>
+                                <span class="badge bg-success text-white rounded-pill px-2 py-0.5" style="font-size:0.68rem;">Formulir Baru</span>
+                            </div>
+                            <small class="text-muted">Rumuskan tujuan pembelajaran spesifik sebagai turunan operasional dari Capaian Pembelajaran terpilih.</small>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -643,7 +646,7 @@
                 <div class="modal-body p-4">
                     <!-- Step 1: Parent CP Selection -->
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-secondary mb-1.5">
+                        <label class="form-label small fw-bold text-secondary mb-1">
                             <i class="bi bi-diagram-3 text-success me-1"></i>Pilih Induk Capaian Pembelajaran (CP) <span class="text-danger">*</span>
                         </label>
                         <select name="cp_id" id="add_tp_cp_id" class="form-select rounded-3 py-2" required>
@@ -663,21 +666,22 @@
                                 </optgroup>
                             <?php endforeach; ?>
                         </select>
+                        <div class="form-text text-muted small mt-1 d-flex align-items-center gap-1.5 flex-wrap" id="preview_cp_meta_line">
+                            <i class="bi bi-info-circle text-primary"></i>
+                            <span>Induk Terpilih:</span>
+                            <span class="badge bg-primary-subtle text-primary border font-monospace px-1.5 py-0.5 rounded" id="preview_cp_kode">CP-...</span>
+                            <span class="badge bg-light text-secondary border px-1.5 py-0.5 rounded" id="preview_cp_elemen">Elemen Ranah</span>
+                        </div>
                     </div>
 
-                    <!-- Parent CP Context Banner (Live Preview) -->
-                    <div class="p-3 rounded-3 border mb-3 bg-light" id="add_tp_cp_preview_box" style="background-color: #f8fafc;">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace px-2 py-0.5 rounded" id="preview_cp_kode">
-                                CP Terpilih
-                            </span>
-                            <span class="badge bg-light text-secondary border px-2 py-0.5 rounded small" id="preview_cp_elemen">
-                                Elemen Ranah
-                            </span>
-                        </div>
-                        <div class="small text-dark mt-1" id="preview_cp_deskripsi" style="line-height: 1.5; font-style: italic;">
-                            Pilih salah satu CP di atas untuk melihat rumusan induk.
-                        </div>
+                    <!-- Divider Section: New TP Inputs (Explicitly clean & fresh) -->
+                    <div class="d-flex align-items-center justify-content-between pb-2 mb-3 mt-2 border-bottom">
+                        <span class="fw-bold text-success d-flex align-items-center gap-1.5 small text-uppercase" style="letter-spacing: 0.5px;">
+                            <i class="bi bi-file-earmark-plus-fill"></i> Formulir TP Baru (Ketik Data Di Bawah Ini)
+                        </span>
+                        <span class="badge bg-light text-muted border rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                            Kondisi Bersih / Kosong
+                        </span>
                     </div>
 
                     <div class="row g-3 mb-3">
@@ -706,16 +710,16 @@
                             <label class="form-label small fw-bold text-secondary mb-1.5">
                                 <i class="bi bi-bookmark text-success me-1"></i>Materi Pokok / Pokok Bahasan
                             </label>
-                            <input type="text" name="materi_pokok" class="form-control rounded-3 py-2" placeholder="Contoh: Algoritma Pencarian & Pengurutan">
+                            <input type="text" name="materi_pokok" id="add_tp_materi" class="form-control rounded-3 py-2" placeholder="Ketik topik atau materi pokok baru...">
                             <div class="form-text small text-muted">Subjek materi pembelajaran yang akan diujikan.</div>
                         </div>
 
                         <!-- Deskripsi TP -->
                         <div class="col-12">
                             <label class="form-label small fw-bold text-secondary mb-1.5">
-                                <i class="bi bi-card-text text-success me-1"></i>Deskripsi Tujuan Pembelajaran (TP) <span class="text-danger">*</span>
+                                <i class="bi bi-card-text text-success me-1"></i>Deskripsi Rumusan Tujuan Pembelajaran (TP) Baru <span class="text-danger">*</span>
                             </label>
-                            <textarea name="deskripsi" id="add_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Tuliskan tujuan pembelajaran yang operasional... Contoh: Peserta didik mampu mengimplementasikan algoritma binary search pada larik data terurut dan menganalisis efisiensi komputasinya dengan benar melalui praktikum mandiri."></textarea>
+                            <textarea name="deskripsi" id="add_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Ketik rumusan Tujuan Pembelajaran baru di sini... Contoh: Peserta didik mampu mengimplementasikan fungsi rekursif secara tepat melalui latihan pemrograman mandiri."></textarea>
                             <div class="d-flex justify-content-between align-items-center mt-1">
                                 <span class="form-text small text-muted"><i class="bi bi-lightbulb text-warning me-1"></i>Tips ABCD: <strong>A</strong>udience, <strong>B</strong>ehavior, <strong>C</strong>ondition, <strong>D</strong>egree.</span>
                                 <span class="form-text small text-muted" id="add_tp_char_count">0 karakter</span>
@@ -728,8 +732,8 @@
                 <div class="modal-footer py-3 px-4 border-top bg-light">
                     <button type="button" class="btn btn-outline-secondary rounded-3 px-3.5 py-2 fw-semibold" data-bs-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-success rounded-3 px-4 py-2 fw-semibold shadow-sm d-flex align-items-center gap-1.5">
-                        <i class="bi bi-save"></i>
-                        <span>Simpan Tujuan Pembelajaran</span>
+                        <i class="bi bi-plus-circle"></i>
+                        <span>Simpan TP Baru</span>
                     </button>
                 </div>
             </form>
@@ -737,7 +741,7 @@
     </div>
 </div>
 
-<!-- Modal Edit TP (Spacious Large Modal) -->
+<!-- Modal Edit TP (Spacious Large Modal - Visually Distinct Warning Theme) -->
 <div class="modal fade" id="modalEditTP" tabindex="-1" aria-labelledby="modalEditTPLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
@@ -749,15 +753,18 @@
                 <input type="hidden" name="filter_fase_id" value="<?= $filterFaseId ?? '' ?>">
                 <input type="hidden" name="id" id="edit_tp_id">
 
-                <!-- Modal Header -->
-                <div class="modal-header py-3.5 px-4 border-bottom" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                <!-- Modal Header (Distinct Amber Theme for Editing) -->
+                <div class="modal-header py-3.5 px-4 border-bottom" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-circle p-2.5 bg-success text-white shadow-xs">
-                            <i class="bi bi-pencil-square fs-5"></i>
+                        <div class="rounded-circle p-2.5 bg-warning text-dark shadow-xs">
+                            <i class="bi bi-pencil-fill fs-5"></i>
                         </div>
                         <div>
-                            <h5 class="modal-title fw-bold text-dark mb-0" id="modalEditTPLabel">Perbarui Tujuan Pembelajaran (TP)</h5>
-                            <small class="text-muted">Edit rumusan atau materi pokok pada butir Tujuan Pembelajaran.</small>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="modal-title fw-bold text-dark mb-0" id="modalEditTPLabel">Edit / Perbarui Data TP</h5>
+                                <span class="badge bg-warning text-dark rounded-pill px-2 py-0.5" style="font-size:0.68rem;">Mode Perubahan Data</span>
+                            </div>
+                            <small class="text-muted">Perbarui rumusan atau materi pokok pada data Tujuan Pembelajaran yang sudah ada.</small>
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -767,7 +774,7 @@
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-secondary mb-1.5">
-                            <i class="bi bi-diagram-3 text-success me-1"></i>Pilih Induk Capaian Pembelajaran (CP) <span class="text-danger">*</span>
+                            <i class="bi bi-diagram-3 text-warning me-1"></i>Pilih Induk Capaian Pembelajaran (CP) <span class="text-danger">*</span>
                         </label>
                         <select name="cp_id" id="edit_tp_cp_id" class="form-select rounded-3 py-2" required>
                             <?php foreach ($groupedCpAdd as $grpName => $cList): ?>
@@ -783,19 +790,19 @@
                     <div class="row g-3 mb-3">
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-secondary mb-1.5">
-                                <i class="bi bi-upc-scan text-success me-1"></i>Kode TP <span class="text-danger">*</span>
+                                <i class="bi bi-upc-scan text-warning me-1"></i>Kode TP <span class="text-danger">*</span>
                             </label>
                             <input type="text" name="kode_tp" id="edit_tp_kode" class="form-control font-monospace fw-bold rounded-3 py-2" required>
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-secondary mb-1.5">
-                                <i class="bi bi-bookmark text-success me-1"></i>Materi Pokok
+                                <i class="bi bi-bookmark text-warning me-1"></i>Materi Pokok
                             </label>
                             <input type="text" name="materi_pokok" id="edit_tp_materi" class="form-control rounded-3 py-2">
                         </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold text-secondary mb-1.5">
-                                <i class="bi bi-card-text text-success me-1"></i>Deskripsi Tujuan Pembelajaran <span class="text-danger">*</span>
+                                <i class="bi bi-card-text text-warning me-1"></i>Deskripsi Tujuan Pembelajaran <span class="text-danger">*</span>
                             </label>
                             <textarea name="deskripsi" id="edit_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required></textarea>
                         </div>
@@ -805,9 +812,9 @@
                 <!-- Modal Footer -->
                 <div class="modal-footer py-3 px-4 border-top bg-light">
                     <button type="button" class="btn btn-outline-secondary rounded-3 px-3.5 py-2 fw-semibold" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-success rounded-3 px-4 py-2 fw-semibold shadow-sm d-flex align-items-center gap-1.5">
+                    <button type="submit" class="btn btn-warning rounded-3 px-4 py-2 fw-bold text-dark shadow-sm d-flex align-items-center gap-1.5">
                         <i class="bi bi-check2-circle"></i>
-                        <span>Perbarui Tujuan Pembelajaran</span>
+                        <span>Simpan Perubahan TP</span>
                     </button>
                 </div>
             </form>
@@ -846,20 +853,17 @@ function updateParentCpPreview() {
     const cpSelect = document.getElementById('add_tp_cp_id');
     const previewKode = document.getElementById('preview_cp_kode');
     const previewElemen = document.getElementById('preview_cp_elemen');
-    const previewDeskripsi = document.getElementById('preview_cp_deskripsi');
 
-    if (!cpSelect || !previewDeskripsi) return;
+    if (!cpSelect) return;
 
     const opt = cpSelect.options[cpSelect.selectedIndex];
     if (opt) {
-        const desk = opt.getAttribute('data-deskripsi') || opt.text || '';
         const elem = opt.getAttribute('data-elemen') || 'Elemen Umum';
         const match = opt.text.match(/^\[(.*?)\]/);
         const kode = match ? match[1] : 'CP Induk';
 
         if (previewKode) previewKode.textContent = kode;
         if (previewElemen) previewElemen.textContent = elem ? elem : 'Elemen Umum';
-        if (previewDeskripsi) previewDeskripsi.textContent = desk;
     }
 }
 
@@ -929,13 +933,20 @@ document.addEventListener('DOMContentLoaded', () => {
         btnRegenCp.addEventListener('click', updateAutoCpCode);
     }
 
+    // Always reset modalAddCP to blank state when opened
     const modalAddCpEl = document.getElementById('modalAddCP');
     if (modalAddCpEl) {
-        modalAddCpEl.addEventListener('shown.bs.modal', () => {
-            const kodeInp = document.getElementById('add_cp_kode');
-            if (kodeInp && !kodeInp.value) {
-                updateAutoCpCode();
-            }
+        modalAddCpEl.addEventListener('show.bs.modal', () => {
+            const elemenInp = document.getElementById('add_cp_elemen');
+            if (elemenInp) elemenInp.value = '';
+
+            const deskInp = document.getElementById('add_cp_deskripsi');
+            if (deskInp) deskInp.value = '';
+
+            const countSpan = document.getElementById('add_cp_char_count');
+            if (countSpan) countSpan.textContent = '0 karakter';
+
+            updateAutoCpCode();
         });
     }
 
@@ -951,14 +962,32 @@ document.addEventListener('DOMContentLoaded', () => {
         btnRegenTp.addEventListener('click', updateAutoTpCode);
     }
 
+    // Always reset modalAddTP to blank state when opened
     const modalAddTpEl = document.getElementById('modalAddTP');
+    function resetAddTpForm(targetCpId = null) {
+        const select = document.getElementById('add_tp_cp_id');
+        if (select && targetCpId) {
+            select.value = targetCpId;
+        }
+
+        const materiInp = document.getElementById('add_tp_materi');
+        if (materiInp) materiInp.value = '';
+
+        const deskInp = document.getElementById('add_tp_deskripsi');
+        if (deskInp) deskInp.value = '';
+
+        const countSpan = document.getElementById('add_tp_char_count');
+        if (countSpan) countSpan.textContent = '0 karakter';
+
+        updateAutoTpCode();
+        updateParentCpPreview();
+    }
+
     if (modalAddTpEl) {
-        modalAddTpEl.addEventListener('shown.bs.modal', () => {
-            const kodeInp = document.getElementById('add_tp_kode');
-            if (kodeInp && !kodeInp.value) {
-                updateAutoTpCode();
-            }
-            updateParentCpPreview();
+        modalAddTpEl.addEventListener('show.bs.modal', function(e) {
+            const button = e.relatedTarget;
+            const targetCpId = button ? button.getAttribute('data-cp-id') : null;
+            resetAddTpForm(targetCpId);
         });
     }
 
@@ -966,12 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.btn-add-tp-for-cp').forEach(btn => {
         btn.addEventListener('click', function() {
             const cpId = this.dataset.cpId;
-            const select = document.getElementById('add_tp_cp_id');
-            if (select && cpId) {
-                select.value = cpId;
-                updateAutoTpCode();
-                updateParentCpPreview();
-            }
+            resetAddTpForm(cpId);
         });
     });
 
