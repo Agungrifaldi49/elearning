@@ -1047,9 +1047,10 @@
 </div>
 
 <!-- Modal Add CP -->
-<div class="modal fade" id="modalAddCP" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+<!-- Modal Add CP (Spacious Large Modal) -->
+<div class="modal fade" id="modalAddCP" tabindex="-1" aria-labelledby="modalAddCPLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="create_cp">
@@ -1057,74 +1058,122 @@
                 <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
                 <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
                 <input type="hidden" name="filter_fase_id" value="<?= $filterCpFaseId ?? '' ?>">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-plus-circle text-primary me-2"></i>Tambah Capaian Pembelajaran (CP)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                <!-- Modal Header -->
+                <div class="modal-header py-3.5 px-4 border-bottom" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle p-2.5 bg-primary text-white shadow-xs">
+                            <i class="bi bi-plus-circle-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="modalAddCPLabel">Tambah Capaian Pembelajaran (CP)</h5>
+                            <small class="text-muted">Rumuskan kompetensi akhir mata pelajaran untuk tingkat atau fase kurikulum tertentu.</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Pilih Kurikulum</label>
-                        <select name="kurikulum_id" id="add_cp_kurikulum_id" class="form-select" required>
-                            <?php foreach ($kurikulumList as $kur): ?>
-                                <option value="<?= $kur['id'] ?>" <?= ($filterCpKurId == $kur['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Pilih Mata Pelajaran</label>
-                        <select name="mapel_id" id="add_cp_mapel_id" class="form-select" required>
-                            <?php foreach ($mapelList as $mp): ?>
-                                <option value="<?= $mp['id'] ?>" <?= ($filterCpMapelId == $mp['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($mp['nama_mapel']) ?> (<?= htmlspecialchars($mp['kode_mapel']) ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Pilih Fase</label>
-                        <select name="fase_id" id="add_cp_fase_id" class="form-select">
-                            <option value="" data-kurikulum-id="">-- Tanpa Fase Khusus --</option>
-                            <?php foreach ($allFaseList as $f): ?>
-                                <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>" <?= ($filterCpFaseId == $f['id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Kode CP (Otomatis)</label>
-                            <div class="input-group">
-                                <input type="text" name="kode_cp" id="add_cp_kode" class="form-control font-monospace" placeholder="Otomatis..." value="">
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btn_regen_cp_code" title="Generate Ulang Kode"><i class="bi bi-arrow-clockwise"></i></button>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-mortarboard text-primary me-1"></i>Pilih Kurikulum <span class="text-danger">*</span>
+                            </label>
+                            <select name="kurikulum_id" id="add_cp_kurikulum_id" class="form-select rounded-3 py-2" required>
+                                <?php foreach ($kurikulumList as $kur): ?>
+                                    <option value="<?= $kur['id'] ?>" <?= ($filterCpKurId == $kur['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text small text-muted">Kurikulum yang dihubungkan dengan CP ini.</div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-book text-primary me-1"></i>Pilih Mata Pelajaran <span class="text-danger">*</span>
+                            </label>
+                            <select name="mapel_id" id="add_cp_mapel_id" class="form-select rounded-3 py-2" required>
+                                <?php foreach ($mapelList as $mp): ?>
+                                    <option value="<?= $mp['id'] ?>" <?= ($filterCpMapelId == $mp['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($mp['nama_mapel']) ?> (<?= htmlspecialchars($mp['kode_mapel']) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text small text-muted">Mata pelajaran yang memiliki capaian kompetensi ini.</div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-layers text-primary me-1"></i>Pilih Fase / Jenjang Kelas
+                            </label>
+                            <select name="fase_id" id="add_cp_fase_id" class="form-select rounded-3 py-2">
+                                <option value="" data-kurikulum-id="">-- Tanpa Fase Khusus --</option>
+                                <?php foreach ($allFaseList as $f): ?>
+                                    <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>" <?= ($filterCpFaseId == $f['id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text small text-muted">Contoh: Fase E (Kelas X), Fase F (Kelas XI - XII).</div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-tags text-primary me-1"></i>Elemen / Ranah Pembelajaran
+                            </label>
+                            <input type="text" name="elemen" class="form-control rounded-3 py-2" placeholder="Algoritma / Desain / Literasi">
+                            <div class="form-text small text-muted">Domain ranah materi kompetensi pembelajaran.</div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="p-3 rounded-3 border bg-light">
+                                <div class="d-flex justify-content-between align-items-center mb-1.5">
+                                    <label class="form-label small fw-bold text-dark mb-0 d-flex align-items-center gap-1">
+                                        <i class="bi bi-upc-scan text-primary"></i>
+                                        Kode CP (Terstandar Otomatis)
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5 ms-1" style="font-size:0.7rem;">Otomatis</span>
+                                    </label>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2.5 rounded-2" id="btn_regen_cp_code" title="Generate ulang kode CP">
+                                        <i class="bi bi-arrow-clockwise me-1"></i> Regenerate Kode
+                                    </button>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 font-monospace text-muted"><i class="bi bi-hash"></i></span>
+                                    <input type="text" name="kode_cp" id="add_cp_kode" class="form-control font-monospace fw-bold border-start-0 py-2" placeholder="CP-..." value="" required>
+                                </div>
+                                <div class="form-text small text-muted mt-1">Dibuat otomatis berdasarkan kurikulum & mapel terpilih.</div>
                             </div>
-                            <small class="text-muted" style="font-size:0.75rem;">Dibuat otomatis, dapat disesuaikan manual.</small>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Elemen / Ranah</label>
-                            <input type="text" name="elemen" class="form-control" placeholder="Algoritma & Pemrograman">
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-card-text text-primary me-1"></i>Deskripsi Capaian Pembelajaran <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Tuliskan rumusan capaian pembelajaran secara lengkap... Contoh: Peserta didik mampu memahami dan menerapkan proses bisnis pada bidang keahlian dengan benar."></textarea>
+                            <div class="form-text small text-muted mt-1">Gunakan redaksi kompetensi yang jelas dan terukur.</div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Deskripsi Capaian Pembelajaran</label>
-                        <textarea name="deskripsi" class="form-control" rows="3" required placeholder="Peserta didik mampu memahami..."></textarea>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary fw-bold px-4">Simpan CP</button>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-3 px-4 border-top bg-light">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3.5 py-2 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fw-semibold shadow-sm d-flex align-items-center gap-1.5">
+                        <i class="bi bi-save"></i>
+                        <span>Simpan Capaian Pembelajaran</span>
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Modal Edit CP -->
-<div class="modal fade" id="modalEditCP" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+<!-- Modal Edit CP (Spacious Large Modal) -->
+<div class="modal fade" id="modalEditCP" tabindex="-1" aria-labelledby="modalEditCPLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="update_cp">
@@ -1133,66 +1182,100 @@
                 <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
                 <input type="hidden" name="filter_fase_id" value="<?= $filterCpFaseId ?? '' ?>">
                 <input type="hidden" name="id" id="edit_cp_id">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Capaian Pembelajaran (CP)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Pilih Kurikulum</label>
-                        <select name="kurikulum_id" id="edit_cp_kurikulum_id" class="form-select" required>
-                            <?php foreach ($kurikulumList as $kur): ?>
-                                <option value="<?= $kur['id'] ?>"><?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Pilih Mata Pelajaran</label>
-                        <select name="mapel_id" id="edit_cp_mapel_id" class="form-select" required>
-                            <?php foreach ($mapelList as $mp): ?>
-                                <option value="<?= $mp['id'] ?>"><?= htmlspecialchars($mp['nama_mapel']) ?> (<?= htmlspecialchars($mp['kode_mapel']) ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Pilih Fase</label>
-                        <select name="fase_id" id="edit_cp_fase_id" class="form-select">
-                            <option value="" data-kurikulum-id="">-- Tanpa Fase Khusus --</option>
-                            <?php foreach ($allFaseList as $f): ?>
-                                <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>">
-                                    <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Kode CP</label>
-                            <input type="text" name="kode_cp" id="edit_cp_kode" class="form-control font-monospace" required>
+
+                <!-- Modal Header -->
+                <div class="modal-header py-3.5 px-4 border-bottom" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle p-2.5 bg-primary text-white shadow-xs">
+                            <i class="bi bi-pencil-square fs-5"></i>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Elemen / Ranah</label>
-                            <input type="text" name="elemen" id="edit_cp_elemen" class="form-control">
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="modalEditCPLabel">Perbarui Capaian Pembelajaran (CP)</h5>
+                            <small class="text-muted">Perbarui data atau rumusan kompetensi Capaian Pembelajaran.</small>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Deskripsi Capaian Pembelajaran</label>
-                        <textarea name="deskripsi" id="edit_cp_deskripsi" class="form-control" rows="3" required></textarea>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-mortarboard text-primary me-1"></i>Pilih Kurikulum <span class="text-danger">*</span>
+                            </label>
+                            <select name="kurikulum_id" id="edit_cp_kurikulum_id" class="form-select rounded-3 py-2" required>
+                                <?php foreach ($kurikulumList as $kur): ?>
+                                    <option value="<?= $kur['id'] ?>"><?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-book text-primary me-1"></i>Pilih Mata Pelajaran <span class="text-danger">*</span>
+                            </label>
+                            <select name="mapel_id" id="edit_cp_mapel_id" class="form-select rounded-3 py-2" required>
+                                <?php foreach ($mapelList as $mp): ?>
+                                    <option value="<?= $mp['id'] ?>"><?= htmlspecialchars($mp['nama_mapel']) ?> (<?= htmlspecialchars($mp['kode_mapel']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-layers text-primary me-1"></i>Pilih Fase / Jenjang Kelas
+                            </label>
+                            <select name="fase_id" id="edit_cp_fase_id" class="form-select rounded-3 py-2">
+                                <option value="" data-kurikulum-id="">-- Tanpa Fase Khusus --</option>
+                                <?php foreach ($allFaseList as $f): ?>
+                                    <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>">
+                                        <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-tags text-primary me-1"></i>Elemen / Ranah Pembelajaran
+                            </label>
+                            <input type="text" name="elemen" id="edit_cp_elemen" class="form-control rounded-3 py-2">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-upc-scan text-primary me-1"></i>Kode CP <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="kode_cp" id="edit_cp_kode" class="form-control font-monospace fw-bold rounded-3 py-2" required>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-card-text text-primary me-1"></i>Deskripsi Capaian Pembelajaran <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="deskripsi" id="edit_cp_deskripsi" class="form-control rounded-3 p-3" rows="5" required></textarea>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary fw-bold px-4">Perbarui CP</button>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-3 px-4 border-top bg-light">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3.5 py-2 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 fw-semibold shadow-sm d-flex align-items-center gap-1.5">
+                        <i class="bi bi-check2-circle"></i>
+                        <span>Perbarui Capaian Pembelajaran</span>
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Modal Add TP -->
-<div class="modal fade" id="modalAddTP" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+<!-- Modal Add TP (Spacious Large Modal) -->
+<div class="modal fade" id="modalAddTP" tabindex="-1" aria-labelledby="modalAddTPLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="create_tp">
@@ -1200,14 +1283,28 @@
                 <input type="hidden" name="filter_kurikulum_id" value="<?= $filterCpKurId ?? '' ?>">
                 <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
                 <input type="hidden" name="filter_fase_id" value="<?= $filterCpFaseId ?? '' ?>">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-plus-circle text-primary me-2"></i>Tambah Tujuan Pembelajaran (TP)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                <!-- Modal Header -->
+                <div class="modal-header py-3.5 px-4 border-bottom" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle p-2.5 bg-success text-white shadow-xs">
+                            <i class="bi bi-bullseye fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="modalAddTPLabel">Tambah Tujuan Pembelajaran (TP)</h5>
+                            <small class="text-muted">Rumuskan tujuan pembelajaran spesifik sebagai turunan operasional dari Capaian Pembelajaran.</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Pilih Induk Capaian Pembelajaran (CP)</label>
-                        <select name="cp_id" id="add_tp_cp_id" class="form-select" required>
+                        <label class="form-label small fw-bold text-secondary mb-1.5">
+                            <i class="bi bi-diagram-3 text-success me-1"></i>Pilih Induk Capaian Pembelajaran (CP) <span class="text-danger">*</span>
+                        </label>
+                        <select name="cp_id" id="add_tp_cp_id" class="form-select rounded-3 py-2" required>
                             <?php 
                             $groupedCpAdd = [];
                             foreach (($allCpForDropdown ?? $cpList) as $c) {
@@ -1217,44 +1314,68 @@
                             foreach ($groupedCpAdd as $grpName => $cList): ?>
                                 <optgroup label="<?= htmlspecialchars($grpName) ?>">
                                     <?php foreach ($cList as $c): ?>
-                                        <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 50, '...')) ?></option>
+                                        <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel'] ?? '') ?> — <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 75, '...')) ?></option>
                                     <?php endforeach; ?>
                                 </optgroup>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Kode TP (Otomatis)</label>
-                            <div class="input-group">
-                                <input type="text" name="kode_tp" id="add_tp_kode" class="form-control font-monospace" placeholder="Otomatis..." value="">
-                                <button type="button" class="btn btn-outline-secondary btn-sm" id="btn_regen_tp_code" title="Generate Ulang Kode"><i class="bi bi-arrow-clockwise"></i></button>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <div class="p-2.5 rounded-3 border bg-light h-100">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-bold text-dark mb-0 d-flex align-items-center gap-1">
+                                        <i class="bi bi-upc-scan text-success"></i> Kode TP (Otomatis)
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-1.5 py-0.5 ms-1" style="font-size:0.68rem;">Otomatis</span>
+                                    </label>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2 rounded" id="btn_regen_tp_code" title="Generate ulang kode TP">
+                                        <i class="bi bi-arrow-clockwise"></i>
+                                    </button>
+                                </div>
+                                <div class="input-group mt-1">
+                                    <span class="input-group-text bg-white border-end-0 font-monospace text-muted"><i class="bi bi-hash"></i></span>
+                                    <input type="text" name="kode_tp" id="add_tp_kode" class="form-control font-monospace fw-bold border-start-0 py-2" placeholder="TP-..." value="" required>
+                                </div>
+                                <div class="form-text small text-muted mt-1" style="font-size:0.75rem;">Turunan terstandar dari kode CP induk.</div>
                             </div>
-                            <small class="text-muted" style="font-size:0.75rem;">Dibuat otomatis, dapat disesuaikan manual.</small>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Materi Pokok</label>
-                            <input type="text" name="materi_pokok" class="form-control" placeholder="Arsitektur Database">
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-bookmark text-success me-1"></i>Materi Pokok / Pokok Bahasan
+                            </label>
+                            <input type="text" name="materi_pokok" class="form-control rounded-3 py-2" placeholder="Topik Utama / Pokok Bahasan">
+                            <div class="form-text small text-muted">Materi pokok yang diujikan dalam TP ini.</div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Deskripsi Tujuan Pembelajaran</label>
-                        <textarea name="deskripsi" class="form-control" rows="3" required placeholder="Memahami dan mempraktikkan konfigurasi..."></textarea>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-card-text text-success me-1"></i>Deskripsi Tujuan Pembelajaran (TP) <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="deskripsi" class="form-control rounded-3 p-3" rows="5" required placeholder="Tuliskan tujuan pembelajaran yang spesifik dan terukur..."></textarea>
+                            <div class="form-text small text-muted mt-1"><i class="bi bi-lightbulb text-warning me-1"></i>Tips ABCD: <strong>A</strong>udience, <strong>B</strong>ehavior, <strong>C</strong>ondition, <strong>D</strong>egree.</div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary fw-bold px-4">Simpan TP</button>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-3 px-4 border-top bg-light">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3.5 py-2 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success rounded-3 px-4 py-2 fw-semibold shadow-sm d-flex align-items-center gap-1.5">
+                        <i class="bi bi-save"></i>
+                        <span>Simpan Tujuan Pembelajaran</span>
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<!-- Modal Edit TP -->
-<div class="modal fade" id="modalEditTP" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+<!-- Modal Edit TP (Spacious Large Modal) -->
+<div class="modal fade" id="modalEditTP" tabindex="-1" aria-labelledby="modalEditTPLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" style="max-width: 880px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="update_tp">
@@ -1263,41 +1384,67 @@
                 <input type="hidden" name="filter_mapel_id" value="<?= $filterCpMapelId ?? '' ?>">
                 <input type="hidden" name="filter_fase_id" value="<?= $filterCpFaseId ?? '' ?>">
                 <input type="hidden" name="id" id="edit_tp_id">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Tujuan Pembelajaran (TP)</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                <!-- Modal Header -->
+                <div class="modal-header py-3.5 px-4 border-bottom" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle p-2.5 bg-success text-white shadow-xs">
+                            <i class="bi bi-pencil-square fs-5"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0" id="modalEditTPLabel">Perbarui Tujuan Pembelajaran (TP)</h5>
+                            <small class="text-muted">Edit rumusan atau materi pokok pada butir Tujuan Pembelajaran.</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Pilih Induk Capaian Pembelajaran (CP)</label>
-                        <select name="cp_id" id="edit_tp_cp_id" class="form-select" required>
+                        <label class="form-label small fw-bold text-secondary mb-1.5">
+                            <i class="bi bi-diagram-3 text-success me-1"></i>Pilih Induk Capaian Pembelajaran (CP) <span class="text-danger">*</span>
+                        </label>
+                        <select name="cp_id" id="edit_tp_cp_id" class="form-select rounded-3 py-2" required>
                             <?php foreach ($groupedCpAdd as $grpName => $cList): ?>
                                 <optgroup label="<?= htmlspecialchars($grpName) ?>">
                                     <?php foreach ($cList as $c): ?>
-                                        <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 50, '...')) ?></option>
+                                        <option value="<?= $c['id'] ?>">[<?= htmlspecialchars($c['kode_cp']) ?>] <?= htmlspecialchars($c['nama_mapel'] ?? '') ?> — <?= htmlspecialchars(mb_strimwidth($c['deskripsi'], 0, 75, '...')) ?></option>
                                     <?php endforeach; ?>
                                 </optgroup>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Kode TP</label>
-                            <input type="text" name="kode_tp" id="edit_tp_kode" class="form-control font-monospace" required>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-upc-scan text-success me-1"></i>Kode TP <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="kode_tp" id="edit_tp_kode" class="form-control font-monospace fw-bold rounded-3 py-2" required>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold">Materi Pokok</label>
-                            <input type="text" name="materi_pokok" id="edit_tp_materi" class="form-control">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-bookmark text-success me-1"></i>Materi Pokok
+                            </label>
+                            <input type="text" name="materi_pokok" id="edit_tp_materi" class="form-control rounded-3 py-2">
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Deskripsi Tujuan Pembelajaran</label>
-                        <textarea name="deskripsi" id="edit_tp_deskripsi" class="form-control" rows="3" required></textarea>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary mb-1.5">
+                                <i class="bi bi-card-text text-success me-1"></i>Deskripsi Tujuan Pembelajaran <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="deskripsi" id="edit_tp_deskripsi" class="form-control rounded-3 p-3" rows="5" required></textarea>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary fw-bold px-4">Perbarui TP</button>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer py-3 px-4 border-top bg-light">
+                    <button type="button" class="btn btn-outline-secondary rounded-3 px-3.5 py-2 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success rounded-3 px-4 py-2 fw-semibold shadow-sm d-flex align-items-center gap-1.5">
+                        <i class="bi bi-check2-circle"></i>
+                        <span>Perbarui Tujuan Pembelajaran</span>
+                    </button>
                 </div>
             </form>
         </div>
