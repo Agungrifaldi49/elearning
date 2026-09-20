@@ -1024,6 +1024,23 @@ if (!function_exists('formatTpDescriptionHtml')) {
     </div>
 </div>
 
+<?php
+// Peta rombel yang sudah memiliki kurikulum per tahun ajaran untuk cegah duplikasi
+$assignedRombelMap = [];
+if (!empty($rombelKurikulumList)) {
+    foreach ($rombelKurikulumList as $rk) {
+        $taId = (int)$rk['tahun_ajaran_id'];
+        $rId = (int)$rk['rombel_id'];
+        if (!isset($assignedRombelMap[$taId])) {
+            $assignedRombelMap[$taId] = [];
+        }
+        if (!in_array($rId, $assignedRombelMap[$taId], true)) {
+            $assignedRombelMap[$taId][] = $rId;
+        }
+    }
+}
+?>
+
 <!-- Modal Assign Rombel Kurikulum -->
 <div class="modal fade" id="modalAssignRombel" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -1057,7 +1074,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                 <label class="form-label small fw-bold text-dark mb-1.5">
                                     <i class="bi bi-calendar3 text-primary me-1.5"></i>Tahun Ajaran <span class="text-danger">*</span>
                                 </label>
-                                <select name="tahun_ajaran_id" class="form-select rounded-3 py-2 px-3 shadow-xs" required>
+                                <select name="tahun_ajaran_id" id="assign_rombel_ta_id" class="form-select rounded-3 py-2 px-3 shadow-xs" required>
                                     <?php foreach ($taList as $ta): ?>
                                         <option value="<?= $ta['id'] ?>" <?= !empty($ta['is_active']) ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($ta['tahun_ajaran'] ?? $ta['tahun']) ?> (Semester <?= htmlspecialchars($ta['semester']) ?>)
@@ -1090,7 +1107,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
                             </span>
                         </div>
                         <p class="text-muted small mb-3">
-                            Centang checkbox pada rombel yang ingin dipasangkan kurikulum (bisa memilih lebih dari 1 kelas sekaligus):
+                            <i class="bi bi-shield-check text-success me-1"></i>Hanya menampilkan rombel kelas yang <strong>belum terdaftar</strong> pada tahun ajaran yang dipilih untuk mencegah data ganda.
                         </p>
 
                         <!-- Controls: Search & Selection Toolbar -->
@@ -1141,6 +1158,21 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                     Tidak ada data kelas yang tersedia.
                                 </div>
                             <?php else: ?>
+                                <!-- Alert: Semua Rombel Sudah Terpasang -->
+                                <div id="rombelAllAssignedAlert" class="text-center py-4 px-3 d-none">
+                                    <div class="bg-success-subtle text-success rounded-circle d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;">
+                                        <i class="bi bi-check-circle-fill fs-4"></i>
+                                    </div>
+                                    <h6 class="fw-bold text-dark mb-1">Semua Rombel Sudah Memiliki Kurikulum</h6>
+                                    <p class="text-muted small mb-0">Seluruh rombel kelas pada tahun ajaran ini sudah terdaftar. Tidak ada rombel baru yang perlu ditambahkan.</p>
+                                </div>
+
+                                <!-- Alert: Filter Pencarian Tidak Ditemukan -->
+                                <div id="rombelNoFilterResult" class="text-muted text-center py-4 small d-none">
+                                    <i class="bi bi-search fs-4 d-block mb-1 opacity-50"></i>
+                                    Tidak ada rombel kelas yang sesuai dengan filter atau kata kunci pencarian.
+                                </div>
+
                                 <div class="row g-2.5" id="rombelCheckboxList">
                                     <?php foreach ($kelasList as $k): ?>
                                         <?php 
@@ -1148,6 +1180,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                         $normalizedTingkat = in_array($tingkatUpper, ['10', 'X']) ? 'X' : (in_array($tingkatUpper, ['11', 'XI']) ? 'XI' : (in_array($tingkatUpper, ['12', 'XII']) ? 'XII' : $tingkatUpper));
                                         ?>
                                         <div class="col-12 col-sm-6 rombel-check-item" 
+                                             data-rombel-id="<?= (int)$k['id'] ?>"
                                              data-tingkat="<?= htmlspecialchars($normalizedTingkat) ?>" 
                                              data-nama="<?= htmlspecialchars(strtolower($k['nama_kelas'] . ' ' . ($k['nama_jurusan'] ?? '') . ' ' . $k['tingkat'])) ?>">
                                             <div class="form-check p-3 rounded-3 bg-light-subtle h-100 d-flex align-items-center gap-3 rombel-card cursor-pointer">
@@ -2499,24 +2532,29 @@ document.addEventListener('DOMContentLoaded', () => {
         filterFaseDropdown('assign_rombel_kurikulum_id', 'assign_rombel_fase_id');
     }
 
-    // Modal Assign Rombel Checkbox Logic
+    // Modal Assign Rombel Checkbox & Anti-Duplikasi Logic
+    const assignedRombelMap = <?= json_encode($assignedRombelMap) ?>;
+    const taSelectAssign = document.getElementById('assign_rombel_ta_id');
     const rombelCheckboxes = document.querySelectorAll('#modalAssignRombel .rombel-checkbox');
     const rombelCountBadge = document.getElementById('rombelCountBadge');
     const searchRombelInput = document.getElementById('searchRombelAssign');
     const btnSelectAllRombel = document.getElementById('btnSelectAllRombel');
     const btnUnselectAllRombel = document.getElementById('btnUnselectAllRombel');
     const validationErrorEl = document.getElementById('rombelValidationError');
+    const allAssignedAlert = document.getElementById('rombelAllAssignedAlert');
+    const noFilterResultAlert = document.getElementById('rombelNoFilterResult');
     const formAssignRombel = document.querySelector('#modalAssignRombel form');
+    let activeTingkatFilter = 'all';
 
     function updateRombelCheckedCount() {
-        const checkedBoxes = document.querySelectorAll('#modalAssignRombel .rombel-checkbox:checked');
+        const checkedBoxes = document.querySelectorAll('#modalAssignRombel .rombel-check-item:not(.d-none) .rombel-checkbox:checked');
         const count = checkedBoxes.length;
         if (rombelCountBadge) {
             rombelCountBadge.textContent = count + ' kelas dipilih';
             if (count > 0) {
-                rombelCountBadge.className = 'badge bg-primary text-white fw-bold px-2.5 py-1';
+                rombelCountBadge.className = 'badge bg-primary text-white fw-bold px-3 py-1.5 rounded-pill';
             } else {
-                rombelCountBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold px-2.5 py-1';
+                rombelCountBadge.className = 'badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold px-3 py-1.5 rounded-pill';
             }
         }
         if (validationErrorEl && count > 0) {
@@ -2545,6 +2583,69 @@ document.addEventListener('DOMContentLoaded', () => {
                 autoMatchFaseForRombel(singleTingkat, faseAssignSelect);
             }
         }
+    }
+
+    function filterRombelList() {
+        const selectedTaId = taSelectAssign ? parseInt(taSelectAssign.value) : 0;
+        const assignedIds = (assignedRombelMap && assignedRombelMap[selectedTaId]) ? assignedRombelMap[selectedTaId] : [];
+        const searchQuery = searchRombelInput ? searchRombelInput.value.toLowerCase().trim() : '';
+
+        let totalUnassignedForTa = 0;
+        let visibleCount = 0;
+
+        document.querySelectorAll('#modalAssignRombel .rombel-check-item').forEach(item => {
+            const rId = parseInt(item.getAttribute('data-rombel-id'));
+            const itemTingkat = item.getAttribute('data-tingkat');
+            const nama = item.getAttribute('data-nama') || '';
+            const isAlreadyAssigned = assignedIds.includes(rId);
+
+            if (isAlreadyAssigned) {
+                // Rombel yang sudah ditambahkan di tahun ajaran ini disembunyikan sepenuhnya untuk mencegah duplikasi
+                item.classList.add('d-none');
+                item.setAttribute('data-already-assigned', 'true');
+                const cb = item.querySelector('.rombel-checkbox');
+                if (cb && cb.checked) {
+                    cb.checked = false; // Batalkan centang
+                }
+            } else {
+                item.setAttribute('data-already-assigned', 'false');
+                totalUnassignedForTa++;
+
+                const matchesTingkat = (activeTingkatFilter === 'all' || itemTingkat === activeTingkatFilter);
+                const matchesSearch = (!searchQuery || nama.includes(searchQuery));
+
+                if (matchesTingkat && matchesSearch) {
+                    item.classList.remove('d-none');
+                    visibleCount++;
+                } else {
+                    item.classList.add('d-none');
+                }
+            }
+        });
+
+        // Tampilkan notifikasi jika semua kelas pada TA ini sudah memiliki kurikulum
+        if (allAssignedAlert) {
+            if (totalUnassignedForTa === 0) {
+                allAssignedAlert.classList.remove('d-none');
+            } else {
+                allAssignedAlert.classList.add('d-none');
+            }
+        }
+
+        // Tampilkan notifikasi jika filter/pencarian menghasilkan 0
+        if (noFilterResultAlert) {
+            if (totalUnassignedForTa > 0 && visibleCount === 0) {
+                noFilterResultAlert.classList.remove('d-none');
+            } else {
+                noFilterResultAlert.classList.add('d-none');
+            }
+        }
+
+        updateRombelCheckedCount();
+    }
+
+    if (taSelectAssign) {
+        taSelectAssign.addEventListener('change', filterRombelList);
     }
 
     rombelCheckboxes.forEach(cb => {
@@ -2583,7 +2684,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#modalAssignRombel .btn-select-tingkat').forEach(btn => {
         btn.addEventListener('click', function() {
             const t = this.getAttribute('data-tingkat');
-            document.querySelectorAll('#modalAssignRombel .rombel-check-item').forEach(item => {
+            document.querySelectorAll('#modalAssignRombel .rombel-check-item:not([data-already-assigned="true"])').forEach(item => {
                 const itemTingkat = item.getAttribute('data-tingkat');
                 if (itemTingkat === t) {
                     const cb = item.querySelector('.rombel-checkbox');
@@ -2597,7 +2698,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Quick filter display by Tingkat pills
     document.querySelectorAll('#modalAssignRombel .btn-filter-tingkat').forEach(btn => {
         btn.addEventListener('click', function() {
-            const t = this.getAttribute('data-tingkat');
+            activeTingkatFilter = this.getAttribute('data-tingkat') || 'all';
             document.querySelectorAll('#modalAssignRombel .btn-filter-tingkat').forEach(b => {
                 b.classList.remove('btn-info', 'text-white');
                 b.classList.add('btn-outline-info');
@@ -2605,36 +2706,30 @@ document.addEventListener('DOMContentLoaded', () => {
             this.classList.remove('btn-outline-info');
             this.classList.add('btn-info', 'text-white');
             
-            document.querySelectorAll('#modalAssignRombel .rombel-check-item').forEach(item => {
-                const itemTingkat = item.getAttribute('data-tingkat');
-                if (t === 'all' || itemTingkat === t) {
-                    item.classList.remove('d-none');
-                } else {
-                    item.classList.add('d-none');
-                }
-            });
+            filterRombelList();
         });
     });
 
     // Live search filter
     if (searchRombelInput) {
-        searchRombelInput.addEventListener('input', function() {
-            const query = this.value.toLowerCase().trim();
-            document.querySelectorAll('#modalAssignRombel .rombel-check-item').forEach(item => {
-                const nama = item.getAttribute('data-nama') || '';
-                if (!query || nama.includes(query)) {
-                    item.classList.remove('d-none');
-                } else {
-                    item.classList.add('d-none');
-                }
-            });
+        searchRombelInput.addEventListener('input', filterRombelList);
+    }
+
+    // Modal show hook: re-filter when modal opens
+    const modalAssignRombelEl = document.getElementById('modalAssignRombel');
+    if (modalAssignRombelEl) {
+        modalAssignRombelEl.addEventListener('show.bs.modal', function() {
+            filterRombelList();
         });
     }
+
+    // Initial filter execution
+    filterRombelList();
 
     // Form submit validation
     if (formAssignRombel) {
         formAssignRombel.addEventListener('submit', function(e) {
-            const checkedBoxes = document.querySelectorAll('#modalAssignRombel .rombel-checkbox:checked');
+            const checkedBoxes = document.querySelectorAll('#modalAssignRombel .rombel-check-item:not(.d-none) .rombel-checkbox:checked');
             if (checkedBoxes.length === 0) {
                 e.preventDefault();
                 if (validationErrorEl) {
