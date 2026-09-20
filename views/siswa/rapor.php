@@ -337,6 +337,20 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
             $lblQuiz  = $bobotKomponen['labels']['quiz'] ?? 'Kuis / Formatif Harian';
             $lblUts   = $bobotKomponen['labels']['uts'] ?? 'Sumatif Tengah Semester (STS)';
             $lblUas   = $bobotKomponen['labels']['uas'] ?? 'Sumatif Akhir Semester (SAS)';
+
+            // Data Rekap Absensi & Riwayat Presensi Siswa (Defensive Fallback)
+            if (!isset($absensiRekap) || !is_array($absensiRekap)) {
+                $absensiRekap = [
+                    'total' => 0,
+                    'hadir' => 0,
+                    'izin'  => 0,
+                    'sakit' => 0,
+                    'alpa'  => 0
+                ];
+            }
+            if (!isset($historyAbsen) || !is_array($historyAbsen)) {
+                $historyAbsen = [];
+            }
             ?>
             <div class="text-center my-2">
                 <div style="font-size: 1.05rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: #0f172a;">
@@ -786,6 +800,208 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- TABEL REKAP KETIDAKHADIRAN & CATATAN WALI KELAS (PRINT VERSION) -->
+        <div class="d-none d-print-block mb-3" style="page-break-inside: avoid; break-inside: avoid;">
+            <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a; background: #ffffff; table-layout: fixed; font-size: 0.72rem;">
+                <tr>
+                    <!-- Kolom Kiri: Rekap Ketidakhadiran (Sakit, Izin, Alpa) -->
+                    <td style="width: 45%; border-right: 1.5px solid #0f172a; padding: 0; vertical-align: top; background: #ffffff;">
+                        <table style="width: 100%; border-collapse: collapse; background: #ffffff;">
+                            <thead>
+                                <tr style="background: #ffffff; border-bottom: 1.5px solid #0f172a;">
+                                    <th colspan="3" style="padding: 5px 6px; text-align: center; font-weight: 700; font-size: 0.70rem; color: #0f172a; letter-spacing: 0.2px;">
+                                        REKAP KETIDAKHADIRAN SISWA
+                                    </th>
+                                </tr>
+                                <tr style="background: #ffffff; border-bottom: 1px solid #0f172a;">
+                                    <th style="width: 15%; border-right: 1px solid #0f172a; padding: 4px 4px; text-align: center; font-size: 0.68rem; color: #0f172a;">NO</th>
+                                    <th style="width: 55%; border-right: 1px solid #0f172a; padding: 4px 6px; text-align: left; font-size: 0.68rem; color: #0f172a;">KETERANGAN</th>
+                                    <th style="width: 30%; padding: 4px 4px; text-align: center; font-size: 0.68rem; color: #0f172a;">JUMLAH</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid #0f172a;">
+                                    <td style="border-right: 1px solid #0f172a; padding: 4px 4px; text-align: center; color: #0f172a;">1</td>
+                                    <td style="border-right: 1px solid #0f172a; padding: 4px 6px; color: #0f172a;">Sakit (S)</td>
+                                    <td style="padding: 4px 4px; text-align: center; font-weight: 700; color: #0f172a;"><?= (int)($absensiRekap['sakit'] ?? 0) ?> hari</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #0f172a;">
+                                    <td style="border-right: 1px solid #0f172a; padding: 4px 4px; text-align: center; color: #0f172a;">2</td>
+                                    <td style="border-right: 1px solid #0f172a; padding: 4px 6px; color: #0f172a;">Izin (I)</td>
+                                    <td style="padding: 4px 4px; text-align: center; font-weight: 700; color: #0f172a;"><?= (int)($absensiRekap['izin'] ?? 0) ?> hari</td>
+                                </tr>
+                                <tr>
+                                    <td style="border-right: 1px solid #0f172a; padding: 4px 4px; text-align: center; color: #0f172a;">3</td>
+                                    <td style="border-right: 1px solid #0f172a; padding: 4px 6px; color: #0f172a;">Tanpa Keterangan / Alpa (A)</td>
+                                    <td style="padding: 4px 4px; text-align: center; font-weight: 700; color: #0f172a;"><?= (int)($absensiRekap['alpa'] ?? 0) ?> hari</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                    <!-- Kolom Kanan: Catatan Wali Kelas & Kedisiplinan -->
+                    <td style="width: 55%; padding: 6px 10px; vertical-align: top; background: #ffffff;">
+                        <div style="font-weight: 700; font-size: 0.70rem; color: #0f172a; margin-bottom: 4px; letter-spacing: 0.2px;">
+                            CATATAN WALI KELAS & KEDISIPLINAN:
+                        </div>
+                        <div style="font-size: 0.69rem; line-height: 1.35; color: #0f172a;">
+                            <?= !empty($raporData['catatan_wali_kelas']) 
+                                ? nl2br(htmlspecialchars($raporData['catatan_wali_kelas'])) 
+                                : 'Tingkatkan kedisiplinan belajar, pertahankan prestasi akademik, serta maksimalkan kehadiran pada setiap kegiatan pembelajaran semester berikutnya.' ?>
+                        </div>
+                        <div style="margin-top: 6px; font-size: 0.66rem; color: #475569;">
+                            Kehadiran Tercatat: <strong><?= (int)($absensiRekap['hadir'] ?? 0) ?></strong> hari hadir dari total <strong><?= (int)($absensiRekap['total'] ?? 0) ?></strong> presensi.
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- SECTION REKAP KEHADIRAN & HISTORY ABSEN (SCREEN VIEW ONLY) -->
+        <div class="card border-0 rounded-4 shadow-sm mb-4 no-print" style="background: #f8fafc; border: 1px solid #e2e8f0 !important;">
+            <div class="card-body p-3 p-md-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-3">
+                            <i class="bi bi-calendar2-check-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-0 fs-6">Rekapitulasi Kehadiran & History Absensi Siswa</h6>
+                            <small class="text-muted">Data presensi riil yang terhubung langsung dengan sistem absensi & presensi digital sekolah.</small>
+                        </div>
+                    </div>
+                    <?php
+                    $rateKehadiran = ($absensiRekap['total'] > 0) 
+                        ? round(($absensiRekap['hadir'] / $absensiRekap['total']) * 100) 
+                        : 100;
+                    ?>
+                    <div class="badge bg-white text-dark border px-3 py-2 rounded-pill shadow-xs">
+                        Tingkat Kehadiran: <strong class="text-success ms-1"><?= $rateKehadiran ?>%</strong>
+                    </div>
+                </div>
+
+                <!-- 4 METRIC CARDS: Hadir, Sakit, Izin, Alpa -->
+                <div class="row g-2 g-md-3 mb-3">
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-white rounded-3 border d-flex align-items-center justify-content-between shadow-xs">
+                            <div>
+                                <small class="text-muted d-block fw-semibold" style="font-size: 0.72rem;">HADIR</small>
+                                <span class="fs-4 fw-bold text-success"><?= (int)($absensiRekap['hadir'] ?? 0) ?></span>
+                                <small class="text-muted ms-1">Hari</small>
+                            </div>
+                            <div class="bg-success bg-opacity-10 text-success p-2.5 rounded-circle">
+                                <i class="bi bi-check-circle-fill fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-white rounded-3 border d-flex align-items-center justify-content-between shadow-xs">
+                            <div>
+                                <small class="text-muted d-block fw-semibold" style="font-size: 0.72rem;">SAKIT</small>
+                                <span class="fs-4 fw-bold text-info"><?= (int)($absensiRekap['sakit'] ?? 0) ?></span>
+                                <small class="text-muted ms-1">Hari</small>
+                            </div>
+                            <div class="bg-info bg-opacity-10 text-info p-2.5 rounded-circle">
+                                <i class="bi bi-heart-pulse-fill fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-white rounded-3 border d-flex align-items-center justify-content-between shadow-xs">
+                            <div>
+                                <small class="text-muted d-block fw-semibold" style="font-size: 0.72rem;">IZIN</small>
+                                <span class="fs-4 fw-bold text-warning"><?= (int)($absensiRekap['izin'] ?? 0) ?></span>
+                                <small class="text-muted ms-1">Hari</small>
+                            </div>
+                            <div class="bg-warning bg-opacity-10 text-warning p-2.5 rounded-circle">
+                                <i class="bi bi-envelope-paper-fill fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-3 bg-white rounded-3 border d-flex align-items-center justify-content-between shadow-xs">
+                            <div>
+                                <small class="text-muted d-block fw-semibold" style="font-size: 0.72rem;">ALPA / TANPA KET.</small>
+                                <span class="fs-4 fw-bold text-danger"><?= (int)($absensiRekap['alpa'] ?? 0) ?></span>
+                                <small class="text-muted ms-1">Hari</small>
+                            </div>
+                            <div class="bg-danger bg-opacity-10 text-danger p-2.5 rounded-circle">
+                                <i class="bi bi-x-circle-fill fs-5"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HISTORY ABSEN DETAIL TABLE -->
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold text-dark small">
+                            <i class="bi bi-clock-history text-primary me-1"></i> Rincian History Riwayat Absensi:
+                        </span>
+                        <span class="text-muted small" style="font-size: 0.75rem;">
+                            Menampilkan <?= min(count($historyAbsen), 10) ?> riwayat presensi terakhir
+                        </span>
+                    </div>
+
+                    <?php if (empty($historyAbsen)): ?>
+                        <div class="text-center py-3 bg-white rounded-3 border text-muted small">
+                            <i class="bi bi-calendar-check text-success fs-4 d-block mb-1"></i>
+                            Belum ada riwayat absensi khusus tercatat atau kehadiran telah 100% tuntas.
+                        </div>
+                    <?php else: ?>
+                        <div class="table-responsive bg-white rounded-3 border shadow-xs" style="max-height: 280px; overflow-y: auto;">
+                            <table class="table table-hover table-sm align-middle mb-0" style="font-size: 0.78rem;">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th class="text-center py-2" style="width: 45px;">No</th>
+                                        <th class="py-2" style="width: 120px;">Tanggal</th>
+                                        <th class="py-2">Mata Pelajaran / Agenda</th>
+                                        <th class="py-2">Guru / Pengampu</th>
+                                        <th class="text-center py-2" style="width: 110px;">Status</th>
+                                        <th class="py-2">Keterangan</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php 
+                                    $noAbs = 1;
+                                    foreach ($historyAbsen as $ha): 
+                                        $stLow = strtolower(trim($ha['status'] ?? 'hadir'));
+                                        $badgeClass = 'bg-success-subtle text-success border border-success';
+                                        $badgeIcon = 'bi-check-circle-fill';
+                                        if ($stLow === 'sakit') {
+                                            $badgeClass = 'bg-info-subtle text-info-emphasis border border-info';
+                                            $badgeIcon = 'bi-heart-pulse-fill';
+                                        } elseif ($stLow === 'izin' || $stLow === 'ijin') {
+                                            $badgeClass = 'bg-warning-subtle text-warning-emphasis border border-warning';
+                                            $badgeIcon = 'bi-envelope-paper-fill';
+                                        } elseif (in_array($stLow, ['alpa', 'alpha', 'tanpa keterangan'])) {
+                                            $badgeClass = 'bg-danger-subtle text-danger border border-danger';
+                                            $badgeIcon = 'bi-x-circle-fill';
+                                        }
+                                        $tglFormatted = !empty($ha['tanggal']) ? date('d M Y', strtotime($ha['tanggal'])) : '-';
+                                    ?>
+                                    <tr>
+                                        <td class="text-center text-muted"><?= $noAbs++ ?></td>
+                                        <td class="fw-semibold text-dark"><?= $tglFormatted ?></td>
+                                        <td><?= htmlspecialchars($ha['nama_mapel'] ?? '-') ?></td>
+                                        <td class="text-muted"><?= htmlspecialchars($ha['nama_guru'] ?? '-') ?></td>
+                                        <td class="text-center">
+                                            <span class="badge <?= $badgeClass ?> rounded-pill px-2.5 py-1" style="font-size: 0.70rem;">
+                                                <i class="bi <?= $badgeIcon ?> me-1"></i><?= htmlspecialchars(ucfirst($ha['status'] ?? 'Hadir')) ?>
+                                            </span>
+                                        </td>
+                                        <td class="text-muted">
+                                            <?= !empty($ha['keterangan']) ? htmlspecialchars($ha['keterangan']) : '<span class="text-black-50 fst-italic">-</span>' ?>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
 
         <!-- Predikat Legend (Screen Only) -->

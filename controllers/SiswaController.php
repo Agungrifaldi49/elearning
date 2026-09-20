@@ -843,6 +843,56 @@ class SiswaController {
             }
         }
 
+        // Ambil Data Rekap Absensi (Sakit, Izin, Alpa) dan Riwayat Presensi Siswa
+        $absensiRekap = [
+            'total' => 0,
+            'hadir' => 0,
+            'izin'  => 0,
+            'sakit' => 0,
+            'alpa'  => 0
+        ];
+        $historyAbsen = [];
+        try {
+            $db = Database::getConnection();
+            $stmtAtt = $db->prepare("
+                SELECT 
+                    COUNT(*) as total_absensi,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) = 'hadir' THEN 1 END) as total_hadir,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) IN ('izin', 'ijin') THEN 1 END) as total_izin,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) = 'sakit' THEN 1 END) as total_sakit,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) IN ('alpa', 'alpha', 'tanpa keterangan') THEN 1 END) as total_alpa
+                FROM absensi 
+                WHERE siswa_id = ?
+            ");
+            $stmtAtt->execute([$siswaId]);
+            $attRow = $stmtAtt->fetch(PDO::FETCH_ASSOC);
+            if ($attRow) {
+                $absensiRekap['total'] = (int)($attRow['total_absensi'] ?? 0);
+                $absensiRekap['hadir'] = (int)($attRow['total_hadir'] ?? 0);
+                $absensiRekap['izin']  = (int)($attRow['total_izin'] ?? 0);
+                $absensiRekap['sakit'] = (int)($attRow['total_sakit'] ?? 0);
+                $absensiRekap['alpa']  = (int)($attRow['total_alpa'] ?? 0);
+            }
+
+            // Ambil detail riwayat / log presensi siswa (history absen)
+            $stmtHist = $db->prepare("
+                SELECT a.id, a.tanggal, a.status, a.keterangan, a.waktu_masuk, a.waktu_hadir,
+                       COALESCE(m.nama_mapel, 'Presensi Harian / KBM') as nama_mapel,
+                       COALESCE(g.nama_lengkap, 'Guru Pengampu / Wali') as nama_guru
+                FROM absensi a
+                LEFT JOIN jadwal j ON a.jadwal_id = j.id
+                LEFT JOIN mata_pelajaran m ON j.mapel_id = m.id
+                LEFT JOIN guru g ON COALESCE(a.guru_id, j.guru_id) = g.id
+                WHERE a.siswa_id = ?
+                ORDER BY a.tanggal DESC, a.id DESC
+                LIMIT 50
+            ");
+            $stmtHist->execute([$siswaId]);
+            $historyAbsen = $stmtHist->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $eAtt) {
+            // fallback jika koneksi bermasalah
+        }
+
         require_once ROOT_PATH . 'views/siswa/rapor.php';
     }
 
