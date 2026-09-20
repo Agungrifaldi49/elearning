@@ -793,14 +793,22 @@ class SiswaController {
             }
         }
 
-        $nilaiList = $nilaiModel->getNilaiBySiswa($siswaId);
-
         require_once ROOT_PATH . 'models/CurriculumModel.php';
         $currModel = new CurriculumModel();
         $activeTa = $academicModel->getActiveTahunAjaran();
         $taId = $activeTa['id'] ?? 4;
         $activeSemester = $activeTa['semester'] ?? 'Ganjil';
         $raporData = $currModel->getRaporSiswa($siswaId, $taId, $activeSemester);
+
+        // Ambil data nilai terkini setelah diselaraskan oleh CurriculumModel
+        $nilaiList = $nilaiModel->getNilaiBySiswa($siswaId);
+
+        // Ambil konfigurasi bobot penilaian kurikulum rombel siswa
+        $kelasId = (int)($siswa['kelas_id'] ?? 0);
+        $kurInfo = $currModel->getActiveKurikulumForRombel($kelasId, $taId);
+        $kurId = (int)($kurInfo['kurikulum_id'] ?? 1);
+        $bobotKomponen = $nilaiModel->getBobotKomponenByKurikulum($kurId);
+        $komponenList = $currModel->getKomponenPenilaian($kurId);
 
         require_once ROOT_PATH . 'models/SettingsModel.php';
         $settingsModel = new SettingsModel();

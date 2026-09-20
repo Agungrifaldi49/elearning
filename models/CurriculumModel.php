@@ -1274,7 +1274,25 @@ class CurriculumModel extends BaseModel {
             }
 
             $this->db->commit();
-            return ['status' => true, 'message' => 'Bobot komponen penilaian berhasil disimpan.'];
+
+            // Otomatis sinkronkan dan kalkulasi ulang seluruh nilai rapor & E-Rapor siswa untuk kurikulum ini
+            $syncedCount = 0;
+            try {
+                require_once ROOT_PATH . 'models/NilaiModel.php';
+                $nilaiModel = new NilaiModel();
+                $syncedCount = $nilaiModel->recalculateAllNilaiForKurikulum($kurId);
+            } catch (\Throwable $eRecalc) {
+                error_log('Gagal rekalkulasi nilai kurikulum: ' . $eRecalc->getMessage());
+            }
+
+            $msg = 'Bobot komponen penilaian berhasil disimpan.';
+            if ($syncedCount > 0) {
+                $msg .= " Seluruh nilai akhir E-Rapor ({$syncedCount} siswa) otomatis dikalkulasi ulang dan disinkronkan sesuai bobot baru.";
+            } else {
+                $msg .= " Perubahan bobot otomatis diterapkan untuk seluruh perhitungan E-Rapor.";
+            }
+
+            return ['status' => true, 'message' => $msg];
         } catch (Exception $e) {
             $this->db->rollBack();
             return ['status' => false, 'message' => 'Gagal menyimpan komponen: ' . $e->getMessage()];
@@ -1483,9 +1501,28 @@ class CurriculumModel extends BaseModel {
         $hasPredikat = in_array('predikat', $colsD);
         $colCapaian = in_array('capaian_kompetensi', $colsD) ? 'capaian_kompetensi' : (in_array('deskripsi_kemajuan', $colsD) ? 'deskripsi_kemajuan' : null);
 
+        require_once ROOT_PATH . 'models/NilaiModel.php';
+        $nilaiModel = new NilaiModel();
+        $targetKurId = (int)($kurInfo['kurikulum_id'] ?? 1);
+        $bobotKur = $nilaiModel->getBobotKomponenByKurikulum($targetKurId);
+
         foreach ($legacyRows as $lr) {
             $mId = (int)$lr['mapel_id'];
-            $akhir = (float)$lr['nilai_akhir'];
+            $akhir = NilaiModel::hitungNilaiAkhir(
+                (float)($lr['nilai_tugas'] ?? 0),
+                (float)($lr['nilai_quiz'] ?? 0),
+                (float)($lr['nilai_uts'] ?? 0),
+                (float)($lr['nilai_uas'] ?? 0),
+                $bobotKur
+            );
+
+            // Selaraskan nilai_rapor jika nilai_akhir berbeda
+            if (abs((float)$lr['nilai_akhir'] - $akhir) > 0.001) {
+                try {
+                    $this->db->prepare("UPDATE nilai_rapor SET nilai_akhir = ?, updated_at = NOW() WHERE id = ?")->execute([$akhir, $lr['id']]);
+                } catch (\Throwable $eUpd) {}
+            }
+
             $kkmVal = (float)$lr['kkm_mapel'];
             $predikat = 'B';
             if ($akhir >= 88) $predikat = 'A';

@@ -76,6 +76,96 @@ class NilaiModel {
     }
 
     /**
+     * Ambil konfigurasi bobot penilaian resmi per kurikulum
+     */
+    public function getBobotKomponenByKurikulum(int $kurId): array {
+        try {
+            require_once ROOT_PATH . 'models/CurriculumModel.php';
+            $currModel = new CurriculumModel();
+            $komponenList = $currModel->getKomponenPenilaian($kurId);
+
+            if (!empty($komponenList)) {
+                $bobot = [
+                    'tugas' => 0.0,
+                    'quiz'  => 0.0,
+                    'uts'   => 0.0,
+                    'uas'   => 0.0,
+                    'labels' => [
+                        'tugas' => 'Tugas Mandiri / Terstruktur',
+                        'quiz'  => 'Kuis / Formatif Harian',
+                        'uts'   => 'Sumatif Tengah Semester (STS)',
+                        'uas'   => 'Sumatif Akhir Semester (SAS)'
+                    ],
+                    'raw_list' => $komponenList
+                ];
+
+                $assignedSlots = [];
+
+                foreach ($komponenList as $kp) {
+                    $code = strtolower(trim($kp['kode_komponen'] ?? ''));
+                    $nama = strtolower(trim($kp['nama_komponen'] ?? ''));
+                    $w = ((float)($kp['bobot_persen'] ?? 0)) / 100.0;
+                    $label = trim($kp['nama_komponen'] ?? '');
+
+                    // Check target slot mapping
+                    $matchedSlot = null;
+                    if (strpos($code, 'tugas') !== false || strpos($code, 'formatif') !== false || strpos($code, 'tp') !== false || strpos($nama, 'tugas') !== false || strpos($nama, 'formatif') !== false || strpos($nama, 'portofolio') !== false) {
+                        $matchedSlot = 'tugas';
+                    } elseif (strpos($code, 'quiz') !== false || strpos($code, 'kuis') !== false || strpos($code, 'teori') !== false || strpos($code, 'sumatif_lm') !== false || strpos($nama, 'kuis') !== false || strpos($nama, 'lingkup materi') !== false || strpos($nama, 'harian') !== false) {
+                        $matchedSlot = 'quiz';
+                    } elseif (strpos($code, 'uts') !== false || strpos($code, 'sts') !== false || strpos($code, 'praktik') !== false || strpos($code, 'projek') !== false || strpos($nama, 'tengah') !== false || strpos($nama, 'praktik') !== false || strpos($nama, 'sts') !== false) {
+                        $matchedSlot = 'uts';
+                    } elseif (strpos($code, 'uas') !== false || strpos($code, 'sas') !== false || strpos($code, 'sumatif_akhir') !== false || strpos($nama, 'akhir') !== false || strpos($nama, 'sas') !== false || strpos($nama, 'uas') !== false) {
+                        $matchedSlot = 'uas';
+                    }
+
+                    if ($matchedSlot && !in_array($matchedSlot, $assignedSlots)) {
+                        $bobot[$matchedSlot] = $w;
+                        if (!empty($label)) $bobot['labels'][$matchedSlot] = $label;
+                        $assignedSlots[] = $matchedSlot;
+                    } else {
+                        // Slot fallback if unassigned
+                        $availableSlots = array_diff(['tugas', 'quiz', 'uts', 'uas'], $assignedSlots);
+                        if (!empty($availableSlots)) {
+                            $fallbackSlot = reset($availableSlots);
+                            $bobot[$fallbackSlot] = $w;
+                            if (!empty($label)) $bobot['labels'][$fallbackSlot] = $label;
+                            $assignedSlots[] = $fallbackSlot;
+                        }
+                    }
+                }
+
+                $totalMappedW = $bobot['tugas'] + $bobot['quiz'] + $bobot['uts'] + $bobot['uas'];
+                if ($totalMappedW > 0) {
+                    $bobot['pct_tugas'] = round($bobot['tugas'] * 100);
+                    $bobot['pct_quiz']  = round($bobot['quiz'] * 100);
+                    $bobot['pct_uts']   = round($bobot['uts'] * 100);
+                    $bobot['pct_uas']   = round($bobot['uas'] * 100);
+                    return $bobot;
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        return [
+            'tugas' => 0.20,
+            'quiz'  => 0.20,
+            'uts'   => 0.30,
+            'uas'   => 0.30,
+            'pct_tugas' => 20,
+            'pct_quiz'  => 20,
+            'pct_uts'   => 30,
+            'pct_uas'   => 30,
+            'labels' => [
+                'tugas' => 'Tugas Mandiri / Terstruktur',
+                'quiz'  => 'Kuis / Formatif Harian',
+                'uts'   => 'Sumatif Tengah Semester (STS)',
+                'uas'   => 'Sumatif Akhir Semester (SAS)'
+            ],
+            'raw_list' => []
+        ];
+    }
+
+    /**
      * Ambil bobot komponen penilaian dinamis sesuai kurikulum rombel siswa
      */
     public function getBobotKomponenForSiswa(int $siswaId): array {
@@ -88,34 +178,53 @@ class NilaiModel {
                 require_once ROOT_PATH . 'models/CurriculumModel.php';
                 $currModel = new CurriculumModel();
                 $kurInfo = $currModel->getActiveKurikulumForRombel($kelasId);
-                $kurId = $kurInfo['kurikulum_id'] ?? 1;
-                $komponenList = $currModel->getKomponenPenilaian($kurId);
-
-                $bobot = [
-                    'tugas' => 0.20,
-                    'quiz'  => 0.20,
-                    'uts'   => 0.30,
-                    'uas'   => 0.30
-                ];
-
-                foreach ($komponenList as $kp) {
-                    $code = strtolower(trim($kp['kode_komponen']));
-                    $w = ((float)$kp['bobot_persen']) / 100.0;
-                    if (strpos($code, 'tugas') !== false || strpos($code, 'formatif') !== false || strpos($code, 'tp') !== false) {
-                        $bobot['tugas'] = $w;
-                    } elseif (strpos($code, 'quiz') !== false || strpos($code, 'kuis') !== false || strpos($code, 'teori') !== false || strpos($code, 'sumatif_lm') !== false) {
-                        $bobot['quiz'] = $w;
-                    } elseif (strpos($code, 'uts') !== false || strpos($code, 'sts') !== false || strpos($code, 'praktik') !== false) {
-                        $bobot['uts'] = $w;
-                    } elseif (strpos($code, 'uas') !== false || strpos($code, 'sas') !== false || strpos($code, 'sumatif_akhir') !== false) {
-                        $bobot['uas'] = $w;
-                    }
-                }
-                return $bobot;
+                $kurId = (int)($kurInfo['kurikulum_id'] ?? 1);
+                return $this->getBobotKomponenByKurikulum($kurId);
             }
         } catch (\Throwable $e) {}
 
-        return ['tugas' => 0.20, 'quiz' => 0.20, 'uts' => 0.30, 'uas' => 0.30];
+        return $this->getBobotKomponenByKurikulum(1);
+    }
+
+    /**
+     * Hitung Nilai Akhir secara akurat & proporsional berdasarkan bobot kurikulum
+     */
+    public static function hitungNilaiAkhir(float $tugas, float $quiz, float $uts, float $uas, array $bobot): float {
+        $wTugas = (float)($bobot['tugas'] ?? 0.0);
+        $wQuiz  = (float)($bobot['quiz'] ?? 0.0);
+        $wUts   = (float)($bobot['uts'] ?? 0.0);
+        $wUas   = (float)($bobot['uas'] ?? 0.0);
+
+        // Jika semua bobot 0 (belum ada konfigurasi valid), fallback ke default
+        $totalW = $wTugas + $wQuiz + $wUts + $wUas;
+        if ($totalW <= 0) {
+            $wTugas = 0.20;
+            $wQuiz  = 0.20;
+            $wUts   = 0.30;
+            $wUas   = 0.30;
+            $totalW = 1.0;
+        }
+
+        $weights = [];
+        if ($tugas > 0 && $wTugas > 0) $weights[] = ['val' => $tugas, 'w' => $wTugas];
+        if ($quiz > 0 && $wQuiz > 0)   $weights[] = ['val' => $quiz,  'w' => $wQuiz];
+        if ($uts > 0 && $wUts > 0)    $weights[] = ['val' => $uts,   'w' => $wUts];
+        if ($uas > 0 && $wUas > 0)    $weights[] = ['val' => $uas,   'w' => $wUas];
+
+        if (!empty($weights)) {
+            $sumVal = 0;
+            $sumW = 0;
+            foreach ($weights as $wItem) {
+                $sumVal += ($wItem['val'] * $wItem['w']);
+                $sumW += $wItem['w'];
+            }
+            $akhir = ($sumW > 0) ? round($sumVal / $sumW, 2) : 0.00;
+        } else {
+            $sumVal = ($tugas * $wTugas) + ($quiz * $wQuiz) + ($uts * $wUts) + ($uas * $wUas);
+            $akhir = ($totalW > 0) ? round($sumVal / $totalW, 2) : 0.00;
+        }
+
+        return min(100.0, max(0.0, (float)$akhir));
     }
 
     /**
@@ -128,30 +237,7 @@ class NilaiModel {
         $uas   = min(100.0, max(0.0, (float)($komponen['nilai_uas'] ?? 0)));
 
         $bobot = $this->getBobotKomponenForSiswa($siswaId);
-        $wTugas = (float)($bobot['tugas'] ?? 0.20);
-        $wQuiz  = (float)($bobot['quiz'] ?? 0.20);
-        $wUts   = (float)($bobot['uts'] ?? 0.30);
-        $wUas   = (float)($bobot['uas'] ?? 0.30);
-
-        // Calculate Proportional Weighted Average for Active Evaluation Components
-        $weights = [];
-        if ($tugas > 0) $weights[] = ['val' => $tugas, 'w' => $wTugas];
-        if ($quiz > 0)  $weights[] = ['val' => $quiz,  'w' => $wQuiz];
-        if ($uts > 0)   $weights[] = ['val' => $uts,   'w' => $wUts];
-        if ($uas > 0)   $weights[] = ['val' => $uas,   'w' => $wUas];
-
-        if (!empty($weights)) {
-            $sumVal = 0;
-            $sumW = 0;
-            foreach ($weights as $wItem) {
-                $sumVal += ($wItem['val'] * $wItem['w']);
-                $sumW += $wItem['w'];
-            }
-            $akhir = ($sumW > 0) ? round($sumVal / $sumW, 2) : 0.00;
-        } else {
-            $akhir = ($tugas * $wTugas) + ($quiz * $wQuiz) + ($uts * $wUts) + ($uas * $wUas);
-        }
-        $akhir = min(100.0, max(0.0, (float)$akhir));
+        $akhir = self::hitungNilaiAkhir($tugas, $quiz, $uts, $uas, $bobot);
 
         // Cek apakah sudah ada data nilai untuk siswa + mapel ini
         $check = $this->db->prepare("SELECT id FROM nilai_rapor WHERE siswa_id = ? AND mapel_id = ?");
@@ -262,48 +348,7 @@ class NilaiModel {
         $uas   = ($avgUasVal   !== false && $avgUasVal   !== null) ? (float)$avgUasVal   : (float)($existing['nilai_uas']   ?? 0);
 
         $bobot = $this->getBobotKomponenForSiswa($siswaId);
-        $wTugas = (float)($bobot['tugas'] ?? 0.20);
-        $wQuiz  = (float)($bobot['quiz'] ?? 0.20);
-        $wUts   = (float)($bobot['uts'] ?? 0.30);
-        $wUas   = (float)($bobot['uas'] ?? 0.30);
-
-        // Calculate Proportional Weighted Average for Available Evaluation Components
-        $weights = [];
-        if ($avgTugasVal !== false && $avgTugasVal !== null) {
-            $weights[] = ['val' => (float)$avgTugasVal, 'w' => $wTugas];
-        } elseif (!empty($existing['nilai_tugas']) && (float)$existing['nilai_tugas'] > 0) {
-            $weights[] = ['val' => (float)$existing['nilai_tugas'], 'w' => $wTugas];
-        }
-
-        if ($avgQuizVal !== false && $avgQuizVal !== null) {
-            $weights[] = ['val' => (float)$avgQuizVal, 'w' => $wQuiz];
-        } elseif (!empty($existing['nilai_quiz']) && (float)$existing['nilai_quiz'] > 0) {
-            $weights[] = ['val' => (float)$existing['nilai_quiz'], 'w' => $wQuiz];
-        }
-
-        if ($avgUtsVal !== false && $avgUtsVal !== null) {
-            $weights[] = ['val' => (float)$avgUtsVal, 'w' => $wUts];
-        } elseif (!empty($existing['nilai_uts']) && (float)$existing['nilai_uts'] > 0) {
-            $weights[] = ['val' => (float)$existing['nilai_uts'], 'w' => $wUts];
-        }
-
-        if ($avgUasVal !== false && $avgUasVal !== null) {
-            $weights[] = ['val' => (float)$avgUasVal, 'w' => $wUas];
-        } elseif (!empty($existing['nilai_uas']) && (float)$existing['nilai_uas'] > 0) {
-            $weights[] = ['val' => (float)$existing['nilai_uas'], 'w' => $wUas];
-        }
-
-        if (!empty($weights)) {
-            $sumVal = 0;
-            $sumW = 0;
-            foreach ($weights as $wItem) {
-                $sumVal += ($wItem['val'] * $wItem['w']);
-                $sumW += $wItem['w'];
-            }
-            $akhir = ($sumW > 0) ? round($sumVal / $sumW, 2) : 0.00;
-        } else {
-            $akhir = ($tugas * $wTugas) + ($quiz * $wQuiz) + ($uts * $wUts) + ($uas * $wUas);
-        }
+        $akhir = self::hitungNilaiAkhir($tugas, $quiz, $uts, $uas, $bobot);
 
         $res = false;
         if ($existing) {
@@ -345,6 +390,84 @@ class NilaiModel {
             }
         }
         return $syncedCount;
+    }
+
+    /**
+     * Rekalkulasi seluruh nilai rapor & E-Rapor siswa untuk kurikulum yang diubah bobotnya
+     */
+    public function recalculateAllNilaiForKurikulum(int $kurId): int {
+        try {
+            require_once ROOT_PATH . 'models/CurriculumModel.php';
+            $currModel = new CurriculumModel();
+            $bobot = $this->getBobotKomponenByKurikulum($kurId);
+
+            // Dapatkan tahun ajaran & semester aktif
+            $stmtTa = $this->db->query("SELECT id, COALESCE(tahun_ajaran, tahun) as tahun_ajaran, COALESCE(semester, 'Ganjil') as semester FROM tahun_ajaran WHERE status = 'aktif' OR is_active = 1 ORDER BY id DESC LIMIT 1");
+            $ta = $stmtTa ? $stmtTa->fetch(PDO::FETCH_ASSOC) : null;
+            $taId = (int)($ta['id'] ?? 1);
+            $sem = $ta['semester'] ?? 'Ganjil';
+
+            // Ambil semua rombel yang terikat dengan kurikulum ini
+            $stmtRombel = $this->db->prepare("SELECT DISTINCT rombel_id FROM rombel_kurikulum WHERE kurikulum_id = ?");
+            $stmtRombel->execute([$kurId]);
+            $rombelIds = $stmtRombel->fetchAll(PDO::FETCH_COLUMN);
+
+            // Cek apakah ini kurikulum aktif global sekolah
+            $activeKur = $currModel->getActiveKurikulum();
+            $isGlobalActive = ($activeKur && (int)$activeKur['id'] === $kurId);
+            if ($isGlobalActive) {
+                // Sertakan semua rombel yang belum terdaftar di rombel_kurikulum
+                $stmtUnassigned = $this->db->query("SELECT id FROM kelas WHERE id NOT IN (SELECT DISTINCT rombel_id FROM rombel_kurikulum)");
+                $unassignedRombel = $stmtUnassigned ? $stmtUnassigned->fetchAll(PDO::FETCH_COLUMN) : [];
+                $rombelIds = array_unique(array_merge($rombelIds, $unassignedRombel));
+            }
+
+            if (empty($rombelIds)) {
+                $stmtAllSiswa = $this->db->query("SELECT id FROM siswa");
+                $siswaIds = $stmtAllSiswa ? $stmtAllSiswa->fetchAll(PDO::FETCH_COLUMN) : [];
+            } else {
+                $inClause = implode(',', array_map('intval', $rombelIds));
+                $stmtSiswa = $this->db->query("SELECT id FROM siswa WHERE kelas_id IN ({$inClause})");
+                $siswaIds = $stmtSiswa ? $stmtSiswa->fetchAll(PDO::FETCH_COLUMN) : [];
+            }
+
+            if (empty($siswaIds)) {
+                return 0;
+            }
+
+            $updatedStudentsCount = 0;
+            $stmtGetNilai = $this->db->prepare("SELECT id, nilai_tugas, nilai_quiz, nilai_uts, nilai_uas, nilai_akhir FROM nilai_rapor WHERE siswa_id = ?");
+            $stmtUpdateNilai = $this->db->prepare("UPDATE nilai_rapor SET nilai_akhir = ?, updated_at = NOW() WHERE id = ?");
+
+            foreach ($siswaIds as $sId) {
+                $sId = (int)$sId;
+                $stmtGetNilai->execute([$sId]);
+                $nilaiRows = $stmtGetNilai->fetchAll(PDO::FETCH_ASSOC);
+
+                $hasNilai = !empty($nilaiRows);
+                foreach ($nilaiRows as $nr) {
+                    $newAkhir = self::hitungNilaiAkhir(
+                        (float)($nr['nilai_tugas'] ?? 0),
+                        (float)($nr['nilai_quiz'] ?? 0),
+                        (float)($nr['nilai_uts'] ?? 0),
+                        (float)($nr['nilai_uas'] ?? 0),
+                        $bobot
+                    );
+                    $stmtUpdateNilai->execute([$newAkhir, (int)$nr['id']]);
+                }
+
+                // Sinkronkan ke modul e-rapor snapshot dinamis (rapor_siswa & rapor_nilai_detail)
+                $currModel->generateOrSyncRaporSiswa($sId, $taId, $sem);
+                if ($hasNilai) {
+                    $updatedStudentsCount++;
+                }
+            }
+
+            return $updatedStudentsCount;
+        } catch (\Throwable $e) {
+            error_log('Error recalculateAllNilaiForKurikulum: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     public function getRekapNilai($kelasId, $mapelId = 0): array {

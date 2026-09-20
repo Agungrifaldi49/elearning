@@ -177,6 +177,17 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
             $faseText = !empty($raporData['fase_nama_snapshot']) ? $raporData['fase_nama_snapshot'] : $defaultFase;
             $tahunAjaranText = $raporData['tahun_ajaran'] ?? ($activeTa['tahun_ajaran'] ?? '2026/2027');
             $semesterText = $raporData['semester'] ?? ($activeTa['semester'] ?? 'Ganjil');
+
+            // Persentase & Label Bobot Komponen Penilaian Dinamis
+            $pTugas = $bobotKomponen['pct_tugas'] ?? 20;
+            $pQuiz  = $bobotKomponen['pct_quiz'] ?? 20;
+            $pUts   = $bobotKomponen['pct_uts'] ?? 30;
+            $pUas   = $bobotKomponen['pct_uas'] ?? 30;
+
+            $lblTugas = $bobotKomponen['labels']['tugas'] ?? 'Tugas Mandiri / Terstruktur';
+            $lblQuiz  = $bobotKomponen['labels']['quiz'] ?? 'Kuis / Formatif Harian';
+            $lblUts   = $bobotKomponen['labels']['uts'] ?? 'Sumatif Tengah Semester (STS)';
+            $lblUas   = $bobotKomponen['labels']['uas'] ?? 'Sumatif Akhir Semester (SAS)';
             ?>
             <div class="mt-3 d-flex justify-content-center gap-2 flex-wrap">
                 <span class="fw-bold text-uppercase border border-2 border-primary d-inline-block px-3 py-1.5 rounded-pill bg-primary bg-opacity-10 text-primary" style="font-size:0.8rem;">
@@ -218,22 +229,42 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                 </div>
                 <div>
                     <h6 class="fw-bold text-dark mb-0 fs-6">Komponen Penilaian E-Rapor</h6>
-                    <small class="text-muted">Kalkulasi Nilai Akhir mengacu pada 4 instrumen penilaian resmi Kurikulum Merdeka SMK:</small>
+                    <small class="text-muted">Kalkulasi Nilai Akhir mengacu pada instrumen penilaian resmi <?= htmlspecialchars($kurikulumText) ?>:</small>
                 </div>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
-                    <i class="bi bi-file-earmark-text text-primary me-1"></i> Tugas Mandiri / Terstruktur <strong>(20%)</strong>
-                </span>
-                <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
-                    <i class="bi bi-ui-checks text-warning me-1"></i> Kuis / Formatif Harian <strong>(20%)</strong>
-                </span>
-                <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
-                    <i class="bi bi-calendar2-check text-info me-1"></i> Sumatif Tengah Semester (STS) <strong>(30%)</strong>
-                </span>
-                <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
-                    <i class="bi bi-award-fill text-success me-1"></i> Sumatif Akhir Semester (SAS) <strong>(30%)</strong>
-                </span>
+                <?php if (!empty($komponenList)): ?>
+                    <?php 
+                    $badgeStyles = [
+                        ['icon' => 'bi-file-earmark-text', 'class' => 'text-primary'],
+                        ['icon' => 'bi-ui-checks', 'class' => 'text-warning'],
+                        ['icon' => 'bi-calendar2-check', 'class' => 'text-info'],
+                        ['icon' => 'bi-award-fill', 'class' => 'text-success'],
+                        ['icon' => 'bi-tools', 'class' => 'text-secondary']
+                    ];
+                    $idxC = 0;
+                    foreach ($komponenList as $kp):
+                        $bStyle = $badgeStyles[$idxC % count($badgeStyles)];
+                        $idxC++;
+                    ?>
+                        <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
+                            <i class="bi <?= $bStyle['icon'] ?> <?= $bStyle['class'] ?> me-1"></i> <?= htmlspecialchars($kp['nama_komponen']) ?> <strong>(<?= (float)$kp['bobot_persen'] ?>%)</strong>
+                        </span>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
+                        <i class="bi bi-file-earmark-text text-primary me-1"></i> <?= htmlspecialchars($lblTugas) ?> <strong>(<?= $pTugas ?>%)</strong>
+                    </span>
+                    <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
+                        <i class="bi bi-ui-checks text-warning me-1"></i> <?= htmlspecialchars($lblQuiz) ?> <strong>(<?= $pQuiz ?>%)</strong>
+                    </span>
+                    <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
+                        <i class="bi bi-calendar2-check text-info me-1"></i> <?= htmlspecialchars($lblUts) ?> <strong>(<?= $pUts ?>%)</strong>
+                    </span>
+                    <span class="badge bg-white text-dark border shadow-xs px-2.5 py-1.5" style="font-size:0.75rem;">
+                        <i class="bi bi-award-fill text-success me-1"></i> <?= htmlspecialchars($lblUas) ?> <strong>(<?= $pUas ?>%)</strong>
+                    </span>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -265,24 +296,24 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                                 </div>
                                 <div class="row g-2 text-center bg-light rounded-3 p-2 border" style="font-size:0.75rem;">
                                     <div class="col-6 col-sm-3">
-                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;">Tugas Mandiri / Terstruktur</span>
+                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;"><?= htmlspecialchars($lblTugas) ?></span>
                                         <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_tugas'], 0) ?></strong>
-                                        <span class="text-primary small fw-semibold" style="font-size:0.65rem;">(20%)</span>
+                                        <span class="text-primary small fw-semibold" style="font-size:0.65rem;">(<?= $pTugas ?>%)</span>
                                     </div>
                                     <div class="col-6 col-sm-3">
-                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;">Kuis / Formatif Harian</span>
+                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;"><?= htmlspecialchars($lblQuiz) ?></span>
                                         <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_quiz'], 0) ?></strong>
-                                        <span class="text-warning-emphasis small fw-semibold" style="font-size:0.65rem;">(20%)</span>
+                                        <span class="text-warning-emphasis small fw-semibold" style="font-size:0.65rem;">(<?= $pQuiz ?>%)</span>
                                     </div>
                                     <div class="col-6 col-sm-3">
-                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;">Sumatif Tengah Sem. (STS)</span>
+                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;"><?= htmlspecialchars($lblUts) ?></span>
                                         <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_uts'], 0) ?></strong>
-                                        <span class="text-info-emphasis small fw-semibold" style="font-size:0.65rem;">(30%)</span>
+                                        <span class="text-info-emphasis small fw-semibold" style="font-size:0.65rem;">(<?= $pUts ?>%)</span>
                                     </div>
                                     <div class="col-6 col-sm-3">
-                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;">Sumatif Akhir Sem. (SAS)</span>
+                                        <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;"><?= htmlspecialchars($lblUas) ?></span>
                                         <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_uas'], 0) ?></strong>
-                                        <span class="text-success small fw-semibold" style="font-size:0.65rem;">(30%)</span>
+                                        <span class="text-success small fw-semibold" style="font-size:0.65rem;">(<?= $pUas ?>%)</span>
                                     </div>
                                 </div>
                             </div>
@@ -316,20 +347,20 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     </tr>
                     <tr style="background-color: #f8fafc;">
                         <th style="min-width:130px; vertical-align:middle;" class="px-2 py-2">
-                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;">Tugas Mandiri / Terstruktur</div>
-                            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600;">(20%)</span>
+                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;"><?= htmlspecialchars($lblTugas) ?></div>
+                            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600;">(<?= $pTugas ?>%)</span>
                         </th>
                         <th style="min-width:130px; vertical-align:middle;" class="px-2 py-2">
-                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;">Kuis / Formatif Harian</div>
-                            <span class="badge bg-warning bg-opacity-10 text-dark rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(245, 158, 11, 0.15) !important;">(20%)</span>
+                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;"><?= htmlspecialchars($lblQuiz) ?></div>
+                            <span class="badge bg-warning bg-opacity-10 text-dark rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(245, 158, 11, 0.15) !important;">(<?= $pQuiz ?>%)</span>
                         </th>
                         <th style="min-width:140px; vertical-align:middle;" class="px-2 py-2">
-                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;">Sumatif Tengah Semester (STS)</div>
-                            <span class="badge bg-info bg-opacity-10 text-dark rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(14, 165, 233, 0.15) !important;">(30%)</span>
+                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;"><?= htmlspecialchars($lblUts) ?></div>
+                            <span class="badge bg-info bg-opacity-10 text-dark rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(14, 165, 233, 0.15) !important;">(<?= $pUts ?>%)</span>
                         </th>
                         <th style="min-width:140px; vertical-align:middle;" class="px-2 py-2">
-                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;">Sumatif Akhir Semester (SAS)</div>
-                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(16, 185, 129, 0.15) !important;">(30%)</span>
+                            <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;"><?= htmlspecialchars($lblUas) ?></div>
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(16, 185, 129, 0.15) !important;">(<?= $pUas ?>%)</span>
                         </th>
                     </tr>
                 </thead>
