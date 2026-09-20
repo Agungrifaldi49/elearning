@@ -16,7 +16,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     </ol>
                 </nav>
                 <h4 class="fw-bold mb-1 text-dark">
-                    <i class="bi bi-activity text-warning me-2"></i>Bimbingan Ekstrakurikuler & Penilaian E-Rapor
+                    <i class="bi bi-activity text-primary me-2"></i>Bimbingan Ekstrakurikuler & Penilaian E-Rapor
                 </h4>
                 <p class="text-muted small mb-0">
                     Kelola siswa bimbingan ekstrakurikuler binaan Anda serta input nilai predikat dan deskripsi capaian untuk lembar E-Rapor Digital.
@@ -36,8 +36,8 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                  TAMPILAN JIKA GURU BELUM DITUGASKAN OLEH ADMIN SEBAGAI PEMBIMBING
             ========================================================================= -->
             <div class="card border-0 rounded-4 shadow-sm bg-white p-5 text-center my-4">
-                <div class="mx-auto mb-4 bg-warning bg-opacity-10 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 88px; height: 88px;">
-                    <i class="bi bi-person-badge fs-1"></i>
+                <div class="mx-auto mb-4 rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 88px; height: 88px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                    <i class="bi bi-person-badge fs-1 text-white"></i>
                 </div>
                 <h4 class="fw-bold text-dark mb-2">Anda Belum Ditugaskan Sebagai Pembimbing Ekstrakurikuler</h4>
                 <p class="text-muted mx-auto mb-4" style="max-width: 580px; font-size: 0.95rem; line-height: 1.6;">
@@ -80,8 +80,8 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     <div class="col-12 col-lg-4">
                         <div class="card border-0 rounded-4 shadow-sm bg-white p-4 h-100">
                             <div class="d-flex align-items-center gap-3 mb-3">
-                                <div class="bg-warning bg-opacity-15 text-warning p-3 rounded-4">
-                                    <i class="bi bi-trophy-fill fs-3"></i>
+                                <div class="d-flex align-items-center justify-content-center rounded-4 shadow-sm flex-shrink-0" style="width: 58px; height: 58px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                                    <i class="bi bi-trophy-fill fs-3 text-white"></i>
                                 </div>
                                 <div>
                                     <h5 class="fw-bold text-dark mb-0"><?= htmlspecialchars($selectedEkskul['nama_ekskul']) ?></h5>
