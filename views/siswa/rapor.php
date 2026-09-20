@@ -80,12 +80,13 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
 }
 
 /* PAGE MEDIA SETUP: Menghilangkan otomatis header browser (tanggal & title) dan footer browser (URL) */
+/* Fleksibel & adaptif otomatis untuk ukuran kertas A4 (210 x 297 mm) dan F4 / Folio (215 x 330 mm) */
 @page {
-    size: A4 portrait;
+    size: auto; 
     margin: 0; /* Menghilangkan tanggal/jam, nama dokumen/title, dan URL browser */
 }
 
-/* Print Friendly Styles - 100% Background Putih, Presisi, Rapih & Elegan */
+/* Print Friendly Styles - 100% Background Putih, Presisi, Rapih & Elegan (A4 & F4 Ready) */
 @media print {
     .d-print-none, .no-print, header, nav, .sidebar, .navbar, .main-content-header, #btn-print-wrapper {
         display: none !important;
@@ -117,15 +118,15 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         display: none !important;
     }
 
-    /* Kertas A4 Bersih dengan Margin Fisik Resmi 12mm x 15mm & Background Murni Putih */
+    /* Kertas Bersih Presisi - Siap Cetak A4 Maupun F4 (Folio) & 100% Background Putih */
     .rapor-card-paper {
         box-shadow: none !important;
         border: none !important;
-        padding: 10mm 14mm 10mm 14mm !important;
+        padding: 8mm 12mm 8mm 12mm !important;
         border-radius: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
-        margin: 0 !important;
+        margin: 0 auto !important;
         background: #ffffff !important;
         box-sizing: border-box !important;
     }
@@ -139,7 +140,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         border-top: 2.5px solid #0f172a !important;
         border-bottom: 1px solid #0f172a !important;
         height: 4px !important;
-        margin: 6px 0 10px 0 !important;
+        margin: 6px 0 8px 0 !important;
     }
 
     /* Kotak Identitas Siswa saat Print - Murni Putih & Rapi Sejajar */
@@ -147,8 +148,8 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         background: #ffffff !important;
         border: 1.5px solid #0f172a !important;
         border-radius: 6px !important;
-        padding: 8px 12px !important;
-        margin-bottom: 12px !important;
+        padding: 6px 10px !important;
+        margin-bottom: 10px !important;
     }
 
     /* Dedicated Print Table */
@@ -159,11 +160,24 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         background: #ffffff !important;
         table-layout: fixed !important;
     }
-    table.table-print-official th,
+    table.table-print-official th {
+        border: 1px solid #0f172a !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        font-size: 0.72rem !important;
+        letter-spacing: 0.2px !important;
+        vertical-align: middle !important;
+        padding: 6px 4px !important;
+        line-height: 1.25 !important;
+        box-sizing: border-box !important;
+    }
     table.table-print-official td {
         border: 1px solid #0f172a !important;
         background: #ffffff !important;
         color: #0f172a !important;
+        vertical-align: middle !important;
+        box-sizing: border-box !important;
     }
 
     /* Badges Saat Print - Murni Putih dengan Border Hitam Tegas */
@@ -179,7 +193,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
 
     /* Tanda Tangan */
     .signature-section {
-        margin-top: 14px !important;
+        margin-top: 12px !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -189,13 +203,13 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
     .signature-line {
         border-top: 1px solid #0f172a !important;
         width: 75% !important;
-        margin: 40px auto 4px auto !important;
+        margin: 35px auto 4px auto !important;
     }
 
     /* Catatan Keabsahan & Validasi Dokumen */
     .print-seal-note {
         display: block !important;
-        margin-top: 14px !important;
+        margin-top: 12px !important;
         padding-top: 6px !important;
         border-top: 1px solid #0f172a !important;
         font-size: 0.65rem !important;
@@ -235,7 +249,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     <i class="bi bi-printer-fill fs-5"></i> Cetak / Simpan PDF E-Rapor
                 </button>
                 <small class="text-white-50" style="font-size: 0.74rem;">
-                    <i class="bi bi-shield-check me-1"></i> Standar Resmi A4 — Bebas URL & tanggal header browser
+                    <i class="bi bi-file-earmark-check me-1"></i> Standar Resmi A4 & F4 (Folio) — Bebas URL & tanggal browser
                 </small>
             </div>
         </div>
@@ -713,13 +727,13 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
             <table class="table-print-official" style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a; background: #ffffff; table-layout: fixed; font-size: 0.74rem;">
                 <thead>
                     <tr style="background: #ffffff;">
-                        <th style="width: 5%; border: 1px solid #0f172a; padding: 5px 3px; text-align: center; font-weight: 700; color: #0f172a; background: #ffffff;">NO</th>
-                        <th style="width: 27%; border: 1px solid #0f172a; padding: 5px 6px; text-align: left; font-weight: 700; color: #0f172a; background: #ffffff;">MATA PELAJARAN</th>
-                        <th style="width: 8%; border: 1px solid #0f172a; padding: 5px 3px; text-align: center; font-weight: 700; color: #0f172a; background: #ffffff;">KKM</th>
-                        <th style="width: 11%; border: 1px solid #0f172a; padding: 5px 3px; text-align: center; font-weight: 700; color: #0f172a; background: #ffffff;">NILAI AKHIR</th>
-                        <th style="width: 9%; border: 1px solid #0f172a; padding: 5px 3px; text-align: center; font-weight: 700; color: #0f172a; background: #ffffff;">PREDIKAT</th>
-                        <th style="width: 11%; border: 1px solid #0f172a; padding: 5px 3px; text-align: center; font-weight: 700; color: #0f172a; background: #ffffff;">KETUNTASAN</th>
-                        <th style="width: 29%; border: 1px solid #0f172a; padding: 5px 6px; text-align: left; font-weight: 700; color: #0f172a; background: #ffffff;">DESKRIPSI CAPAIAN KOMPETENSI</th>
+                        <th style="width: 4%; text-align: center; white-space: nowrap; padding: 6px 2px;">NO</th>
+                        <th style="width: 24%; text-align: left; padding: 6px 6px;">MATA PELAJARAN</th>
+                        <th style="width: 7%; text-align: center; white-space: nowrap; padding: 6px 2px;">KKM</th>
+                        <th style="width: 12%; text-align: center; white-space: nowrap; padding: 6px 2px;">NILAI AKHIR</th>
+                        <th style="width: 9%; text-align: center; white-space: nowrap; padding: 6px 2px;">PREDIKAT</th>
+                        <th style="width: 11%; text-align: center; white-space: nowrap; padding: 6px 2px;">KETUNTASAN</th>
+                        <th style="width: 33%; text-align: left; padding: 6px 6px; white-space: nowrap;">CAPAIAN KOMPETENSI</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -748,9 +762,9 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                         </tr>
                         <?php endforeach; ?>
 
-                        <!-- BARIS RATA-RATA: Ukuran Font Diperkecil & Background Putih Bersih Sesuai Permintaan -->
+                        <!-- BARIS RATA-RATA: Ukuran Font Diperkecil, 1 Baris Rapih & Background Putih Bersih -->
                         <tr style="background: #ffffff; border-top: 2px solid #0f172a;">
-                            <td colspan="3" style="border: 1px solid #0f172a; padding: 4px 8px; text-align: right; font-weight: 700; font-size: 0.70rem; letter-spacing: 0.2px; color: #0f172a; background: #ffffff; vertical-align: middle;">
+                            <td colspan="3" style="border: 1px solid #0f172a; padding: 4px 6px; text-align: right; font-weight: 700; font-size: 0.69rem; letter-spacing: 0.2px; white-space: nowrap; color: #0f172a; background: #ffffff; vertical-align: middle;">
                                 RATA-RATA NILAI AKHIR SEMESTER
                             </td>
                             <td style="border: 1px solid #0f172a; padding: 4px 3px; text-align: center; font-weight: 800; font-size: 0.80rem; color: #0f172a; background: #ffffff; vertical-align: middle;">
