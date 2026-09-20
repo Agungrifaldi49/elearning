@@ -3318,5 +3318,436 @@ class GuruController {
 
         require_once ROOT_PATH . 'views/guru/ekstrakurikuler.php';
     }
+
+    /**
+     * Helper untuk mengompilasi data lengkap E-Rapor satu siswa (Nilai, KKM, Predikat, Ketuntasan, Absensi, Ekskul, TTD)
+     */
+    private function getStudentRaporFullData($siswaId, $taId, $activeSemester) {
+        require_once ROOT_PATH . 'models/CurriculumModel.php';
+        require_once ROOT_PATH . 'models/NilaiModel.php';
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        require_once ROOT_PATH . 'models/EkstrakurikulerModel.php';
+        require_once ROOT_PATH . 'models/SettingsModel.php';
+
+        $currModel = new CurriculumModel();
+        $nilaiModel = new NilaiModel();
+        $academicModel = new AcademicModel();
+        $ekskulModel = new EkstrakurikulerModel();
+        $settingsModel = new SettingsModel();
+
+        $db = Database::getConnection();
+
+        // 1. Data Siswa & Rombel
+        $stmtS = $db->prepare("
+            SELECT s.*, k.nama_kelas, k.tingkat, j.nama_jurusan, k.wali_kelas_id
+            FROM siswa s
+            JOIN kelas k ON s.kelas_id = k.id
+            LEFT JOIN jurusan j ON k.jurusan_id = j.id
+            WHERE s.id = ?
+        ");
+        $stmtS->execute([(int)$siswaId]);
+        $siswa = $stmtS->fetch(PDO::FETCH_ASSOC);
+        if (!$siswa) return null;
+
+        // Auto-sync real-time scores
+        $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
+        if (!empty($enrolledList)) {
+            foreach ($enrolledList as $em) {
+                $nilaiModel->syncSiswaMapelNilai($siswaId, (int)$em['mapel_id']);
+            }
+        }
+
+        $raporData = $currModel->getRaporSiswa($siswaId, $taId, $activeSemester);
+        $nilaiList = $nilaiModel->getNilaiBySiswa($siswaId);
+
+        $kelasId = (int)$siswa['kelas_id'];
+        $kurInfo = $currModel->getActiveKurikulumForRombel($kelasId, $taId);
+        $kurId = (int)($kurInfo['kurikulum_id'] ?? 1);
+        $bobotKomponen = $nilaiModel->getBobotKomponenByKurikulum($kurId);
+
+        // 2. Data Wali Kelas
+        $waliKelas = null;
+        if (!empty($siswa['wali_kelas_id'])) {
+            $stmtWali = $db->prepare("SELECT nama_lengkap, nip, no_telepon FROM guru WHERE id = ?");
+            $stmtWali->execute([(int)$siswa['wali_kelas_id']]);
+            $waliKelas = $stmtWali->fetch(PDO::FETCH_ASSOC);
+        }
+
+        // 3. Data Pengaturan Sekolah & Kepala Sekolah
+        $settings = $settingsModel->getAll();
+        $kepsekNama = !empty($settings['kepala_sekolah']) ? $settings['kepala_sekolah'] : 'H. ASEP SAEPULLOH, S. Ag';
+        $kepsekNip  = !empty($settings['nip_kepala_sekolah']) ? $settings['nip_kepala_sekolah'] : (!empty($settings['nip_kepsek']) ? $settings['nip_kepsek'] : 'G202608503');
+
+        // 4. Data Rekap Ketidakhadiran (Sakit, Izin, Alpa)
+        $absensiRekap = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+        try {
+            $stmtAtt = $db->prepare("
+                SELECT 
+                    COUNT(*) as total_absensi,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) = 'hadir' THEN 1 END) as total_hadir,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) IN ('izin', 'ijin') THEN 1 END) as total_izin,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) = 'sakit' THEN 1 END) as total_sakit,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) IN ('alpa', 'alpha', 'tanpa keterangan') THEN 1 END) as total_alpa
+                FROM absensi 
+                WHERE siswa_id = ?
+            ");
+            $stmtAtt->execute([(int)$siswaId]);
+            $attRow = $stmtAtt->fetch(PDO::FETCH_ASSOC);
+            if ($attRow) {
+                $absensiRekap['total'] = (int)($attRow['total_absensi'] ?? 0);
+                $absensiRekap['hadir'] = (int)($attRow['total_hadir'] ?? 0);
+                $absensiRekap['izin']  = (int)($attRow['total_izin'] ?? 0);
+                $absensiRekap['sakit'] = (int)($attRow['total_sakit'] ?? 0);
+                $absensiRekap['alpa']  = (int)($attRow['total_alpa'] ?? 0);
+            }
+        } catch (\Throwable $e) {}
+
+        // 5. Data Ekstrakurikuler yang Diikuti Siswa
+        $ekskulList = $ekskulModel->getEkskulBySiswa($siswaId, $taId, $activeSemester);
+
+        // 6. Pemetaan Capaian Deskripsi & Perhitungan Nilai Rapor
+        $capaianMap = [];
+        if (!empty($raporData['nilai_list'])) {
+            foreach ($raporData['nilai_list'] as $rd) {
+                $capaianMap[$rd['mapel_id']] = $rd['capaian_kompetensi'] ?? '';
+            }
+        }
+
+        $calculatedRows = [];
+        $totalAkhir = 0;
+        $allTuntas = true;
+
+        if (!empty($nilaiList)) {
+            foreach ($nilaiList as $i => $n) {
+                $kkmVal = (float)($n['kkm'] ?? 75);
+                $recalcAkhir = NilaiModel::hitungNilaiAkhir(
+                    (float)($n['nilai_tugas'] ?? 0),
+                    (float)($n['nilai_quiz'] ?? 0),
+                    (float)($n['nilai_uts'] ?? 0),
+                    (float)($n['nilai_uas'] ?? 0),
+                    $bobotKomponen
+                );
+                $akhirRow = ($recalcAkhir > 0 || (float)($n['nilai_akhir'] ?? 0) <= 0) ? $recalcAkhir : (float)$n['nilai_akhir'];
+                $pred = NilaiModel::getPredikat($akhirRow);
+                $isTuntas = ($akhirRow >= $kkmVal);
+                if (!$isTuntas) $allTuntas = false;
+                $totalAkhir += $akhirRow;
+
+                $deskripsiCapaian = $capaianMap[$n['mapel_id']] ?? (
+                    $isTuntas 
+                    ? "Menunjukkan penguasaan sangat baik dalam menuntaskan seluruh tujuan pembelajaran {$n['nama_mapel']}."
+                    : "Perlu bimbingan dan tindak lanjut remedial pada beberapa kompetensi dasar mata pelajaran {$n['nama_mapel']}."
+                );
+
+                $calculatedRows[] = [
+                    'no' => $i + 1,
+                    'mapel' => $n['nama_mapel'],
+                    'kkm' => $kkmVal,
+                    'akhir' => $akhirRow,
+                    'pred' => $pred,
+                    'is_tuntas' => $isTuntas,
+                    'deskripsi' => $deskripsiCapaian
+                ];
+            }
+        }
+        $countMapel = count($calculatedRows);
+        $avgAkhir = $countMapel > 0 ? ($totalAkhir / $countMapel) : 0;
+        $avgPred  = NilaiModel::getPredikat($avgAkhir);
+
+        return [
+            'siswa' => $siswa,
+            'raporData' => $raporData,
+            'calculatedRows' => $calculatedRows,
+            'avgAkhir' => $avgAkhir,
+            'avgPred' => $avgPred,
+            'allTuntas' => $allTuntas,
+            'absensiRekap' => $absensiRekap,
+            'ekskulList' => $ekskulList,
+            'waliKelas' => $waliKelas,
+            'kepsekNama' => $kepsekNama,
+            'kepsekNip' => $kepsekNip,
+            'settings' => $settings
+        ];
+    }
+
+    /**
+     * Dashboard & Panel Khusus Wali Kelas (Rekap Nilai, Presensi, & E-Rapor Rombel Binaan)
+     */
+    public function waliKelas() {
+        $guru = $this->getGuruInfo();
+        $guruId = (int)($guru['id'] ?? 0);
+
+        $db = Database::getConnection();
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        require_once ROOT_PATH . 'models/CurriculumModel.php';
+        require_once ROOT_PATH . 'models/NilaiModel.php';
+
+        $academicModel = new AcademicModel();
+        $currModel = new CurriculumModel();
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $taId = $activeTa['id'] ?? 4;
+        $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+
+        // Ambil rombel yang dibimbing oleh guru sebagai wali kelas
+        $stmtWali = $db->prepare("
+            SELECT k.*, j.nama_jurusan, j.kode_jurusan,
+                   (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id) as total_siswa
+            FROM kelas k
+            LEFT JOIN jurusan j ON k.jurusan_id = j.id
+            WHERE k.wali_kelas_id = ?
+            ORDER BY k.tingkat ASC, k.nama_kelas ASC
+        ");
+        $stmtWali->execute([$guruId]);
+        $myWaliKelas = $stmtWali->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $isWaliKelas = !empty($myWaliKelas);
+
+        if (!$isWaliKelas) {
+            FlashHelper::setError('Anda tidak terdaftar sebagai Wali Kelas pada rombel manapun.');
+            header('Location: ' . BASE_URL . 'index.php?url=guru/dashboard');
+            exit();
+        }
+
+        // Tentukan kelas yang aktif dipilih
+        $selectedKelasId = isset($_GET['kelas_id']) ? (int)$_GET['kelas_id'] : 0;
+        $selectedKelas = null;
+        if ($selectedKelasId > 0) {
+            foreach ($myWaliKelas as $mwk) {
+                if ((int)$mwk['id'] === $selectedKelasId) {
+                    $selectedKelas = $mwk;
+                    break;
+                }
+            }
+        }
+        if (!$selectedKelas && !empty($myWaliKelas)) {
+            $selectedKelas = $myWaliKelas[0];
+            $selectedKelasId = (int)$selectedKelas['id'];
+        }
+
+        // Handle POST: Simpan Catatan Wali Kelas untuk E-Rapor
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('Token keamanan CSRF tidak valid.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas&kelas_id=' . $selectedKelasId);
+                exit();
+            }
+
+            $action = $_POST['action'] ?? '';
+            if ($action === 'save_catatan_wali') {
+                $catatanData = $_POST['catatan'] ?? []; // [siswa_id => '...']
+                $countUpdated = 0;
+                if (!empty($catatanData) && is_array($catatanData)) {
+                    foreach ($catatanData as $sId => $catText) {
+                        $sId = (int)$sId;
+                        $catClean = trim($catText);
+                        // Pastikan rapor_siswa ada untuk semester ini
+                        $currModel->generateOrSyncRaporSiswa($sId, $taId, $activeSemester);
+                        $stmtUpCat = $db->prepare("
+                            UPDATE rapor_siswa 
+                            SET catatan_wali_kelas = ? 
+                            WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ?
+                        ");
+                        if ($stmtUpCat->execute([$catClean, $sId, $taId, $activeSemester])) {
+                            $countUpdated++;
+                        }
+                    }
+                }
+                FlashHelper::setSuccess("Berhasil memperbarui catatan wali kelas untuk {$countUpdated} siswa.");
+                header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas&kelas_id=' . $selectedKelasId);
+                exit();
+            }
+        }
+
+        // Ambil seluruh siswa di rombel terpilih
+        $stmtSiswa = $db->prepare("
+            SELECT s.*, u.username 
+            FROM siswa s 
+            LEFT JOIN users u ON s.user_id = u.id 
+            WHERE s.kelas_id = ? 
+            ORDER BY s.nama_lengkap ASC
+        ");
+        $stmtSiswa->execute([$selectedKelasId]);
+        $siswaList = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // Ambil ringkasan nilai, absensi, dan catatan wali kelas untuk setiap siswa
+        $studentSummary = [];
+        $totalRombelAvg = 0;
+        $totalRombelHadir = 0;
+        $totalRombelPresensi = 0;
+
+        foreach ($siswaList as $sw) {
+            $sId = (int)$sw['id'];
+
+            // Nilai Akhir Rata-rata dari tabel nilai_rapor atau CurriculumModel
+            $stmtAvg = $db->prepare("
+                SELECT AVG(nilai_akhir) as avg_nilai, COUNT(*) as total_mapel
+                FROM nilai_rapor 
+                WHERE siswa_id = ?
+            ");
+            $stmtAvg->execute([$sId]);
+            $avgRow = $stmtAvg->fetch(PDO::FETCH_ASSOC);
+            $avgVal = (float)($avgRow['avg_nilai'] ?? 0);
+            $predikat = NilaiModel::getPredikat($avgVal);
+
+            // Presensi per siswa
+            $stmtAbs = $db->prepare("
+                SELECT 
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) = 'hadir' THEN 1 END) as hadir,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) IN ('izin', 'ijin') THEN 1 END) as izin,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) = 'sakit' THEN 1 END) as sakit,
+                    COUNT(CASE WHEN LOWER(TRIM(status)) IN ('alpa', 'alpha', 'tanpa keterangan') THEN 1 END) as alpa
+                FROM absensi 
+                WHERE siswa_id = ?
+            ");
+            $stmtAbs->execute([$sId]);
+            $absRow = $stmtAbs->fetch(PDO::FETCH_ASSOC);
+            $totAbs = (int)($absRow['total'] ?? 0);
+            $hadirAbs = (int)($absRow['hadir'] ?? 0);
+
+            // Catatan wali kelas dari rapor_siswa
+            $stmtRapor = $db->prepare("
+                SELECT catatan_wali_kelas 
+                FROM rapor_siswa 
+                WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ?
+            ");
+            $stmtRapor->execute([$sId, $taId, $activeSemester]);
+            $catatanWali = $stmtRapor->fetchColumn() ?: '';
+
+            $studentSummary[$sId] = [
+                'siswa' => $sw,
+                'avg_nilai' => $avgVal,
+                'predikat' => $predikat,
+                'total_mapel' => (int)($avgRow['total_mapel'] ?? 0),
+                'absensi' => [
+                    'total' => $totAbs,
+                    'hadir' => $hadirAbs,
+                    'izin' => (int)($absRow['izin'] ?? 0),
+                    'sakit' => (int)($absRow['sakit'] ?? 0),
+                    'alpa' => (int)($absRow['alpa'] ?? 0),
+                    'persen' => $totAbs > 0 ? round(($hadirAbs / $totAbs) * 100) : 100
+                ],
+                'catatan_wali' => $catatanWali
+            ];
+
+            $totalRombelAvg += $avgVal;
+            $totalRombelHadir += $hadirAbs;
+            $totalRombelPresensi += $totAbs;
+        }
+
+        $countSiswa = count($siswaList);
+        $rombelAvgNilai = $countSiswa > 0 ? ($totalRombelAvg / $countSiswa) : 0;
+        $rombelKehadiranPersen = $totalRombelPresensi > 0 ? round(($totalRombelHadir / $totalRombelPresensi) * 100) : 100;
+
+        require_once ROOT_PATH . 'views/guru/wali_kelas.php';
+    }
+
+    /**
+     * Cetak Sekaligus Semua E-Rapor Siswa dalam Satu Rombel (Bulk Print / A4/F4)
+     */
+    public function cetakRaporRombel() {
+        $guru = $this->getGuruInfo();
+        $guruId = (int)($guru['id'] ?? 0);
+        $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+
+        $kelasId = (int)($_GET['kelas_id'] ?? 0);
+        $db = Database::getConnection();
+
+        // Validasi: pastikan kelasId ini benar dibimbing oleh guru yang bersangkutan (atau admin)
+        $stmtK = $db->prepare("
+            SELECT k.*, j.nama_jurusan, g.nama_lengkap as nama_walikelas, g.nip as nip_walikelas
+            FROM kelas k
+            LEFT JOIN jurusan j ON k.jurusan_id = j.id
+            LEFT JOIN guru g ON k.wali_kelas_id = g.id
+            WHERE k.id = ?
+        ");
+        $stmtK->execute([$kelasId]);
+        $kelas = $stmtK->fetch(PDO::FETCH_ASSOC);
+
+        if (!$kelas) {
+            FlashHelper::setError('Data kelas rombel tidak ditemukan.');
+            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
+            exit();
+        }
+
+        if (!$isAdmin && (int)($kelas['wali_kelas_id'] ?? 0) !== $guruId) {
+            FlashHelper::setError('Anda tidak memiliki otorisasi untuk mencetak E-Rapor kelas ini.');
+            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
+            exit();
+        }
+
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        $academicModel = new AcademicModel();
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $taId = $activeTa['id'] ?? 4;
+        $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+
+        // Ambil seluruh siswa di rombel ini
+        $stmtS = $db->prepare("SELECT id, nama_lengkap FROM siswa WHERE kelas_id = ? ORDER BY nama_lengkap ASC");
+        $stmtS->execute([$kelasId]);
+        $allSiswa = $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // Kumpulkan data E-Rapor untuk setiap siswa dalam rombel
+        $allRaporList = [];
+        foreach ($allSiswa as $s) {
+            $report = $this->getStudentRaporFullData($s['id'], $taId, $activeSemester);
+            if ($report) {
+                $allRaporList[] = $report;
+            }
+        }
+
+        require_once ROOT_PATH . 'views/guru/cetak_rapor_rombel.php';
+    }
+
+    /**
+     * Cetak E-Rapor Satu Siswa Perorangan oleh Wali Kelas
+     */
+    public function cetakRaporSiswa() {
+        $guru = $this->getGuruInfo();
+        $guruId = (int)($guru['id'] ?? 0);
+        $siswaId = (int)($_GET['siswa_id'] ?? 0);
+        $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+
+        $db = Database::getConnection();
+        $stmtS = $db->prepare("SELECT s.*, k.wali_kelas_id FROM siswa s JOIN kelas k ON s.kelas_id = k.id WHERE s.id = ?");
+        $stmtS->execute([$siswaId]);
+        $siswa = $stmtS->fetch(PDO::FETCH_ASSOC);
+
+        if (!$siswa) {
+            FlashHelper::setError('Data siswa tidak ditemukan.');
+            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
+            exit();
+        }
+
+        if (!$isAdmin && (int)($siswa['wali_kelas_id'] ?? 0) !== $guruId) {
+            FlashHelper::setError('Anda tidak memiliki hak akses sebagai Wali Kelas siswa ini.');
+            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
+            exit();
+        }
+
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        $academicModel = new AcademicModel();
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $taId = $activeTa['id'] ?? 4;
+        $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+
+        $singleReport = $this->getStudentRaporFullData($siswaId, $taId, $activeSemester);
+        if (!$singleReport) {
+            FlashHelper::setError('Gagal memuat dokumen E-Rapor siswa.');
+            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
+            exit();
+        }
+
+        $allRaporList = [$singleReport];
+        $kelas = [
+            'id' => $siswa['kelas_id'],
+            'nama_kelas' => $singleReport['siswa']['nama_kelas'] ?? '',
+            'nama_jurusan' => $singleReport['siswa']['nama_jurusan'] ?? '',
+            'nama_walikelas' => $singleReport['waliKelas']['nama_lengkap'] ?? ''
+        ];
+
+        require_once ROOT_PATH . 'views/guru/cetak_rapor_rombel.php';
+    }
 }
 

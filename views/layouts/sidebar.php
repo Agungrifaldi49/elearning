@@ -257,6 +257,28 @@ if (!empty($sidebarRawLogo)) {
                     <i class="bi bi-activity text-warning"></i> Bimbingan Ekstrakurikuler
                 </a></li>
             <?php endif; ?>
+            <?php
+            // Cek apakah guru saat ini ditugaskan oleh Admin sebagai Wali Kelas
+            $isWaliKelas = false;
+            try {
+                if (!empty($user['id'])) {
+                    $dbSidebar = Database::getConnection();
+                    $stmtCekWali = $dbSidebar->prepare("
+                        SELECT COUNT(*) FROM kelas k
+                        JOIN guru g ON k.wali_kelas_id = g.id
+                        WHERE g.user_id = ?
+                    ");
+                    $stmtCekWali->execute([$user['id']]);
+                    $isWaliKelas = ((int)$stmtCekWali->fetchColumn() > 0);
+                }
+            } catch (\Throwable $eWali) {}
+            ?>
+            <?php if ($isWaliKelas): ?>
+                <li class="nav-section-title">Wali Kelas</li>
+                <li><a class="nav-link <?= isActive($currentUrl,'guru/waliKelas') ?>" href="<?= BASE_URL ?>index.php?url=guru/waliKelas">
+                    <i class="bi bi-person-workspace text-info"></i> Kelas Binaan (Wali Kelas)
+                </a></li>
+            <?php endif; ?>
 
             <li class="nav-section-title">Komunikasi & Virtual Meeting</li>
             <li><a class="nav-link <?= isActive($currentUrl,'forum') ?>" href="<?= BASE_URL ?>index.php?url=forum">
