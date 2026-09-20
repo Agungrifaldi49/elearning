@@ -5,26 +5,24 @@
  * Standar Presisi Ukuran Kertas A4 & F4 (Folio), Background Putih Bersih, Page Break Antar Siswa
  */
 
-// Resolusi Logo Sekolah Dinamis & Aman
+// Resolusi Logo Sekolah Dinamis & Aman (Anti-Gagal)
 $rawLogo = $settings['logo'] ?? '';
 $logoUrl = '';
 if (!empty($rawLogo)) {
     if (strpos($rawLogo, 'http') === 0) {
         $logoUrl = $rawLogo;
-    } elseif (strpos($rawLogo, 'assets/') === 0 && file_exists(ROOT_PATH . $rawLogo)) {
+    } elseif (strpos($rawLogo, 'assets/') === 0) {
         $logoUrl = BASE_URL . $rawLogo;
-    } elseif (file_exists(ROOT_PATH . 'assets/uploads/logo/' . $rawLogo)) {
+    } else {
         $logoUrl = BASE_URL . 'assets/uploads/logo/' . $rawLogo;
-    } elseif (file_exists(ROOT_PATH . 'assets/uploads/' . $rawLogo)) {
-        $logoUrl = BASE_URL . 'assets/uploads/' . $rawLogo;
-    } elseif (file_exists(ROOT_PATH . $rawLogo)) {
-        $logoUrl = BASE_URL . $rawLogo;
     }
 }
 if (empty($logoUrl)) {
-    $logoFiles = glob(ROOT_PATH . 'assets/uploads/logo/*.*');
+    $logoFiles = @glob(ROOT_PATH . 'assets/uploads/logo/*.*');
     if (!empty($logoFiles)) {
         $logoUrl = BASE_URL . 'assets/uploads/logo/' . basename(end($logoFiles));
+    } else {
+        $logoUrl = BASE_URL . 'assets/images/logo.png';
     }
 }
 ?>

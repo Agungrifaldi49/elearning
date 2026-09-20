@@ -3550,10 +3550,25 @@ class GuruController {
             $selectedKelasId = (int)$selectedKelas['id'];
         }
 
-        // Handle POST: Simpan Catatan Wali Kelas untuk E-Rapor
+        // Self-healing & defensive check untuk tabel rapor_siswa
+        $colsRapor = [];
+        try {
+            $colsRapor = $db->query("SHOW COLUMNS FROM rapor_siswa")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+            if (!empty($colsRapor) && !in_array('catatan_wali_kelas', $colsRapor)) {
+                $db->exec("ALTER TABLE `rapor_siswa` ADD COLUMN `catatan_wali_kelas` TEXT NULL AFTER `catatan_akademik`");
+                $colsRapor[] = 'catatan_wali_kelas';
+            }
+        } catch (\Throwable $e) {}
+
+        $colCatatanSelect = in_array('catatan_wali_kelas', $colsRapor)
+            ? (in_array('catatan_akademik', $colsRapor) ? "COALESCE(catatan_wali_kelas, catatan_akademik, '')" : "COALESCE(catatan_wali_kelas, '')")
+            : (in_array('catatan_akademik', $colsRapor) ? "COALESCE(catatan_akademik, '')" : "''");
+
+        // Handle POST: Simpan Catatan Wali Kelas Massal
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (!Security::verifyCsrfToken()) {
-                FlashHelper::setError('Token keamanan CSRF tidak valid.');
+            $csrf = $_POST['csrf_token'] ?? '';
+            if (!CsrfHelper::validateToken($csrf)) {
+                FlashHelper::setError('Token keamanan tidak valid.');
                 header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas&kelas_id=' . $selectedKelasId);
                 exit();
             }
@@ -3568,14 +3583,37 @@ class GuruController {
                         $catClean = trim($catText);
                         // Pastikan rapor_siswa ada untuk semester ini
                         $currModel->generateOrSyncRaporSiswa($sId, $taId, $activeSemester);
-                        $stmtUpCat = $db->prepare("
-                            UPDATE rapor_siswa 
-                            SET catatan_wali_kelas = ? 
-                            WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ?
-                        ");
-                        if ($stmtUpCat->execute([$catClean, $sId, $taId, $activeSemester])) {
-                            $countUpdated++;
-                        }
+                        
+                        try {
+                            if (in_array('catatan_wali_kelas', $colsRapor) && in_array('catatan_akademik', $colsRapor)) {
+                                $stmtUpCat = $db->prepare("
+                                    UPDATE rapor_siswa 
+                                    SET catatan_wali_kelas = ?, catatan_akademik = ? 
+                                    WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ?
+                                ");
+                                if ($stmtUpCat->execute([$catClean, $catClean, $sId, $taId, $activeSemester])) {
+                                    $countUpdated++;
+                                }
+                            } elseif (in_array('catatan_wali_kelas', $colsRapor)) {
+                                $stmtUpCat = $db->prepare("
+                                    UPDATE rapor_siswa 
+                                    SET catatan_wali_kelas = ? 
+                                    WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ?
+                                ");
+                                if ($stmtUpCat->execute([$catClean, $sId, $taId, $activeSemester])) {
+                                    $countUpdated++;
+                                }
+                            } elseif (in_array('catatan_akademik', $colsRapor)) {
+                                $stmtUpCat = $db->prepare("
+                                    UPDATE rapor_siswa 
+                                    SET catatan_akademik = ? 
+                                    WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ?
+                                ");
+                                if ($stmtUpCat->execute([$catClean, $sId, $taId, $activeSemester])) {
+                                    $countUpdated++;
+                                }
+                            }
+                        } catch (\Throwable $eUp) {}
                     }
                 }
                 FlashHelper::setSuccess("Berhasil memperbarui catatan wali kelas untuk {$countUpdated} siswa.");
@@ -3632,13 +3670,16 @@ class GuruController {
             $hadirAbs = (int)($absRow['hadir'] ?? 0);
 
             // Catatan wali kelas dari rapor_siswa
-            $stmtRapor = $db->prepare("
-                SELECT catatan_wali_kelas 
-                FROM rapor_siswa 
-                WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ?
-            ");
-            $stmtRapor->execute([$sId, $taId, $activeSemester]);
-            $catatanWali = $stmtRapor->fetchColumn() ?: '';
+            $catatanWali = '';
+            try {
+                $stmtRapor = $db->prepare("
+                    SELECT {$colCatatanSelect} 
+                    FROM rapor_siswa 
+                    WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ?
+                ");
+                $stmtRapor->execute([$sId, $taId, $activeSemester]);
+                $catatanWali = $stmtRapor->fetchColumn() ?: '';
+            } catch (\Throwable $eCat) {}
 
             $studentSummary[$sId] = [
                 'siswa' => $sw,
@@ -3670,63 +3711,269 @@ class GuruController {
 
     /**
      * Cetak Sekaligus Semua E-Rapor Siswa dalam Satu Rombel (Bulk Print / A4/F4)
+     * Menggunakan Batch Query Super Cepat, Ringan, & Anti-500
      */
     public function cetakRaporRombel() {
         @ini_set('max_execution_time', '300');
         @ini_set('memory_limit', '256M');
 
-        $guru = $this->getGuruInfo();
-        $guruId = (int)($guru['id'] ?? 0);
-        $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
-        $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
-
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
-        $db = Database::getConnection();
 
-        // Validasi: pastikan kelasId ini benar dibimbing oleh guru yang bersangkutan (atau admin)
-        $stmtK = $db->prepare("
-            SELECT k.*, j.nama_jurusan, g.nama_lengkap as nama_walikelas, g.nip as nip_walikelas
-            FROM kelas k
-            LEFT JOIN jurusan j ON k.jurusan_id = j.id
-            LEFT JOIN guru g ON k.wali_kelas_id = g.id
-            WHERE k.id = ?
-        ");
-        $stmtK->execute([$kelasId]);
-        $kelas = $stmtK->fetch(PDO::FETCH_ASSOC);
+        try {
+            $guru = $this->getGuruInfo();
+            $guruId = (int)($guru['id'] ?? 0);
+            $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
+            $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
 
-        if (!$kelas) {
-            FlashHelper::setError('Data kelas rombel tidak ditemukan.');
-            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
-            exit();
-        }
+            $db = Database::getConnection();
 
-        if (!$isAdmin && (int)($kelas['wali_kelas_id'] ?? 0) !== $guruId) {
-            FlashHelper::setError('Anda tidak memiliki otorisasi untuk mencetak E-Rapor kelas ini.');
-            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
-            exit();
-        }
+            // Validasi: pastikan kelasId ini benar dibimbing oleh guru yang bersangkutan (atau admin)
+            $stmtK = $db->prepare("
+                SELECT k.*, j.nama_jurusan, g.nama_lengkap as nama_walikelas, g.nip as nip_walikelas
+                FROM kelas k
+                LEFT JOIN jurusan j ON k.jurusan_id = j.id
+                LEFT JOIN guru g ON k.wali_kelas_id = g.id
+                WHERE k.id = ?
+            ");
+            $stmtK->execute([$kelasId]);
+            $kelas = $stmtK->fetch(PDO::FETCH_ASSOC);
 
-        require_once ROOT_PATH . 'models/AcademicModel.php';
-        $academicModel = new AcademicModel();
-        $activeTa = $academicModel->getActiveTahunAjaran();
-        $taId = $activeTa['id'] ?? 4;
-        $activeSemester = $activeTa['semester'] ?? 'Ganjil';
-
-        // Ambil seluruh siswa di rombel ini
-        $stmtS = $db->prepare("SELECT id, nama_lengkap FROM siswa WHERE kelas_id = ? ORDER BY nama_lengkap ASC");
-        $stmtS->execute([$kelasId]);
-        $allSiswa = $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-        // Kumpulkan data E-Rapor untuk setiap siswa dalam rombel
-        $allRaporList = [];
-        foreach ($allSiswa as $s) {
-            $report = $this->getStudentRaporFullData($s['id'], $taId, $activeSemester);
-            if ($report) {
-                $allRaporList[] = $report;
+            if (!$kelas) {
+                FlashHelper::setError('Data kelas rombel tidak ditemukan.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
+                exit();
             }
-        }
 
-        require_once ROOT_PATH . 'views/guru/cetak_rapor_rombel.php';
+            if (!$isAdmin && (int)($kelas['wali_kelas_id'] ?? 0) !== $guruId) {
+                FlashHelper::setError('Anda tidak memiliki otorisasi untuk mencetak E-Rapor kelas ini.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
+                exit();
+            }
+
+            require_once ROOT_PATH . 'models/AcademicModel.php';
+            require_once ROOT_PATH . 'models/CurriculumModel.php';
+            require_once ROOT_PATH . 'models/NilaiModel.php';
+            require_once ROOT_PATH . 'models/SettingsModel.php';
+            require_once ROOT_PATH . 'models/EkstrakurikulerModel.php';
+
+            $academicModel = new AcademicModel();
+            $currModel = new CurriculumModel();
+            $settingsModel = new SettingsModel();
+            $ekskulModel = new EkstrakurikulerModel(); // Memastikan tabel ekstrakurikuler & anggotanya otomatis ada
+
+            $activeTa = $academicModel->getActiveTahunAjaran();
+            $taId = (int)($activeTa['id'] ?? 4);
+            $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+
+            $settings = $settingsModel->getAll();
+            $kepsekNama = !empty($settings['kepala_sekolah']) ? $settings['kepala_sekolah'] : 'H. ASEP SAEPULLOH, S. Ag';
+            $kepsekNip  = !empty($settings['nip_kepala_sekolah']) ? $settings['nip_kepala_sekolah'] : (!empty($settings['nip_kepsek']) ? $settings['nip_kepsek'] : 'G202608503');
+
+            $kurInfo = $currModel->getActiveKurikulumForRombel($kelasId, $taId);
+            $kurId = (int)($kurInfo['kurikulum_id'] ?? 1);
+            $nilaiModel = new NilaiModel();
+            $bobotKomponen = $nilaiModel->getBobotKomponenByKurikulum($kurId);
+
+            $waliKelas = [
+                'nama_lengkap' => $kelas['nama_walikelas'] ?? '',
+                'nip' => $kelas['nip_walikelas'] ?? ''
+            ];
+
+            // 1. Ambil seluruh siswa di rombel ini
+            $stmtS = $db->prepare("
+                SELECT s.*, k.nama_kelas, k.tingkat, j.nama_jurusan
+                FROM siswa s
+                JOIN kelas k ON s.kelas_id = k.id
+                LEFT JOIN jurusan j ON k.jurusan_id = j.id
+                WHERE s.kelas_id = ?
+                ORDER BY s.nama_lengkap ASC
+            ");
+            $stmtS->execute([$kelasId]);
+            $allSiswa = $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            if (empty($allSiswa)) {
+                $allRaporList = [];
+                require_once ROOT_PATH . 'views/guru/cetak_rapor_rombel.php';
+                return;
+            }
+
+            $siswaIds = array_column($allSiswa, 'id');
+            $inIds = implode(',', array_map('intval', $siswaIds));
+
+            // 2. BATCH QUERY: Nilai seluruh siswa di rombel ini (1 query cepat)
+            $nilaiBySiswa = [];
+            try {
+                $stmtNilai = $db->query("
+                    SELECT nr.siswa_id, nr.mapel_id, nr.nilai_tugas, nr.nilai_quiz, nr.nilai_uts, nr.nilai_uas, nr.nilai_akhir,
+                           mp.nama_mapel, mp.kode_mapel, COALESCE(mp.kkm, 75) as kkm
+                    FROM nilai_rapor nr
+                    JOIN mata_pelajaran mp ON nr.mapel_id = mp.id
+                    WHERE nr.siswa_id IN ({$inIds})
+                    ORDER BY nr.siswa_id, mp.nama_mapel ASC
+                ");
+                if ($stmtNilai) {
+                    $allNilaiRows = $stmtNilai->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    foreach ($allNilaiRows as $nr) {
+                        $nilaiBySiswa[$nr['siswa_id']][] = $nr;
+                    }
+                }
+            } catch (\Throwable $eNilai) {
+                error_log("Error batch nilai cetakRaporRombel: " . $eNilai->getMessage());
+            }
+
+            // 3. BATCH QUERY: Catatan wali kelas & rapor snapshot (Defensive Column Check)
+            $raporHeaderBySiswa = [];
+            try {
+                $colsR = $db->query("SHOW COLUMNS FROM rapor_siswa")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                if (!in_array('catatan_wali_kelas', $colsR)) {
+                    try {
+                        $db->exec("ALTER TABLE `rapor_siswa` ADD COLUMN `catatan_wali_kelas` TEXT NULL AFTER `catatan_akademik`");
+                        $colsR[] = 'catatan_wali_kelas';
+                    } catch (\Throwable $eAlter) {}
+                }
+                $colCat = in_array('catatan_wali_kelas', $colsR) 
+                    ? (in_array('catatan_akademik', $colsR) ? "COALESCE(rs.catatan_wali_kelas, rs.catatan_akademik, '')" : "COALESCE(rs.catatan_wali_kelas, '')")
+                    : (in_array('catatan_akademik', $colsR) ? "COALESCE(rs.catatan_akademik, '')" : "''");
+
+                $stmtRapor = $db->prepare("
+                    SELECT rs.siswa_id, {$colCat} as catatan_wali_kelas, rs.kurikulum_nama_snapshot, rs.fase_nama_snapshot, rs.status
+                    FROM rapor_siswa rs
+                    WHERE rs.siswa_id IN ({$inIds}) AND rs.tahun_ajaran_id = ? AND rs.semester = ?
+                ");
+                $stmtRapor->execute([$taId, $activeSemester]);
+                $allRaporHeaders = $stmtRapor->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                foreach ($allRaporHeaders as $rh) {
+                    $raporHeaderBySiswa[$rh['siswa_id']] = $rh;
+                }
+            } catch (\Throwable $eRapor) {
+                error_log("Error batch rapor header cetakRaporRombel: " . $eRapor->getMessage());
+            }
+
+            // 4. BATCH QUERY: Rekapitulasi absensi seluruh siswa (1 query cepat)
+            $absBySiswa = [];
+            try {
+                $stmtAbs = $db->query("
+                    SELECT 
+                        siswa_id,
+                        COUNT(*) as total_absensi,
+                        COUNT(CASE WHEN LOWER(TRIM(status)) = 'hadir' THEN 1 END) as total_hadir,
+                        COUNT(CASE WHEN LOWER(TRIM(status)) IN ('izin', 'ijin') THEN 1 END) as total_izin,
+                        COUNT(CASE WHEN LOWER(TRIM(status)) = 'sakit' THEN 1 END) as total_sakit,
+                        COUNT(CASE WHEN LOWER(TRIM(status)) IN ('alpa', 'alpha', 'tanpa keterangan') THEN 1 END) as total_alpa
+                    FROM absensi
+                    WHERE siswa_id IN ({$inIds})
+                    GROUP BY siswa_id
+                ");
+                if ($stmtAbs) {
+                    $allAbsRows = $stmtAbs->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    foreach ($allAbsRows as $ab) {
+                        $absBySiswa[$ab['siswa_id']] = [
+                            'total' => (int)$ab['total_absensi'],
+                            'hadir' => (int)$ab['total_hadir'],
+                            'izin'  => (int)$ab['total_izin'],
+                            'sakit' => (int)$ab['total_sakit'],
+                            'alpa'  => (int)$ab['total_alpa']
+                        ];
+                    }
+                }
+            } catch (\Throwable $eAbs) {
+                error_log("Error batch absensi cetakRaporRombel: " . $eAbs->getMessage());
+            }
+
+            // 5. BATCH QUERY: Ekstrakurikuler yang diikuti seluruh siswa (1 query cepat)
+            $eksBySiswa = [];
+            try {
+                $stmtEks = $db->query("
+                    SELECT es.siswa_id, es.ekskul_id, es.predikat, es.nilai_deskripsi, e.nama_ekskul
+                    FROM ekstrakurikuler_siswa es
+                    JOIN ekstrakurikuler e ON es.ekskul_id = e.id
+                    WHERE es.siswa_id IN ({$inIds}) AND es.status = 'aktif'
+                    ORDER BY es.siswa_id, e.nama_ekskul ASC
+                ");
+                if ($stmtEks) {
+                    $allEksRows = $stmtEks->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    foreach ($allEksRows as $er) {
+                        $eksBySiswa[$er['siswa_id']][] = $er;
+                    }
+                }
+            } catch (\Throwable $eEks) {
+                error_log("Error batch ekskul cetakRaporRombel: " . $eEks->getMessage());
+            }
+
+            // 6. Kompilasi data E-Rapor setiap siswa dalam rombel (100% in-memory)
+            $allRaporList = [];
+            foreach ($allSiswa as $s) {
+                $sId = (int)$s['id'];
+                $nilaiList = $nilaiBySiswa[$sId] ?? [];
+                $rHeader = $raporHeaderBySiswa[$sId] ?? [
+                    'catatan_wali_kelas' => '',
+                    'kurikulum_nama_snapshot' => $kurInfo['nama_kurikulum'] ?? 'Kurikulum Merdeka SMK',
+                    'fase_nama_snapshot' => $kurInfo['nama_fase'] ?? 'Fase F (Kelas XI - XII)',
+                    'status' => 'terverifikasi'
+                ];
+
+                $calculatedRows = [];
+                $totalAkhir = 0;
+                $allTuntas = true;
+
+                foreach ($nilaiList as $i => $n) {
+                    $kkmVal = (float)($n['kkm'] ?? 75);
+                    $recalcAkhir = NilaiModel::hitungNilaiAkhir(
+                        (float)($n['nilai_tugas'] ?? 0),
+                        (float)($n['nilai_quiz'] ?? 0),
+                        (float)($n['nilai_uts'] ?? 0),
+                        (float)($n['nilai_uas'] ?? 0),
+                        $bobotKomponen
+                    );
+                    $akhirRow = ($recalcAkhir > 0 || (float)($n['nilai_akhir'] ?? 0) <= 0) ? $recalcAkhir : (float)$n['nilai_akhir'];
+                    $pred = NilaiModel::getPredikat($akhirRow);
+                    $isTuntas = ($akhirRow >= $kkmVal);
+                    if (!$isTuntas) $allTuntas = false;
+                    $totalAkhir += $akhirRow;
+
+                    $deskripsiCapaian = $isTuntas 
+                        ? "Menunjukkan penguasaan sangat baik dalam menuntaskan seluruh tujuan pembelajaran {$n['nama_mapel']}."
+                        : "Perlu bimbingan dan tindak lanjut remedial pada beberapa kompetensi dasar mata pelajaran {$n['nama_mapel']}.";
+
+                    $calculatedRows[] = [
+                        'no' => $i + 1,
+                        'mapel' => $n['nama_mapel'],
+                        'kkm' => $kkmVal,
+                        'akhir' => $akhirRow,
+                        'pred' => $pred,
+                        'is_tuntas' => $isTuntas,
+                        'deskripsi' => $deskripsiCapaian
+                    ];
+                }
+
+                $countMapel = count($calculatedRows);
+                $avgAkhir = $countMapel > 0 ? ($totalAkhir / $countMapel) : 0;
+                $avgPred  = NilaiModel::getPredikat($avgAkhir);
+
+                $allRaporList[] = [
+                    'siswa' => $s,
+                    'raporData' => $rHeader,
+                    'calculatedRows' => $calculatedRows,
+                    'avgAkhir' => $avgAkhir,
+                    'avgPred' => $avgPred,
+                    'allTuntas' => $allTuntas,
+                    'absensiRekap' => $absBySiswa[$sId] ?? ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0],
+                    'ekskulList' => $eksBySiswa[$sId] ?? [],
+                    'waliKelas' => $waliKelas,
+                    'kepsekNama' => $kepsekNama,
+                    'kepsekNip' => $kepsekNip,
+                    'settings' => $settings
+                ];
+            }
+
+            require_once ROOT_PATH . 'views/guru/cetak_rapor_rombel.php';
+
+        } catch (\Throwable $e) {
+            error_log("Fatal error cetakRaporRombel: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            FlashHelper::setError('Gagal mencetak rapor rombel: ' . $e->getMessage());
+            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas&kelas_id=' . $kelasId);
+            exit();
+        }
     }
 
     /**
@@ -3735,51 +3982,223 @@ class GuruController {
     public function cetakRaporSiswa() {
         @ini_set('max_execution_time', '120');
 
-        $guru = $this->getGuruInfo();
-        $guruId = (int)($guru['id'] ?? 0);
         $siswaId = (int)($_GET['siswa_id'] ?? 0);
-        $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
-        $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
 
-        $db = Database::getConnection();
-        $stmtS = $db->prepare("SELECT s.*, k.wali_kelas_id FROM siswa s JOIN kelas k ON s.kelas_id = k.id WHERE s.id = ?");
-        $stmtS->execute([$siswaId]);
-        $siswa = $stmtS->fetch(PDO::FETCH_ASSOC);
+        try {
+            $guru = $this->getGuruInfo();
+            $guruId = (int)($guru['id'] ?? 0);
+            $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
+            $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
 
-        if (!$siswa) {
-            FlashHelper::setError('Data siswa tidak ditemukan.');
+            $db = Database::getConnection();
+            $stmtS = $db->prepare("SELECT s.*, k.wali_kelas_id, k.id as kelas_id FROM siswa s JOIN kelas k ON s.kelas_id = k.id WHERE s.id = ?");
+            $stmtS->execute([$siswaId]);
+            $siswa = $stmtS->fetch(PDO::FETCH_ASSOC);
+
+            if (!$siswa) {
+                FlashHelper::setError('Data siswa tidak ditemukan.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
+                exit();
+            }
+
+            if (!$isAdmin && (int)($siswa['wali_kelas_id'] ?? 0) !== $guruId) {
+                FlashHelper::setError('Anda tidak memiliki hak akses sebagai Wali Kelas siswa ini.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
+                exit();
+            }
+
+            $kelasId = (int)$siswa['kelas_id'];
+
+            require_once ROOT_PATH . 'models/AcademicModel.php';
+            require_once ROOT_PATH . 'models/CurriculumModel.php';
+            require_once ROOT_PATH . 'models/NilaiModel.php';
+            require_once ROOT_PATH . 'models/SettingsModel.php';
+            require_once ROOT_PATH . 'models/EkstrakurikulerModel.php';
+
+            $academicModel = new AcademicModel();
+            $currModel = new CurriculumModel();
+            $settingsModel = new SettingsModel();
+            $ekskulModel = new EkstrakurikulerModel();
+
+            $activeTa = $academicModel->getActiveTahunAjaran();
+            $taId = (int)($activeTa['id'] ?? 4);
+            $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+
+            $settings = $settingsModel->getAll();
+            $kepsekNama = !empty($settings['kepala_sekolah']) ? $settings['kepala_sekolah'] : 'H. ASEP SAEPULLOH, S. Ag';
+            $kepsekNip  = !empty($settings['nip_kepala_sekolah']) ? $settings['nip_kepala_sekolah'] : (!empty($settings['nip_kepsek']) ? $settings['nip_kepsek'] : 'G202608503');
+
+            $stmtK = $db->prepare("
+                SELECT k.*, j.nama_jurusan, g.nama_lengkap as nama_walikelas, g.nip as nip_walikelas
+                FROM kelas k
+                LEFT JOIN jurusan j ON k.jurusan_id = j.id
+                LEFT JOIN guru g ON k.wali_kelas_id = g.id
+                WHERE k.id = ?
+            ");
+            $stmtK->execute([$kelasId]);
+            $kelas = $stmtK->fetch(PDO::FETCH_ASSOC);
+
+            $waliKelas = [
+                'nama_lengkap' => $kelas['nama_walikelas'] ?? '',
+                'nip' => $kelas['nip_walikelas'] ?? ''
+            ];
+
+            $kurInfo = $currModel->getActiveKurikulumForRombel($kelasId, $taId);
+            $kurId = (int)($kurInfo['kurikulum_id'] ?? 1);
+            $nilaiModel = new NilaiModel();
+            $bobotKomponen = $nilaiModel->getBobotKomponenByKurikulum($kurId);
+
+            // Fetch single student info
+            $stmtSFull = $db->prepare("
+                SELECT s.*, k.nama_kelas, k.tingkat, j.nama_jurusan
+                FROM siswa s
+                JOIN kelas k ON s.kelas_id = k.id
+                LEFT JOIN jurusan j ON k.jurusan_id = j.id
+                WHERE s.id = ?
+            ");
+            $stmtSFull->execute([$siswaId]);
+            $s = $stmtSFull->fetch(PDO::FETCH_ASSOC);
+
+            // Nilai
+            $nilaiList = [];
+            try {
+                $stmtNilai = $db->prepare("
+                    SELECT nr.siswa_id, nr.mapel_id, nr.nilai_tugas, nr.nilai_quiz, nr.nilai_uts, nr.nilai_uas, nr.nilai_akhir,
+                           mp.nama_mapel, mp.kode_mapel, COALESCE(mp.kkm, 75) as kkm
+                    FROM nilai_rapor nr
+                    JOIN mata_pelajaran mp ON nr.mapel_id = mp.id
+                    WHERE nr.siswa_id = ?
+                    ORDER BY mp.nama_mapel ASC
+                ");
+                $stmtNilai->execute([$siswaId]);
+                $nilaiList = $stmtNilai->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (\Throwable $eNilai) {}
+
+            // Header Rapor
+            $rHeader = [
+                'catatan_wali_kelas' => '',
+                'kurikulum_nama_snapshot' => $kurInfo['nama_kurikulum'] ?? 'Kurikulum Merdeka SMK',
+                'fase_nama_snapshot' => $kurInfo['nama_fase'] ?? 'Fase F (Kelas XI - XII)',
+                'status' => 'terverifikasi'
+            ];
+            try {
+                $colsR = $db->query("SHOW COLUMNS FROM rapor_siswa")->fetchAll(PDO::FETCH_COLUMN) ?: [];
+                $colCat = in_array('catatan_wali_kelas', $colsR) 
+                    ? (in_array('catatan_akademik', $colsR) ? "COALESCE(rs.catatan_wali_kelas, rs.catatan_akademik, '')" : "COALESCE(rs.catatan_wali_kelas, '')")
+                    : (in_array('catatan_akademik', $colsR) ? "COALESCE(rs.catatan_akademik, '')" : "''");
+
+                $stmtRapor = $db->prepare("
+                    SELECT rs.siswa_id, {$colCat} as catatan_wali_kelas, rs.kurikulum_nama_snapshot, rs.fase_nama_snapshot, rs.status
+                    FROM rapor_siswa rs
+                    WHERE rs.siswa_id = ? AND rs.tahun_ajaran_id = ? AND rs.semester = ?
+                ");
+                $stmtRapor->execute([$siswaId, $taId, $activeSemester]);
+                $foundR = $stmtRapor->fetch(PDO::FETCH_ASSOC);
+                if ($foundR) {
+                    $rHeader = $foundR;
+                }
+            } catch (\Throwable $eRapor) {}
+
+            // Absensi
+            $absRekap = ['total' => 0, 'hadir' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+            try {
+                $stmtAbs = $db->prepare("
+                    SELECT 
+                        COUNT(*) as total_absensi,
+                        COUNT(CASE WHEN LOWER(TRIM(status)) = 'hadir' THEN 1 END) as total_hadir,
+                        COUNT(CASE WHEN LOWER(TRIM(status)) IN ('izin', 'ijin') THEN 1 END) as total_izin,
+                        COUNT(CASE WHEN LOWER(TRIM(status)) = 'sakit' THEN 1 END) as total_sakit,
+                        COUNT(CASE WHEN LOWER(TRIM(status)) IN ('alpa', 'alpha', 'tanpa keterangan') THEN 1 END) as total_alpa
+                    FROM absensi
+                    WHERE siswa_id = ?
+                ");
+                $stmtAbs->execute([$siswaId]);
+                $ab = $stmtAbs->fetch(PDO::FETCH_ASSOC);
+                if ($ab) {
+                    $absRekap = [
+                        'total' => (int)($ab['total_absensi'] ?? 0),
+                        'hadir' => (int)($ab['total_hadir'] ?? 0),
+                        'izin'  => (int)($ab['total_izin'] ?? 0),
+                        'sakit' => (int)($ab['total_sakit'] ?? 0),
+                        'alpa'  => (int)($ab['total_alpa'] ?? 0)
+                    ];
+                }
+            } catch (\Throwable $eAbs) {}
+
+            // Ekskul
+            $eksList = [];
+            try {
+                $stmtEks = $db->prepare("
+                    SELECT es.siswa_id, es.ekskul_id, es.predikat, es.nilai_deskripsi, e.nama_ekskul
+                    FROM ekstrakurikuler_siswa es
+                    JOIN ekstrakurikuler e ON es.ekskul_id = e.id
+                    WHERE es.siswa_id = ? AND es.status = 'aktif'
+                    ORDER BY e.nama_ekskul ASC
+                ");
+                $stmtEks->execute([$siswaId]);
+                $eksList = $stmtEks->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            } catch (\Throwable $eEks) {}
+
+            $calculatedRows = [];
+            $totalAkhir = 0;
+            $allTuntas = true;
+
+            foreach ($nilaiList as $i => $n) {
+                $kkmVal = (float)($n['kkm'] ?? 75);
+                $recalcAkhir = NilaiModel::hitungNilaiAkhir(
+                    (float)($n['nilai_tugas'] ?? 0),
+                    (float)($n['nilai_quiz'] ?? 0),
+                    (float)($n['nilai_uts'] ?? 0),
+                    (float)($n['nilai_uas'] ?? 0),
+                    $bobotKomponen
+                );
+                $akhirRow = ($recalcAkhir > 0 || (float)($n['nilai_akhir'] ?? 0) <= 0) ? $recalcAkhir : (float)$n['nilai_akhir'];
+                $pred = NilaiModel::getPredikat($akhirRow);
+                $isTuntas = ($akhirRow >= $kkmVal);
+                if (!$isTuntas) $allTuntas = false;
+                $totalAkhir += $akhirRow;
+
+                $deskripsiCapaian = $isTuntas 
+                    ? "Menunjukkan penguasaan sangat baik dalam menuntaskan seluruh tujuan pembelajaran {$n['nama_mapel']}."
+                    : "Perlu bimbingan dan tindak lanjut remedial pada beberapa kompetensi dasar mata pelajaran {$n['nama_mapel']}.";
+
+                $calculatedRows[] = [
+                    'no' => $i + 1,
+                    'mapel' => $n['nama_mapel'],
+                    'kkm' => $kkmVal,
+                    'akhir' => $akhirRow,
+                    'pred' => $pred,
+                    'is_tuntas' => $isTuntas,
+                    'deskripsi' => $deskripsiCapaian
+                ];
+            }
+
+            $countMapel = count($calculatedRows);
+            $avgAkhir = $countMapel > 0 ? ($totalAkhir / $countMapel) : 0;
+            $avgPred  = NilaiModel::getPredikat($avgAkhir);
+
+            $allRaporList = [[
+                'siswa' => $s,
+                'raporData' => $rHeader,
+                'calculatedRows' => $calculatedRows,
+                'avgAkhir' => $avgAkhir,
+                'avgPred' => $avgPred,
+                'allTuntas' => $allTuntas,
+                'absensiRekap' => $absRekap,
+                'ekskulList' => $eksList,
+                'waliKelas' => $waliKelas,
+                'kepsekNama' => $kepsekNama,
+                'kepsekNip' => $kepsekNip,
+                'settings' => $settings
+            ]];
+
+            require_once ROOT_PATH . 'views/guru/cetak_rapor_rombel.php';
+
+        } catch (\Throwable $e) {
+            error_log("Fatal error cetakRaporSiswa: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            FlashHelper::setError('Gagal mencetak rapor siswa: ' . $e->getMessage());
             header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
             exit();
         }
-
-        if (!$isAdmin && (int)($siswa['wali_kelas_id'] ?? 0) !== $guruId) {
-            FlashHelper::setError('Anda tidak memiliki hak akses sebagai Wali Kelas siswa ini.');
-            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
-            exit();
-        }
-
-        require_once ROOT_PATH . 'models/AcademicModel.php';
-        $academicModel = new AcademicModel();
-        $activeTa = $academicModel->getActiveTahunAjaran();
-        $taId = $activeTa['id'] ?? 4;
-        $activeSemester = $activeTa['semester'] ?? 'Ganjil';
-
-        $singleReport = $this->getStudentRaporFullData($siswaId, $taId, $activeSemester);
-        if (!$singleReport) {
-            FlashHelper::setError('Gagal memuat dokumen E-Rapor siswa.');
-            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
-            exit();
-        }
-
-        $allRaporList = [$singleReport];
-        $kelas = [
-            'id' => $siswa['kelas_id'],
-            'nama_kelas' => $singleReport['siswa']['nama_kelas'] ?? '',
-            'nama_jurusan' => $singleReport['siswa']['nama_jurusan'] ?? '',
-            'nama_walikelas' => $singleReport['waliKelas']['nama_lengkap'] ?? ''
-        ];
-
-        require_once ROOT_PATH . 'views/guru/cetak_rapor_rombel.php';
     }
 }
-
