@@ -731,9 +731,9 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                         <th style="width: 24%; text-align: left; padding: 6px 6px;">MATA PELAJARAN</th>
                         <th style="width: 7%; text-align: center; white-space: nowrap; padding: 6px 2px;">KKM</th>
                         <th style="width: 12%; text-align: center; white-space: nowrap; padding: 6px 2px;">NILAI AKHIR</th>
-                        <th style="width: 9%; text-align: center; white-space: nowrap; padding: 6px 2px;">PREDIKAT</th>
-                        <th style="width: 11%; text-align: center; white-space: nowrap; padding: 6px 2px;">KETUNTASAN</th>
-                        <th style="width: 33%; text-align: left; padding: 6px 6px; white-space: nowrap;">CAPAIAN KOMPETENSI</th>
+                        <th style="width: 8%; text-align: center; white-space: nowrap; padding: 6px 2px;">PREDIKAT</th>
+                        <th style="width: 13%; text-align: center; white-space: nowrap; padding: 6px 6px;">KETUNTASAN</th>
+                        <th style="width: 32%; text-align: left; padding: 6px 6px; white-space: nowrap;">CAPAIAN KOMPETENSI</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -753,8 +753,8 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                             <td style="border: 1px solid #0f172a; padding: 5px 3px; text-align: center; background: #ffffff; vertical-align: middle;">
                                 <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 1px 6px; font-weight: 700; font-size: 0.72rem; color: #0f172a; background: #ffffff;"><?= $row['pred']['grade'] ?></span>
                             </td>
-                            <td style="border: 1px solid #0f172a; padding: 5px 3px; text-align: center; background: #ffffff; vertical-align: middle;">
-                                <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 1px 5px; font-weight: 700; font-size: 0.68rem; color: #0f172a; background: #ffffff;"><?= $row['is_tuntas'] ? 'TUNTAS' : 'REMEDIAL' ?></span>
+                            <td style="border: 1px solid #0f172a; padding: 5px 6px; text-align: center; background: #ffffff; vertical-align: middle; white-space: nowrap;">
+                                <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 2px 8px; font-weight: 700; font-size: 0.68rem; letter-spacing: 0.3px; color: #0f172a; background: #ffffff;"><?= $row['is_tuntas'] ? 'TUNTAS' : 'REMEDIAL' ?></span>
                             </td>
                             <td style="border: 1px solid #0f172a; padding: 4px 6px; text-align: left; font-size: 0.70rem; line-height: 1.35; color: #0f172a; background: #ffffff; vertical-align: middle;">
                                 <?= htmlspecialchars($row['deskripsi']) ?>
@@ -773,8 +773,8 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                             <td style="border: 1px solid #0f172a; padding: 4px 3px; text-align: center; background: #ffffff; vertical-align: middle;">
                                 <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 1px 6px; font-weight: 700; font-size: 0.70rem; color: #0f172a; background: #ffffff;"><?= $avgPred['grade'] ?></span>
                             </td>
-                            <td style="border: 1px solid #0f172a; padding: 4px 3px; text-align: center; background: #ffffff; vertical-align: middle;">
-                                <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 1px 5px; font-weight: 700; font-size: 0.65rem; color: #0f172a; background: #ffffff;"><?= $allTuntas ? 'TUNTAS' : 'REMEDIAL' ?></span>
+                            <td style="border: 1px solid #0f172a; padding: 4px 6px; text-align: center; background: #ffffff; vertical-align: middle; white-space: nowrap;">
+                                <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 2px 8px; font-weight: 700; font-size: 0.65rem; letter-spacing: 0.3px; color: #0f172a; background: #ffffff;"><?= $allTuntas ? 'TUNTAS' : 'REMEDIAL' ?></span>
                             </td>
                             <td style="border: 1px solid #0f172a; padding: 4px 6px; text-align: left; font-size: 0.68rem; line-height: 1.25; font-weight: 600; color: #0f172a; background: #ffffff; vertical-align: middle;">
                                 <?= $allTuntas 
