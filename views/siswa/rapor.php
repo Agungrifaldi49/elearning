@@ -79,10 +79,10 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
     }
 }
 
-/* PAGE MEDIA SETUP: Standar Cetak A4 Maupun F4 (Folio) dengan Jarak Aman Anti-Terpotong */
+/* PAGE MEDIA SETUP: Standar Cetak A4 Maupun F4 (Folio) Bebas Header-Footer Browser */
 @page {
     size: auto; 
-    margin: 12mm 12mm 14mm 12mm; /* Jarak aman atas, kanan, bawah, dan kiri di setiap lembar cetak */
+    margin: 0; /* Margin 0 mematikan URL, tanggal/waktu, dan header/footer default browser */
 }
 
 /* Print Friendly Styles - 100% Background Putih, Presisi, Rapih & Elegan (A4 & F4 Ready) */
@@ -121,7 +121,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
     .rapor-card-paper {
         box-shadow: none !important;
         border: none !important;
-        padding: 0 !important; /* Menggunakan margin konsisten dari @page */
+        padding: 8mm 12mm 12mm 12mm !important; /* Jarak aman tepi kertas */
         border-radius: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
@@ -167,9 +167,6 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
     }
     table.table-print-official thead {
         display: table-header-group !important; /* Header kolom otomatis mengulang di halaman lanjutan */
-    }
-    table.table-print-official tfoot {
-        display: table-footer-group !important;
     }
     table.table-print-official tr {
         page-break-inside: avoid !important;
@@ -275,7 +272,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     <i class="bi bi-printer-fill fs-5"></i> Cetak / Simpan PDF E-Rapor
                 </button>
                 <small class="text-white-50" style="font-size: 0.74rem;">
-                    <i class="bi bi-file-earmark-check me-1"></i> Standar Resmi A4 & F4 (Folio) — Bebas URL & tanggal browser
+                    <i class="bi bi-info-circle me-1"></i> Tips Cetak Bersih: Hilangkan centang <em>"Header dan footer"</em> di dialog print browser.
                 </small>
             </div>
         </div>
@@ -804,11 +801,8 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-                <?php if (!empty($calculatedRows)): ?>
-                    <tfoot>
-                        <!-- BARIS RATA-RATA: Ukuran Font Diperkecil, 1 Baris Rapih & Background Putih Bersih -->
+
+                        <!-- BARIS RATA-RATA: DITAMPILKAN DI AKHIR SETELAH SELURUH MAPEL SELESAI DICETAK -->
                         <tr style="background: #ffffff; border-top: 2px solid #0f172a; page-break-inside: avoid !important; break-inside: avoid !important;">
                             <td colspan="3" style="border: 1px solid #0f172a; padding: 3.5px 5px; text-align: right; font-weight: 700; font-size: 0.68rem; letter-spacing: 0.2px; white-space: nowrap; color: #0f172a; background: #ffffff; vertical-align: middle;">
                                 RATA-RATA NILAI AKHIR SEMESTER
@@ -828,8 +822,8 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                                     : 'Status Akademik: Terdapat mata pelajaran yang memerlukan pendampingan/remedial.' ?>
                             </td>
                         </tr>
-                    </tfoot>
-                <?php endif; ?>
+                    <?php endif; ?>
+                </tbody>
             </table>
         </div>
 

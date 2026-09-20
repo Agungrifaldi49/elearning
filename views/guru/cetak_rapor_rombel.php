@@ -234,16 +234,16 @@ if (empty($logoUrl)) {
             break-inside: avoid !important;
         }
 
-        /* PRINT MEDIA RULES (A4 & F4 READY DENGAN JARAK AMAN ANTI-TERPOTONG) */
+        /* PRINT MEDIA RULES (A4 & F4 READY DENGAN JARAK AMAN & ANTI-HEADER/FOOTER BROWSER) */
         @page {
             size: auto; /* Otomatis A4 / F4 */
-            margin: 12mm 12mm 14mm 12mm; /* Jarak aman di sekeliling kertas pada setiap halaman cetak */
+            margin: 0; /* Margin 0 mematikan URL, tanggal, dan header/footer default browser */
         }
         @media print {
             .no-print, .bulk-print-toolbar {
                 display: none !important;
             }
-            body {
+            html, body {
                 background: #ffffff !important;
                 color: #0f172a !important;
                 font-size: 0.70rem;
@@ -252,6 +252,7 @@ if (empty($logoUrl)) {
             }
             .paper-wrapper {
                 padding: 0 !important;
+                margin: 0 !important;
                 gap: 0 !important;
                 display: block !important;
             }
@@ -259,11 +260,12 @@ if (empty($logoUrl)) {
                 width: 100% !important;
                 min-height: auto !important;
                 box-shadow: none !important;
-                padding: 0 !important; /* Gunakan margin dari @page agar konsisten di setiap halaman */
+                padding: 8mm 12mm 12mm 12mm !important; /* Jarak aman tepi kertas */
                 margin: 0 auto !important;
                 border: none !important;
                 border-radius: 0 !important;
                 background: #ffffff !important;
+                box-sizing: border-box !important;
                 page-break-inside: auto !important;
                 break-inside: auto !important;
             }
@@ -275,9 +277,6 @@ if (empty($logoUrl)) {
             /* Anti Terpotong di Garis Bawah Kertas */
             table.table-official thead {
                 display: table-header-group !important;
-            }
-            table.table-official tfoot {
-                display: table-footer-group !important;
             }
             table.table-official tr {
                 page-break-inside: avoid !important;
@@ -320,10 +319,11 @@ if (empty($logoUrl)) {
             </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <span style="font-size: 0.75rem; color: #64748b;">
-                <i class="bi bi-file-earmark-check me-1"></i>Standar A4 / F4 (Folio) &bull; Centang <em>Background Graphics</em> di dialog print
-            </span>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 9999px; padding: 4px 14px; font-size: 0.74rem; color: #1e40af; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="bi bi-info-circle-fill text-primary"></i>
+                <span><strong>Cetak Bersih:</strong> Di dialog print browser, pilih <em>"Setelan lainnya" (More settings)</em> &rarr; <strong>Hilangkan centang "Header dan footer"</strong> agar tanggal & link URL tidak muncul.</span>
+            </div>
             <button type="button" class="btn-print" onclick="printOfficialBulkRapor()">
                 <i class="bi bi-printer-fill fs-5"></i> Cetak E-Rapor (<?= count($allRaporList) ?> Siswa)
             </button>
@@ -501,11 +501,8 @@ if (empty($logoUrl)) {
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                        <?php if (!empty($calcRows)): ?>
-                            <tfoot>
-                                <!-- BARIS RATA-RATA NILAI AKHIR (BACKGROUND PUTIH, FONT RAPI, UKURAN PROPORSIONAL) -->
+
+                                <!-- BARIS RATA-RATA NILAI AKHIR (DITAMPILKAN DI AKHIR SETELAH SELURUH MAPEL SELESAI DICETAK) -->
                                 <tr style="background: #ffffff; border-top: 2px solid #0f172a; page-break-inside: avoid !important; break-inside: avoid !important;">
                                     <td colspan="3" style="text-align: right; font-weight: 700; font-size: 0.68rem; padding: 3.5px 5px; white-space: nowrap;">
                                         RATA-RATA NILAI AKHIR SEMESTER
@@ -525,8 +522,8 @@ if (empty($logoUrl)) {
                                             : 'Status Akademik: Terdapat mata pelajaran yang memerlukan pendampingan/remedial.' ?>
                                     </td>
                                 </tr>
-                            </tfoot>
-                        <?php endif; ?>
+                            <?php endif; ?>
+                        </tbody>
                     </table>
 
                     <!-- REKAP KETIDAKHADIRAN & CATATAN WALI KELAS (ANTI-TERPOTONG DI BATAS HALAMAN) -->
