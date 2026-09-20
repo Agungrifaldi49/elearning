@@ -168,6 +168,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         font-size: 0.72rem !important;
         letter-spacing: 0.2px !important;
         vertical-align: middle !important;
+        text-align: center !important;
         padding: 6px 4px !important;
         line-height: 1.25 !important;
         box-sizing: border-box !important;
@@ -727,13 +728,13 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
             <table class="table-print-official" style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a; background: #ffffff; table-layout: fixed; font-size: 0.74rem;">
                 <thead>
                     <tr style="background: #ffffff;">
-                        <th style="width: 4%; text-align: center; white-space: nowrap; padding: 6px 2px;">NO</th>
-                        <th style="width: 24%; text-align: left; padding: 6px 6px;">MATA PELAJARAN</th>
-                        <th style="width: 7%; text-align: center; white-space: nowrap; padding: 6px 2px;">KKM</th>
-                        <th style="width: 12%; text-align: center; white-space: nowrap; padding: 6px 2px;">NILAI AKHIR</th>
-                        <th style="width: 8%; text-align: center; white-space: nowrap; padding: 6px 2px;">PREDIKAT</th>
-                        <th style="width: 13%; text-align: center; white-space: nowrap; padding: 6px 6px;">KETUNTASAN</th>
-                        <th style="width: 32%; text-align: left; padding: 6px 6px; white-space: nowrap;">CAPAIAN KOMPETENSI</th>
+                        <th style="width: 4%; text-align: center !important; white-space: nowrap; padding: 6px 2px;">NO</th>
+                        <th style="width: 24%; text-align: center !important; white-space: nowrap; padding: 6px 4px;">MATA PELAJARAN</th>
+                        <th style="width: 6%; text-align: center !important; white-space: nowrap; padding: 6px 2px;">KKM</th>
+                        <th style="width: 12%; text-align: center !important; white-space: nowrap; padding: 6px 2px;">NILAI AKHIR</th>
+                        <th style="width: 11%; text-align: center !important; white-space: nowrap; padding: 6px 4px;">PREDIKAT</th>
+                        <th style="width: 13%; text-align: center !important; white-space: nowrap; padding: 6px 4px;">KETUNTASAN</th>
+                        <th style="width: 30%; text-align: center !important; white-space: nowrap; padding: 6px 4px;">CAPAIAN KOMPETENSI</th>
                     </tr>
                 </thead>
                 <tbody>
