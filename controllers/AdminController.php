@@ -1441,15 +1441,59 @@ class AdminController {
                 else FlashHelper::setError($res['message']);
 
             } elseif ($action === 'assign_rombel') {
-                $res = $currModel->assignRombelKurikulum([
-                    'rombel_id' => (int)$_POST['rombel_id'],
-                    'tahun_ajaran_id' => (int)$_POST['tahun_ajaran_id'],
-                    'kurikulum_id' => (int)$_POST['kurikulum_id'],
-                    'fase_id' => !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null,
-                    'status' => $_POST['status'] ?? 'aktif'
-                ]);
-                if ($res['status']) FlashHelper::setSuccess($res['message']);
-                else FlashHelper::setError($res['message']);
+                $rombelIds = [];
+                if (!empty($_POST['rombel_ids']) && is_array($_POST['rombel_ids'])) {
+                    $rombelIds = array_map('intval', $_POST['rombel_ids']);
+                } elseif (!empty($_POST['rombel_id'])) {
+                    if (is_array($_POST['rombel_id'])) {
+                        $rombelIds = array_map('intval', $_POST['rombel_id']);
+                    } else {
+                        $rombelIds = [(int)$_POST['rombel_id']];
+                    }
+                }
+
+                $rombelIds = array_values(array_filter($rombelIds, fn($id) => $id > 0));
+
+                $tahunAjaranId = (int)($_POST['tahun_ajaran_id'] ?? 0);
+                $kurikulumId = (int)($_POST['kurikulum_id'] ?? 0);
+                $faseId = !empty($_POST['fase_id']) ? (int)$_POST['fase_id'] : null;
+                $status = in_array($_POST['status'] ?? '', ['aktif', 'selesai', 'non-aktif'], true) ? $_POST['status'] : 'aktif';
+
+                if (empty($rombelIds)) {
+                    FlashHelper::setError('Pilih minimal satu rombel kelas.');
+                } elseif ($tahunAjaranId <= 0 || $kurikulumId <= 0) {
+                    FlashHelper::setError('Tahun ajaran dan kurikulum wajib dipilih.');
+                } else {
+                    $successCount = 0;
+                    $errorCount = 0;
+                    $errorDetails = [];
+
+                    foreach ($rombelIds as $rId) {
+                        $res = $currModel->assignRombelKurikulum([
+                            'rombel_id' => $rId,
+                            'tahun_ajaran_id' => $tahunAjaranId,
+                            'kurikulum_id' => $kurikulumId,
+                            'fase_id' => $faseId,
+                            'status' => $status
+                        ]);
+                        if ($res['status']) {
+                            $successCount++;
+                        } else {
+                            $errorCount++;
+                            $errorDetails[] = $res['message'];
+                        }
+                    }
+
+                    if ($errorCount === 0) {
+                        FlashHelper::setSuccess("Berhasil memasang kurikulum pada {$successCount} rombel kelas.");
+                    } elseif ($successCount > 0) {
+                        $uniqueErrors = array_unique($errorDetails);
+                        FlashHelper::setWarning("Berhasil memasang kurikulum pada {$successCount} rombel kelas. ({$errorCount} kelas dilewati/bentrok: " . implode('; ', array_slice($uniqueErrors, 0, 2)) . ")");
+                    } else {
+                        $uniqueErrors = array_unique($errorDetails);
+                        FlashHelper::setError("Gagal memasang kurikulum: " . implode('; ', array_slice($uniqueErrors, 0, 2)));
+                    }
+                }
 
             } elseif ($action === 'update_rombel') {
                 $id = (int)$_POST['id'];
