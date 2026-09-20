@@ -56,6 +56,13 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
     }
 }
 
+/* Screen & Print Layout Rules */
+@media screen {
+    .header-print {
+        display: none !important;
+    }
+}
+
 /* Print Friendly Styles */
 @media print {
     .no-print, header, nav, .sidebar, .navbar, .main-content-header {
@@ -85,7 +92,56 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         width: 100% !important;
         min-width: 100% !important;
         table-layout: auto !important;
+        border-collapse: collapse !important;
     }
+    table.grade-table th, 
+    table.grade-table td {
+        border: 1px solid #1e293b !important;
+        padding: 6px 8px !important;
+    }
+    .grade-table-header {
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
+    }
+
+    /* Saat Print: Sembunyikan Header 2-Baris Screen */
+    .header-screen {
+        display: none !important;
+    }
+    /* Saat Print: Tampilkan Header Tunggal Resmi Tanpa Komponen */
+    .header-print {
+        display: table-row !important;
+    }
+    .header-print th {
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        font-size: 0.82rem !important;
+        vertical-align: middle !important;
+        text-align: center !important;
+    }
+    .header-print th.text-start {
+        text-align: left !important;
+    }
+
+    /* SEMBUNYIKAN SELURUH KOMPONEN PENILAIAN (Tugas, Kuis, UTS, UAS) SAAT PRINT */
+    .col-komponen {
+        display: none !important;
+    }
+
+    /* DESKRIPSI CAPAIAN KOMPETENSI WAJIB TAMPIL PENUH & JELAS SAAT PRINT */
+    .cell-deskripsi {
+        display: table-cell !important;
+        width: 42% !important;
+        min-width: 220px !important;
+        text-align: left !important;
+        font-size: 0.76rem !important;
+        line-height: 1.35 !important;
+        color: #0f172a !important;
+        word-wrap: break-word !important;
+        white-space: normal !important;
+    }
+
     ::-webkit-scrollbar {
         display: none !important;
     }
@@ -94,9 +150,26 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         print-color-adjust: exact !important;
     }
     .badge {
-        border: 1px solid #94a3b8 !important;
+        border: 1px solid #64748b !important;
         color: #0f172a !important;
-        background: #f8fafc !important;
+        background: transparent !important;
+        font-size: 0.72rem !important;
+    }
+    .badge.bg-secondary {
+        border-color: #64748b !important;
+        color: #334155 !important;
+    }
+    .badge.bg-success {
+        border-color: #166534 !important;
+        color: #166534 !important;
+    }
+    .badge.bg-danger {
+        border-color: #991b1b !important;
+        color: #991b1b !important;
+    }
+    .badge.bg-warning {
+        border-color: #854d0e !important;
+        color: #854d0e !important;
     }
 }
 </style>
@@ -396,33 +469,45 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         <div class="rapor-table-scroll mb-4">
             <table class="table grade-table table-bordered text-center align-middle mb-0">
                 <thead class="grade-table-header">
-                    <tr>
+                    <!-- SCREEN HEADER: 2 Baris Lengkap dengan Rincian Komponen Penilaian (Tampil di Layar Monitor/HP) -->
+                    <tr class="header-screen">
                         <th class="text-start" rowspan="2" style="width:40px;">No</th>
                         <th class="text-start" rowspan="2" style="min-width:180px;">Mata Pelajaran</th>
                         <th rowspan="2" style="width:60px;">KKM</th>
-                        <th colspan="4" class="text-center py-2" style="background-color: #f1f5f9;">Komponen Penilaian</th>
+                        <th colspan="4" class="text-center py-2 col-komponen" style="background-color: #f1f5f9;">Komponen Penilaian</th>
                         <th rowspan="2" style="width:85px;">Nilai Akhir</th>
                         <th rowspan="2" style="width:75px;">Predikat</th>
                         <th rowspan="2" style="width:95px;">Ketuntasan</th>
-                        <th rowspan="2" class="text-start" style="min-width:240px;">Deskripsi Capaian Kompetensi</th>
+                        <th rowspan="2" class="text-start cell-deskripsi" style="min-width:240px;">Deskripsi Capaian Kompetensi</th>
                     </tr>
-                    <tr style="background-color: #f8fafc;">
-                        <th style="min-width:130px; vertical-align:middle;" class="px-2 py-2">
+                    <tr class="header-screen" style="background-color: #f8fafc;">
+                        <th style="min-width:130px; vertical-align:middle;" class="px-2 py-2 col-komponen">
                             <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;"><?= htmlspecialchars($lblTugas) ?></div>
                             <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600;">(<?= $pTugas ?>%)</span>
                         </th>
-                        <th style="min-width:130px; vertical-align:middle;" class="px-2 py-2">
+                        <th style="min-width:130px; vertical-align:middle;" class="px-2 py-2 col-komponen">
                             <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;"><?= htmlspecialchars($lblQuiz) ?></div>
                             <span class="badge bg-warning bg-opacity-10 text-dark rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(245, 158, 11, 0.15) !important;">(<?= $pQuiz ?>%)</span>
                         </th>
-                        <th style="min-width:140px; vertical-align:middle;" class="px-2 py-2">
+                        <th style="min-width:140px; vertical-align:middle;" class="px-2 py-2 col-komponen">
                             <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;"><?= htmlspecialchars($lblUts) ?></div>
                             <span class="badge bg-info bg-opacity-10 text-dark rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(14, 165, 233, 0.15) !important;">(<?= $pUts ?>%)</span>
                         </th>
-                        <th style="min-width:140px; vertical-align:middle;" class="px-2 py-2">
+                        <th style="min-width:140px; vertical-align:middle;" class="px-2 py-2 col-komponen">
                             <div class="fw-bold text-dark" style="font-size:0.8rem; line-height:1.25;"><?= htmlspecialchars($lblUas) ?></div>
                             <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-0.5 mt-1" style="font-size:0.68rem; font-weight:600; background-color: rgba(16, 185, 129, 0.15) !important;">(<?= $pUas ?>%)</span>
                         </th>
+                    </tr>
+
+                    <!-- PRINT HEADER: Baris Tunggal Resmi (Tanpa Komponen, Langsung Nilai Akhir & Deskripsi Wajib Muncul) -->
+                    <tr class="header-print">
+                        <th class="text-center" style="width:35px;">No</th>
+                        <th class="text-start" style="width:26%;">Mata Pelajaran</th>
+                        <th class="text-center" style="width:55px;">KKM</th>
+                        <th class="text-center" style="width:85px;">Nilai Akhir</th>
+                        <th class="text-center" style="width:70px;">Predikat</th>
+                        <th class="text-center" style="width:90px;">Ketuntasan</th>
+                        <th class="text-start cell-deskripsi" style="width:44%;">Deskripsi Capaian Kompetensi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -469,25 +554,25 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                             );
                         ?>
                         <tr>
-                            <td><?= $i + 1 ?></td>
+                            <td class="text-center"><?= $i + 1 ?></td>
                             <td class="text-start fw-bold text-dark"><?= htmlspecialchars($n['nama_mapel']) ?></td>
-                            <td><span class="badge bg-secondary rounded-pill"><?= (int)$kkmVal ?></span></td>
-                            <td><?= number_format((float)($n['nilai_tugas'] ?? 0), 0) ?></td>
-                            <td><?= number_format((float)($n['nilai_quiz'] ?? 0), 0) ?></td>
-                            <td><?= number_format((float)($n['nilai_uts'] ?? 0), 0) ?></td>
-                            <td><?= number_format((float)($n['nilai_uas'] ?? 0), 0) ?></td>
-                            <td class="fw-bold fs-6 text-primary"><?= number_format($akhirRow, 1) ?></td>
-                            <td>
+                            <td class="text-center"><span class="badge bg-secondary rounded-pill"><?= (int)$kkmVal ?></span></td>
+                            <td class="col-komponen text-center"><?= number_format((float)($n['nilai_tugas'] ?? 0), 0) ?></td>
+                            <td class="col-komponen text-center"><?= number_format((float)($n['nilai_quiz'] ?? 0), 0) ?></td>
+                            <td class="col-komponen text-center"><?= number_format((float)($n['nilai_uts'] ?? 0), 0) ?></td>
+                            <td class="col-komponen text-center"><?= number_format((float)($n['nilai_uas'] ?? 0), 0) ?></td>
+                            <td class="fw-bold fs-6 text-primary text-center"><?= number_format($akhirRow, 1) ?></td>
+                            <td class="text-center">
                                 <span class="badge <?= $pred['class'] ?> rounded-pill px-2.5 py-1">
                                     <?= $pred['grade'] ?>
                                 </span>
                             </td>
-                            <td>
+                            <td class="text-center">
                                 <span class="badge <?= $isTuntas ? 'bg-success' : 'bg-danger' ?> rounded-pill px-2 py-1" style="font-size:0.75rem;">
                                     <?= $isTuntas ? 'TUNTAS' : 'BELUM' ?>
                                 </span>
                             </td>
-                            <td class="text-start small text-muted lh-sm">
+                            <td class="text-start small cell-deskripsi" style="color: #1e293b;">
                                 <?= htmlspecialchars($deskripsiCapaian) ?>
                             </td>
                         </tr>
@@ -504,10 +589,10 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                         ?>
                         <tr class="table-primary fw-bold text-center align-middle" style="background-color: #e0e7ff !important; border-top: 2px solid #6366f1;">
                             <td colspan="3" class="text-end fw-bold py-2.5 px-3" style="letter-spacing: 0.3px;">RATA-RATA NILAI AKHIR SEMESTER</td>
-                            <td class="fw-bold text-dark"><?= number_format($avgTugas, 1) ?></td>
-                            <td class="fw-bold text-dark"><?= number_format($avgQuiz, 1) ?></td>
-                            <td class="fw-bold text-dark"><?= number_format($avgUts, 1) ?></td>
-                            <td class="fw-bold text-dark"><?= number_format($avgUas, 1) ?></td>
+                            <td class="fw-bold text-dark col-komponen"><?= number_format($avgTugas, 1) ?></td>
+                            <td class="fw-bold text-dark col-komponen"><?= number_format($avgQuiz, 1) ?></td>
+                            <td class="fw-bold text-dark col-komponen"><?= number_format($avgUts, 1) ?></td>
+                            <td class="fw-bold text-dark col-komponen"><?= number_format($avgUas, 1) ?></td>
                             <td class="fs-6 text-primary fw-bold"><?= number_format($avgAkhir, 1) ?></td>
                             <td>
                                 <span class="badge <?= $avgPred['class'] ?> rounded-pill px-2.5 py-1">
@@ -519,7 +604,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                                     <?= $allTuntas ? 'TUNTAS' : 'REMEDIAL' ?>
                                 </span>
                             </td>
-                            <td class="text-start small text-primary fw-semibold">
+                            <td class="text-start small text-primary fw-semibold cell-deskripsi">
                                 <?= $allTuntas 
                                     ? 'Status Akademik: Memenuhi Kriteria Ketercapaian Tujuan Pembelajaran (KKTP).' 
                                     : 'Status Akademik: Terdapat mata pelajaran yang memerlukan pendampingan/remedial.' ?>
@@ -544,7 +629,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         </div>
 
         <!-- Signature Section -->
-        <div class="row g-4 mt-4 text-center">
+        <div class="row g-4 mt-4 text-center signature-section" style="page-break-inside: avoid; break-inside: avoid;">
             <div class="col-12 col-sm-4 mb-3 mb-sm-0">
                 <p class="mb-0 small text-muted">Mengetahui,</p>
                 <p class="fw-bold mb-0 text-dark">Orang Tua / Wali Siswa</p>
