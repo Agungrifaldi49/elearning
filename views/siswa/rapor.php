@@ -42,6 +42,29 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
     border: 1px solid #e2e8f0;
 }
 
+.kop-divider {
+    border-top: 2.5px solid #0f172a;
+    border-bottom: 1px solid #0f172a;
+    height: 4px;
+    margin: 10px 0 14px 0;
+}
+
+.student-info-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+}
+
+.signature-line {
+    border-top: 1px dashed #475569;
+    width: 75%;
+    margin: 50px auto 4px auto;
+}
+
+.print-seal-note {
+    display: none;
+}
+
 @media (max-width: 767.98px) {
     table.grade-table {
         min-width: 680px !important;
@@ -56,58 +79,117 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
     }
 }
 
-/* Screen & Print Layout Rules */
+/* Screen Layout Rules */
 @media screen {
     .header-print {
         display: none !important;
     }
 }
 
-/* Print Friendly Styles */
+/* PAGE MEDIA SETUP: Menghilangkan otomatis header browser (tanggal & title) dan footer browser (URL) */
+@page {
+    size: A4 portrait;
+    margin: 0; /* Menghilangkan tanggal/jam, nama dokumen/title, dan URL browser */
+}
+
+/* Print Friendly Styles - Resmi, Rapih, Modern */
 @media print {
-    .no-print, header, nav, .sidebar, .navbar, .main-content-header {
+    .no-print, header, nav, .sidebar, .navbar, .main-content-header, #btn-print-wrapper {
         display: none !important;
     }
-    body, .main-content, .container-fluid, .rapor-wrapper {
+    
+    html, body {
         background: #ffffff !important;
         margin: 0 !important;
         padding: 0 !important;
         width: 100% !important;
+        color: #0f172a !important;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
+
+    .main-content, .container-fluid, .rapor-wrapper {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
     .rapor-hero-banner {
         display: none !important;
     }
+
+    /* Kertas A4 Bersih dengan Margin Fisik Resmi 12mm x 15mm */
     .rapor-card-paper {
         box-shadow: none !important;
         border: none !important;
-        padding: 0 !important;
+        padding: 12mm 15mm 12mm 15mm !important;
         border-radius: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        background: #ffffff !important;
+        box-sizing: border-box !important;
     }
+
+    .rapor-kop-header {
+        margin-bottom: 6px !important;
+    }
+
+    .kop-divider {
+        border-top: 2.5px solid #0f172a !important;
+        border-bottom: 1px solid #0f172a !important;
+        height: 4px !important;
+        margin: 8px 0 12px 0 !important;
+    }
+
+    /* Kotak Identitas Siswa saat Print */
+    .student-info-box {
+        background: #f8fafc !important;
+        border: 1px solid #94a3b8 !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
+        margin-bottom: 12px !important;
+    }
+    .student-table td {
+        padding: 2px 4px !important;
+        font-size: 0.78rem !important;
+        color: #0f172a !important;
+    }
+    .student-table td.text-muted {
+        color: #475569 !important;
+        font-weight: 500 !important;
+    }
+
+    /* Tabel Nilai saat Print */
     .rapor-table-scroll {
         border: none !important;
         overflow: visible !important;
         display: block !important;
+        margin-bottom: 12px !important;
     }
     table.grade-table {
         width: 100% !important;
         min-width: 100% !important;
-        table-layout: auto !important;
+        table-layout: fixed !important;
         border-collapse: collapse !important;
+        border: 1.5px solid #0f172a !important;
     }
     table.grade-table th, 
     table.grade-table td {
-        border: 1px solid #1e293b !important;
-        padding: 6px 8px !important;
-    }
-    .grade-table-header {
-        background-color: #f1f5f9 !important;
+        border: 1px solid #334155 !important;
+        padding: 5px 6px !important;
         color: #0f172a !important;
+        vertical-align: middle !important;
     }
 
-    /* Saat Print: Sembunyikan Header 2-Baris Screen */
-    .header-screen {
+    /* Saat Print: Sembunyikan Header 2-Baris Screen & Sel Komponen */
+    .header-screen, .col-komponen {
         display: none !important;
     }
+
     /* Saat Print: Tampilkan Header Tunggal Resmi Tanpa Komponen */
     .header-print {
         display: table-row !important;
@@ -116,30 +198,104 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         background-color: #f1f5f9 !important;
         color: #0f172a !important;
         font-weight: 700 !important;
-        font-size: 0.82rem !important;
+        font-size: 0.78rem !important;
         vertical-align: middle !important;
         text-align: center !important;
+        border: 1px solid #334155 !important;
+        padding: 6px 4px !important;
+        text-transform: uppercase !important;
     }
     .header-print th.text-start {
         text-align: left !important;
     }
 
-    /* SEMBUNYIKAN SELURUH KOMPONEN PENILAIAN (Tugas, Kuis, UTS, UAS) SAAT PRINT */
-    .col-komponen {
-        display: none !important;
-    }
+    /* Proporsi Kolom Print Total 100% */
+    .col-p-no { width: 4% !important; }
+    .col-p-mapel { width: 25% !important; }
+    .col-p-kkm { width: 7% !important; }
+    .col-p-akhir { width: 10% !important; }
+    .col-p-predikat { width: 8% !important; }
+    .col-p-ketuntasan { width: 10% !important; }
+    .col-p-deskripsi { width: 36% !important; }
 
     /* DESKRIPSI CAPAIAN KOMPETENSI WAJIB TAMPIL PENUH & JELAS SAAT PRINT */
     .cell-deskripsi {
         display: table-cell !important;
-        width: 42% !important;
-        min-width: 220px !important;
         text-align: left !important;
-        font-size: 0.76rem !important;
+        font-size: 0.72rem !important;
         line-height: 1.35 !important;
         color: #0f172a !important;
         word-wrap: break-word !important;
         white-space: normal !important;
+        padding: 4px 6px !important;
+    }
+
+    /* Baris Rata-Rata Saat Print */
+    tr.table-primary {
+        background-color: #f1f5f9 !important;
+        border-top: 2px solid #0f172a !important;
+    }
+
+    /* Badges Saat Print */
+    .badge {
+        font-size: 0.72rem !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+        border: 1px solid #64748b !important;
+        background: transparent !important;
+        color: #0f172a !important;
+        font-weight: 600 !important;
+    }
+    .badge.bg-secondary {
+        border-color: #475569 !important;
+        color: #334155 !important;
+    }
+    .badge.bg-success {
+        border-color: #166534 !important;
+        color: #166534 !important;
+        background: rgba(22, 101, 52, 0.08) !important;
+    }
+    .badge.bg-danger {
+        border-color: #991b1b !important;
+        color: #991b1b !important;
+        background: rgba(153, 27, 27, 0.08) !important;
+    }
+    .badge.bg-warning {
+        border-color: #854d0e !important;
+        color: #854d0e !important;
+        background: rgba(133, 77, 14, 0.08) !important;
+    }
+    .badge.bg-primary {
+        border-color: #1e40af !important;
+        color: #1e40af !important;
+        background: rgba(30, 64, 175, 0.08) !important;
+    }
+
+    /* Tanda Tangan */
+    .signature-section {
+        margin-top: 16px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    .signature-section p, .signature-section small {
+        color: #0f172a !important;
+    }
+    .signature-line {
+        border-top: 1px solid #1e293b !important;
+        width: 75% !important;
+        margin: 45px auto 4px auto !important;
+    }
+
+    /* Catatan Keabsahan & Validasi Dokumen */
+    .print-seal-note {
+        display: block !important;
+        margin-top: 16px !important;
+        padding-top: 6px !important;
+        border-top: 1px solid #cbd5e1 !important;
+        font-size: 0.65rem !important;
+        color: #64748b !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
 
     ::-webkit-scrollbar {
@@ -148,28 +304,6 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-    }
-    .badge {
-        border: 1px solid #64748b !important;
-        color: #0f172a !important;
-        background: transparent !important;
-        font-size: 0.72rem !important;
-    }
-    .badge.bg-secondary {
-        border-color: #64748b !important;
-        color: #334155 !important;
-    }
-    .badge.bg-success {
-        border-color: #166534 !important;
-        color: #166534 !important;
-    }
-    .badge.bg-danger {
-        border-color: #991b1b !important;
-        color: #991b1b !important;
-    }
-    .badge.bg-warning {
-        border-color: #854d0e !important;
-        color: #854d0e !important;
     }
 }
 </style>
@@ -190,17 +324,22 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                 </div>
             </div>
 
-            <button onclick="window.print()" class="btn btn-success fw-bold rounded-pill shadow-sm px-4 py-2.5 text-nowrap" style="font-size: 0.88rem; width: fit-content; max-width: 100%;">
-                <i class="bi bi-printer-fill me-1.5"></i> Cetak / Simpan PDF E-Rapor
-            </button>
+            <div class="d-flex flex-column align-items-start align-items-md-end gap-1.5" id="btn-print-wrapper">
+                <button type="button" onclick="printOfficialRapor()" class="btn btn-success fw-bold rounded-pill shadow-sm px-4 py-2.5 text-nowrap d-flex align-items-center gap-2" style="font-size: 0.88rem; width: fit-content; max-width: 100%;">
+                    <i class="bi bi-printer-fill fs-5"></i> Cetak / Simpan PDF E-Rapor
+                </button>
+                <small class="text-white-50" style="font-size: 0.74rem;">
+                    <i class="bi bi-shield-check me-1"></i> Standar Resmi A4 — Bebas URL & tanggal header browser
+                </small>
+            </div>
         </div>
     </div>
 
     <!-- Rapor Container Paper -->
     <div class="rapor-card-paper p-3 p-sm-4 p-md-5 mb-4">
 
-        <!-- School Header Kop -->
-        <div class="text-center border-bottom pb-4 mb-4">
+        <!-- School Header Kop (Resmi, Elegan & Modern) -->
+        <div class="rapor-kop-header text-center mb-2">
             <div class="d-flex align-items-center justify-content-center gap-3 mb-2 flex-wrap text-center text-sm-start">
                 <?php 
                     $rawLogo = $settings['logo'] ?? '';
@@ -220,17 +359,22 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     }
                 ?>
                 <?php if (!empty($logoUrl)): ?>
-                    <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo Sekolah" style="max-height:64px; width:auto;" class="img-fluid me-sm-1">
+                    <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo Sekolah" style="max-height:66px; width:auto;" class="img-fluid me-sm-1">
                 <?php else: ?>
                     <div class="bg-primary text-white rounded-4 p-2.5 px-3 shadow-sm mx-auto mx-sm-0">
                         <i class="bi bi-mortarboard-fill fs-2"></i>
                     </div>
                 <?php endif; ?>
                 <div>
-                    <h5 class="fw-bold mb-0 text-primary" style="letter-spacing:0.5px;"><?= htmlspecialchars($settings['nama_sekolah'] ?? 'SMK MUTHIA HARAPAN CICALENGKA') ?></h5>
-                    <small class="text-muted d-block"><?= htmlspecialchars($settings['alamat'] ?? 'Jl. Raya Cicalengka, Kab. Bandung, Jawa Barat 40395') ?> <?= !empty($settings['telepon']) ? '| Telp: ' . htmlspecialchars($settings['telepon']) : '' ?></small>
+                    <div class="small fw-semibold text-muted text-uppercase" style="letter-spacing: 0.6px; font-size: 0.76rem;">Pemerintah Daerah Provinsi Jawa Barat &bull; Dinas Pendidikan</div>
+                    <h4 class="fw-bold mb-0 text-dark" style="letter-spacing:0.5px; font-size: 1.25rem;"><?= htmlspecialchars($settings['nama_sekolah'] ?? 'SMK MUTHIA HARAPAN CICALENGKA') ?></h4>
+                    <div class="small text-muted" style="font-size: 0.8rem;"><?= htmlspecialchars($settings['alamat'] ?? 'Jl. Raya Cicalengka, Kab. Bandung, Jawa Barat 40395') ?> <?= !empty($settings['telepon']) ? '| Telp: ' . htmlspecialchars($settings['telepon']) : '' ?></div>
                 </div>
             </div>
+
+            <!-- Garis Ganda Kop Surat Resmi Dinas -->
+            <div class="kop-divider"></div>
+
             <?php
             $tingkatSiswa = strtoupper(trim($siswa['tingkat'] ?? ($raporData['tingkat'] ?? '')));
             if (empty($tingkatSiswa)) {
@@ -262,35 +406,37 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
             $lblUts   = $bobotKomponen['labels']['uts'] ?? 'Sumatif Tengah Semester (STS)';
             $lblUas   = $bobotKomponen['labels']['uas'] ?? 'Sumatif Akhir Semester (SAS)';
             ?>
-            <div class="mt-3 d-flex justify-content-center gap-2 flex-wrap">
-                <span class="fw-bold text-uppercase border border-2 border-primary d-inline-block px-3 py-1.5 rounded-pill bg-primary bg-opacity-10 text-primary" style="font-size:0.8rem;">
-                    <i class="bi bi-award-fill me-1"></i> Laporan Hasil Belajar (E-Rapor) T.A. <?= htmlspecialchars($tahunAjaranText) ?> (Semester <?= htmlspecialchars($semesterText) ?>)
-                </span>
-                <span class="fw-bold border border-2 border-info d-inline-block px-3 py-1.5 rounded-pill bg-info bg-opacity-10 text-dark" style="font-size:0.8rem;">
-                    <i class="bi bi-mortarboard-fill me-1 text-primary"></i> <?= htmlspecialchars($kurikulumText) ?> — <?= htmlspecialchars($faseText) ?>
-                </span>
+            <div class="text-center my-2">
+                <h5 class="fw-bold text-dark text-uppercase mb-1" style="letter-spacing: 0.4px; font-size: 1.05rem;">
+                    LAPORAN HASIL BELAJAR PESERTA DIDIK (E-RAPOR DIGITAL)
+                </h5>
+                <div class="small fw-semibold text-secondary">
+                    Tahun Ajaran <?= htmlspecialchars($tahunAjaranText) ?> (Semester <?= htmlspecialchars($semesterText) ?>) &bull; <?= htmlspecialchars($kurikulumText) ?> &bull; <?= htmlspecialchars($faseText) ?>
+                </div>
             </div>
         </div>
 
-        <!-- Student Info Header Block -->
-        <div class="row g-3 mb-4 p-3 rounded-4 border" style="background: #f8fafc; border-color: #e2e8f0 !important;">
-            <div class="col-12 col-md-6">
-                <table class="table table-sm table-borderless small mb-0">
-                    <tbody>
-                        <tr><td class="text-muted" style="width:40%">Nama Siswa</td><td class="fw-bold text-dark">: <?= htmlspecialchars($siswa['nama_lengkap'] ?? '-') ?></td></tr>
-                        <tr><td class="text-muted">NIS / NISN</td><td class="fw-bold text-dark">: <?= htmlspecialchars($siswa['nis'] ?? '-') ?> / <?= htmlspecialchars($siswa['nisn'] ?? '-') ?></td></tr>
-                        <tr><td class="text-muted">Rombel Kelas</td><td class="fw-bold text-dark">: <?= htmlspecialchars($siswa['nama_kelas'] ?? '-') ?></td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="col-12 col-md-6">
-                <table class="table table-sm table-borderless small mb-0">
-                    <tbody>
-                        <tr><td class="text-muted" style="width:40%">Program Keahlian</td><td class="fw-bold text-dark">: <?= htmlspecialchars($siswa['nama_jurusan'] ?? '-') ?></td></tr>
-                        <tr><td class="text-muted">Kurikulum & Fase</td><td class="fw-bold text-primary">: <?= htmlspecialchars($kurikulumText) ?> (<?= htmlspecialchars($faseText) ?>)</td></tr>
-                        <tr><td class="text-muted">Status E-Rapor</td><td class="fw-bold text-success">: <i class="bi bi-patch-check-fill me-1"></i> <?= htmlspecialchars(ucfirst($raporData['status'] ?? 'Terverifikasi')) ?> Resmi</td></tr>
-                    </tbody>
-                </table>
+        <!-- Student Info Header Block (Kotak Identitas Siswa Rapi & Modern) -->
+        <div class="student-info-box mb-4 p-3">
+            <div class="row g-2">
+                <div class="col-12 col-md-6 col-print-6">
+                    <table class="table table-sm table-borderless small mb-0 student-table">
+                        <tbody>
+                            <tr><td class="text-muted" style="width:38%">Nama Peserta Didik</td><td class="fw-bold text-dark">: <?= htmlspecialchars($siswa['nama_lengkap'] ?? '-') ?></td></tr>
+                            <tr><td class="text-muted">NIS / NISN</td><td class="fw-bold text-dark">: <?= htmlspecialchars($siswa['nis'] ?? '-') ?> / <?= htmlspecialchars($siswa['nisn'] ?? '-') ?></td></tr>
+                            <tr><td class="text-muted">Kelas / Rombel</td><td class="fw-bold text-dark">: <?= htmlspecialchars($siswa['nama_kelas'] ?? '-') ?></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-12 col-md-6 col-print-6">
+                    <table class="table table-sm table-borderless small mb-0 student-table">
+                        <tbody>
+                            <tr><td class="text-muted" style="width:42%">Program Keahlian</td><td class="fw-bold text-dark">: <?= htmlspecialchars($siswa['nama_jurusan'] ?? '-') ?></td></tr>
+                            <tr><td class="text-muted">Fase & Kurikulum</td><td class="fw-bold text-primary">: <?= htmlspecialchars($faseText) ?> (<?= htmlspecialchars($kurikulumText) ?>)</td></tr>
+                            <tr><td class="text-muted">Status E-Rapor</td><td class="fw-bold text-success">: <i class="bi bi-patch-check-fill me-1"></i> <?= htmlspecialchars(ucfirst($raporData['status'] ?? 'Terverifikasi')) ?> Resmi</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -501,13 +647,13 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
 
                     <!-- PRINT HEADER: Baris Tunggal Resmi (Tanpa Komponen, Langsung Nilai Akhir & Deskripsi Wajib Muncul) -->
                     <tr class="header-print">
-                        <th class="text-center" style="width:35px;">No</th>
-                        <th class="text-start" style="width:26%;">Mata Pelajaran</th>
-                        <th class="text-center" style="width:55px;">KKM</th>
-                        <th class="text-center" style="width:85px;">Nilai Akhir</th>
-                        <th class="text-center" style="width:70px;">Predikat</th>
-                        <th class="text-center" style="width:90px;">Ketuntasan</th>
-                        <th class="text-start cell-deskripsi" style="width:44%;">Deskripsi Capaian Kompetensi</th>
+                        <th class="text-center col-p-no">No</th>
+                        <th class="text-start col-p-mapel">Mata Pelajaran</th>
+                        <th class="text-center col-p-kkm">KKM</th>
+                        <th class="text-center col-p-akhir">Nilai Akhir</th>
+                        <th class="text-center col-p-predikat">Predikat</th>
+                        <th class="text-center col-p-ketuntasan">Ketuntasan</th>
+                        <th class="text-start cell-deskripsi col-p-deskripsi">Deskripsi Capaian Kompetensi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -628,24 +774,22 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
             <?php endforeach; ?>
         </div>
 
-        <!-- Signature Section -->
-        <div class="row g-4 mt-4 text-center signature-section" style="page-break-inside: avoid; break-inside: avoid;">
-            <div class="col-12 col-sm-4 mb-3 mb-sm-0">
+        <!-- Signature Section (Tanda Tangan Resmi 3 Kolom Rapi) -->
+        <div class="row g-2 mt-3 text-center signature-section" style="page-break-inside: avoid; break-inside: avoid;">
+            <div class="col-4">
                 <p class="mb-0 small text-muted">Mengetahui,</p>
-                <p class="fw-bold mb-0 text-dark">Orang Tua / Wali Siswa</p>
-                <div style="height:60px;"></div>
-                <div style="border-top: 1px dashed #333; width:75%; margin:auto;"></div>
-                <small class="text-muted d-block mt-1">( ................................................ )</small>
+                <p class="fw-bold mb-0 text-dark" style="font-size:0.85rem;">Orang Tua / Wali Siswa</p>
+                <div class="signature-line"></div>
+                <small class="text-muted d-block mt-1" style="font-size:0.75rem;">( ................................................ )</small>
             </div>
-            <div class="col-12 col-sm-4 mb-3 mb-sm-0">
+            <div class="col-4">
                 <p class="mb-0 small text-muted">Mengetahui,</p>
-                <p class="fw-bold mb-0 text-dark">Kepala Sekolah</p>
-                <div style="height:60px;"></div>
-                <div style="border-top: 1px dashed #333; width:75%; margin:auto;"></div>
-                <small class="fw-bold text-dark d-block mt-1"><?= htmlspecialchars($kepsekNama) ?></small>
-                <small class="text-muted d-block" style="font-size:0.75rem;">NIP/NUPTK: <?= htmlspecialchars($kepsekNip ?: '-') ?></small>
+                <p class="fw-bold mb-0 text-dark" style="font-size:0.85rem;">Kepala Sekolah</p>
+                <div class="signature-line"></div>
+                <small class="fw-bold text-dark d-block mt-1" style="font-size:0.82rem;"><?= htmlspecialchars($kepsekNama) ?></small>
+                <small class="text-muted d-block" style="font-size:0.72rem;">NIP/NUPTK: <?= htmlspecialchars($kepsekNip ?: '-') ?></small>
             </div>
-            <div class="col-12 col-sm-4">
+            <div class="col-4">
                 <?php
                 $kotaSekolah = 'Cicalengka';
                 if (!empty($settings['alamat'])) {
@@ -654,16 +798,28 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                 }
                 ?>
                 <p class="mb-0 small text-muted"><?= htmlspecialchars($kotaSekolah) ?>, <?= date('d F Y') ?></p>
-                <p class="fw-bold mb-0 text-dark">Wali Kelas Rombel</p>
-                <div style="height:60px;"></div>
-                <div style="border-top: 1px dashed #333; width:75%; margin:auto;"></div>
+                <p class="fw-bold mb-0 text-dark" style="font-size:0.85rem;">Wali Kelas Rombel</p>
+                <div class="signature-line"></div>
                 <?php if (!empty($waliKelas['nama_lengkap'])): ?>
-                    <small class="fw-bold text-dark d-block mt-1"><?= htmlspecialchars($waliKelas['nama_lengkap']) ?></small>
-                    <small class="text-muted d-block" style="font-size:0.75rem;">NIP/NUPTK: <?= htmlspecialchars($waliKelas['nip'] ?: '-') ?></small>
+                    <small class="fw-bold text-dark d-block mt-1" style="font-size:0.82rem;"><?= htmlspecialchars($waliKelas['nama_lengkap']) ?></small>
+                    <small class="text-muted d-block" style="font-size:0.72rem;">NIP/NUPTK: <?= htmlspecialchars($waliKelas['nip'] ?: '-') ?></small>
                 <?php else: ?>
-                    <small class="text-muted d-block mt-1">( ................................................ )</small>
+                    <small class="text-muted d-block mt-1" style="font-size:0.75rem;">( ................................................ )</small>
                     <small class="text-muted d-block" style="font-size:0.72rem;">Wali Kelas Belum Ditentukan</small>
                 <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Official Modern Seal / Verification Footnote (Print Only) -->
+        <div class="print-seal-note">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi bi-patch-check-fill text-primary me-1"></i>
+                    <strong>Dokumen Resmi E-Rapor Digital SMK Muthia Harapan Cicalengka</strong> — Dicetak melalui Sistem Manajemen Pembelajaran & E-Rapor Resmi.
+                </div>
+                <div class="text-end fw-semibold">
+                    Sah Tanpa Tanda Tangan Basah &bull; Validasi Sistem
+                </div>
             </div>
         </div>
 
@@ -671,5 +827,18 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
 
 </div>
 </main>
+
+<script>
+function printOfficialRapor() {
+    const originalTitle = document.title;
+    // Mengosongkan document.title sementara sebelum print agar browser tidak mencetak judul halaman di header
+    document.title = '';
+    window.print();
+    // Mengembalikan document.title setelah dialog print
+    setTimeout(function() {
+        document.title = originalTitle;
+    }, 1000);
+}
+</script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
