@@ -814,6 +814,35 @@ class SiswaController {
         $settingsModel = new SettingsModel();
         $settings = $settingsModel->getAll();
 
+        // Ambil data Wali Kelas Rombel Siswa dari relasi kelas -> wali_kelas_id -> guru
+        $waliKelas = null;
+        if ($kelasId > 0) {
+            $db = Database::getConnection();
+            $stmtWali = $db->prepare("
+                SELECT g.nama_lengkap, g.nip, g.no_telepon 
+                FROM kelas k 
+                JOIN guru g ON k.wali_kelas_id = g.id 
+                WHERE k.id = ?
+            ");
+            $stmtWali->execute([$kelasId]);
+            $waliKelas = $stmtWali->fetch(PDO::FETCH_ASSOC);
+        }
+
+        // Ambil nama & NIP/NUPTK Kepala Sekolah resmi
+        $kepsekNama = !empty($settings['kepala_sekolah']) ? $settings['kepala_sekolah'] : 'H. ASEP SAEPULLOH, S. Ag';
+        $kepsekNip  = !empty($settings['nip_kepala_sekolah']) ? $settings['nip_kepala_sekolah'] : (!empty($settings['nip_kepsek']) ? $settings['nip_kepsek'] : '');
+        if (empty($kepsekNip)) {
+            try {
+                $db = Database::getConnection();
+                $cleanName = trim(explode(',', $kepsekNama)[0]);
+                $stmtKep = $db->prepare("SELECT nip FROM guru WHERE nama_lengkap LIKE ? OR nip = 'G202608503' OR user_id = 4 ORDER BY id DESC LIMIT 1");
+                $stmtKep->execute(['%' . $cleanName . '%']);
+                $kepsekNip = $stmtKep->fetchColumn() ?: 'G202608503';
+            } catch (\Throwable $eKep) {
+                $kepsekNip = 'G202608503';
+            }
+        }
+
         require_once ROOT_PATH . 'views/siswa/rapor.php';
     }
 

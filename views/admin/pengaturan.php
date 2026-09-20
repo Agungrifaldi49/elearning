@@ -76,7 +76,11 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold">Kepala Sekolah</label>
-                            <input type="text" name="kepala_sekolah" class="form-control" value="<?= htmlspecialchars($settings['kepala_sekolah'] ?? 'H. Supriyadi, M.M.') ?>" required>
+                            <input type="text" name="kepala_sekolah" class="form-control" value="<?= htmlspecialchars($settings['kepala_sekolah'] ?? 'H. ASEP SAEPULLOH, S. Ag') ?>" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold">NIP / NUPTK Kepala Sekolah</label>
+                            <input type="text" name="nip_kepala_sekolah" class="form-control" value="<?= htmlspecialchars($settings['nip_kepala_sekolah'] ?? ($settings['nip_kepsek'] ?? 'G202608503')) ?>" placeholder="Contoh: 198501152010011002 / G202608503">
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold">No. Telepon / WhatsApp</label>

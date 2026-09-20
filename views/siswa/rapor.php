@@ -274,22 +274,42 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                 <h6 class="fw-bold text-dark mb-2.5"><i class="bi bi-grid-fill text-primary me-1.5"></i>Ringkasan Nilai Mata Pelajaran:</h6>
                 <div class="row g-2.5">
                     <?php 
-                    $mobTotal = 0;
+                    $mobTotalAkhir = 0;
+                    $mobTotalTugas = 0;
+                    $mobTotalQuiz  = 0;
+                    $mobTotalUts   = 0;
+                    $mobTotalUas   = 0;
+                    $mobAllTuntas  = true;
+
                     foreach ($nilaiList as $mn):
-                        $kkmVal = $mn['kkm'] ?? 75;
-                        $pred = NilaiModel::getPredikat((float)$mn['nilai_akhir']);
-                        $mobTotal += $mn['nilai_akhir'];
-                        $isTuntas = ((float)$mn['nilai_akhir'] >= $kkmVal);
+                        $kkmVal = (float)($mn['kkm'] ?? 75);
+                        $recalcAkhir = NilaiModel::hitungNilaiAkhir(
+                            (float)($mn['nilai_tugas'] ?? 0),
+                            (float)($mn['nilai_quiz'] ?? 0),
+                            (float)($mn['nilai_uts'] ?? 0),
+                            (float)($mn['nilai_uas'] ?? 0),
+                            $bobotKomponen
+                        );
+                        $rowAkhir = ($recalcAkhir > 0 || (float)($mn['nilai_akhir'] ?? 0) <= 0) ? $recalcAkhir : (float)$mn['nilai_akhir'];
+                        $pred = NilaiModel::getPredikat($rowAkhir);
+                        $isTuntas = ($rowAkhir >= $kkmVal);
+                        if (!$isTuntas) $mobAllTuntas = false;
+
+                        $mobTotalTugas += (float)($mn['nilai_tugas'] ?? 0);
+                        $mobTotalQuiz  += (float)($mn['nilai_quiz'] ?? 0);
+                        $mobTotalUts   += (float)($mn['nilai_uts'] ?? 0);
+                        $mobTotalUas   += (float)($mn['nilai_uas'] ?? 0);
+                        $mobTotalAkhir += $rowAkhir;
                     ?>
                         <div class="col-12">
                             <div class="p-3 bg-white rounded-3 border shadow-xs">
                                 <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
                                     <div>
                                         <h6 class="fw-bold text-dark mb-0 fs-6"><?= htmlspecialchars($mn['nama_mapel']) ?></h6>
-                                        <span class="badge bg-secondary rounded-pill" style="font-size:0.68rem;">KKM: <?= $kkmVal ?></span>
+                                        <span class="badge bg-secondary rounded-pill" style="font-size:0.68rem;">KKM: <?= (int)$kkmVal ?></span>
                                     </div>
                                     <div class="text-end flex-shrink-0">
-                                        <span class="fw-bold fs-5 text-primary d-block"><?= number_format($mn['nilai_akhir'], 1) ?></span>
+                                        <span class="fw-bold fs-5 text-primary d-block"><?= number_format($rowAkhir, 1) ?></span>
                                         <span class="badge <?= $pred['class'] ?> rounded-pill px-2 py-0.5" style="font-size:0.68rem;"><?= $pred['grade'] ?></span>
                                         <span class="badge <?= $isTuntas ? 'bg-success' : 'bg-danger' ?> rounded-pill px-2 py-0.5" style="font-size:0.68rem;"><?= $isTuntas ? 'TUNTAS' : 'BELUM' ?></span>
                                     </div>
@@ -297,28 +317,69 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                                 <div class="row g-2 text-center bg-light rounded-3 p-2 border" style="font-size:0.75rem;">
                                     <div class="col-6 col-sm-3">
                                         <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;"><?= htmlspecialchars($lblTugas) ?></span>
-                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_tugas'], 0) ?></strong>
+                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format((float)($mn['nilai_tugas'] ?? 0), 0) ?></strong>
                                         <span class="text-primary small fw-semibold" style="font-size:0.65rem;">(<?= $pTugas ?>%)</span>
                                     </div>
                                     <div class="col-6 col-sm-3">
                                         <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;"><?= htmlspecialchars($lblQuiz) ?></span>
-                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_quiz'], 0) ?></strong>
+                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format((float)($mn['nilai_quiz'] ?? 0), 0) ?></strong>
                                         <span class="text-warning-emphasis small fw-semibold" style="font-size:0.65rem;">(<?= $pQuiz ?>%)</span>
                                     </div>
                                     <div class="col-6 col-sm-3">
                                         <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;"><?= htmlspecialchars($lblUts) ?></span>
-                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_uts'], 0) ?></strong>
+                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format((float)($mn['nilai_uts'] ?? 0), 0) ?></strong>
                                         <span class="text-info-emphasis small fw-semibold" style="font-size:0.65rem;">(<?= $pUts ?>%)</span>
                                     </div>
                                     <div class="col-6 col-sm-3">
                                         <span class="text-muted d-block small" style="font-size:0.68rem; line-height: 1.2;"><?= htmlspecialchars($lblUas) ?></span>
-                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format($mn['nilai_uas'], 0) ?></strong>
+                                        <strong class="fs-6 text-dark d-block mt-0.5"><?= number_format((float)($mn['nilai_uas'] ?? 0), 0) ?></strong>
                                         <span class="text-success small fw-semibold" style="font-size:0.65rem;">(<?= $pUas ?>%)</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
+
+                    <?php 
+                    $mobCount = count($nilaiList);
+                    $mobAvgAkhir = $mobCount > 0 ? ($mobTotalAkhir / $mobCount) : 0;
+                    $mobAvgTugas = $mobCount > 0 ? ($mobTotalTugas / $mobCount) : 0;
+                    $mobAvgQuiz  = $mobCount > 0 ? ($mobTotalQuiz / $mobCount) : 0;
+                    $mobAvgUts   = $mobCount > 0 ? ($mobTotalUts / $mobCount) : 0;
+                    $mobAvgUas   = $mobCount > 0 ? ($mobTotalUas / $mobCount) : 0;
+                    $mobPred = NilaiModel::getPredikat($mobAvgAkhir);
+                    ?>
+                    <!-- Mobile Average Summary Card -->
+                    <div class="col-12 mt-2">
+                        <div class="p-3 rounded-3 border bg-primary bg-opacity-10 border-primary shadow-xs">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-primary fs-6"><i class="bi bi-calculator-fill me-1.5"></i>Rata-Rata Nilai Akhir:</span>
+                                <div class="text-end">
+                                    <span class="fw-bold fs-5 text-primary"><?= number_format($mobAvgAkhir, 1) ?></span>
+                                    <span class="badge <?= $mobPred['class'] ?> rounded-pill px-2 py-0.5" style="font-size:0.68rem;"><?= $mobPred['grade'] ?></span>
+                                    <span class="badge <?= $mobAllTuntas ? 'bg-success' : 'bg-warning text-dark' ?> rounded-pill px-2 py-0.5" style="font-size:0.68rem;"><?= $mobAllTuntas ? 'TUNTAS' : 'REMEDIAL' ?></span>
+                                </div>
+                            </div>
+                            <div class="row g-2 text-center bg-white rounded-3 p-2 border" style="font-size:0.75rem;">
+                                <div class="col-6 col-sm-3">
+                                    <span class="text-muted d-block small" style="font-size:0.68rem;">Rata-Rata Tugas</span>
+                                    <strong class="fs-6 text-dark d-block"><?= number_format($mobAvgTugas, 1) ?></strong>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <span class="text-muted d-block small" style="font-size:0.68rem;">Rata-Rata Kuis</span>
+                                    <strong class="fs-6 text-dark d-block"><?= number_format($mobAvgQuiz, 1) ?></strong>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <span class="text-muted d-block small" style="font-size:0.68rem;">Rata-Rata STS</span>
+                                    <strong class="fs-6 text-dark d-block"><?= number_format($mobAvgUts, 1) ?></strong>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <span class="text-muted d-block small" style="font-size:0.68rem;">Rata-Rata SAS</span>
+                                    <strong class="fs-6 text-dark d-block"><?= number_format($mobAvgUas, 1) ?></strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         <?php endif; ?>
@@ -375,11 +436,32 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     <?php else: ?>
                         <?php
                         $totalAkhir = 0;
+                        $totalTugas = 0;
+                        $totalQuiz  = 0;
+                        $totalUts   = 0;
+                        $totalUas   = 0;
+                        $allTuntas  = true;
+
                         foreach ($nilaiList as $i => $n):
-                            $kkmVal = $n['kkm'] ?? 75;
-                            $pred = NilaiModel::getPredikat((float)$n['nilai_akhir']);
-                            $totalAkhir += $n['nilai_akhir'];
-                            $isTuntas = ((float)$n['nilai_akhir'] >= $kkmVal);
+                            $kkmVal = (float)($n['kkm'] ?? 75);
+                            $recalcAkhir = NilaiModel::hitungNilaiAkhir(
+                                (float)($n['nilai_tugas'] ?? 0),
+                                (float)($n['nilai_quiz'] ?? 0),
+                                (float)($n['nilai_uts'] ?? 0),
+                                (float)($n['nilai_uas'] ?? 0),
+                                $bobotKomponen
+                            );
+                            $akhirRow = ($recalcAkhir > 0 || (float)($n['nilai_akhir'] ?? 0) <= 0) ? $recalcAkhir : (float)$n['nilai_akhir'];
+                            $pred = NilaiModel::getPredikat($akhirRow);
+                            $isTuntas = ($akhirRow >= $kkmVal);
+                            if (!$isTuntas) $allTuntas = false;
+
+                            $totalTugas += (float)($n['nilai_tugas'] ?? 0);
+                            $totalQuiz  += (float)($n['nilai_quiz'] ?? 0);
+                            $totalUts   += (float)($n['nilai_uts'] ?? 0);
+                            $totalUas   += (float)($n['nilai_uas'] ?? 0);
+                            $totalAkhir += $akhirRow;
+
                             $deskripsiCapaian = $capaianMap[$n['mapel_id']] ?? (
                                 $isTuntas 
                                 ? "Menunjukkan penguasaan yang sangat baik dalam menuntaskan seluruh tujuan pembelajaran {$n['nama_mapel']}."
@@ -389,12 +471,12 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                         <tr>
                             <td><?= $i + 1 ?></td>
                             <td class="text-start fw-bold text-dark"><?= htmlspecialchars($n['nama_mapel']) ?></td>
-                            <td><span class="badge bg-secondary rounded-pill"><?= $kkmVal ?></span></td>
-                            <td><?= number_format($n['nilai_tugas'], 0) ?></td>
-                            <td><?= number_format($n['nilai_quiz'], 0) ?></td>
-                            <td><?= number_format($n['nilai_uts'], 0) ?></td>
-                            <td><?= number_format($n['nilai_uas'], 0) ?></td>
-                            <td class="fw-bold fs-6 text-primary"><?= number_format($n['nilai_akhir'], 1) ?></td>
+                            <td><span class="badge bg-secondary rounded-pill"><?= (int)$kkmVal ?></span></td>
+                            <td><?= number_format((float)($n['nilai_tugas'] ?? 0), 0) ?></td>
+                            <td><?= number_format((float)($n['nilai_quiz'] ?? 0), 0) ?></td>
+                            <td><?= number_format((float)($n['nilai_uts'] ?? 0), 0) ?></td>
+                            <td><?= number_format((float)($n['nilai_uas'] ?? 0), 0) ?></td>
+                            <td class="fw-bold fs-6 text-primary"><?= number_format($akhirRow, 1) ?></td>
                             <td>
                                 <span class="badge <?= $pred['class'] ?> rounded-pill px-2.5 py-1">
                                     <?= $pred['grade'] ?>
@@ -410,13 +492,38 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                             </td>
                         </tr>
                         <?php endforeach; ?>
-                        <tr class="table-primary fw-bold">
-                            <td colspan="7" class="text-end">Rata-Rata Nilai Akhir Semester</td>
-                            <td class="fs-6 text-primary"><?= number_format($totalAkhir / count($nilaiList), 1) ?></td>
-                            <?php $avgPred = NilaiModel::getPredikat($totalAkhir / count($nilaiList)); ?>
-                            <td><span class="badge <?= $avgPred['class'] ?> rounded-pill px-2.5 py-1"><?= $avgPred['grade'] ?></span></td>
-                            <td><span class="badge bg-success rounded-pill px-2.5 py-1">LULUS</span></td>
-                            <td class="text-start small text-primary fw-semibold">Status Akademik: Memenuhi Kriteria Ketercapaian Tujuan Pembelajaran (KKTP).</td>
+
+                        <?php
+                        $countMapel = count($nilaiList);
+                        $avgTugas = $countMapel > 0 ? ($totalTugas / $countMapel) : 0;
+                        $avgQuiz  = $countMapel > 0 ? ($totalQuiz  / $countMapel) : 0;
+                        $avgUts   = $countMapel > 0 ? ($totalUts   / $countMapel) : 0;
+                        $avgUas   = $countMapel > 0 ? ($totalUas   / $countMapel) : 0;
+                        $avgAkhir = $countMapel > 0 ? ($totalAkhir / $countMapel) : 0;
+                        $avgPred  = NilaiModel::getPredikat($avgAkhir);
+                        ?>
+                        <tr class="table-primary fw-bold text-center align-middle" style="background-color: #e0e7ff !important; border-top: 2px solid #6366f1;">
+                            <td colspan="3" class="text-end fw-bold py-2.5 px-3" style="letter-spacing: 0.3px;">RATA-RATA NILAI AKHIR SEMESTER</td>
+                            <td class="fw-bold text-dark"><?= number_format($avgTugas, 1) ?></td>
+                            <td class="fw-bold text-dark"><?= number_format($avgQuiz, 1) ?></td>
+                            <td class="fw-bold text-dark"><?= number_format($avgUts, 1) ?></td>
+                            <td class="fw-bold text-dark"><?= number_format($avgUas, 1) ?></td>
+                            <td class="fs-6 text-primary fw-bold"><?= number_format($avgAkhir, 1) ?></td>
+                            <td>
+                                <span class="badge <?= $avgPred['class'] ?> rounded-pill px-2.5 py-1">
+                                    <?= $avgPred['grade'] ?>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge <?= $allTuntas ? 'bg-success' : 'bg-warning text-dark' ?> rounded-pill px-2 py-1" style="font-size:0.75rem;">
+                                    <?= $allTuntas ? 'TUNTAS' : 'REMEDIAL' ?>
+                                </span>
+                            </td>
+                            <td class="text-start small text-primary fw-semibold">
+                                <?= $allTuntas 
+                                    ? 'Status Akademik: Memenuhi Kriteria Ketercapaian Tujuan Pembelajaran (KKTP).' 
+                                    : 'Status Akademik: Terdapat mata pelajaran yang memerlukan pendampingan/remedial.' ?>
+                            </td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -437,27 +544,41 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
         </div>
 
         <!-- Signature Section -->
-        <div class="row g-4 mt-3 text-center">
+        <div class="row g-4 mt-4 text-center">
             <div class="col-12 col-sm-4 mb-3 mb-sm-0">
                 <p class="mb-0 small text-muted">Mengetahui,</p>
                 <p class="fw-bold mb-0 text-dark">Orang Tua / Wali Siswa</p>
-                <div style="height:50px;"></div>
-                <div style="border-top: 1px dashed #333; width:80%; margin:auto;"></div>
-                <small class="text-muted">(................................................)</small>
+                <div style="height:60px;"></div>
+                <div style="border-top: 1px dashed #333; width:75%; margin:auto;"></div>
+                <small class="text-muted d-block mt-1">( ................................................ )</small>
             </div>
             <div class="col-12 col-sm-4 mb-3 mb-sm-0">
                 <p class="mb-0 small text-muted">Mengetahui,</p>
                 <p class="fw-bold mb-0 text-dark">Kepala Sekolah</p>
-                <div style="height:50px;"></div>
-                <div style="border-top: 1px dashed #333; width:80%; margin:auto;"></div>
-                <small class="fw-bold text-dark"><?= htmlspecialchars($settings['kepala_sekolah'] ?? 'H. Supriyadi, M.M.') ?></small>
+                <div style="height:60px;"></div>
+                <div style="border-top: 1px dashed #333; width:75%; margin:auto;"></div>
+                <small class="fw-bold text-dark d-block mt-1"><?= htmlspecialchars($kepsekNama) ?></small>
+                <small class="text-muted d-block" style="font-size:0.75rem;">NIP/NUPTK: <?= htmlspecialchars($kepsekNip ?: '-') ?></small>
             </div>
             <div class="col-12 col-sm-4">
-                <p class="mb-0 small text-muted">Cicalengka, <?= date('d F Y') ?></p>
+                <?php
+                $kotaSekolah = 'Cicalengka';
+                if (!empty($settings['alamat'])) {
+                    if (stripos($settings['alamat'], 'Bandung') !== false) $kotaSekolah = 'Bandung';
+                    elseif (stripos($settings['alamat'], 'Cicalengka') !== false) $kotaSekolah = 'Cicalengka';
+                }
+                ?>
+                <p class="mb-0 small text-muted"><?= htmlspecialchars($kotaSekolah) ?>, <?= date('d F Y') ?></p>
                 <p class="fw-bold mb-0 text-dark">Wali Kelas Rombel</p>
-                <div style="height:50px;"></div>
-                <div style="border-top: 1px dashed #333; width:80%; margin:auto;"></div>
-                <small class="text-muted">(................................................)</small>
+                <div style="height:60px;"></div>
+                <div style="border-top: 1px dashed #333; width:75%; margin:auto;"></div>
+                <?php if (!empty($waliKelas['nama_lengkap'])): ?>
+                    <small class="fw-bold text-dark d-block mt-1"><?= htmlspecialchars($waliKelas['nama_lengkap']) ?></small>
+                    <small class="text-muted d-block" style="font-size:0.75rem;">NIP/NUPTK: <?= htmlspecialchars($waliKelas['nip'] ?: '-') ?></small>
+                <?php else: ?>
+                    <small class="text-muted d-block mt-1">( ................................................ )</small>
+                    <small class="text-muted d-block" style="font-size:0.72rem;">Wali Kelas Belum Ditentukan</small>
+                <?php endif; ?>
             </div>
         </div>
 

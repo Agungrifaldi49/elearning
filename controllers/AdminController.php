@@ -486,6 +486,7 @@ class AdminController {
                     'nama_sekolah' => Security::sanitize($_POST['nama_sekolah'] ?? ''),
                     'npsn' => Security::sanitize($_POST['npsn'] ?? ''),
                     'kepala_sekolah' => Security::sanitize($_POST['kepala_sekolah'] ?? ''),
+                    'nip_kepala_sekolah' => Security::sanitize($_POST['nip_kepala_sekolah'] ?? ''),
                     'telepon' => Security::sanitize($_POST['telepon'] ?? ''),
                     'alamat' => Security::sanitize($_POST['alamat'] ?? ''),
                 ];
