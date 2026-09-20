@@ -236,6 +236,27 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'guru/supervisi') ?>" href="<?= BASE_URL ?>index.php?url=guru/supervisi">
                 <i class="bi bi-award-fill text-warning"></i> Hasil Supervisi Akademik
             </a></li>
+            <?php
+            // Cek apakah guru saat ini ditugaskan oleh Admin sebagai pembimbing ekstrakurikuler
+            $isPembimbingEkskul = false;
+            try {
+                if (!empty($user['id'])) {
+                    $dbSidebar = Database::getConnection();
+                    $stmtCekEkskul = $dbSidebar->prepare("
+                        SELECT COUNT(*) FROM ekstrakurikuler e
+                        JOIN guru g ON e.guru_id = g.id
+                        WHERE g.user_id = ? AND e.status = 'aktif'
+                    ");
+                    $stmtCekEkskul->execute([$user['id']]);
+                    $isPembimbingEkskul = ((int)$stmtCekEkskul->fetchColumn() > 0);
+                }
+            } catch (\Throwable $eCekEks) {}
+            ?>
+            <?php if ($isPembimbingEkskul): ?>
+                <li><a class="nav-link <?= isActive($currentUrl,'guru/ekstrakurikuler') ?>" href="<?= BASE_URL ?>index.php?url=guru/ekstrakurikuler">
+                    <i class="bi bi-activity text-warning"></i> Bimbingan Ekstrakurikuler
+                </a></li>
+            <?php endif; ?>
 
             <li class="nav-section-title">Komunikasi & Virtual Meeting</li>
             <li><a class="nav-link <?= isActive($currentUrl,'forum') ?>" href="<?= BASE_URL ?>index.php?url=forum">

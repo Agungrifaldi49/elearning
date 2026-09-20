@@ -346,4 +346,38 @@ class EkstrakurikulerModel extends BaseModel {
             return [];
         }
     }
+
+    /**
+     * Mengambil seluruh ekstrakurikuler yang dibimbing oleh seorang Guru
+     */
+    public function getEkskulByGuru($guruId) {
+        try {
+            $sql = "SELECT e.*, 
+                           g.nama_lengkap AS nama_guru, 
+                           g.nip AS nip_guru,
+                           (SELECT COUNT(*) FROM ekstrakurikuler_siswa es WHERE es.ekskul_id = e.id AND es.status = 'aktif') AS total_anggota
+                    FROM ekstrakurikuler e
+                    LEFT JOIN guru g ON e.guru_id = g.id
+                    WHERE e.guru_id = ? AND e.status = 'aktif'
+                    ORDER BY e.nama_ekskul ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([(int)$guruId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Memeriksa apakah guru ditugaskan sebagai pembimbing ekskul aktif
+     */
+    public function isGuruPembimbing($guruId) {
+        try {
+            $stmt = $this->db->prepare("SELECT COUNT(*) FROM ekstrakurikuler WHERE guru_id = ? AND status = 'aktif'");
+            $stmt->execute([(int)$guruId]);
+            return (int)$stmt->fetchColumn() > 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
 }

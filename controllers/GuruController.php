@@ -3202,5 +3202,121 @@ class GuruController {
 
         require_once ROOT_PATH . 'views/guru/asesmen.php';
     }
+
+    /**
+     * Manajemen Bimbingan Ekstrakurikuler & Penilaian E-Rapor oleh Guru Pembimbing
+     */
+    public function ekstrakurikuler() {
+        $guru = $this->getGuruInfo();
+        $guruId = (int)($guru['id'] ?? 0);
+
+        require_once ROOT_PATH . 'models/EkstrakurikulerModel.php';
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        require_once ROOT_PATH . 'models/SiswaModel.php';
+
+        $ekskulModel = new EkstrakurikulerModel();
+        $academicModel = new AcademicModel();
+        $siswaModel = new SiswaModel();
+
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $taId = $activeTa['id'] ?? 4;
+        $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+
+        // Ambil seluruh ekstrakurikuler yang ditugaskan oleh Admin kepada guru ini
+        $guidedEkskul = $ekskulModel->getEkskulByGuru($guruId);
+        $isPembimbing = !empty($guidedEkskul);
+
+        // Jika form POST disubmit
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('Token keamanan CSRF tidak valid.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/ekstrakurikuler');
+                exit();
+            }
+
+            $action = $_POST['action'] ?? '';
+            $ekskulId = (int)($_POST['ekskul_id'] ?? 0);
+
+            // Validasi hak bimbing: pastikan ekskulId ini benar dibimbing oleh guru yang login
+            $allowedEkskulIds = array_column($guidedEkskul, 'id');
+            if (!in_array($ekskulId, $allowedEkskulIds)) {
+                FlashHelper::setError('Anda tidak memiliki hak akses bimbingan pada ekstrakurikuler ini.');
+                header('Location: ' . BASE_URL . 'index.php?url=guru/ekstrakurikuler');
+                exit();
+            }
+
+            if ($action === 'save_nilai_deskripsi') {
+                $nilaiData = $_POST['nilai'] ?? []; // array [anggota_id => ['predikat' => ..., 'deskripsi' => ...]]
+                $countSaved = 0;
+
+                if (!empty($nilaiData) && is_array($nilaiData)) {
+                    foreach ($nilaiData as $anggotaId => $val) {
+                        $pred = trim($val['predikat'] ?? 'Sangat Baik');
+                        $desk = trim($val['deskripsi'] ?? '');
+                        if ($ekskulModel->updateNilaiDeskripsi((int)$anggotaId, $pred, $desk)) {
+                            $countSaved++;
+                        }
+                    }
+                    FlashHelper::setSuccess("Berhasil memperbarui nilai deskripsi capaian {$countSaved} siswa untuk E-Rapor.");
+                }
+
+                header('Location: ' . BASE_URL . 'index.php?url=guru/ekstrakurikuler&id=' . $ekskulId);
+                exit();
+            }
+
+            if ($action === 'add_anggota_manual') {
+                $siswaId = (int)($_POST['siswa_id'] ?? 0);
+                if ($siswaId > 0) {
+                    $ekskulModel->joinEkskul($siswaId, $ekskulId, $taId, $activeSemester);
+                    FlashHelper::setSuccess('Siswa berhasil didaftarkan ke dalam kelompok bimbingan ekstrakurikuler.');
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=guru/ekstrakurikuler&id=' . $ekskulId);
+                exit();
+            }
+
+            if ($action === 'remove_anggota') {
+                $siswaId = (int)($_POST['siswa_id'] ?? 0);
+                if ($siswaId > 0) {
+                    $ekskulModel->leaveEkskul($siswaId, $ekskulId);
+                    FlashHelper::setSuccess('Siswa berhasil dikeluarkan dari kelompok ekstrakurikuler.');
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=guru/ekstrakurikuler&id=' . $ekskulId);
+                exit();
+            }
+        }
+
+        // Tentukan ekskul yang sedang aktif dibuka
+        $selectedId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        $selectedEkskul = null;
+        if ($selectedId > 0) {
+            foreach ($guidedEkskul as $ge) {
+                if ((int)$ge['id'] === $selectedId) {
+                    $selectedEkskul = $ge;
+                    break;
+                }
+            }
+        }
+        if (!$selectedEkskul && !empty($guidedEkskul)) {
+            $selectedEkskul = $guidedEkskul[0];
+            $selectedId = (int)$selectedEkskul['id'];
+        }
+
+        $anggotaList = [];
+        $availableSiswa = [];
+        if ($selectedEkskul) {
+            $anggotaList = $ekskulModel->getAnggotaEkskul($selectedId, $taId, $activeSemester);
+
+            // Ambil daftar seluruh siswa untuk penambahan manual
+            $allSiswa = $siswaModel->getAll();
+            $joinedSiswaIds = array_column($anggotaList, 'siswa_id');
+            foreach ($allSiswa as $s) {
+                if (!in_array($s['id'], $joinedSiswaIds)) {
+                    $availableSiswa[] = $s;
+                }
+            }
+        }
+
+        require_once ROOT_PATH . 'views/guru/ekstrakurikuler.php';
+    }
 }
 
