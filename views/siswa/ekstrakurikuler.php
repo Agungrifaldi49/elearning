@@ -153,13 +153,17 @@ function getEkskulTheme($namaEkskul) {
         <div class="ekskul-hero-card text-white p-4 p-md-5 mb-4">
             <div class="d-flex align-items-start align-items-md-center justify-content-between flex-column flex-md-row gap-3 position-relative z-1">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="bg-white bg-opacity-15 p-3 rounded-4 text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 58px; height: 58px; backdrop-filter: blur(8px);">
+                    <!-- Kotak Ikon Utama (Kontras Tinggi) -->
+                    <div class="p-3 rounded-4 d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 58px; height: 58px; background: #ffffff; color: #2563eb;">
                         <i class="bi bi-activity fs-2"></i>
                     </div>
                     <div>
                         <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
                             <h3 class="fw-bold text-white mb-0" style="letter-spacing: -0.4px;">Portal Ekstrakurikuler Siswa</h3>
-                            <span class="badge bg-white bg-opacity-20 text-white rounded-pill px-2.5 py-1 small">Tahun Ajaran <?= htmlspecialchars($activeTa['tahun_ajaran'] ?? '2026/2027') ?></span>
+                            <!-- Badge Tahun Ajaran (Transparan Elegan & Teks Putih Terbaca Jelas) -->
+                            <span class="rounded-pill px-3 py-1 small fw-bold" style="background: rgba(255, 255, 255, 0.18); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.35); font-size: 0.76rem; display: inline-flex; align-items: center; letter-spacing: 0.2px;">
+                                <i class="bi bi-calendar-check me-1.5 text-warning"></i> Tahun Ajaran <?= htmlspecialchars($activeTa['tahun_ajaran'] ?? '2026/2027') ?>
+                            </span>
                         </div>
                         <p class="text-white-50 small mb-0 fw-medium">
                             Salurkan minat, bakat, kepemimpinan & raih capaian prestasi non-akademik resmi yang terintegrasi pada E-Rapor Digital.
@@ -167,10 +171,16 @@ function getEkskulTheme($namaEkskul) {
                     </div>
                 </div>
 
+                <!-- Status Keikutsertaan di Sebelah Kanan (Kontras & Rapi) -->
                 <div class="d-flex align-items-center gap-2">
-                    <div class="bg-white bg-opacity-10 rounded-pill px-3.5 py-2 text-nowrap border border-white border-opacity-20">
-                        <small class="text-white-50 d-block" style="font-size: 0.68rem; line-height: 1;">Status Keikutsertaan</small>
-                        <strong class="text-white fs-6"><?= count($myEkskul) ?> Ekskul Diikuti</strong>
+                    <div class="rounded-4 px-3.5 py-2 text-nowrap shadow-xs" style="background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(8px);">
+                        <small class="d-block text-white-50 fw-semibold" style="font-size: 0.68rem; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.3px;">
+                            Status Keikutsertaan
+                        </small>
+                        <div class="d-flex align-items-center gap-1.5 mt-0.5">
+                            <i class="bi bi-patch-check-fill text-success" style="font-size: 0.95rem;"></i>
+                            <strong class="text-white fs-6"><?= count($myEkskul) ?> Ekskul Diikuti</strong>
+                        </div>
                     </div>
                 </div>
             </div>
