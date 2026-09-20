@@ -118,7 +118,7 @@ if (empty($logoUrl)) {
             background: #ffffff;
             width: 210mm;
             min-height: 297mm;
-            padding: 10mm 14mm 10mm 14mm;
+            padding: 10mm 14mm 14mm 14mm;
             box-shadow: 0 4px 25px rgba(15, 23, 42, 0.08);
             border-radius: 6px;
             position: relative;
@@ -140,7 +140,7 @@ if (empty($logoUrl)) {
             border-top: 2.5px solid #0f172a;
             border-bottom: 1px solid #0f172a;
             height: 4px;
-            margin: 6px 0 10px 0;
+            margin: 5px 0 8px 0;
         }
 
         /* KOTAK IDENTITAS SISWA */
@@ -148,8 +148,10 @@ if (empty($logoUrl)) {
             background: #ffffff !important;
             border: 1.5px solid #0f172a !important;
             border-radius: 6px;
-            padding: 6px 12px;
-            margin-bottom: 10px;
+            padding: 5px 10px;
+            margin-bottom: 8px;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
         /* TABLE OFFICIAL STYLES */
@@ -159,60 +161,83 @@ if (empty($logoUrl)) {
             border: 1.5px solid #0f172a;
             table-layout: fixed;
             background: #ffffff;
-            margin-bottom: 10px;
-            font-size: 0.72rem;
+            margin-bottom: 8px;
+            font-size: 0.70rem;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+        }
+        table.table-official thead {
+            display: table-header-group !important; /* Header kolom otomatis mengulang jika tabel bersambung ke halaman berikutnya */
+        }
+        table.table-official tfoot {
+            display: table-footer-group !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+        table.table-official tbody tr, 
+        table.table-official tfoot tr {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important; /* Mencegah baris tabel terbelah di batas bawah kertas */
         }
         table.table-official th, table.table-official td {
             border: 1px solid #0f172a;
-            padding: 5px 5px;
+            padding: 3.5px 5px;
             background: #ffffff;
+            vertical-align: middle;
+            box-sizing: border-box;
         }
         table.table-official th {
             text-align: center;
             font-weight: 700;
-            font-size: 0.70rem;
+            font-size: 0.69rem;
             letter-spacing: 0.2px;
             background: #ffffff;
             color: #0f172a;
             line-height: 1.25;
+            padding: 4px 3px;
         }
 
         /* SIGNATURE */
         .sig-row {
             display: flex;
             justify-content: space-between;
-            margin-top: 14px;
+            margin-top: 10px;
             text-align: center;
-            page-break-inside: avoid;
-            break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
         .sig-col {
             width: 32%;
         }
         .sig-line {
             width: 75%;
-            margin: 38px auto 4px auto;
+            margin: 32px auto 4px auto;
             border-bottom: 1.2px solid #0f172a;
         }
 
         /* SEAL NOTE */
         .seal-note {
-            margin-top: 12px;
-            padding-top: 6px;
+            margin-top: 10px;
+            padding-top: 5px;
             border-top: 1px solid #0f172a;
             font-size: 0.65rem;
             color: #475569;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            page-break-inside: avoid;
-            break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
         }
 
-        /* PRINT MEDIA RULES */
+        .avoid-break {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        /* PRINT MEDIA RULES (A4 & F4 READY DENGAN JARAK AMAN ANTI-TERPOTONG) */
         @page {
-            size: auto;
-            margin: 0;
+            size: auto; /* Otomatis A4 / F4 */
+            margin: 12mm 12mm 14mm 12mm; /* Jarak aman di sekeliling kertas pada setiap halaman cetak */
         }
         @media print {
             .no-print, .bulk-print-toolbar {
@@ -221,26 +246,57 @@ if (empty($logoUrl)) {
             body {
                 background: #ffffff !important;
                 color: #0f172a !important;
-                font-size: 0.72rem;
+                font-size: 0.70rem;
                 margin: 0 !important;
                 padding: 0 !important;
             }
             .paper-wrapper {
                 padding: 0 !important;
                 gap: 0 !important;
+                display: block !important;
             }
             .rapor-sheet {
                 width: 100% !important;
                 min-height: auto !important;
                 box-shadow: none !important;
-                padding: 8mm 12mm 8mm 12mm !important;
+                padding: 0 !important; /* Gunakan margin dari @page agar konsisten di setiap halaman */
                 margin: 0 auto !important;
+                border: none !important;
                 border-radius: 0 !important;
                 background: #ffffff !important;
+                page-break-inside: auto !important;
+                break-inside: auto !important;
             }
             .page-break {
                 page-break-after: always !important;
                 break-after: page !important;
+            }
+
+            /* Anti Terpotong di Garis Bawah Kertas */
+            table.table-official thead {
+                display: table-header-group !important;
+            }
+            table.table-official tfoot {
+                display: table-footer-group !important;
+            }
+            table.table-official tr {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            table.table-official td, table.table-official th {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            .student-info-box,
+            .attendance-catatan-box,
+            .ekskul-box,
+            .sig-row,
+            .seal-note,
+            .signature-seal-block,
+            .avoid-break {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
         }
     </style>
@@ -429,92 +485,95 @@ if (empty($logoUrl)) {
                                 </tr>
                             <?php else: ?>
                                 <?php foreach ($calcRows as $cr): ?>
-                                    <tr>
-                                        <td style="text-align: center; vertical-align: middle; padding: 5px 3px;"><?= $cr['no'] ?></td>
-                                        <td style="text-align: left; font-weight: 700; vertical-align: middle; padding: 5px 6px;"><?= htmlspecialchars($cr['mapel']) ?></td>
-                                        <td style="text-align: center; vertical-align: middle; padding: 5px 3px;"><?= (int)$cr['kkm'] ?></td>
-                                        <td style="text-align: center; font-weight: 800; font-size: 0.82rem; vertical-align: middle; padding: 5px 3px;"><?= number_format($cr['akhir'], 1) ?></td>
-                                        <td style="text-align: center; vertical-align: middle; padding: 5px 3px;">
-                                            <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 1px 6px; font-weight: 700; font-size: 0.72rem;"><?= $cr['pred']['grade'] ?></span>
+                                    <tr style="page-break-inside: avoid !important; break-inside: avoid !important;">
+                                        <td style="text-align: center; vertical-align: middle; padding: 3px 2px; font-size: 0.70rem;"><?= $cr['no'] ?></td>
+                                        <td style="text-align: left; font-weight: 700; vertical-align: middle; padding: 3px 5px; font-size: 0.71rem;"><?= htmlspecialchars($cr['mapel']) ?></td>
+                                        <td style="text-align: center; vertical-align: middle; padding: 3px 2px; font-size: 0.70rem;"><?= (int)$cr['kkm'] ?></td>
+                                        <td style="text-align: center; font-weight: 800; font-size: 0.78rem; vertical-align: middle; padding: 3px 2px;"><?= number_format($cr['akhir'], 1) ?></td>
+                                        <td style="text-align: center; vertical-align: middle; padding: 3px 2px;">
+                                            <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 1px 5px; font-weight: 700; font-size: 0.68rem;"><?= $cr['pred']['grade'] ?></span>
                                         </td>
-                                        <td style="text-align: center; vertical-align: middle; white-space: nowrap; padding: 5px 6px;">
-                                            <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 2px 8px; font-weight: 700; font-size: 0.68rem;"><?= $cr['is_tuntas'] ? 'TUNTAS' : 'REMEDIAL' ?></span>
+                                        <td style="text-align: center; vertical-align: middle; white-space: nowrap; padding: 3px 4px;">
+                                            <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 1px 6px; font-weight: 700; font-size: 0.64rem;"><?= $cr['is_tuntas'] ? 'TUNTAS' : 'REMEDIAL' ?></span>
                                         </td>
-                                        <td style="text-align: left; font-size: 0.70rem; line-height: 1.35; vertical-align: middle; padding: 4px 6px;">
+                                        <td style="text-align: left; font-size: 0.66rem; line-height: 1.25; vertical-align: middle; padding: 3px 5px;">
                                             <?= htmlspecialchars($cr['deskripsi']) ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
-
+                            <?php endif; ?>
+                        </tbody>
+                        <?php if (!empty($calcRows)): ?>
+                            <tfoot>
                                 <!-- BARIS RATA-RATA NILAI AKHIR (BACKGROUND PUTIH, FONT RAPI, UKURAN PROPORSIONAL) -->
-                                <tr style="background: #ffffff; border-top: 2px solid #0f172a;">
-                                    <td colspan="3" style="text-align: right; font-weight: 700; font-size: 0.69rem; padding: 4px 6px; white-space: nowrap;">
+                                <tr style="background: #ffffff; border-top: 2px solid #0f172a; page-break-inside: avoid !important; break-inside: avoid !important;">
+                                    <td colspan="3" style="text-align: right; font-weight: 700; font-size: 0.68rem; padding: 3.5px 5px; white-space: nowrap;">
                                         RATA-RATA NILAI AKHIR SEMESTER
                                     </td>
-                                    <td style="text-align: center; font-weight: 800; font-size: 0.80rem; padding: 4px 3px;">
+                                    <td style="text-align: center; font-weight: 800; font-size: 0.78rem; padding: 3.5px 2px;">
                                         <?= number_format($avgAkhir, 1) ?>
                                     </td>
-                                    <td style="text-align: center; padding: 4px 3px;">
-                                        <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 1px 6px; font-weight: 700; font-size: 0.70rem;"><?= $avgPred['grade'] ?></span>
+                                    <td style="text-align: center; padding: 3.5px 2px;">
+                                        <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 1px 5px; font-weight: 700; font-size: 0.68rem;"><?= $avgPred['grade'] ?></span>
                                     </td>
-                                    <td style="text-align: center; padding: 4px 6px; white-space: nowrap;">
-                                        <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 2px 8px; font-weight: 700; font-size: 0.65rem;"><?= $allTuntas ? 'TUNTAS' : 'REMEDIAL' ?></span>
+                                    <td style="text-align: center; padding: 3.5px 4px; white-space: nowrap;">
+                                        <span style="display: inline-block; border: 1px solid #0f172a; border-radius: 4px; padding: 1px 6px; font-weight: 700; font-size: 0.64rem;"><?= $allTuntas ? 'TUNTAS' : 'REMEDIAL' ?></span>
                                     </td>
-                                    <td style="text-align: left; font-size: 0.68rem; line-height: 1.25; font-weight: 600; padding: 4px 6px;">
+                                    <td style="text-align: left; font-size: 0.66rem; line-height: 1.22; font-weight: 600; padding: 3.5px 5px;">
                                         <?= $allTuntas 
                                             ? 'Status Akademik: Memenuhi Kriteria Ketercapaian Tujuan Pembelajaran (KKTP).' 
                                             : 'Status Akademik: Terdapat mata pelajaran yang memerlukan pendampingan/remedial.' ?>
                                     </td>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
+                            </tfoot>
+                        <?php endif; ?>
                     </table>
 
-                    <!-- REKAP KETIDAKHADIRAN & CATATAN WALI KELAS -->
-                    <div style="margin-bottom: 10px; page-break-inside: avoid; break-inside: avoid;">
-                        <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a; background: #ffffff; table-layout: fixed; font-size: 0.72rem;">
+                    <!-- REKAP KETIDAKHADIRAN & CATATAN WALI KELAS (ANTI-TERPOTONG DI BATAS HALAMAN) -->
+                    <div class="avoid-break attendance-catatan-box" style="margin-bottom: 8px; page-break-inside: avoid !important; break-inside: avoid !important;">
+                        <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a; background: #ffffff; table-layout: fixed; font-size: 0.70rem;">
                             <tr>
                                 <!-- Sisi Kiri: Rekap Absensi -->
                                 <td style="width: 45%; border-right: 1.5px solid #0f172a; padding: 0; vertical-align: top; background: #ffffff;">
                                     <table style="width: 100%; border-collapse: collapse; background: #ffffff;">
                                         <tr style="border-bottom: 1.5px solid #0f172a;">
-                                            <th colspan="3" style="padding: 5px 6px; text-align: center; font-weight: 700; font-size: 0.70rem; letter-spacing: 0.2px;">
+                                            <th colspan="3" style="padding: 4px 6px; text-align: center; font-weight: 700; font-size: 0.69rem; letter-spacing: 0.2px;">
                                                 REKAP KETIDAKHADIRAN SISWA
                                             </th>
                                         </tr>
                                         <tr style="border-bottom: 1px solid #0f172a;">
-                                            <th style="width: 15%; border-right: 1px solid #0f172a; padding: 4px 4px; text-align: center; font-size: 0.68rem;">NO</th>
-                                            <th style="width: 55%; border-right: 1px solid #0f172a; padding: 4px 6px; text-align: left; font-size: 0.68rem;">KETERANGAN</th>
-                                            <th style="width: 30%; padding: 4px 4px; text-align: center; font-size: 0.68rem;">JUMLAH</th>
+                                            <th style="width: 15%; border-right: 1px solid #0f172a; padding: 3px 4px; text-align: center; font-size: 0.67rem;">NO</th>
+                                            <th style="width: 55%; border-right: 1px solid #0f172a; padding: 3px 6px; text-align: left; font-size: 0.67rem;">KETERANGAN</th>
+                                            <th style="width: 30%; padding: 3px 4px; text-align: center; font-size: 0.67rem;">JUMLAH</th>
                                         </tr>
                                         <tr style="border-bottom: 1px solid #0f172a;">
-                                            <td style="border-right: 1px solid #0f172a; padding: 4px 4px; text-align: center;">1</td>
-                                            <td style="border-right: 1px solid #0f172a; padding: 4px 6px;">Sakit (S)</td>
-                                            <td style="padding: 4px 4px; text-align: center; font-weight: 700;"><?= (int)($attRekap['sakit'] ?? 0) ?> hari</td>
+                                            <td style="border-right: 1px solid #0f172a; padding: 3.5px 4px; text-align: center;">1</td>
+                                            <td style="border-right: 1px solid #0f172a; padding: 3.5px 6px;">Sakit (S)</td>
+                                            <td style="padding: 3.5px 4px; text-align: center; font-weight: 700;"><?= (int)($attRekap['sakit'] ?? 0) ?> hari</td>
                                         </tr>
                                         <tr style="border-bottom: 1px solid #0f172a;">
-                                            <td style="border-right: 1px solid #0f172a; padding: 4px 4px; text-align: center;">2</td>
-                                            <td style="border-right: 1px solid #0f172a; padding: 4px 6px;">Izin (I)</td>
-                                            <td style="padding: 4px 4px; text-align: center; font-weight: 700;"><?= (int)($attRekap['izin'] ?? 0) ?> hari</td>
+                                            <td style="border-right: 1px solid #0f172a; padding: 3.5px 4px; text-align: center;">2</td>
+                                            <td style="border-right: 1px solid #0f172a; padding: 3.5px 6px;">Izin (I)</td>
+                                            <td style="padding: 3.5px 4px; text-align: center; font-weight: 700;"><?= (int)($attRekap['izin'] ?? 0) ?> hari</td>
                                         </tr>
                                         <tr>
-                                            <td style="border-right: 1px solid #0f172a; padding: 4px 4px; text-align: center;">3</td>
-                                            <td style="border-right: 1px solid #0f172a; padding: 4px 6px;">Tanpa Keterangan / Alpa (A)</td>
-                                            <td style="padding: 4px 4px; text-align: center; font-weight: 700;"><?= (int)($attRekap['alpa'] ?? 0) ?> hari</td>
+                                            <td style="border-right: 1px solid #0f172a; padding: 3.5px 4px; text-align: center;">3</td>
+                                            <td style="border-right: 1px solid #0f172a; padding: 3.5px 6px;">Tanpa Keterangan / Alpa (A)</td>
+                                            <td style="padding: 3.5px 4px; text-align: center; font-weight: 700;"><?= (int)($attRekap['alpa'] ?? 0) ?> hari</td>
                                         </tr>
                                     </table>
                                 </td>
                                 <!-- Sisi Kanan: Catatan Wali Kelas -->
-                                <td style="width: 55%; padding: 6px 10px; vertical-align: top; background: #ffffff;">
-                                    <div style="font-weight: 700; font-size: 0.70rem; color: #0f172a; margin-bottom: 4px; letter-spacing: 0.2px;">
+                                <td style="width: 55%; padding: 5px 8px; vertical-align: top; background: #ffffff;">
+                                    <div style="font-weight: 700; font-size: 0.69rem; color: #0f172a; margin-bottom: 3px; letter-spacing: 0.2px;">
                                         CATATAN WALI KELAS & KEDISIPLINAN:
                                     </div>
-                                    <div style="font-size: 0.69rem; line-height: 1.35; color: #0f172a;">
+                                    <div style="font-size: 0.67rem; line-height: 1.3; color: #0f172a;">
                                         <?= !empty($rHeader['catatan_wali_kelas']) 
                                             ? nl2br(htmlspecialchars($rHeader['catatan_wali_kelas'])) 
                                             : 'Tingkatkan kedisiplinan belajar, pertahankan prestasi akademik, serta maksimalkan kehadiran pada setiap kegiatan pembelajaran semester berikutnya.' ?>
                                     </div>
-                                    <div style="margin-top: 6px; font-size: 0.66rem; color: #475569;">
+                                    <div style="margin-top: 5px; font-size: 0.65rem; color: #475569;">
                                         Kehadiran Tercatat: <strong><?= (int)($attRekap['hadir'] ?? 0) ?></strong> hari hadir dari total <strong><?= (int)($attRekap['total'] ?? 0) ?></strong> presensi.
                                     </div>
                                 </td>
@@ -522,32 +581,32 @@ if (empty($logoUrl)) {
                         </table>
                     </div>
 
-                    <!-- TABEL EKSTRAKURIKULER SISWA -->
-                    <div style="margin-bottom: 10px; page-break-inside: avoid; break-inside: avoid;">
-                        <table class="table-official" style="font-size: 0.72rem; margin-bottom: 0;">
+                    <!-- TABEL EKSTRAKURIKULER SISWA (ANTI-TERPOTONG DI BATAS HALAMAN) -->
+                    <div class="avoid-break ekskul-box" style="margin-bottom: 8px; page-break-inside: avoid !important; break-inside: avoid !important;">
+                        <table class="table-official" style="font-size: 0.70rem; margin-bottom: 0;">
                             <thead>
                                 <tr style="border-bottom: 1.5px solid #0f172a;">
-                                    <th style="width: 5%; text-align: center !important; padding: 5px 2px;">NO</th>
-                                    <th style="width: 25%; text-align: center !important; padding: 5px 6px;">KEGIATAN EKSTRAKURIKULER</th>
-                                    <th style="width: 15%; text-align: center !important; padding: 5px 4px;">PREDIKAT</th>
-                                    <th style="width: 55%; text-align: center !important; padding: 5px 6px;">KETERANGAN / NILAI CAPAIAN</th>
+                                    <th style="width: 5%; text-align: center !important; padding: 4px 2px;">NO</th>
+                                    <th style="width: 25%; text-align: center !important; padding: 4px 6px;">KEGIATAN EKSTRAKURIKULER</th>
+                                    <th style="width: 15%; text-align: center !important; padding: 4px 4px;">PREDIKAT</th>
+                                    <th style="width: 55%; text-align: center !important; padding: 4px 6px;">KETERANGAN / NILAI CAPAIAN</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($eksList)): ?>
-                                    <tr>
-                                        <td style="text-align: center; color: #475569; padding: 5px 2px;">1</td>
-                                        <td style="text-align: left; color: #475569; padding: 5px 6px;">-</td>
-                                        <td style="text-align: center; color: #475569; padding: 5px 4px;">-</td>
-                                        <td style="text-align: left; color: #475569; padding: 5px 6px;">Belum mengikuti kegiatan ekstrakurikuler pada semester ini.</td>
+                                    <tr style="page-break-inside: avoid !important; break-inside: avoid !important;">
+                                        <td style="text-align: center; color: #475569; padding: 4px 2px;">1</td>
+                                        <td style="text-align: left; color: #475569; padding: 4px 6px;">-</td>
+                                        <td style="text-align: center; color: #475569; padding: 4px 4px;">-</td>
+                                        <td style="text-align: left; color: #475569; padding: 4px 6px;">Belum mengikuti kegiatan ekstrakurikuler pada semester ini.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($eksList as $iEks => $ek): ?>
-                                        <tr>
-                                            <td style="text-align: center; vertical-align: middle; padding: 5px 2px;"><?= $iEks + 1 ?></td>
-                                            <td style="text-align: left; font-weight: 700; vertical-align: middle; padding: 5px 6px;"><?= htmlspecialchars($ek['nama_ekskul']) ?></td>
-                                            <td style="text-align: center; font-weight: 700; vertical-align: middle; padding: 5px 4px;"><?= htmlspecialchars($ek['predikat'] ?: 'Sangat Baik') ?></td>
-                                            <td style="text-align: left; font-size: 0.70rem; line-height: 1.35; vertical-align: middle; padding: 5px 6px;">
+                                        <tr style="page-break-inside: avoid !important; break-inside: avoid !important;">
+                                            <td style="text-align: center; vertical-align: middle; padding: 4px 2px;"><?= $iEks + 1 ?></td>
+                                            <td style="text-align: left; font-weight: 700; vertical-align: middle; padding: 4px 6px;"><?= htmlspecialchars($ek['nama_ekskul']) ?></td>
+                                            <td style="text-align: center; font-weight: 700; vertical-align: middle; padding: 4px 4px;"><?= htmlspecialchars($ek['predikat'] ?: 'Sangat Baik') ?></td>
+                                            <td style="text-align: left; font-size: 0.67rem; line-height: 1.3; vertical-align: middle; padding: 4px 6px;">
                                                 <?= !empty($ek['nilai_deskripsi']) 
                                                     ? htmlspecialchars($ek['nilai_deskripsi']) 
                                                     : 'Aktif berpartisipasi dalam kegiatan dan menunjukkan capaian pembinaan yang baik.' ?>
@@ -559,50 +618,53 @@ if (empty($logoUrl)) {
                         </table>
                     </div>
 
-                    <!-- TANDA TANGAN RESMI 3 KOLOM -->
-                    <div class="sig-row">
-                        <div class="sig-col">
-                            <p class="mb-0 small text-muted">Mengetahui,</p>
-                            <p class="fw-bold mb-0 text-dark" style="font-size:0.85rem;">Orang Tua / Wali Siswa</p>
-                            <div class="sig-line"></div>
-                            <small class="text-muted d-block mt-1" style="font-size:0.75rem;">( ................................................ )</small>
+                    <!-- BLOK TANDA TANGAN & KEABSAHAN (SATU KESATUAN ANTI-TERBELAH) -->
+                    <div class="avoid-break signature-seal-block" style="page-break-inside: avoid !important; break-inside: avoid !important; margin-top: 10px;">
+                        <!-- TANDA TANGAN RESMI 3 KOLOM -->
+                        <div class="sig-row">
+                            <div class="sig-col">
+                                <p class="mb-0 small text-muted">Mengetahui,</p>
+                                <p class="fw-bold mb-0 text-dark" style="font-size:0.83rem;">Orang Tua / Wali Siswa</p>
+                                <div class="sig-line"></div>
+                                <small class="text-muted d-block mt-1" style="font-size:0.73rem;">( ................................................ )</small>
+                            </div>
+                            <div class="sig-col">
+                                <p class="mb-0 small text-muted">Mengetahui,</p>
+                                <p class="fw-bold mb-0 text-dark" style="font-size:0.83rem;">Kepala Sekolah</p>
+                                <div class="sig-line"></div>
+                                <small class="fw-bold text-dark d-block mt-1" style="font-size:0.80rem;"><?= htmlspecialchars($rData['kepsekNama']) ?></small>
+                                <small class="text-muted d-block" style="font-size:0.70rem;">NIP/NUPTK: <?= htmlspecialchars($rData['kepsekNip'] ?: '-') ?></small>
+                            </div>
+                            <div class="sig-col">
+                                <?php
+                                $kotaSekolah = 'Cicalengka';
+                                if (!empty($st['alamat'])) {
+                                    if (stripos($st['alamat'], 'Bandung') !== false) $kotaSekolah = 'Bandung';
+                                    elseif (stripos($st['alamat'], 'Cicalengka') !== false) $kotaSekolah = 'Cicalengka';
+                                }
+                                ?>
+                                <p class="mb-0 small text-muted"><?= htmlspecialchars($kotaSekolah) ?>, <?= date('d F Y') ?></p>
+                                <p class="fw-bold mb-0 text-dark" style="font-size:0.83rem;">Wali Kelas Rombel</p>
+                                <div class="sig-line"></div>
+                                <?php if (!empty($waliK['nama_lengkap'])): ?>
+                                    <small class="fw-bold text-dark d-block mt-1" style="font-size:0.80rem;"><?= htmlspecialchars($waliK['nama_lengkap']) ?></small>
+                                    <small class="text-muted d-block" style="font-size:0.70rem;">NIP/NUPTK: <?= htmlspecialchars($waliK['nip'] ?: '-') ?></small>
+                                <?php else: ?>
+                                    <small class="text-muted d-block mt-1" style="font-size:0.73rem;">( ................................................ )</small>
+                                    <small class="text-muted d-block" style="font-size:0.70rem;">Wali Kelas</small>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div class="sig-col">
-                            <p class="mb-0 small text-muted">Mengetahui,</p>
-                            <p class="fw-bold mb-0 text-dark" style="font-size:0.85rem;">Kepala Sekolah</p>
-                            <div class="sig-line"></div>
-                            <small class="fw-bold text-dark d-block mt-1" style="font-size:0.82rem;"><?= htmlspecialchars($rData['kepsekNama']) ?></small>
-                            <small class="text-muted d-block" style="font-size:0.72rem;">NIP/NUPTK: <?= htmlspecialchars($rData['kepsekNip'] ?: '-') ?></small>
-                        </div>
-                        <div class="sig-col">
-                            <?php
-                            $kotaSekolah = 'Cicalengka';
-                            if (!empty($st['alamat'])) {
-                                if (stripos($st['alamat'], 'Bandung') !== false) $kotaSekolah = 'Bandung';
-                                elseif (stripos($st['alamat'], 'Cicalengka') !== false) $kotaSekolah = 'Cicalengka';
-                            }
-                            ?>
-                            <p class="mb-0 small text-muted"><?= htmlspecialchars($kotaSekolah) ?>, <?= date('d F Y') ?></p>
-                            <p class="fw-bold mb-0 text-dark" style="font-size:0.85rem;">Wali Kelas Rombel</p>
-                            <div class="sig-line"></div>
-                            <?php if (!empty($waliK['nama_lengkap'])): ?>
-                                <small class="fw-bold text-dark d-block mt-1" style="font-size:0.82rem;"><?= htmlspecialchars($waliK['nama_lengkap']) ?></small>
-                                <small class="text-muted d-block" style="font-size:0.72rem;">NIP/NUPTK: <?= htmlspecialchars($waliK['nip'] ?: '-') ?></small>
-                            <?php else: ?>
-                                <small class="text-muted d-block mt-1" style="font-size:0.75rem;">( ................................................ )</small>
-                                <small class="text-muted d-block" style="font-size:0.72rem;">Wali Kelas</small>
-                            <?php endif; ?>
-                        </div>
-                    </div>
 
-                    <!-- FOOTER SEAL VALIDASI SISTEM RESMI -->
-                    <div class="seal-note">
-                        <div>
-                            <i class="bi bi-patch-check-fill text-primary me-1"></i>
-                            <strong>Dokumen Resmi E-Rapor Digital SMK Muthia Harapan Cicalengka</strong> — Dicetak melalui Sistem Manajemen Pembelajaran & E-Rapor Resmi.
-                        </div>
-                        <div style="font-weight: 700;">
-                            Sah Tanpa Tanda Tangan Basah &bull; Validasi Sistem
+                        <!-- FOOTER SEAL VALIDASI SISTEM RESMI -->
+                        <div class="seal-note">
+                            <div>
+                                <i class="bi bi-patch-check-fill text-primary me-1"></i>
+                                <strong>Dokumen Resmi E-Rapor Digital SMK Muthia Harapan Cicalengka</strong> — Dicetak melalui Sistem E-Learning & E-Rapor Resmi.
+                            </div>
+                            <div style="font-weight: 700;">
+                                Sah Tanpa Tanda Tangan Basah &bull; Validasi Sistem
+                            </div>
                         </div>
                     </div>
 
