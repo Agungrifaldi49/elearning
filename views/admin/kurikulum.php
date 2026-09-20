@@ -68,16 +68,40 @@ if (!function_exists('formatTpDescriptionHtml')) {
     word-break: break-word;
 }
 .rombel-card {
-    transition: all 0.15s ease-in-out;
-    border: 1px solid #e2e8f0;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1.5px solid #e2e8f0;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 .rombel-card:hover {
     border-color: #3b82f6 !important;
     background-color: #f8fafc !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.08);
 }
 .rombel-card.selected-card {
     border-color: #2563eb !important;
-    background-color: #eff6ff !important;
+    background: #f0f7ff !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+}
+.rombel-checkbox {
+    width: 1.2rem;
+    height: 1.2rem;
+    cursor: pointer;
+}
+.rombel-scroll-box::-webkit-scrollbar {
+    width: 6px;
+}
+.rombel-scroll-box::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 4px;
+}
+.rombel-scroll-box::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+.rombel-scroll-box::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 </style>
 
@@ -1003,93 +1027,121 @@ if (!function_exists('formatTpDescriptionHtml')) {
 <!-- Modal Assign Rombel Kurikulum -->
 <div class="modal fade" id="modalAssignRombel" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form action="<?= BASE_URL ?>index.php?url=admin/kurikulum" method="POST">
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="assign_rombel">
                 <input type="hidden" name="redirect_tab" value="rombel">
-                <div class="modal-header border-0 pb-0">
-                    <div>
-                        <h5 class="fw-bold mb-1"><i class="bi bi-building-add text-primary me-2"></i>Pasang Kurikulum ke Rombel Kelas</h5>
-                        <p class="text-muted small mb-0">Pilih satu atau lebih rombel kelas untuk menetapkan kurikulum secara massal.</p>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row g-3 mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold">Tahun Ajaran <span class="text-danger">*</span></label>
-                            <select name="tahun_ajaran_id" class="form-select" required>
-                                <?php foreach ($taList as $ta): ?>
-                                    <option value="<?= $ta['id'] ?>" <?= !empty($ta['is_active']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($ta['tahun_ajaran'] ?? $ta['tahun']) ?> (Semester <?= htmlspecialchars($ta['semester']) ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                
+                <!-- Modal Header -->
+                <div class="modal-header px-4 pt-4 pb-3 border-bottom bg-light bg-opacity-50 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary bg-opacity-10 text-primary p-2.5 rounded-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+                            <i class="bi bi-building-add fs-4"></i>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold">Pilih Kurikulum Yang Berlaku <span class="text-danger">*</span></label>
-                            <select name="kurikulum_id" id="assign_rombel_kurikulum_id" class="form-select" required>
-                                <?php foreach ($kurikulumList as $kur): ?>
-                                    <option value="<?= $kur['id'] ?>"><?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
+                        <div>
+                            <h5 class="fw-bold mb-0.5 text-dark">Pasang Kurikulum ke Rombel Kelas</h5>
+                            <p class="text-muted small mb-0">Tentukan periode, kurikulum, dan pilih rombel kelas secara fleksibel.</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body p-4">
+                    
+                    <!-- Section 1: Periode & Kurikulum Utama -->
+                    <div class="bg-light bg-opacity-60 p-3 p-md-3.5 rounded-4 border mb-4">
+                        <div class="row g-3 g-md-4">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-dark mb-1.5">
+                                    <i class="bi bi-calendar3 text-primary me-1.5"></i>Tahun Ajaran <span class="text-danger">*</span>
+                                </label>
+                                <select name="tahun_ajaran_id" class="form-select rounded-3 py-2 px-3 shadow-xs" required>
+                                    <?php foreach ($taList as $ta): ?>
+                                        <option value="<?= $ta['id'] ?>" <?= !empty($ta['is_active']) ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($ta['tahun_ajaran'] ?? $ta['tahun']) ?> (Semester <?= htmlspecialchars($ta['semester']) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-dark mb-1.5">
+                                    <i class="bi bi-mortarboard text-primary me-1.5"></i>Pilih Kurikulum Yang Berlaku <span class="text-danger">*</span>
+                                </label>
+                                <select name="kurikulum_id" id="assign_rombel_kurikulum_id" class="form-select rounded-3 py-2 px-3 shadow-xs" required>
+                                    <?php foreach ($kurikulumList as $kur): ?>
+                                        <option value="<?= $kur['id'] ?>"><?= htmlspecialchars($kur['nama']) ?> (<?= $kur['kode'] ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Multi-selection Checkboxes Rombel Kelas -->
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
-                            <label class="form-label small fw-bold mb-0">
-                                Pilih Rombel Kelas <span class="text-danger">*</span>
+                    <!-- Section 2: Multi-selection Checkboxes Rombel Kelas -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-2">
+                            <label class="form-label fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                <i class="bi bi-ui-checks-grid text-primary fs-5"></i>
+                                <span>Pilih Rombel Kelas <span class="text-danger">*</span></span>
                             </label>
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold px-2.5 py-1" id="rombelCountBadge">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold px-3 py-1.5 rounded-pill" id="rombelCountBadge">
                                 0 kelas dipilih
                             </span>
                         </div>
-                        <small class="text-muted d-block mb-2">Centang checkbox pada rombel yang ingin dipasangkan kurikulum (bisa memilih lebih dari 1 kelas sekaligus):</small>
+                        <p class="text-muted small mb-3">
+                            Centang checkbox pada rombel yang ingin dipasangkan kurikulum (bisa memilih lebih dari 1 kelas sekaligus):
+                        </p>
 
                         <!-- Controls: Search & Selection Toolbar -->
-                        <div class="p-2.5 bg-light rounded-3 border mb-2">
-                            <div class="row g-2 align-items-center mb-2">
+                        <div class="p-3 bg-light rounded-4 border mb-3 shadow-xs">
+                            <div class="row g-2.5 align-items-center">
                                 <div class="col-12 col-sm-6">
                                     <div class="input-group input-group-sm">
-                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                                        <input type="text" id="searchRombelAssign" class="form-control border-start-0" placeholder="Cari nama kelas / jurusan...">
+                                        <span class="input-group-text bg-white border-end-0 rounded-start-3 px-2.5"><i class="bi bi-search text-muted"></i></span>
+                                        <input type="text" id="searchRombelAssign" class="form-control border-start-0 rounded-end-3 py-1.5" placeholder="Cari nama kelas atau jurusan...">
                                     </div>
                                 </div>
                                 <div class="col-12 col-sm-6 text-sm-end">
                                     <div class="btn-group btn-group-sm shadow-xs">
-                                        <button type="button" class="btn btn-outline-primary fw-semibold" id="btnSelectAllRombel">
+                                        <button type="button" class="btn btn-outline-primary px-3 py-1.5 fw-semibold" id="btnSelectAllRombel">
                                             <i class="bi bi-check-all me-1"></i>Pilih Semua
                                         </button>
-                                        <button type="button" class="btn btn-outline-secondary fw-semibold" id="btnUnselectAllRombel">
+                                        <button type="button" class="btn btn-outline-secondary px-3 py-1.5 fw-semibold" id="btnUnselectAllRombel">
                                             <i class="bi bi-x me-1"></i>Batal Semua
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                            <!-- Quick Action Buttons -->
-                            <div class="d-flex align-items-center gap-1.5 flex-wrap pt-1 border-top" style="font-size: 0.78rem;">
-                                <span class="text-muted me-1 fw-bold"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Pilih Cepat:</span>
-                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0.5 px-2 btn-select-tingkat" data-tingkat="X">+ Semua Kelas X</button>
-                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0.5 px-2 btn-select-tingkat" data-tingkat="XI">+ Semua Kelas XI</button>
-                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-0.5 px-2 btn-select-tingkat" data-tingkat="XII">+ Semua Kelas XII</button>
-                                <span class="text-muted ms-2 me-1">|</span>
-                                <span class="text-muted me-1 fw-bold">Filter Tampilan:</span>
-                                <button type="button" class="btn btn-xs btn-info rounded-pill py-0.5 px-2 btn-filter-tingkat text-white fw-semibold" data-tingkat="all">Semua</button>
-                                <button type="button" class="btn btn-xs btn-outline-info rounded-pill py-0.5 px-2 btn-filter-tingkat fw-semibold" data-tingkat="X">Tingkat X</button>
-                                <button type="button" class="btn btn-xs btn-outline-info rounded-pill py-0.5 px-2 btn-filter-tingkat fw-semibold" data-tingkat="XI">Tingkat XI</button>
-                                <button type="button" class="btn btn-xs btn-outline-info rounded-pill py-0.5 px-2 btn-filter-tingkat fw-semibold" data-tingkat="XII">Tingkat XII</button>
+                            
+                            <!-- Quick Action & Filter Buttons -->
+                            <div class="d-flex align-items-center gap-2 flex-wrap pt-2.5 mt-2.5 border-top" style="font-size: 0.8rem;">
+                                <span class="text-muted me-1 fw-bold d-flex align-items-center gap-1">
+                                    <i class="bi bi-lightning-charge-fill text-warning"></i>Pilih Cepat:
+                                </span>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2.5 btn-select-tingkat fw-semibold" data-tingkat="X">+ Semua Kelas X</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2.5 btn-select-tingkat fw-semibold" data-tingkat="XI">+ Semua Kelas XI</button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill py-1 px-2.5 btn-select-tingkat fw-semibold" data-tingkat="XII">+ Semua Kelas XII</button>
+                                
+                                <span class="text-muted mx-1 opacity-50">|</span>
+                                
+                                <span class="text-muted me-1 fw-bold">Filter:</span>
+                                <button type="button" class="btn btn-xs btn-info rounded-pill py-1 px-2.5 btn-filter-tingkat text-white fw-semibold" data-tingkat="all">Semua</button>
+                                <button type="button" class="btn btn-xs btn-outline-info rounded-pill py-1 px-2.5 btn-filter-tingkat fw-semibold" data-tingkat="X">Tingkat X</button>
+                                <button type="button" class="btn btn-xs btn-outline-info rounded-pill py-1 px-2.5 btn-filter-tingkat fw-semibold" data-tingkat="XI">Tingkat XI</button>
+                                <button type="button" class="btn btn-xs btn-outline-info rounded-pill py-1 px-2.5 btn-filter-tingkat fw-semibold" data-tingkat="XII">Tingkat XII</button>
                             </div>
                         </div>
 
-                        <!-- Checkbox Container -->
-                        <div class="p-2 border rounded-3 bg-white" style="max-height: 250px; overflow-y: auto;">
+                        <!-- Checkbox Cards Container -->
+                        <div class="p-3 border rounded-4 bg-white rombel-scroll-box shadow-xs" style="max-height: 270px; overflow-y: auto;">
                             <?php if (empty($kelasList)): ?>
-                                <div class="text-muted text-center py-3 small">Tidak ada data kelas yang tersedia.</div>
+                                <div class="text-muted text-center py-4 small">
+                                    <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary opacity-50"></i>
+                                    Tidak ada data kelas yang tersedia.
+                                </div>
                             <?php else: ?>
-                                <div class="row g-2" id="rombelCheckboxList">
+                                <div class="row g-2.5" id="rombelCheckboxList">
                                     <?php foreach ($kelasList as $k): ?>
                                         <?php 
                                         $tingkatUpper = strtoupper(trim($k['tingkat']));
@@ -1098,7 +1150,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                         <div class="col-12 col-sm-6 rombel-check-item" 
                                              data-tingkat="<?= htmlspecialchars($normalizedTingkat) ?>" 
                                              data-nama="<?= htmlspecialchars(strtolower($k['nama_kelas'] . ' ' . ($k['nama_jurusan'] ?? '') . ' ' . $k['tingkat'])) ?>">
-                                            <div class="form-check p-2.5 rounded-3 bg-light-subtle h-100 d-flex align-items-center gap-2 rombel-card cursor-pointer">
+                                            <div class="form-check p-3 rounded-3 bg-light-subtle h-100 d-flex align-items-center gap-3 rombel-card cursor-pointer">
                                                 <input class="form-check-input rombel-checkbox flex-shrink-0 mt-0" 
                                                        type="checkbox" 
                                                        name="rombel_ids[]" 
@@ -1106,14 +1158,16 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                                        id="rombel_chk_<?= $k['id'] ?>" 
                                                        data-tingkat="<?= htmlspecialchars($normalizedTingkat) ?>" 
                                                        data-kelas="<?= htmlspecialchars($k['nama_kelas']) ?>">
-                                                <label class="form-check-label flex-grow-1 cursor-pointer mb-0 small" for="rombel_chk_<?= $k['id'] ?>">
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <span class="fw-bold text-dark text-truncate" style="max-width: 170px;"><?= htmlspecialchars($k['nama_kelas']) ?></span>
-                                                        <span class="badge bg-secondary-subtle text-secondary border px-1.5 py-0.5" style="font-size: 0.7rem;">
+                                                <label class="form-check-label flex-grow-1 cursor-pointer mb-0" for="rombel_chk_<?= $k['id'] ?>">
+                                                    <div class="d-flex justify-content-between align-items-center mb-0.5">
+                                                        <span class="fw-bold text-dark text-truncate" style="max-width: 175px; font-size: 0.92rem;">
+                                                            <?= htmlspecialchars($k['nama_kelas']) ?>
+                                                        </span>
+                                                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-0.5 rounded-2" style="font-size: 0.72rem;">
                                                             Tingkat <?= htmlspecialchars($k['tingkat']) ?>
                                                         </span>
                                                     </div>
-                                                    <div class="text-muted text-truncate" style="font-size: 0.74rem;">
+                                                    <div class="text-muted text-truncate" style="font-size: 0.78rem;">
                                                         <?= htmlspecialchars($k['nama_jurusan'] ?? 'Umum') ?>
                                                     </div>
                                                 </label>
@@ -1123,39 +1177,62 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                 </div>
                             <?php endif; ?>
                         </div>
-                        <div id="rombelValidationError" class="text-danger small mt-1.5 fw-semibold d-none">
-                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Silakan centang minimal 1 rombel kelas terlebih dahulu.
+                        <div id="rombelValidationError" class="text-danger small mt-2 p-2 px-3 rounded-3 bg-danger-subtle border border-danger-subtle fw-semibold d-none">
+                            <i class="bi bi-exclamation-triangle-fill me-1.5"></i>Silakan centang minimal 1 rombel kelas terlebih dahulu sebelum menerapkan.
                         </div>
                     </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold">Pilih Fase / Jenjang (Opsional)</label>
-                            <select name="fase_id" id="assign_rombel_fase_id" class="form-select">
-                                <option value="" data-kurikulum-id="">-- Auto (Menyesuaikan Masing-Masing Kelas) --</option>
-                                <?php foreach ($allFaseList as $f): ?>
-                                    <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>" data-kode="<?= htmlspecialchars($f['kode'] ?? '') ?>" data-tingkat="<?= htmlspecialchars($f['tingkat_kelas'] ?? '') ?>">
-                                        <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <small class="text-muted" style="font-size: 0.76rem;">Jika diset Auto, sistem otomatis menentukan Fase E (Kelas X) atau Fase F (Kelas XI/XII) untuk tiap kelas.</small>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label class="form-label small fw-bold">Status Hubungan</label>
-                            <select name="status" class="form-select">
-                                <option value="aktif" selected>Aktif (Berjalan Saat Ini)</option>
-                                <option value="selesai">Selesai / Riwayat Lalu</option>
-                            </select>
-                            <small class="text-muted" style="font-size: 0.76rem;">Hanya boleh ada 1 kurikulum berstatus 'Aktif' per rombel pada tahun ajaran yang dipilih.</small>
+                    <!-- Section 3: Pengaturan Fase & Status -->
+                    <div class="bg-light bg-opacity-40 p-3 p-md-3.5 rounded-4 border mb-2">
+                        <div class="row g-3 g-md-4">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-dark mb-1.5">
+                                    <i class="bi bi-layers text-primary me-1.5"></i>Pilih Fase / Jenjang (Opsional)
+                                </label>
+                                <select name="fase_id" id="assign_rombel_fase_id" class="form-select rounded-3 py-2 px-3 shadow-xs">
+                                    <option value="" data-kurikulum-id="">-- Auto (Menyesuaikan Masing-Masing Kelas) --</option>
+                                    <?php foreach ($allFaseList as $f): ?>
+                                        <option value="<?= $f['id'] ?>" data-kurikulum-id="<?= $f['kurikulum_id'] ?>" data-kode="<?= htmlspecialchars($f['kode'] ?? '') ?>" data-tingkat="<?= htmlspecialchars($f['tingkat_kelas'] ?? '') ?>">
+                                            <?= htmlspecialchars($f['nama']) ?> (<?= $f['nama_kurikulum'] ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <small class="text-muted d-block mt-1.5" style="font-size: 0.76rem; line-height: 1.4;">
+                                    <i class="bi bi-info-circle me-1 text-primary"></i>Mode <strong>Auto</strong> otomatis menentukan Fase E (Kelas X) atau Fase F (Kelas XI/XII) untuk tiap rombel.
+                                </small>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-dark mb-1.5">
+                                    <i class="bi bi-toggle-on text-primary me-1.5"></i>Status Hubungan
+                                </label>
+                                <select name="status" class="form-select rounded-3 py-2 px-3 shadow-xs">
+                                    <option value="aktif" selected>Aktif (Berjalan Saat Ini)</option>
+                                    <option value="selesai">Selesai / Riwayat Lalu</option>
+                                </select>
+                                <small class="text-muted d-block mt-1.5" style="font-size: 0.76rem; line-height: 1.4;">
+                                    <i class="bi bi-shield-check me-1 text-success"></i>Hanya boleh ada 1 kurikulum berstatus <strong>Aktif</strong> per rombel pada tahun ajaran yang sama.
+                                </small>
+                            </div>
                         </div>
                     </div>
+
                 </div>
-                <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary fw-bold px-4" id="btnSubmitAssignRombel">
-                        <i class="bi bi-check2-circle me-1"></i> Terapkan Kurikulum
-                    </button>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer px-4 py-3 border-top bg-light bg-opacity-60 rounded-bottom-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="text-muted small d-none d-md-flex align-items-center gap-1.5">
+                        <i class="bi bi-lightning-charge text-warning"></i>
+                        <span>Perubahan otomatis disinkronkan ke e-rapor kelas terpilih.</span>
+                    </div>
+                    <div class="d-flex gap-2 ms-auto">
+                        <button type="button" class="btn btn-outline-secondary px-4 py-2 rounded-3 fw-semibold" data-bs-dismiss="modal">
+                            Batal
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4 py-2 rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2" id="btnSubmitAssignRombel">
+                            <i class="bi bi-check2-circle fs-6"></i>
+                            <span>Terapkan Kurikulum</span>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
