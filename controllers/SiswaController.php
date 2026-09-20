@@ -893,6 +893,16 @@ class SiswaController {
             // fallback jika koneksi bermasalah
         }
 
+        // Ambil Data Ekstrakurikuler yang Diikuti Siswa & Nilai Deskripsi untuk E-Rapor
+        $ekskulList = [];
+        try {
+            require_once ROOT_PATH . 'models/EkstrakurikulerModel.php';
+            $ekskulModel = new EkstrakurikulerModel();
+            $ekskulList = $ekskulModel->getEkskulBySiswa($siswaId, $taId, $activeSemester);
+        } catch (\Throwable $eEks) {
+            $ekskulList = [];
+        }
+
         require_once ROOT_PATH . 'views/siswa/rapor.php';
     }
 
@@ -1162,5 +1172,63 @@ class SiswaController {
         }
 
         require_once ROOT_PATH . 'views/siswa/slip_pembayaran.php';
+    }
+
+    /**
+     * Halaman Ekstrakurikuler Siswa (Daftar & Ikuti Ekskul)
+     */
+    public function ekstrakurikuler() {
+        $siswa = $this->getSiswaInfo();
+        $siswaId = $siswa['id'];
+
+        require_once ROOT_PATH . 'models/EkstrakurikulerModel.php';
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        $ekskulModel = new EkstrakurikulerModel();
+        $academicModel = new AcademicModel();
+
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $taId = $activeTa['id'] ?? 4;
+        $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('Token keamanan CSRF tidak valid.');
+                header('Location: ' . BASE_URL . 'index.php?url=siswa/ekstrakurikuler');
+                exit();
+            }
+
+            $action = $_POST['action'] ?? '';
+            $ekskulId = (int)($_POST['ekskul_id'] ?? 0);
+
+            if ($action === 'join_ekskul' && $ekskulId > 0) {
+                $joined = $ekskulModel->joinEkskul($siswaId, $ekskulId, $taId, $activeSemester);
+                if ($joined) {
+                    FlashHelper::setSuccess('Selamat! Anda telah berhasil mengikuti kegiatan ekstrakurikuler ini.');
+                } else {
+                    FlashHelper::setError('Gagal bergabung ke dalam ekstrakurikuler.');
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=siswa/ekstrakurikuler');
+                exit();
+            }
+
+            if ($action === 'leave_ekskul' && $ekskulId > 0) {
+                $left = $ekskulModel->leaveEkskul($siswaId, $ekskulId);
+                if ($left) {
+                    FlashHelper::setSuccess('Anda telah membatalkan keikutsertaan pada ekstrakurikuler ini.');
+                } else {
+                    FlashHelper::setError('Gagal membatalkan keikutsertaan.');
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=siswa/ekstrakurikuler');
+                exit();
+            }
+        }
+
+        // Ambil seluruh ekskul aktif
+        $allEkskul = $ekskulModel->getAllEkskul(true);
+        // Ambil data ekskul yang sedang diikuti siswa
+        $myEkskul = $ekskulModel->getEkskulBySiswa($siswaId, $taId, $activeSemester);
+        $enrolledIds = array_column($myEkskul, 'ekskul_id');
+
+        require_once ROOT_PATH . 'views/siswa/ekstrakurikuler.php';
     }
 }

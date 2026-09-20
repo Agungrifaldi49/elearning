@@ -351,6 +351,9 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
             if (!isset($historyAbsen) || !is_array($historyAbsen)) {
                 $historyAbsen = [];
             }
+            if (!isset($ekskulList) || !is_array($ekskulList)) {
+                $ekskulList = [];
+            }
             ?>
             <div class="text-center my-2">
                 <div style="font-size: 1.05rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: #0f172a;">
@@ -802,6 +805,47 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
             </table>
         </div>
 
+        <!-- TABEL EKSTRAKURIKULER SISWA (PRINT VERSION) -->
+        <div class="d-none d-print-block mb-3" style="page-break-inside: avoid; break-inside: avoid;">
+            <table class="table-print-official" style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a; background: #ffffff; table-layout: fixed; font-size: 0.72rem;">
+                <thead>
+                    <tr style="background: #ffffff; border-bottom: 1.5px solid #0f172a;">
+                        <th style="width: 5%; text-align: center !important; padding: 5px 2px;">NO</th>
+                        <th style="width: 25%; text-align: center !important; padding: 5px 6px;">KEGIATAN EKSTRAKURIKULER</th>
+                        <th style="width: 15%; text-align: center !important; padding: 5px 4px;">PREDIKAT</th>
+                        <th style="width: 55%; text-align: center !important; padding: 5px 6px;">KETERANGAN / NILAI CAPAIAN</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($ekskulList)): ?>
+                        <tr>
+                            <td style="border: 1px solid #0f172a; padding: 5px 2px; text-align: center; color: #475569;">1</td>
+                            <td style="border: 1px solid #0f172a; padding: 5px 6px; text-align: left; color: #475569;">-</td>
+                            <td style="border: 1px solid #0f172a; padding: 5px 4px; text-align: center; color: #475569;">-</td>
+                            <td style="border: 1px solid #0f172a; padding: 5px 6px; text-align: left; color: #475569;">Belum mengikuti kegiatan ekstrakurikuler pada semester ini.</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($ekskulList as $iEks => $ek): ?>
+                            <tr>
+                                <td style="border: 1px solid #0f172a; padding: 5px 2px; text-align: center; color: #0f172a; vertical-align: middle;"><?= $iEks + 1 ?></td>
+                                <td style="border: 1px solid #0f172a; padding: 5px 6px; text-align: left; font-weight: 700; color: #0f172a; vertical-align: middle;">
+                                    <?= htmlspecialchars($ek['nama_ekskul']) ?>
+                                </td>
+                                <td style="border: 1px solid #0f172a; padding: 5px 4px; text-align: center; font-weight: 700; color: #0f172a; vertical-align: middle;">
+                                    <?= htmlspecialchars($ek['predikat'] ?: 'Sangat Baik') ?>
+                                </td>
+                                <td style="border: 1px solid #0f172a; padding: 5px 6px; text-align: left; font-size: 0.70rem; line-height: 1.35; color: #0f172a; vertical-align: middle;">
+                                    <?= !empty($ek['nilai_deskripsi']) 
+                                        ? htmlspecialchars($ek['nilai_deskripsi']) 
+                                        : 'Aktif berpartisipasi dalam kegiatan dan menunjukkan capaian pembinaan yang baik.' ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
         <!-- TABEL REKAP KETIDAKHADIRAN & CATATAN WALI KELAS (PRINT VERSION) -->
         <div class="d-none d-print-block mb-3" style="page-break-inside: avoid; break-inside: avoid;">
             <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a; background: #ffffff; table-layout: fixed; font-size: 0.72rem;">
@@ -856,6 +900,76 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     </td>
                 </tr>
             </table>
+        </div>
+
+        <!-- SECTION EKSTRAKURIKULER SISWA (SCREEN VIEW ONLY) -->
+        <div class="card border-0 rounded-4 shadow-sm mb-4 no-print" style="background: #f8fafc; border: 1px solid #e2e8f0 !important;">
+            <div class="card-body p-3 p-md-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-3">
+                            <i class="bi bi-activity fs-5"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-0 fs-6">Kegiatan Ekstrakurikuler yang Diikuti</h6>
+                            <small class="text-muted">Capaian kompetensi dan nilai pembinaan minat-bakat siswa.</small>
+                        </div>
+                    </div>
+                    <a href="<?= BASE_URL ?>index.php?url=siswa/ekstrakurikuler" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold">
+                        <i class="bi bi-compass me-1"></i> Jelajahi / Ikuti Ekskul
+                    </a>
+                </div>
+
+                <?php if (empty($ekskulList)): ?>
+                    <div class="text-center py-3 bg-white rounded-3 border text-muted small">
+                        <i class="bi bi-activity text-secondary fs-4 d-block mb-1"></i>
+                        Anda belum terdaftar dalam kegiatan ekstrakurikuler semester ini. Silakan pilih ekskul yang diminati melalui menu <a href="<?= BASE_URL ?>index.php?url=siswa/ekstrakurikuler" class="fw-bold text-primary">Kegiatan Ekstrakurikuler</a>.
+                    </div>
+                <?php else: ?>
+                    <div class="table-responsive bg-white rounded-3 border shadow-xs">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.82rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 45px;" class="text-center">No</th>
+                                    <th style="min-width: 170px;">Nama Ekstrakurikuler</th>
+                                    <th style="min-width: 180px;">Pembimbing</th>
+                                    <th style="width: 120px;" class="text-center">Predikat</th>
+                                    <th style="min-width: 280px;">Keterangan / Nilai Capaian</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($ekskulList as $iEks => $ek): ?>
+                                    <tr>
+                                        <td class="text-center text-muted"><?= $iEks + 1 ?></td>
+                                        <td>
+                                            <strong class="text-dark d-block"><?= htmlspecialchars($ek['nama_ekskul']) ?></strong>
+                                            <small class="text-muted"><?= htmlspecialchars($ek['hari'] ?: '-') ?> (<?= htmlspecialchars($ek['jam'] ?: '-') ?>)</small>
+                                        </td>
+                                        <td>
+                                            <span class="text-dark fw-semibold d-block"><?= htmlspecialchars($ek['pembimbing']) ?></span>
+                                            <?php if (!empty($ek['kontak_pembimbing'])): ?>
+                                                <small class="text-muted"><i class="bi bi-telephone me-1"></i><?= htmlspecialchars($ek['kontak_pembimbing']) ?></small>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-2.5 py-1">
+                                                <?= htmlspecialchars($ek['predikat'] ?: 'Sangat Baik') ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <p class="mb-0 text-dark" style="font-size: 0.78rem; line-height: 1.35;">
+                                                <?= !empty($ek['nilai_deskripsi']) 
+                                                    ? htmlspecialchars($ek['nilai_deskripsi']) 
+                                                    : '<span class="text-muted fst-italic">Belum ada deskripsi nilai capaian dari pembimbing.</span>' ?>
+                                            </p>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <!-- SECTION REKAP KEHADIRAN & HISTORY ABSEN (SCREEN VIEW ONLY) -->

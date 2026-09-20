@@ -75,6 +75,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'admin/enrollmentKey') ?>" href="<?= BASE_URL ?>index.php?url=admin/enrollmentKey">
                 <i class="bi bi-key-fill text-primary"></i> Key & Kode Akses Mapel
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'admin/ekstrakurikuler') ?>" href="<?= BASE_URL ?>index.php?url=admin/ekstrakurikuler">
+                <i class="bi bi-activity text-warning"></i> Data Ekstrakurikuler
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'admin/users') ?>" href="<?= BASE_URL ?>index.php?url=admin/users">
                 <i class="bi bi-person-gear"></i> Hak Akses & User
             </a></li>
@@ -301,6 +304,9 @@ if (!empty($sidebarRawLogo)) {
             </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'siswa/kartuPelajar') ?>" href="<?= BASE_URL ?>index.php?url=siswa/kartuPelajar">
                 <i class="bi bi-credit-card-fill"></i> Kartu Pelajar Digital
+            </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'siswa/ekstrakurikuler') ?>" href="<?= BASE_URL ?>index.php?url=siswa/ekstrakurikuler">
+                <i class="bi bi-activity text-warning"></i> Kegiatan Ekstrakurikuler
             </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'siswa/pembayaran') ?>" href="<?= BASE_URL ?>index.php?url=siswa/pembayaran">
                 <i class="bi bi-wallet2 text-success"></i> Portal Pembayaran SPP

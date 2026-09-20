@@ -2078,4 +2078,161 @@ class AdminController {
         ]);
         exit();
     }
+
+    /**
+     * Manajemen Master Data Ekstrakurikuler & Penilaian Deskripsi E-Rapor
+     */
+    public function ekstrakurikuler() {
+        require_once ROOT_PATH . 'models/EkstrakurikulerModel.php';
+        $ekskulModel = new EkstrakurikulerModel();
+        $guruModel = new GuruModel();
+        $academicModel = new AcademicModel();
+
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $taId = $activeTa['id'] ?? 4;
+        $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('Token keamanan CSRF tidak valid.');
+                header('Location: ' . BASE_URL . 'index.php?url=admin/ekstrakurikuler');
+                exit();
+            }
+
+            $action = $_POST['action'] ?? '';
+
+            if ($action === 'create_ekskul') {
+                $nama = trim($_POST['nama_ekskul'] ?? '');
+                if (empty($nama)) {
+                    FlashHelper::setError('Nama Ekstrakurikuler wajib diisi.');
+                } else {
+                    $saved = $ekskulModel->createEkskul([
+                        'nama_ekskul' => $nama,
+                        'tipe_pembimbing' => $_POST['tipe_pembimbing'] ?? 'guru',
+                        'guru_id' => !empty($_POST['guru_id']) ? (int)$_POST['guru_id'] : null,
+                        'nama_pembimbing_luar' => $_POST['nama_pembimbing_luar'] ?? '',
+                        'kontak_pembimbing' => $_POST['kontak_pembimbing'] ?? '',
+                        'hari' => $_POST['hari'] ?? '',
+                        'jam' => $_POST['jam'] ?? '',
+                        'tempat' => $_POST['tempat'] ?? '',
+                        'deskripsi' => $_POST['deskripsi'] ?? '',
+                        'status' => $_POST['status'] ?? 'aktif'
+                    ]);
+                    if ($saved) {
+                        FlashHelper::setSuccess("Ekstrakurikuler '{$nama}' berhasil ditambahkan.");
+                    } else {
+                        FlashHelper::setError('Gagal menambahkan data ekstrakurikuler.');
+                    }
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=admin/ekstrakurikuler');
+                exit();
+            }
+
+            if ($action === 'edit_ekskul') {
+                $id = (int)($_POST['id'] ?? 0);
+                $nama = trim($_POST['nama_ekskul'] ?? '');
+                if ($id <= 0 || empty($nama)) {
+                    FlashHelper::setError('Data ekstrakurikuler tidak valid.');
+                } else {
+                    $updated = $ekskulModel->updateEkskul($id, [
+                        'nama_ekskul' => $nama,
+                        'tipe_pembimbing' => $_POST['tipe_pembimbing'] ?? 'guru',
+                        'guru_id' => !empty($_POST['guru_id']) ? (int)$_POST['guru_id'] : null,
+                        'nama_pembimbing_luar' => $_POST['nama_pembimbing_luar'] ?? '',
+                        'kontak_pembimbing' => $_POST['kontak_pembimbing'] ?? '',
+                        'hari' => $_POST['hari'] ?? '',
+                        'jam' => $_POST['jam'] ?? '',
+                        'tempat' => $_POST['tempat'] ?? '',
+                        'deskripsi' => $_POST['deskripsi'] ?? '',
+                        'status' => $_POST['status'] ?? 'aktif'
+                    ]);
+                    if ($updated) {
+                        FlashHelper::setSuccess("Data ekstrakurikuler '{$nama}' berhasil diperbarui.");
+                    } else {
+                        FlashHelper::setError('Gagal memperbarui data ekstrakurikuler.');
+                    }
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=admin/ekstrakurikuler');
+                exit();
+            }
+
+            if ($action === 'delete_ekskul') {
+                $id = (int)($_POST['id'] ?? 0);
+                if ($id > 0) {
+                    $ekskulModel->deleteEkskul($id);
+                    FlashHelper::setSuccess('Ekstrakurikuler berhasil dihapus dari sistem.');
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=admin/ekstrakurikuler');
+                exit();
+            }
+
+            if ($action === 'save_nilai_deskripsi') {
+                $ekskulId = (int)($_POST['ekskul_id'] ?? 0);
+                $nilaiData = $_POST['nilai'] ?? []; // array [anggota_id => ['predikat' => ..., 'deskripsi' => ...]]
+                $countSaved = 0;
+
+                if (!empty($nilaiData) && is_array($nilaiData)) {
+                    foreach ($nilaiData as $anggotaId => $val) {
+                        $pred = trim($val['predikat'] ?? 'Sangat Baik');
+                        $desk = trim($val['deskripsi'] ?? '');
+                        if ($ekskulModel->updateNilaiDeskripsi((int)$anggotaId, $pred, $desk)) {
+                            $countSaved++;
+                        }
+                    }
+                    FlashHelper::setSuccess("Berhasil memperbarui nilai deskripsi capaian {$countSaved} siswa untuk E-Rapor.");
+                }
+
+                header('Location: ' . BASE_URL . 'index.php?url=admin/ekstrakurikuler&detail=' . $ekskulId);
+                exit();
+            }
+
+            if ($action === 'add_anggota_manual') {
+                $ekskulId = (int)($_POST['ekskul_id'] ?? 0);
+                $siswaId = (int)($_POST['siswa_id'] ?? 0);
+                if ($ekskulId > 0 && $siswaId > 0) {
+                    $ekskulModel->joinEkskul($siswaId, $ekskulId, $taId, $activeSemester);
+                    FlashHelper::setSuccess('Siswa berhasil didaftarkan ke dalam ekstrakurikuler.');
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=admin/ekstrakurikuler&detail=' . $ekskulId);
+                exit();
+            }
+
+            if ($action === 'remove_anggota') {
+                $ekskulId = (int)($_POST['ekskul_id'] ?? 0);
+                $siswaId = (int)($_POST['siswa_id'] ?? 0);
+                if ($ekskulId > 0 && $siswaId > 0) {
+                    $ekskulModel->leaveEkskul($siswaId, $ekskulId);
+                    FlashHelper::setSuccess('Siswa berhasil dikeluarkan dari ekstrakurikuler.');
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=admin/ekstrakurikuler&detail=' . $ekskulId);
+                exit();
+            }
+        }
+
+        $ekskulList = $ekskulModel->getAllEkskul();
+        $guruList = $guruModel->getAll();
+        $selectedDetailId = isset($_GET['detail']) ? (int)$_GET['detail'] : 0;
+        $selectedEkskul = null;
+        $anggotaList = [];
+        $availableSiswa = [];
+
+        if ($selectedDetailId > 0) {
+            $selectedEkskul = $ekskulModel->getEkskulById($selectedDetailId);
+            if ($selectedEkskul) {
+                $anggotaList = $ekskulModel->getAnggotaEkskul($selectedDetailId, $taId, $activeSemester);
+                
+                // Ambil daftar seluruh siswa aktif untuk pendaftaran manual
+                $siswaModel = new SiswaModel();
+                $allSiswa = $siswaModel->getAll();
+                $joinedSiswaIds = array_column($anggotaList, 'siswa_id');
+                foreach ($allSiswa as $s) {
+                    if (!in_array($s['id'], $joinedSiswaIds)) {
+                        $availableSiswa[] = $s;
+                    }
+                }
+            }
+        }
+
+        require_once ROOT_PATH . 'views/admin/ekstrakurikuler.php';
+    }
 }
