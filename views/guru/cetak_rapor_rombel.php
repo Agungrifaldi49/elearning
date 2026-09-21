@@ -474,9 +474,10 @@ if (empty($logoUrl)) {
                             <?php if (empty($calcRows)): ?>
                                 <tr>
                                     <td colspan="7" style="text-align: center; padding: 14px; color: #475569; font-size: 0.82rem;">
-                                        Belum ada data nilai yang diinput Guru Pengampu.
+                                        Belum ada mata pelajaran yang didaftarkan/diikuti atau belum ada data nilai yang diinput Guru Pengampu.
                                     </td>
                                 </tr>
+
                             <?php else: ?>
                                 <?php foreach ($calcRows as $cr): ?>
                                     <tr style="page-break-inside: avoid !important; break-inside: avoid !important;">

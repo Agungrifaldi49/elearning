@@ -188,15 +188,35 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                                                         <small class="text-muted">NIS: <?= htmlspecialchars($sw['nis'] ?: ($sw['nisn'] ?: '-')) ?> | <?= htmlspecialchars($sw['jenis_kelamin'] ?: '-') ?></small>
                                                     </td>
                                                     <td class="text-center">
-                                                        <span class="fs-6 fw-bold <?= $avg >= 75 ? 'text-primary' : 'text-danger' ?>">
-                                                            <?= number_format($avg, 1) ?>
-                                                        </span>
-                                                        <small class="d-block text-muted" style="font-size: 0.70rem;"><?= $sm['total_mapel'] ?? 0 ?> Mapel</small>
+                                                        <?php if (($sm['total_mapel'] ?? 0) > 0): ?>
+                                                            <span class="fs-6 fw-bold <?= $avg >= 75 ? 'text-primary' : 'text-danger' ?>">
+                                                                <?= number_format($avg, 1) ?>
+                                                            </span>
+                                                            <small class="d-block text-muted" style="font-size: 0.70rem;"><?= (int)$sm['total_mapel'] ?> Mapel Terdaftar</small>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-light text-muted border px-2 py-1" style="font-size: 0.72rem;">
+                                                                <i class="bi bi-dash-circle me-1"></i>0 Mapel
+                                                            </span>
+                                                            <small class="d-block text-muted" style="font-size: 0.68rem;">Belum Daftar</small>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($sm['enrolled_mapels'])): ?>
+                                                            <div class="mt-1 d-flex flex-wrap justify-content-center gap-1">
+                                                                <?php foreach ($sm['enrolled_mapels'] as $mName): ?>
+                                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-0.5 px-1.5" style="font-size: 0.65rem;" title="<?= htmlspecialchars($mName) ?>">
+                                                                        <?= htmlspecialchars(mb_strimwidth($mName, 0, 16, '...')) ?>
+                                                                    </span>
+                                                                <?php endforeach; ?>
+                                                            </div>
+                                                        <?php endif; ?>
                                                     </td>
                                                     <td class="text-center">
-                                                        <span class="badge <?= $pred['class'] ?> rounded-pill px-2.5 py-1">
-                                                            <?= $pred['grade'] ?>
-                                                        </span>
+                                                        <?php if (($sm['total_mapel'] ?? 0) > 0): ?>
+                                                            <span class="badge <?= $pred['class'] ?> rounded-pill px-2.5 py-1">
+                                                                <?= $pred['grade'] ?>
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-light text-muted border rounded-pill px-2.5 py-1">-</span>
+                                                        <?php endif; ?>
                                                     </td>
                                                     <td>
                                                         <textarea name="catatan[<?= $sw['id'] ?>]" rows="2" class="form-control form-control-sm rounded-3" placeholder="Tuliskan catatan apresiasi, motivasi, atau evaluasi belajar siswa untuk rapor..."><?= htmlspecialchars($sm['catatan_wali'] ?? '') ?></textarea>
@@ -206,6 +226,7 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                                                             <i class="bi bi-printer-fill me-1"></i> Cetak
                                                         </a>
                                                     </td>
+
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>

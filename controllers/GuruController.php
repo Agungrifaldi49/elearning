@@ -3363,19 +3363,27 @@ class GuruController {
                 $raporData['catatan_wali_kelas'] = $stmtCat->fetchColumn() ?: '';
             }
 
-            // Ambil data nilai tersimpan
-            $nilaiList = $nilaiModel->getNilaiBySiswa($siswaId);
-            if (empty($nilaiList)) {
-                $stmtNr = $db->prepare("
-                    SELECT nr.*, mp.nama_mapel, mp.kode_mapel, COALESCE(mp.kkm, 75) as kkm
-                    FROM nilai_rapor nr
-                    JOIN mata_pelajaran mp ON nr.mapel_id = mp.id
-                    WHERE nr.siswa_id = ?
-                    ORDER BY mp.nama_mapel ASC
-                ");
-                $stmtNr->execute([(int)$siswaId]);
-                $nilaiList = $stmtNr->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            }
+            // Ambil data nilai tersimpan HANYA untuk mata pelajaran yang didaftarkan siswa
+            $stmtNr = $db->prepare("
+                SELECT sme.mapel_id, 
+                       COALESCE(nr.id, 0) as id,
+                       COALESCE(nr.siswa_id, ?) as siswa_id,
+                       COALESCE(nr.nilai_tugas, 0) as nilai_tugas,
+                       COALESCE(nr.nilai_quiz, 0) as nilai_quiz,
+                       COALESCE(nr.nilai_uts, 0) as nilai_uts,
+                       COALESCE(nr.nilai_uas, 0) as nilai_uas,
+                       COALESCE(nr.nilai_akhir, 0) as nilai_akhir,
+                       mp.nama_mapel, mp.kode_mapel, COALESCE(mp.kkm, 75) as kkm
+                FROM siswa_mapel_enrollment sme
+                JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+                LEFT JOIN nilai_rapor nr ON (sme.siswa_id = nr.siswa_id AND sme.mapel_id = nr.mapel_id)
+                WHERE sme.siswa_id = ?
+                GROUP BY sme.mapel_id, mp.nama_mapel
+                ORDER BY mp.nama_mapel ASC
+            ");
+            $stmtNr->execute([(int)$siswaId, (int)$siswaId]);
+            $nilaiList = $stmtNr->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
 
             $kelasId = (int)$siswa['kelas_id'];
             $kurInfo = $currModel->getActiveKurikulumForRombel($kelasId, $taId);
@@ -3639,19 +3647,33 @@ class GuruController {
         $totalRombelHadir = 0;
         $totalRombelPresensi = 0;
 
+        $studentsWithMapels = 0;
         foreach ($siswaList as $sw) {
             $sId = (int)$sw['id'];
 
-            // Nilai Akhir Rata-rata dari tabel nilai_rapor atau CurriculumModel
-            $stmtAvg = $db->prepare("
-                SELECT AVG(nilai_akhir) as avg_nilai, COUNT(*) as total_mapel
-                FROM nilai_rapor 
-                WHERE siswa_id = ?
+            // Ambil mata pelajaran yang resmi didaftarkan siswa (siswa_mapel_enrollment) beserta nilainya
+            $stmtEnrolled = $db->prepare("
+                SELECT sme.mapel_id, mp.nama_mapel, mp.kode_mapel,
+                       COALESCE(nr.nilai_akhir, 0) as nilai_akhir
+                FROM siswa_mapel_enrollment sme
+                JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+                LEFT JOIN nilai_rapor nr ON (sme.siswa_id = nr.siswa_id AND sme.mapel_id = nr.mapel_id)
+                WHERE sme.siswa_id = ?
+                GROUP BY sme.mapel_id, mp.nama_mapel
+                ORDER BY mp.nama_mapel ASC
             ");
-            $stmtAvg->execute([$sId]);
-            $avgRow = $stmtAvg->fetch(PDO::FETCH_ASSOC);
-            $avgVal = (float)($avgRow['avg_nilai'] ?? 0);
-            $predikat = NilaiModel::getPredikat($avgVal);
+            $stmtEnrolled->execute([$sId]);
+            $enrolledRows = $stmtEnrolled->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $totalMapel = count($enrolledRows);
+            $sumNilai = 0;
+            $enrolledMapelNames = [];
+            foreach ($enrolledRows as $er) {
+                $sumNilai += (float)$er['nilai_akhir'];
+                $enrolledMapelNames[] = $er['nama_mapel'];
+            }
+            $avgVal = $totalMapel > 0 ? ($sumNilai / $totalMapel) : 0.0;
+            $predikat = $totalMapel > 0 ? NilaiModel::getPredikat($avgVal) : ['grade' => '-', 'class' => 'bg-secondary'];
 
             // Presensi per siswa
             $stmtAbs = $db->prepare("
@@ -3685,7 +3707,8 @@ class GuruController {
                 'siswa' => $sw,
                 'avg_nilai' => $avgVal,
                 'predikat' => $predikat,
-                'total_mapel' => (int)($avgRow['total_mapel'] ?? 0),
+                'total_mapel' => $totalMapel,
+                'enrolled_mapels' => $enrolledMapelNames,
                 'absensi' => [
                     'total' => $totAbs,
                     'hadir' => $hadirAbs,
@@ -3697,14 +3720,18 @@ class GuruController {
                 'catatan_wali' => $catatanWali
             ];
 
-            $totalRombelAvg += $avgVal;
+            if ($totalMapel > 0) {
+                $totalRombelAvg += $avgVal;
+                $studentsWithMapels++;
+            }
             $totalRombelHadir += $hadirAbs;
             $totalRombelPresensi += $totAbs;
         }
 
         $countSiswa = count($siswaList);
-        $rombelAvgNilai = $countSiswa > 0 ? ($totalRombelAvg / $countSiswa) : 0;
+        $rombelAvgNilai = $studentsWithMapels > 0 ? ($totalRombelAvg / $studentsWithMapels) : 0;
         $rombelKehadiranPersen = $totalRombelPresensi > 0 ? round(($totalRombelHadir / $totalRombelPresensi) * 100) : 100;
+
 
         require_once ROOT_PATH . 'views/guru/wali_kelas.php';
     }
@@ -3800,16 +3827,23 @@ class GuruController {
             $siswaIds = array_column($allSiswa, 'id');
             $inIds = implode(',', array_map('intval', $siswaIds));
 
-            // 2. BATCH QUERY: Nilai seluruh siswa di rombel ini (1 query cepat)
+            // 2. BATCH QUERY: Nilai seluruh siswa di rombel ini HANYA untuk mapel yang resmi didaftarkan (1 query cepat)
             $nilaiBySiswa = [];
             try {
                 $stmtNilai = $db->query("
-                    SELECT nr.siswa_id, nr.mapel_id, nr.nilai_tugas, nr.nilai_quiz, nr.nilai_uts, nr.nilai_uas, nr.nilai_akhir,
+                    SELECT sme.siswa_id, sme.mapel_id,
+                           COALESCE(nr.nilai_tugas, 0) as nilai_tugas,
+                           COALESCE(nr.nilai_quiz, 0) as nilai_quiz,
+                           COALESCE(nr.nilai_uts, 0) as nilai_uts,
+                           COALESCE(nr.nilai_uas, 0) as nilai_uas,
+                           COALESCE(nr.nilai_akhir, 0) as nilai_akhir,
                            mp.nama_mapel, mp.kode_mapel, COALESCE(mp.kkm, 75) as kkm
-                    FROM nilai_rapor nr
-                    JOIN mata_pelajaran mp ON nr.mapel_id = mp.id
-                    WHERE nr.siswa_id IN ({$inIds})
-                    ORDER BY nr.siswa_id, mp.nama_mapel ASC
+                    FROM siswa_mapel_enrollment sme
+                    JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+                    LEFT JOIN nilai_rapor nr ON (sme.siswa_id = nr.siswa_id AND sme.mapel_id = nr.mapel_id)
+                    WHERE sme.siswa_id IN ({$inIds})
+                    GROUP BY sme.siswa_id, sme.mapel_id
+                    ORDER BY sme.siswa_id, mp.nama_mapel ASC
                 ");
                 if ($stmtNilai) {
                     $allNilaiRows = $stmtNilai->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -3820,6 +3854,7 @@ class GuruController {
             } catch (\Throwable $eNilai) {
                 error_log("Error batch nilai cetakRaporRombel: " . $eNilai->getMessage());
             }
+
 
             // 3. BATCH QUERY: Catatan wali kelas & rapor snapshot (Defensive Column Check)
             $raporHeaderBySiswa = [];
@@ -4059,20 +4094,28 @@ class GuruController {
             $stmtSFull->execute([$siswaId]);
             $s = $stmtSFull->fetch(PDO::FETCH_ASSOC);
 
-            // Nilai
+            // Nilai siswa HANYA untuk mata pelajaran yang resmi didaftarkan (siswa_mapel_enrollment)
             $nilaiList = [];
             try {
                 $stmtNilai = $db->prepare("
-                    SELECT nr.siswa_id, nr.mapel_id, nr.nilai_tugas, nr.nilai_quiz, nr.nilai_uts, nr.nilai_uas, nr.nilai_akhir,
+                    SELECT sme.siswa_id, sme.mapel_id,
+                           COALESCE(nr.nilai_tugas, 0) as nilai_tugas,
+                           COALESCE(nr.nilai_quiz, 0) as nilai_quiz,
+                           COALESCE(nr.nilai_uts, 0) as nilai_uts,
+                           COALESCE(nr.nilai_uas, 0) as nilai_uas,
+                           COALESCE(nr.nilai_akhir, 0) as nilai_akhir,
                            mp.nama_mapel, mp.kode_mapel, COALESCE(mp.kkm, 75) as kkm
-                    FROM nilai_rapor nr
-                    JOIN mata_pelajaran mp ON nr.mapel_id = mp.id
-                    WHERE nr.siswa_id = ?
+                    FROM siswa_mapel_enrollment sme
+                    JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+                    LEFT JOIN nilai_rapor nr ON (sme.siswa_id = nr.siswa_id AND sme.mapel_id = nr.mapel_id)
+                    WHERE sme.siswa_id = ?
+                    GROUP BY sme.siswa_id, sme.mapel_id
                     ORDER BY mp.nama_mapel ASC
                 ");
                 $stmtNilai->execute([$siswaId]);
                 $nilaiList = $stmtNilai->fetchAll(PDO::FETCH_ASSOC) ?: [];
             } catch (\Throwable $eNilai) {}
+
 
             // Header Rapor
             $rHeader = [

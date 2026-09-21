@@ -47,33 +47,31 @@ class NilaiModel {
      * Ambil semua nilai milik seorang siswa
      */
     public function getNilaiBySiswa(int $siswaId): array {
+        // Hanya ambil mata pelajaran yang resmi didaftarkan/diikuti siswa (siswa_mapel_enrollment)
         $stmt = $this->db->prepare("
-            SELECT n.*, mp.nama_mapel, COALESCE(mp.kkm, 75) as kkm
-            FROM nilai_rapor n
-            JOIN mata_pelajaran mp ON n.mapel_id = mp.id
-            JOIN siswa_mapel_enrollment sme ON (n.siswa_id = sme.siswa_id AND n.mapel_id = sme.mapel_id)
-            WHERE n.siswa_id = ?
-            GROUP BY n.id, mp.id
+            SELECT 
+                sme.siswa_id, 
+                sme.mapel_id, 
+                COALESCE(n.id, 0) as id,
+                COALESCE(n.nilai_tugas, 0) as nilai_tugas,
+                COALESCE(n.nilai_quiz, 0) as nilai_quiz,
+                COALESCE(n.nilai_uts, 0) as nilai_uts,
+                COALESCE(n.nilai_uas, 0) as nilai_uas,
+                COALESCE(n.nilai_akhir, 0) as nilai_akhir,
+                mp.nama_mapel, 
+                mp.kode_mapel, 
+                COALESCE(mp.kkm, 75) as kkm
+            FROM siswa_mapel_enrollment sme
+            JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+            LEFT JOIN nilai_rapor n ON (sme.siswa_id = n.siswa_id AND sme.mapel_id = n.mapel_id)
+            WHERE sme.siswa_id = ?
+            GROUP BY sme.siswa_id, sme.mapel_id
             ORDER BY mp.nama_mapel ASC
         ");
         $stmt->execute([$siswaId]);
-        $enrolledNilai = $stmt->fetchAll();
-
-        // Fallback for students with un-enrolled mapels
-        if (empty($enrolledNilai)) {
-            $stmtFallback = $this->db->prepare("
-                SELECT n.*, mp.nama_mapel, COALESCE(mp.kkm, 75) as kkm
-                FROM nilai_rapor n
-                JOIN mata_pelajaran mp ON n.mapel_id = mp.id
-                WHERE n.siswa_id = ?
-                ORDER BY mp.nama_mapel ASC
-            ");
-            $stmtFallback->execute([$siswaId]);
-            $enrolledNilai = $stmtFallback->fetchAll();
-        }
-
-        return $enrolledNilai;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
+
 
     /**
      * Ambil konfigurasi bobot penilaian resmi per kurikulum

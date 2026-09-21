@@ -1367,10 +1367,12 @@ class CurriculumModel extends BaseModel {
                    COALESCE({$mapelSnapCol}, mp.nama_mapel) as nama_mapel
             FROM rapor_nilai_detail rd
             JOIN mata_pelajaran mp ON rd.mapel_id = mp.id
+            JOIN siswa_mapel_enrollment sme ON (sme.siswa_id = ? AND rd.mapel_id = sme.mapel_id)
             WHERE {$fkCol} = ?
+            GROUP BY rd.id, mp.id
             ORDER BY mp.nama_mapel ASC
         ");
-        $stmtD->execute([$header['id']]);
+        $stmtD->execute([(int)$siswaId, $header['id']]);
         $details = $stmtD->fetchAll(PDO::FETCH_ASSOC);
 
         $header['nilai_list'] = $details;
@@ -1479,12 +1481,22 @@ class CurriculumModel extends BaseModel {
             $this->db->prepare("UPDATE rapor_siswa SET " . implode(', ', $updFields) . " WHERE id = ?")->execute($updValues);
         }
 
-        // Pull enrolled mapels or existing legacy nilai_rapor
+        // Pull HANYA mata pelajaran yang resmi didaftarkan siswa (siswa_mapel_enrollment)
         $stmtLegacy = $this->db->prepare("
-            SELECT nr.*, mp.nama_mapel, COALESCE(mp.kkm, 75) as kkm_mapel
-            FROM nilai_rapor nr
-            JOIN mata_pelajaran mp ON nr.mapel_id = mp.id
-            WHERE nr.siswa_id = ?
+            SELECT sme.siswa_id, sme.mapel_id,
+                   COALESCE(nr.id, 0) as id,
+                   COALESCE(nr.nilai_tugas, 0) as nilai_tugas,
+                   COALESCE(nr.nilai_quiz, 0) as nilai_quiz,
+                   COALESCE(nr.nilai_uts, 0) as nilai_uts,
+                   COALESCE(nr.nilai_uas, 0) as nilai_uas,
+                   COALESCE(nr.nilai_akhir, 0) as nilai_akhir,
+                   mp.nama_mapel, COALESCE(mp.kkm, 75) as kkm_mapel
+            FROM siswa_mapel_enrollment sme
+            JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+            LEFT JOIN nilai_rapor nr ON (sme.siswa_id = nr.siswa_id AND sme.mapel_id = nr.mapel_id)
+            WHERE sme.siswa_id = ?
+            GROUP BY sme.siswa_id, sme.mapel_id
+            ORDER BY mp.nama_mapel ASC
         ");
         $stmtLegacy->execute([$sId]);
         $legacyRows = $stmtLegacy->fetchAll(PDO::FETCH_ASSOC);
@@ -1501,6 +1513,15 @@ class CurriculumModel extends BaseModel {
         $hasPredikat = in_array('predikat', $colsD);
         $colCapaian = in_array('capaian_kompetensi', $colsD) ? 'capaian_kompetensi' : (in_array('deskripsi_kemajuan', $colsD) ? 'deskripsi_kemajuan' : null);
 
+        // Bersihkan data lama rapor_nilai_detail untuk mata pelajaran yang TIDAK didaftarkan siswa
+        try {
+            $this->db->prepare("
+                DELETE FROM rapor_nilai_detail 
+                WHERE {$colRaporFk} = ? 
+                AND mapel_id NOT IN (SELECT mapel_id FROM siswa_mapel_enrollment WHERE siswa_id = ?)
+            ")->execute([$raporId, $sId]);
+        } catch (\Throwable $eClean) {}
+
         require_once ROOT_PATH . 'models/NilaiModel.php';
         $nilaiModel = new NilaiModel();
         $targetKurId = (int)($kurInfo['kurikulum_id'] ?? 1);
@@ -1516,11 +1537,21 @@ class CurriculumModel extends BaseModel {
                 $bobotKur
             );
 
-            // Selaraskan nilai_rapor jika nilai_akhir berbeda
-            if (abs((float)$lr['nilai_akhir'] - $akhir) > 0.001) {
+            // Selaraskan nilai_rapor jika nilai_akhir berbeda atau buat baris nilai_rapor jika belum ada
+            if (!empty($lr['id']) && $lr['id'] > 0) {
+                if (abs((float)$lr['nilai_akhir'] - $akhir) > 0.001) {
+                    try {
+                        $this->db->prepare("UPDATE nilai_rapor SET nilai_akhir = ?, updated_at = NOW() WHERE id = ?")->execute([$akhir, $lr['id']]);
+                    } catch (\Throwable $eUpd) {}
+                }
+            } else {
                 try {
-                    $this->db->prepare("UPDATE nilai_rapor SET nilai_akhir = ?, updated_at = NOW() WHERE id = ?")->execute([$akhir, $lr['id']]);
-                } catch (\Throwable $eUpd) {}
+                    $this->db->prepare("
+                        INSERT INTO nilai_rapor (siswa_id, mapel_id, nilai_tugas, nilai_quiz, nilai_uts, nilai_uas, nilai_akhir, created_at)
+                        VALUES (?, ?, 0, 0, 0, 0, ?, NOW())
+                        ON DUPLICATE KEY UPDATE nilai_akhir = VALUES(nilai_akhir)
+                    ")->execute([$sId, $mId, $akhir]);
+                } catch (\Throwable $eIns) {}
             }
 
             $kkmVal = (float)$lr['kkm_mapel'];
