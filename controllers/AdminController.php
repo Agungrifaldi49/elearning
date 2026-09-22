@@ -534,17 +534,27 @@ class AdminController {
                 $flashSuccess = 'Pengaturan Halaman Landing & Visi Misi berhasil disimpan!';
                 $_GET['tab'] = 'landing';
             } elseif ($section === 'geofencing') {
+                $modeJadwal = trim($_POST['presensi_mode_jadwal'] ?? 'jadwal');
+                if (!in_array($modeJadwal, ['jadwal', 'serentak'])) {
+                    $modeJadwal = 'jadwal';
+                }
+
                 $updateData = [
                     'lokasi_sekolah_nama' => Security::sanitize($_POST['lokasi_sekolah_nama'] ?? 'SMK Muthia Harapan Cicalengka'),
                     'lokasi_sekolah_lat' => trim($_POST['lokasi_sekolah_lat'] ?? '-6.984042'),
                     'lokasi_sekolah_lng' => trim($_POST['lokasi_sekolah_lng'] ?? '107.838612'),
                     'lokasi_sekolah_radius' => (int)($_POST['lokasi_sekolah_radius'] ?? 150),
+                    'presensi_mode_jadwal' => $modeJadwal,
+                    'presensi_kegiatan_serentak_nama' => Security::sanitize($_POST['presensi_kegiatan_serentak_nama'] ?? ''),
+                    'presensi_toleransi_masuk_menit' => max(0, (int)($_POST['presensi_toleransi_masuk_menit'] ?? 60)),
+                    'presensi_toleransi_terlambat_menit' => max(0, (int)($_POST['presensi_toleransi_terlambat_menit'] ?? 0)),
+                    'presensi_guru_tanpa_jadwal' => trim($_POST['presensi_guru_tanpa_jadwal'] ?? 'standar'),
                     'presensi_jam_masuk_mulai' => trim($_POST['presensi_jam_masuk_mulai'] ?? '06:00'),
                     'presensi_jam_masuk_batas' => trim($_POST['presensi_jam_masuk_batas'] ?? '07:30'),
                     'presensi_jam_pulang_mulai' => trim($_POST['presensi_jam_pulang_mulai'] ?? '15:00'),
                 ];
                 $settingsModel->saveBatch($updateData);
-                $flashSuccess = 'Titik Lokasi Presensi (Geofencing) dan Batas Jam Presensi Guru berhasil disimpan!';
+                $flashSuccess = 'Titik Lokasi Presensi (Geofencing) dan Skema Jadwal Presensi Guru berhasil disimpan!';
                 $_GET['tab'] = 'geofencing';
             }
         }

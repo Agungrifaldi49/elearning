@@ -423,33 +423,123 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                             <div id="adminGeofenceMap" style="height: 380px; width: 100%; border-radius: 14px; border: 1px solid rgba(0,0,0,0.12); z-index: 1;"></div>
                         </div>
 
-                        <!-- Jam Masuk & Jam Pulang Limits -->
+                        <!-- Jam Masuk & Jam Pulang Limits & Mode Penjadwalan -->
                         <div class="col-12 mt-4">
-                            <h6 class="fw-bold text-dark border-bottom pb-2 mb-3"><i class="bi bi-clock-history text-warning me-2"></i>Jadwal Jam Presensi Guru & Batas Waktu</h6>
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3 flex-wrap gap-2">
+                                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-clock-history text-warning me-2"></i>Skema Penjadwalan Presensi Guru & Batas Waktu</h6>
+                                <span class="badge bg-primary-subtle text-primary fw-bold px-3 py-1.5 rounded-pill"><i class="bi bi-gear-wide-connected me-1"></i> Mode Fleksibel KBM / Rapat</span>
+                            </div>
+                            <p class="text-muted small mb-3">Atur apakah jam presensi guru berjalan otomatis mengikuti <b>Manajemen Jadwal Pelajaran Sekolah</b> masing-masing guru, atau diatur <b>Serentak</b> saat ada agenda rapat dinas, upacara, ujian, maupun kegiatan khusus lainnya.</p>
+                        </div>
+
+                        <!-- Mode Selector Cards -->
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary mb-2">Pilih Mode Penjadwalan Presensi:</label>
+                            <div class="row g-3">
+                                <?php 
+                                $currentMode = $settings['presensi_mode_jadwal'] ?? 'jadwal'; 
+                                ?>
+                                <div class="col-12 col-md-6">
+                                    <label class="card h-100 p-3 rounded-3 border cursor-pointer mode-card <?= $currentMode === 'jadwal' ? 'border-primary bg-primary-subtle bg-opacity-10' : 'border-secondary-subtle' ?>" for="modeJadwalRadio" style="cursor: pointer;">
+                                        <div class="d-flex align-items-start gap-3">
+                                            <div class="pt-1">
+                                                <input class="form-check-input fs-5" type="radio" name="presensi_mode_jadwal" id="modeJadwalRadio" value="jadwal" <?= $currentMode === 'jadwal' ? 'checked' : '' ?> onchange="togglePresensiMode('jadwal')">
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark mb-1">
+                                                    <i class="bi bi-calendar-week text-primary me-1"></i> Mengikuti Jadwal Pelajaran KBM
+                                                    <span class="badge bg-primary text-white ms-1" style="font-size: 0.7rem;">Otomatis per-Guru</span>
+                                                </div>
+                                                <p class="text-muted small mb-0">Jam masuk & kepulangan setiap guru otomatis sinkron dengan jam mengajar harian di <b>Manajemen Jadwal Pelajaran</b>. Guru yang kelas pertamanya jam 07:30 batasnya 07:30, dan pulang setelah kelas terakhirnya berakhir.</p>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <label class="card h-100 p-3 rounded-3 border cursor-pointer mode-card <?= $currentMode === 'serentak' ? 'border-primary bg-primary-subtle bg-opacity-10' : 'border-secondary-subtle' ?>" for="modeSerentakRadio" style="cursor: pointer;">
+                                        <div class="d-flex align-items-start gap-3">
+                                            <div class="pt-1">
+                                                <input class="form-check-input fs-5" type="radio" name="presensi_mode_jadwal" id="modeSerentakRadio" value="serentak" <?= $currentMode === 'serentak' ? 'checked' : '' ?> onchange="togglePresensiMode('serentak')">
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold text-dark mb-1">
+                                                    <i class="bi bi-people-fill text-warning me-1"></i> Jadwal Serentak / Bersama
+                                                    <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">Rapat / Upacara / Event</span>
+                                                </div>
+                                                <p class="text-muted small mb-0">Seluruh dewan guru presensi serentak di waktu yang sama. Cocok saat ada kegiatan rapat kerja dewan guru, upacara bendera, perpisahan, atau hari kegiatan serentak sekolah.</p>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kolom Agenda Khusus (Muncul saat Mode Serentak Aktif) -->
+                        <div class="col-12 <?= $currentMode === 'serentak' ? '' : 'd-none' ?>" id="containerAgendaSerentak">
+                            <div class="p-3 rounded-3 bg-warning-subtle border border-warning">
+                                <label class="form-label small fw-bold text-dark mb-1"><i class="bi bi-megaphone-fill text-warning me-1"></i> Nama Agenda / Kegiatan Serentak (Opsional)</label>
+                                <input type="text" name="presensi_kegiatan_serentak_nama" id="inputAgendaSerentak" class="form-control rounded-3" value="<?= htmlspecialchars($settings['presensi_kegiatan_serentak_nama'] ?? '') ?>" placeholder="Contoh: Rapat Pleno Dewan Guru / Upacara Bendera Hari Senin">
+                                <small class="text-dark-emphasis">Nama kegiatan ini akan ditampilkan langsung di kartu presensi selfie guru sebagai pengingat agenda serentak hari ini.</small>
+                            </div>
+                        </div>
+
+                        <!-- Kolom Parameter Toleransi KBM (Muncul saat Mode Jadwal KBM Aktif) -->
+                        <div class="col-12 <?= $currentMode === 'jadwal' ? '' : 'd-none' ?>" id="containerToleransiKBM">
+                            <div class="p-3 rounded-3 bg-light border">
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-secondary">Buka Presensi Sebelum KBM Pertama</label>
+                                        <div class="input-group">
+                                            <input type="number" name="presensi_toleransi_masuk_menit" class="form-control rounded-start-3" value="<?= htmlspecialchars($settings['presensi_toleransi_masuk_menit'] ?? '60') ?>" min="15" max="180" step="5" required>
+                                            <span class="input-group-text bg-white fw-semibold text-muted rounded-end-3">Menit Sebelumnya</span>
+                                        </div>
+                                        <small class="text-muted">Presensi masuk dibuka X menit sebelum jam mengajar pertama guru dimulai.</small>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-secondary">Toleransi Keterlambatan KBM</label>
+                                        <div class="input-group">
+                                            <input type="number" name="presensi_toleransi_terlambat_menit" class="form-control rounded-start-3" value="<?= htmlspecialchars($settings['presensi_toleransi_terlambat_menit'] ?? '0') ?>" min="0" max="60" step="5" required>
+                                            <span class="input-group-text bg-white fw-semibold text-muted rounded-end-3">Menit Toleransi</span>
+                                        </div>
+                                        <small class="text-muted">Toleransi keterlambatan setelah jam mulai kelas (0 = tepat waktu sesuai jadwal).</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Jam Masuk & Jam Pulang (Serentak / Fallback Standar) -->
+                        <div class="col-12 mt-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label class="form-label small fw-bold text-dark mb-0" id="labelJamPresensiHeader">
+                                    <i class="bi bi-clock me-1 text-primary"></i> 
+                                    <?= $currentMode === 'serentak' ? 'Jam Operasional Serentak Seluruh Guru (Rapat / Agenda Bersama)' : 'Jam Standar Sekolah (Fallback untuk Guru yang Tidak Memiliki Jadwal KBM Hari Ini)' ?>
+                                </label>
+                            </div>
                         </div>
 
                         <div class="col-12 col-md-4">
                             <label class="form-label small fw-bold text-secondary">Jam Buka Presensi Masuk</label>
                             <input type="time" name="presensi_jam_masuk_mulai" class="form-control rounded-3" value="<?= htmlspecialchars($settings['presensi_jam_masuk_mulai'] ?? '06:00') ?>" required>
-                            <small class="text-muted">Waktu mulai guru dapat melakukan presensi masuk.</small>
+                            <small class="text-muted">Jam buka serentak / guru tanpa jam KBM.</small>
                         </div>
 
                         <div class="col-12 col-md-4">
                             <label class="form-label small fw-bold text-secondary">Batas Masuk (Tepat Waktu)</label>
                             <input type="time" name="presensi_jam_masuk_batas" class="form-control rounded-3" value="<?= htmlspecialchars($settings['presensi_jam_masuk_batas'] ?? '07:30') ?>" required>
-                            <small class="text-muted">Setelah jam ini, status presensi otomatis terhitung <b>Terlambat</b>.</small>
+                            <small class="text-muted">Batas tepat waktu serentak / guru tanpa jam KBM.</small>
                         </div>
 
                         <div class="col-12 col-md-4">
                             <label class="form-label small fw-bold text-secondary">Jam Buka Presensi Pulang</label>
                             <input type="time" name="presensi_jam_pulang_mulai" class="form-control rounded-3" value="<?= htmlspecialchars($settings['presensi_jam_pulang_mulai'] ?? '15:00') ?>" required>
-                            <small class="text-muted">Waktu minimal guru diizinkan untuk presensi pulang.</small>
+                            <small class="text-muted">Waktu minimal kepulangan serentak / guru non-KBM.</small>
                         </div>
                     </div>
 
                     <div class="mt-4 pt-3 border-top d-flex gap-2">
                         <button type="submit" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm">
-                            <i class="bi bi-save me-1"></i> Simpan Pengaturan Geofencing
+                            <i class="bi bi-save me-1"></i> Simpan Pengaturan Geofencing & Jadwal Presensi
                         </button>
                     </div>
                 </form>
@@ -807,6 +897,35 @@ function initAdminGeofenceMap() {
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         });
+    }
+}
+
+// Toggle Mode Presensi Guru (Jadwal KBM vs Serentak)
+function togglePresensiMode(mode) {
+    const containerAgenda = document.getElementById('containerAgendaSerentak');
+    const containerToleransi = document.getElementById('containerToleransiKBM');
+    const labelHeader = document.getElementById('labelJamPresensiHeader');
+    const cards = document.querySelectorAll('.mode-card');
+
+    cards.forEach(c => {
+        c.classList.remove('border-primary', 'bg-primary-subtle', 'bg-opacity-10');
+        c.classList.add('border-secondary-subtle');
+    });
+
+    if (mode === 'serentak') {
+        containerAgenda?.classList.remove('d-none');
+        containerToleransi?.classList.add('d-none');
+        if (labelHeader) {
+            labelHeader.innerHTML = '<i class="bi bi-clock me-1 text-primary"></i> Jam Operasional Serentak Seluruh Guru (Rapat / Agenda Bersama)';
+        }
+        document.querySelector('label[for="modeSerentakRadio"]')?.classList.add('border-primary', 'bg-primary-subtle', 'bg-opacity-10');
+    } else {
+        containerAgenda?.classList.add('d-none');
+        containerToleransi?.classList.remove('d-none');
+        if (labelHeader) {
+            labelHeader.innerHTML = '<i class="bi bi-clock me-1 text-primary"></i> Jam Standar Sekolah (Fallback untuk Guru yang Tidak Memiliki Jadwal KBM Hari Ini)';
+        }
+        document.querySelector('label[for="modeJadwalRadio"]')?.classList.add('border-primary', 'bg-primary-subtle', 'bg-opacity-10');
     }
 }
 

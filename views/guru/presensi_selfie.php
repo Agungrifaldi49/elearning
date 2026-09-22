@@ -7,9 +7,14 @@ $lokasiNama = $settings['lokasi_sekolah_nama'] ?? 'SMK Muthia Harapan Cicalengka
 $lokasiLat = isset($settings['lokasi_sekolah_lat']) ? (float)$settings['lokasi_sekolah_lat'] : -6.984042;
 $lokasiLng = isset($settings['lokasi_sekolah_lng']) ? (float)$settings['lokasi_sekolah_lng'] : 107.838612;
 $lokasiRadius = isset($settings['lokasi_sekolah_radius']) ? (int)$settings['lokasi_sekolah_radius'] : 150;
-$jamMasukMulai = $settings['presensi_jam_masuk_mulai'] ?? '06:00';
-$jamMasukBatas = $settings['presensi_jam_masuk_batas'] ?? '07:30';
-$jamPulangMulai = $settings['presensi_jam_pulang_mulai'] ?? '15:00';
+$jamMasukMulai = $effectiveJadwal['jam_masuk_mulai'] ?? ($settings['presensi_jam_masuk_mulai'] ?? '06:00');
+$jamMasukBatas = $effectiveJadwal['jam_masuk_batas'] ?? ($settings['presensi_jam_masuk_batas'] ?? '07:30');
+$jamPulangMulai = $effectiveJadwal['jam_pulang_mulai'] ?? ($settings['presensi_jam_pulang_mulai'] ?? '15:00');
+$modePresensi = $effectiveJadwal['mode'] ?? 'jadwal';
+$isKbm = !empty($effectiveJadwal['is_kbm']);
+$kbmList = $effectiveJadwal['kbm_list'] ?? [];
+$keteranganJadwal = $effectiveJadwal['keterangan_jadwal'] ?? '';
+$kegiatanNama = $effectiveJadwal['kegiatan_nama'] ?? '';
 
 $sudahMasuk = !empty($presensiHariIni['waktu_masuk']) && $presensiHariIni['waktu_masuk'] !== '0000-00-00 00:00:00';
 $sudahPulang = !empty($presensiHariIni['waktu_pulang']) && $presensiHariIni['waktu_pulang'] !== '0000-00-00 00:00:00';
@@ -197,6 +202,62 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
                     <span class="badge bg-dark text-white rounded-pill px-2 py-1 small">WIB</span>
                 </div>
                 <div class="small text-muted fw-medium" id="liveDate"><?= date('l, d F Y') ?></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner Info Skema Jadwal Presensi Aktif -->
+    <div class="card selfie-card p-3 p-md-4 mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
+        <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-start gap-3">
+                <div class="p-3 rounded-4 <?= $modePresensi === 'jadwal' ? 'bg-primary bg-opacity-10 text-primary' : ($modePresensi === 'serentak' ? 'bg-warning bg-opacity-15 text-warning' : 'bg-secondary bg-opacity-10 text-secondary') ?>">
+                    <i class="bi <?= $modePresensi === 'jadwal' ? 'bi-calendar-week-fill fs-3' : ($modePresensi === 'serentak' ? 'bi-megaphone-fill fs-3' : 'bi-info-circle-fill fs-3') ?>"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <span class="badge <?= $modePresensi === 'jadwal' ? 'badge-soft-primary' : ($modePresensi === 'serentak' ? 'badge-soft-warning' : 'bg-light text-secondary border') ?> rounded-pill px-3 py-1 fw-bold">
+                            <i class="bi bi-clock me-1"></i> <?= htmlspecialchars($effectiveJadwal['title'] ?? 'Skema Presensi') ?>
+                        </span>
+                        <span class="text-muted small">Hari: <b><?= htmlspecialchars($effectiveJadwal['hari'] ?? date('l')) ?></b></span>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">
+                        <?php if ($modePresensi === 'serentak'): ?>
+                            <?= htmlspecialchars(!empty($kegiatanNama) ? $kegiatanNama : 'Presensi Serentak Seluruh Guru') ?>
+                        <?php elseif ($modePresensi === 'jadwal' && $isKbm): ?>
+                            Jadwal KBM: <?= count($kbmList) ?> Sesi Kelas Hari Ini
+                        <?php else: ?>
+                            Jam Standar Operasional Sekolah (Non-KBM)
+                        <?php endif; ?>
+                    </h5>
+                    <p class="text-muted small mb-0">
+                        <?= htmlspecialchars($keteranganJadwal) ?>
+                    </p>
+
+                    <?php if ($isKbm && !empty($kbmList)): ?>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <?php foreach ($kbmList as $kbm): ?>
+                                <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-3 fw-medium shadow-2xs">
+                                    <i class="bi bi-book me-1 text-primary"></i><?= htmlspecialchars($kbm['nama_mapel']) ?> (<?= htmlspecialchars($kbm['nama_kelas']) ?>) 
+                                    <span class="text-primary fw-bold ms-1"><?= substr($kbm['jam_mulai'], 0, 5) ?> - <?= substr($kbm['jam_selesai'], 0, 5) ?></span>
+                                    <?php if (!empty($kbm['ruangan'])): ?>
+                                        <small class="text-muted ms-1">&bull; <?= htmlspecialchars($kbm['ruangan']) ?></small>
+                                    <?php endif; ?>
+                                </span>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column gap-2 text-md-end ms-auto">
+                <div class="bg-white px-3 py-2 rounded-3 border shadow-2xs">
+                    <div class="small text-muted">Batas Tepat Waktu:</div>
+                    <div class="fw-bold text-dark fs-6"><i class="bi bi-box-arrow-in-right text-success me-1"></i><?= $jamMasukBatas ?> WIB</div>
+                </div>
+                <div class="bg-white px-3 py-2 rounded-3 border shadow-2xs">
+                    <div class="small text-muted">Buka Kepulangan:</div>
+                    <div class="fw-bold text-dark fs-6"><i class="bi bi-door-open text-primary me-1"></i><?= $jamPulangMulai ?> WIB</div>
+                </div>
             </div>
         </div>
     </div>
@@ -867,7 +928,29 @@ async function submitPresensi(jenis) {
         return;
     }
 
+    const JAM_PULANG_MULAI = '<?= $jamPulangMulai ?>';
     const keteranganVal = document.getElementById('presensiKeterangan').value.trim();
+
+    if (jenis === 'pulang') {
+        const now = new Date();
+        const currentHourMin = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        if (currentHourMin < JAM_PULANG_MULAI && !keteranganVal) {
+            const confirmEarly = await Swal.fire({
+                icon: 'question',
+                title: 'Konfirmasi Pulang Mendahului Jadwal',
+                html: `Jam kepulangan resmi Anda hari ini adalah pukul <b>${JAM_PULANG_MULAI} WIB</b> (Waktu saat ini: <b>${currentHourMin} WIB</b>).<br><br>Apakah Anda yakin ingin melakukan presensi pulang sekarang?<br><small class="text-muted">Disarankan mengisi catatan di kolom keterangan jika ada izin/kepentingan khusus.</small>`,
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Tetap Pulang',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#4f46e5',
+                cancelButtonColor: '#64748b'
+            });
+            if (!confirmEarly.isConfirmed) {
+                return;
+            }
+        }
+    }
+
     const btnSubmit = jenis === 'masuk' ? document.getElementById('btnSubmitMasuk') : document.getElementById('btnSubmitPulang');
     const originalBtnHtml = btnSubmit.innerHTML;
 

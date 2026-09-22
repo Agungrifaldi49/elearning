@@ -1235,6 +1235,7 @@ class GuruController {
 
         $presensiHariIni = $absensiModel->getPresensiGuruHariIni($guruId);
         $riwayatPresensi = $absensiModel->getRiwayatPresensiGuru($guruId, 20);
+        $effectiveJadwal = $absensiModel->getEffectiveJadwalGuru($guruId);
 
         require_once ROOT_PATH . 'views/guru/presensi_selfie.php';
     }

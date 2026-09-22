@@ -65,6 +65,11 @@ class SettingsModel {
             'lokasi_sekolah_lat' => '-6.984042',
             'lokasi_sekolah_lng' => '107.838612',
             'lokasi_sekolah_radius' => '150',
+            'presensi_mode_jadwal' => 'jadwal',
+            'presensi_kegiatan_serentak_nama' => '',
+            'presensi_toleransi_masuk_menit' => '60',
+            'presensi_toleransi_terlambat_menit' => '0',
+            'presensi_guru_tanpa_jadwal' => 'standar',
             'presensi_jam_masuk_mulai' => '06:00',
             'presensi_jam_masuk_batas' => '07:30',
             'presensi_jam_pulang_mulai' => '15:00'

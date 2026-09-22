@@ -873,6 +873,133 @@ class AbsensiModel extends BaseModel {
     }
 
     /**
+     * Hitung Jadwal Efektif Presensi Guru Hari Ini (Berdasarkan Mode KBM Dinamis atau Mode Serentak)
+     */
+    public function getEffectiveJadwalGuru($guruId, $tanggal = null) {
+        $guruId = (int)$guruId;
+        $tanggal = $tanggal ?: date('Y-m-d');
+
+        require_once ROOT_PATH . 'models/SettingsModel.php';
+        $settingsModel = new SettingsModel();
+        $settings = $settingsModel->getAll();
+
+        $mode = $settings['presensi_mode_jadwal'] ?? 'jadwal';
+        $kegiatanSerentak = trim($settings['presensi_kegiatan_serentak_nama'] ?? '');
+        $standarMasukMulai = $settings['presensi_jam_masuk_mulai'] ?? '06:00';
+        $standarMasukBatas = $settings['presensi_jam_masuk_batas'] ?? '07:30';
+        $standarPulangMulai = $settings['presensi_jam_pulang_mulai'] ?? '15:00';
+        $toleransiMasukMenit = max(10, (int)($settings['presensi_toleransi_masuk_menit'] ?? 60));
+        $toleransiTerlambatMenit = max(0, (int)($settings['presensi_toleransi_terlambat_menit'] ?? 0));
+
+        // Mapping hari dalam bahasa Indonesia
+        $daysMap = [
+            1 => 'Senin',
+            2 => 'Selasa',
+            3 => 'Rabu',
+            4 => 'Kamis',
+            5 => 'Jumat',
+            6 => 'Sabtu',
+            7 => 'Minggu'
+        ];
+        $dayNum = (int)date('N', strtotime($tanggal));
+        $hariName = $daysMap[$dayNum] ?? 'Senin';
+
+        // 1. Jika Mode Serentak aktif (Rapat, Upacara, Kegiatan Khusus dewan guru)
+        if ($mode === 'serentak') {
+            return [
+                'mode' => 'serentak',
+                'title' => 'Jadwal Serentak / Bersama',
+                'kegiatan_nama' => $kegiatanSerentak ?: 'Jadwal Bersama Dewan Guru',
+                'hari' => $hariName,
+                'tanggal' => $tanggal,
+                'jam_masuk_mulai' => $standarMasukMulai,
+                'jam_masuk_batas' => $standarMasukBatas,
+                'jam_pulang_mulai' => $standarPulangMulai,
+                'is_kbm' => false,
+                'total_sesi' => 0,
+                'kbm_list' => [],
+                'keterangan_jadwal' => !empty($kegiatanSerentak) 
+                    ? "Agenda Hari Ini: {$kegiatanSerentak} (Presensi Serentak Seluruh Guru)" 
+                    : "Presensi Serentak Seluruh Guru"
+            ];
+        }
+
+        // 2. Mode Jadwal Pelajaran Sekolah (Dinamis mengikuti jadwal KBM mengajar guru)
+        $kbmList = [];
+        try {
+            $stmt = $this->db->prepare("
+                SELECT j.id, j.kelas_id, j.mapel_id, j.hari, j.jam_mulai, j.jam_selesai, j.ruangan,
+                       m.nama_mapel, k.nama_kelas
+                FROM jadwal j
+                LEFT JOIN mata_pelajaran m ON j.mapel_id = m.id
+                LEFT JOIN kelas k ON j.kelas_id = k.id
+                WHERE j.guru_id = ? AND j.hari = ?
+                ORDER BY j.jam_mulai ASC
+            ");
+            $stmt->execute([$guruId, $hariName]);
+            $kbmList = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            $kbmList = [];
+        }
+
+        if (!empty($kbmList)) {
+            $firstSesi = $kbmList[0];
+            $lastSesi = end($kbmList);
+
+            $jamMulaiKbm = substr($firstSesi['jam_mulai'], 0, 5);
+            $jamSelesaiKbm = substr($lastSesi['jam_selesai'], 0, 5);
+
+            // Jam buka masuk = KBM pertama dikurangi toleransi menit (misal 60 menit sebelum sesi 1)
+            $jamBukaMasukTimestamp = strtotime($tanggal . ' ' . $firstSesi['jam_mulai']) - ($toleransiMasukMenit * 60);
+            $jamMasukMulaiCalculated = date('H:i', $jamBukaMasukTimestamp);
+
+            // Batas masuk tepat waktu = jam mulai sesi KBM pertama (ditambah toleransi jika ada)
+            if ($toleransiTerlambatMenit > 0) {
+                $jamBatasMasukTimestamp = strtotime($tanggal . ' ' . $firstSesi['jam_mulai']) + ($toleransiTerlambatMenit * 60);
+                $jamMasukBatasCalculated = date('H:i', $jamBatasMasukTimestamp);
+            } else {
+                $jamMasukBatasCalculated = $jamMulaiKbm;
+            }
+
+            // Jam buka pulang = saat sesi KBM terakhir guru hari itu selesai
+            $jamPulangMulaiCalculated = $jamSelesaiKbm;
+
+            return [
+                'mode' => 'jadwal',
+                'title' => 'Mengikuti Jadwal Pelajaran KBM',
+                'kegiatan_nama' => 'Jadwal Mengajar KBM Hari Ini',
+                'hari' => $hariName,
+                'tanggal' => $tanggal,
+                'jam_masuk_mulai' => $jamMasukMulaiCalculated,
+                'jam_masuk_batas' => $jamMasukBatasCalculated,
+                'jam_pulang_mulai' => $jamPulangMulaiCalculated,
+                'is_kbm' => true,
+                'total_sesi' => count($kbmList),
+                'kbm_list' => $kbmList,
+                'first_sesi' => $firstSesi,
+                'last_sesi' => $lastSesi,
+                'keterangan_jadwal' => "Mengikuti Jadwal KBM: {$firstSesi['nama_mapel']} ({$firstSesi['nama_kelas']}) s/d {$lastSesi['nama_mapel']} ({$lastSesi['nama_kelas']})"
+            ];
+        }
+
+        // 3. Fallback: Guru tidak memiliki jadwal KBM pada hari ini (misal piket / tugas dinas / KBM kosong)
+        return [
+            'mode' => 'fallback_standar',
+            'title' => 'Jam Standar Sekolah (Non-KBM)',
+            'kegiatan_nama' => 'Tidak Ada Jadwal Mengajar KBM Hari Ini',
+            'hari' => $hariName,
+            'tanggal' => $tanggal,
+            'jam_masuk_mulai' => $standarMasukMulai,
+            'jam_masuk_batas' => $standarMasukBatas,
+            'jam_pulang_mulai' => $standarPulangMulai,
+            'is_kbm' => false,
+            'total_sesi' => 0,
+            'kbm_list' => [],
+            'keterangan_jadwal' => "Tidak ada jadwal mengajar KBM hari {$hariName} (Mengikuti jam operasional standar sekolah)"
+        ];
+    }
+
+    /**
      * Catat Presensi Selfie Guru dengan Validasi Geofencing
      */
     public function submitPresensiGuruSelfie($guruId, $data) {
@@ -898,7 +1025,7 @@ class AbsensiModel extends BaseModel {
             return ['status' => 'error', 'message' => 'Foto selfie tidak ditemukan. Harap aktifkan kamera dan ambil foto selfie.'];
         }
 
-        // Ambil konfigurasi lokasi & jam presensi dari settings
+        // Ambil konfigurasi lokasi sekolah dari settings
         require_once ROOT_PATH . 'models/SettingsModel.php';
         $settingsModel = new SettingsModel();
         $settings = $settingsModel->getAll();
@@ -907,9 +1034,13 @@ class AbsensiModel extends BaseModel {
         $lokasiLat = isset($settings['lokasi_sekolah_lat']) ? (float)$settings['lokasi_sekolah_lat'] : -6.984042;
         $lokasiLng = isset($settings['lokasi_sekolah_lng']) ? (float)$settings['lokasi_sekolah_lng'] : 107.838612;
         $radiusMaksimal = isset($settings['lokasi_sekolah_radius']) ? (int)$settings['lokasi_sekolah_radius'] : 150;
-        $jamMasukMulai = $settings['presensi_jam_masuk_mulai'] ?? '06:00';
-        $jamMasukBatas = $settings['presensi_jam_masuk_batas'] ?? '07:30';
-        $jamPulangMulai = $settings['presensi_jam_pulang_mulai'] ?? '15:00';
+
+        // Ambil jadwal efektif presensi guru hari ini (Dinamis KBM atau Serentak)
+        $today = date('Y-m-d');
+        $effectiveJadwal = $this->getEffectiveJadwalGuru($guruId, $today);
+        $jamMasukMulai = $effectiveJadwal['jam_masuk_mulai'];
+        $jamMasukBatas = $effectiveJadwal['jam_masuk_batas'];
+        $jamPulangMulai = $effectiveJadwal['jam_pulang_mulai'];
 
         // Hitung jarak Haversine ke titik koordinat sekolah
         $distance = $this->calculateDistanceMeter($lat, $lng, $lokasiLat, $lokasiLng);
@@ -953,7 +1084,6 @@ class AbsensiModel extends BaseModel {
             return ['status' => 'error', 'message' => 'Gagal menyimpan file foto selfie ke server.'];
         }
 
-        $today = date('Y-m-d');
         $nowDateTime = date('Y-m-d H:i:s');
         $nowTime = date('H:i:s');
         $existing = $this->getPresensiGuruHariIni($guruId, $today);
@@ -976,7 +1106,7 @@ class AbsensiModel extends BaseModel {
 
             $keterangan = trim($data['keterangan'] ?? '');
             if ($statusPresensi === 'Terlambat' && empty($keterangan)) {
-                $keterangan = 'Terlambat hadir (Check-in ' . substr($nowTime, 0, 5) . ' WIB)';
+                $keterangan = 'Terlambat hadir (Check-in ' . substr($nowTime, 0, 5) . ' WIB, batas: ' . $jamMasukBatas . ' WIB)';
             }
 
             if ($existing) {
@@ -1004,7 +1134,8 @@ class AbsensiModel extends BaseModel {
                 'waktu' => substr($nowTime, 0, 5),
                 'status_presensi' => $statusPresensi,
                 'jarak' => $distance,
-                'foto' => $relativeFilePath
+                'foto' => $relativeFilePath,
+                'jadwal_efektif' => $effectiveJadwal
             ];
 
         } else { // pulang
@@ -1023,13 +1154,30 @@ class AbsensiModel extends BaseModel {
                 ];
             }
 
-            $stmt = $this->db->prepare("
-                UPDATE absensi_guru 
-                SET waktu_pulang = ?, foto_pulang = ?, latitude_pulang = ?, longitude_pulang = ?, 
-                    jarak_pulang_meter = ?, tipe_presensi = 'selfie'
-                WHERE id = ?
-            ");
-            $stmt->execute([$nowDateTime, $relativeFilePath, $lat, $lng, $distance, $existing['id']]);
+            $jamSekarang = date('H:i');
+            $keteranganPulang = trim($data['keterangan'] ?? '');
+            if ($jamSekarang < $jamPulangMulai && empty($keteranganPulang)) {
+                $keteranganPulang = 'Pulang lebih awal ' . substr($nowTime, 0, 5) . ' WIB (Jadwal kepulangan: ' . $jamPulangMulai . ' WIB)';
+            }
+
+            if (!empty($keteranganPulang)) {
+                $stmt = $this->db->prepare("
+                    UPDATE absensi_guru 
+                    SET waktu_pulang = ?, foto_pulang = ?, latitude_pulang = ?, longitude_pulang = ?, 
+                        jarak_pulang_meter = ?, tipe_presensi = 'selfie',
+                        keterangan = CASE WHEN keterangan IS NULL OR keterangan = '' THEN ? ELSE CONCAT(keterangan, ' | Pulang: ', ?) END
+                    WHERE id = ?
+                ");
+                $stmt->execute([$nowDateTime, $relativeFilePath, $lat, $lng, $distance, $keteranganPulang, $keteranganPulang, $existing['id']]);
+            } else {
+                $stmt = $this->db->prepare("
+                    UPDATE absensi_guru 
+                    SET waktu_pulang = ?, foto_pulang = ?, latitude_pulang = ?, longitude_pulang = ?, 
+                        jarak_pulang_meter = ?, tipe_presensi = 'selfie'
+                    WHERE id = ?
+                ");
+                $stmt->execute([$nowDateTime, $relativeFilePath, $lat, $lng, $distance, $existing['id']]);
+            }
 
             return [
                 'status' => 'success',
@@ -1037,7 +1185,8 @@ class AbsensiModel extends BaseModel {
                 'jenis' => 'pulang',
                 'waktu' => substr($nowTime, 0, 5),
                 'jarak' => $distance,
-                'foto' => $relativeFilePath
+                'foto' => $relativeFilePath,
+                'jadwal_efektif' => $effectiveJadwal
             ];
         }
     }
