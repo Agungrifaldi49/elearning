@@ -199,6 +199,16 @@ class AcademicModel extends BaseModel {
     public function getKelasByGuru($guru_id) {
         $this->ensureEnrollmentTables();
         $gId = (int)$guru_id;
+        $uId = 0;
+        try {
+            $stmtU = $this->db->prepare("SELECT user_id FROM guru WHERE id = ? LIMIT 1");
+            $stmtU->execute([$gId]);
+            $uId = (int)$stmtU->fetchColumn();
+        } catch (\Throwable $e) {}
+
+        $guruIds = array_filter(array_unique([$gId, $uId]));
+        $inGuru = !empty($guruIds) ? implode(',', $guruIds) : "{$gId}";
+
         $sql = "
             SELECT DISTINCT k.*, 
                    COALESCE(k.nama_kelas, '') as nama_rombel,
@@ -206,19 +216,23 @@ class AcademicModel extends BaseModel {
             FROM kelas k
             LEFT JOIN jurusan j ON k.jurusan_id = j.id
             WHERE k.id IN (
-                SELECT id FROM kelas WHERE wali_kelas_id = {$gId}
+                SELECT id FROM kelas WHERE wali_kelas_id IN ({$inGuru})
                 UNION
-                SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id IN ({$inGuru}) AND kelas_id IS NOT NULL
                 UNION
-                SELECT kelas_id FROM jadwal WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                SELECT kelas_id FROM jadwal WHERE guru_id IN ({$inGuru}) AND kelas_id IS NOT NULL
                 UNION
-                SELECT kelas_id FROM materi WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                SELECT kelas_id FROM materi WHERE guru_id IN ({$inGuru}) AND kelas_id IS NOT NULL
                 UNION
-                SELECT kelas_id FROM tugas WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
+                SELECT kelas_id FROM tugas WHERE guru_id IN ({$inGuru}) AND kelas_id IS NOT NULL
                 UNION
-                SELECT rombel_id FROM asesmen WHERE guru_id = {$gId} AND rombel_id IS NOT NULL
+                SELECT rombel_id FROM asesmen WHERE guru_id IN ({$inGuru}) AND rombel_id IS NOT NULL
                 UNION
-                SELECT s.kelas_id FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.guru_id = {$gId} AND s.kelas_id IS NOT NULL
+                SELECT kelas_id FROM quiz WHERE guru_id IN ({$inGuru}) AND kelas_id IS NOT NULL
+                UNION
+                SELECT k2.id FROM quiz q JOIN kelas k2 ON FIND_IN_SET(k2.id, q.kelas_ids) WHERE q.guru_id IN ({$inGuru})
+                UNION
+                SELECT s.kelas_id FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.guru_id IN ({$inGuru}) AND s.kelas_id IS NOT NULL
             )
             ORDER BY 
                 CASE 

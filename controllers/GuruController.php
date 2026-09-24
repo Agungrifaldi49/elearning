@@ -3045,6 +3045,10 @@ class GuruController {
             exit();
         }
 
+        // Role check
+        $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdminOrKepsek = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+
         // Handle POST Requests
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
@@ -3058,6 +3062,16 @@ class GuruController {
             if ($action === 'create_asesmen') {
                 $rombelId = (int)$_POST['rombel_id'];
                 $mapelId = (int)$_POST['mapel_id'];
+
+                // Hak Akses Guru: Validasi rombel harus kelas yang diampu guru
+                $allowedKelasList = $isAdminOrKepsek ? $academicModel->getKelas() : $academicModel->getKelasByGuru($guruId);
+                $allowedKelasIds = array_map('intval', array_column($allowedKelasList, 'id'));
+                if (!$isAdminOrKepsek && !empty($allowedKelasIds) && !in_array($rombelId, $allowedKelasIds)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses mengajar pada rombel/kelas tersebut.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/asesmen');
+                    exit();
+                }
+
                 $namaAsesmen = Security::sanitize($_POST['nama_asesmen'] ?? '');
                 $jenisAsesmen = Security::sanitize($_POST['jenis_asesmen'] ?? 'formatif');
                 $tanggal = !empty($_POST['tanggal']) ? Security::sanitize($_POST['tanggal']) : date('Y-m-d');
@@ -3095,6 +3109,16 @@ class GuruController {
                 $asesmenId = (int)($_POST['asesmen_id'] ?? 0);
                 $rombelId = (int)($_POST['rombel_id'] ?? 0);
                 $mapelId = (int)($_POST['mapel_id'] ?? 0);
+
+                // Hak Akses Guru: Validasi rombel harus kelas yang diampu guru
+                $allowedKelasList = $isAdminOrKepsek ? $academicModel->getKelas() : $academicModel->getKelasByGuru($guruId);
+                $allowedKelasIds = array_map('intval', array_column($allowedKelasList, 'id'));
+                if (!$isAdminOrKepsek && !empty($allowedKelasIds) && !in_array($rombelId, $allowedKelasIds)) {
+                    FlashHelper::setError('Anda tidak memiliki hak akses mengajar pada rombel/kelas tersebut.');
+                    header('Location: ' . BASE_URL . 'index.php?url=guru/asesmen');
+                    exit();
+                }
+
                 $namaAsesmen = Security::sanitize($_POST['nama_asesmen'] ?? '');
                 $jenisAsesmen = Security::sanitize($_POST['jenis_asesmen'] ?? 'formatif');
                 $tanggal = !empty($_POST['tanggal']) ? Security::sanitize($_POST['tanggal']) : date('Y-m-d');
@@ -3184,10 +3208,16 @@ class GuruController {
         // Active Tab: 'asesmen' | 'penilaian' | 'rekap_kelas' | 'rekap_siswa'
         $activeTab = $_GET['tab'] ?? 'asesmen';
 
-        // Master Data
+        // Master Data: Hanya kelas yang diajar/diampu guru yang dimunculkan
         $teacherMapelList = $academicModel->getMapelByGuru($guruId) ?: $academicModel->getMapel();
         $teacherKelasList = $academicModel->getKelasByGuru($guruId);
-        $rombelList = $academicModel->getKelas();
+
+        // Jika bukan admin/kepsek, batasi rombel hanya yang diampu guru
+        if ($isAdminOrKepsek) {
+            $rombelList = $academicModel->getKelas();
+        } else {
+            $rombelList = !empty($teacherKelasList) ? $teacherKelasList : [];
+        }
 
         // Kelompokkan rombel berdasarkan Jurusan (RPL, TBSM, dll) agar terstruktur rapi
         $rombelByJurusan = [];
@@ -3202,14 +3232,37 @@ class GuruController {
         }
 
         // Filter Param
-        $filterRombelId = !empty($_GET['rombel_id']) ? (int)$_GET['rombel_id'] : (!empty($rombelList[0]['id']) ? (int)$rombelList[0]['id'] : 0);
-        $filterMapelId = !empty($_GET['mapel_id']) ? (int)$_GET['mapel_id'] : (!empty($teacherMapelList[0]['id']) ? (int)$teacherMapelList[0]['id'] : 0);
+        $validRombelIds = array_map('intval', array_column($rombelList, 'id'));
+        if (isset($_GET['rombel_id'])) {
+            $reqRombelId = (int)$_GET['rombel_id'];
+            if ($reqRombelId > 0 && (in_array($reqRombelId, $validRombelIds) || $isAdminOrKepsek)) {
+                $filterRombelId = $reqRombelId;
+            } else {
+                $filterRombelId = 0;
+            }
+        } else {
+            // Default ke rombel pertama yang diampu jika ada
+            $filterRombelId = !empty($validRombelIds) ? $validRombelIds[0] : 0;
+        }
+
+        // Pastikan Tab 2 (penilaian), Tab 3 (rekap_kelas), dan Tab 4 (rekap_siswa) memiliki kelas default dari kelas yang diampu
+        if ($filterRombelId === 0 && !empty($validRombelIds) && in_array($activeTab, ['penilaian', 'rekap_kelas', 'rekap_siswa'])) {
+            $filterRombelId = $validRombelIds[0];
+        }
+
+        $validMapelIds = array_map('intval', array_column($teacherMapelList, 'id'));
+        if (!empty($_GET['mapel_id']) && (in_array((int)$_GET['mapel_id'], $validMapelIds) || $isAdminOrKepsek)) {
+            $filterMapelId = (int)$_GET['mapel_id'];
+        } else {
+            $filterMapelId = !empty($validMapelIds) ? (int)$validMapelIds[0] : 0;
+        }
+
         $selectedAsesmenId = !empty($_GET['asesmen_id']) ? (int)$_GET['asesmen_id'] : 0;
         $selectedSiswaId = !empty($_GET['siswa_id']) ? (int)$_GET['siswa_id'] : 0;
 
         // Data for Tab 1: Asesmen List
         $asesmenList = $assessModel->getAsesmenList([
-            'guru_id' => $guruId,
+            'guru_id' => $isAdminOrKepsek ? null : $guruId,
             'rombel_id' => $filterRombelId ?: null,
             'mapel_id' => $filterMapelId ?: null,
             'tahun_ajaran_id' => $activeTaId

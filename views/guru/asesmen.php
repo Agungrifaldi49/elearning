@@ -6,7 +6,7 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
     function renderRombelOptgroupsHtml($rombelByJurusan, $selectedId, $showAllOption = false) {
         $html = '';
         if ($showAllOption) {
-            $html .= '<option value="">-- Semua Rombel / Kelas --</option>';
+            $html .= '<option value="">-- Semua Rombel / Kelas yang Diampu --</option>';
         }
         if (!empty($rombelByJurusan) && is_array($rombelByJurusan)) {
             foreach ($rombelByJurusan as $groupTitle => $classes) {
@@ -19,6 +19,8 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                 }
                 $html .= '</optgroup>';
             }
+        } elseif (!$showAllOption) {
+            $html .= '<option value="" disabled>-- Tidak ada rombel/kelas yang diampu --</option>';
         }
         return $html;
     }
@@ -81,6 +83,17 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
+    <?php endif; ?>
+
+    <?php if (empty($rombelList) && empty($isAdminOrKepsek)): ?>
+        <div class="alert alert-warning rounded-3 shadow-xs mb-4 border-0 border-start border-warning border-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-circle-fill text-warning fs-5"></i>
+                <div>
+                    <strong>Pemberitahuan:</strong> Anda belum memiliki jadwal mengajar / rombel kelas yang diampu. Modul Asesmen & KKTP hanya menampilkan kelas yang Anda ajar. Silakan hubungi Administrator atau Waka Kurikulum jika penugasan kelas Anda belum didaftarkan.
+                </div>
+            </div>
+        </div>
     <?php endif; ?>
 
     <!-- Navigation Tabs -->
@@ -852,7 +865,7 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-secondary mb-1">Rombel / Kelas <span class="text-danger">*</span></label>
                             <select name="rombel_id" id="add_asesmen_rombel" class="form-select rounded-3 py-2" required>
-                                <option value="">-- Pilih Rombel Kelas Target --</option>
+                                <option value="">-- Pilih Rombel Kelas Target (Sesuai Jadwal Mengajar) --</option>
                                 <?= renderRombelOptgroupsHtml($rombelByJurusan ?? [], $filterRombelId, false) ?>
                             </select>
                         </div>
@@ -1014,7 +1027,7 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold text-secondary mb-1">Rombel / Kelas <span class="text-danger">*</span></label>
                             <select name="rombel_id" id="edit_asesmen_rombel" class="form-select rounded-3 py-2" required>
-                                <option value="">-- Pilih Rombel Kelas Target --</option>
+                                <option value="">-- Pilih Rombel Kelas Target (Sesuai Jadwal Mengajar) --</option>
                                 <?= renderRombelOptgroupsHtml($rombelByJurusan ?? [], 0, false) ?>
                             </select>
                         </div>
