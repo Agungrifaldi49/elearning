@@ -321,13 +321,14 @@ if (empty($logoUrl)) {
             <?php endif; ?>
             <div class="kop-text">
                 <div class="instansi">YAYASAN PENDIDIKAN MUTHI'AH</div>
-                <div class="nama-sekolah">SMK MUTHIA HARAPAN CICALENGKA</div>
+                <div class="nama-sekolah"><?= htmlspecialchars($settings['nama_sekolah'] ?? 'SMK MUTHIA HARAPAN CICALENGKA') ?></div>
                 <div class="npsn-akred">
-                    NPSN: <?= htmlspecialchars($settings['npsn'] ?? '69888806') ?> | AKREDITASI: "B" (BAN-S/M)
+                    NPSN: <?= htmlspecialchars($settings['npsn'] ?? '69725846') ?> | AKREDITASI: "<?= htmlspecialchars($settings['akreditasi'] ?? 'B') ?>"
                 </div>
                 <div class="alamat">
-                    <?= htmlspecialchars($settings['alamat_sekolah'] ?? 'Jl. Cicalengka - Majalaya Km. 2.5 Kp. Cikopo Desa Tenjolaya Kec. Cicalengka Kab. Bandung') ?><br>
-                    Website: <?= htmlspecialchars($settings['website'] ?? 'www.smkmuthiaharapan.sch.id') ?> | Email: <?= htmlspecialchars($settings['email'] ?? 'smkmuthiaharapan@gmail.com') ?>
+                    <?= htmlspecialchars(!empty($settings['alamat']) ? $settings['alamat'] : (!empty($settings['alamat_sekolah']) ? $settings['alamat_sekolah'] : 'Jalan Babakan Peuteuy Nomor 300, Desa Babakanpeuteuy, Kecamatan Cicalengka, Kabupaten Bandung, Jawa Barat')) ?>
+                    <?php if (!empty($settings['telepon'])): ?> | Telp: <?= htmlspecialchars($settings['telepon']) ?><?php endif; ?><br>
+                    Website: <?= htmlspecialchars(!empty($settings['website']) ? $settings['website'] : 'www.smkmuthiaharapan.sch.id') ?> | Email: <?= htmlspecialchars(!empty($settings['email']) ? $settings['email'] : (!empty($settings['landing_email']) ? $settings['landing_email'] : 'info@smkmh-cicalengka.sch.id')) ?>
                 </div>
             </div>
         </div>
@@ -343,7 +344,7 @@ if (empty($logoUrl)) {
             <tr>
                 <td style="width: 15%; font-weight: 600;">Satuan Pendidikan</td>
                 <td style="width: 2%;">:</td>
-                <td style="width: 33%; font-weight: 700;">SMK MUTHIA HARAPAN CICALENGKA</td>
+                <td style="width: 33%; font-weight: 700;"><?= htmlspecialchars($settings['nama_sekolah'] ?? 'SMK MUTHIA HARAPAN CICALENGKA') ?></td>
 
                 <td style="width: 18%; font-weight: 600;">Wali Kelas</td>
                 <td style="width: 2%;">:</td>
@@ -555,7 +556,7 @@ if (empty($logoUrl)) {
                 <tr>
                     <td style="width: 50%;">
                         Mengetahui,<br>
-                        <strong>Kepala SMK Muthia Harapan Cicalengka</strong>
+                        <strong>Kepala <?= htmlspecialchars($settings['nama_sekolah'] ?? 'SMK Muthia Harapan Cicalengka') ?></strong>
                         <div class="sign-space"></div>
                         <div class="sign-name"><?= htmlspecialchars($kepsekNama) ?></div>
                         <div>NIP. <?= htmlspecialchars($kepsekNip) ?></div>

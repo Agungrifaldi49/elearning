@@ -32,10 +32,13 @@ class SettingsModel {
         // Default values if empty
         $defaults = [
             'nama_sekolah' => 'SMK Muthia Harapan Cicalengka',
-            'npsn' => '20229871',
+            'npsn' => '69725846',
+            'akreditasi' => 'B',
             'kepala_sekolah' => 'H. ASEP SAEPULLOH, S. Ag',
             'telepon' => '(022) 7950123',
-            'alamat' => 'Jl. Raya Cicalengka No. 45, Cicalengka, Kabupaten Bandung, Jawa Barat 40395',
+            'email' => 'info@smkmh-cicalengka.sch.id',
+            'website' => 'www.smkmuthiaharapan.sch.id',
+            'alamat' => 'Jalan Babakan Peuteuy Nomor 300, Desa Babakanpeuteuy, Kecamatan Cicalengka, Kabupaten Bandung, Jawa Barat',
             'logo' => '',
             'smtp_host' => 'smtp.gmail.com',
             'smtp_port' => '587',

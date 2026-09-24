@@ -70,9 +70,13 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                             <label class="form-label small fw-bold">Nama Sekolah</label>
                             <input type="text" name="nama_sekolah" class="form-control" value="<?= htmlspecialchars($settings['nama_sekolah'] ?? 'SMK Muthia Harapan Cicalengka') ?>" required>
                         </div>
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-3">
                             <label class="form-label small fw-bold">NPSN</label>
-                            <input type="text" name="npsn" class="form-control" value="<?= htmlspecialchars($settings['npsn'] ?? '20229871') ?>" required>
+                            <input type="text" name="npsn" class="form-control" value="<?= htmlspecialchars($settings['npsn'] ?? '69725846') ?>" required>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small fw-bold">Status Akreditasi</label>
+                            <input type="text" name="akreditasi" class="form-control" value="<?= htmlspecialchars($settings['akreditasi'] ?? 'B') ?>" placeholder="Contoh: B / A (Unggul)">
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold">Kepala Sekolah</label>
@@ -82,13 +86,21 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                             <label class="form-label small fw-bold">NIP / NUPTK Kepala Sekolah</label>
                             <input type="text" name="nip_kepala_sekolah" class="form-control" value="<?= htmlspecialchars($settings['nip_kepala_sekolah'] ?? ($settings['nip_kepsek'] ?? 'G202608503')) ?>" placeholder="Contoh: 198501152010011002 / G202608503">
                         </div>
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-4">
                             <label class="form-label small fw-bold">No. Telepon / WhatsApp</label>
                             <input type="text" name="telepon" class="form-control" value="<?= htmlspecialchars($settings['telepon'] ?? '(022) 7950123') ?>" required>
                         </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold">Email Resmi Sekolah</label>
+                            <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($settings['email'] ?? ($settings['landing_email'] ?? 'info@smkmh-cicalengka.sch.id')) ?>" placeholder="Contoh: info@smkmh-cicalengka.sch.id">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-bold">Website Resmi Sekolah</label>
+                            <input type="text" name="website" class="form-control" value="<?= htmlspecialchars($settings['website'] ?? 'www.smkmuthiaharapan.sch.id') ?>" placeholder="Contoh: www.smkmuthiaharapan.sch.id">
+                        </div>
                         <div class="col-12">
                             <label class="form-label small fw-bold">Alamat Lengkap</label>
-                            <textarea name="alamat" class="form-control" rows="2"><?= htmlspecialchars($settings['alamat'] ?? 'Jl. Raya Cicalengka No. 45, Cicalengka, Kabupaten Bandung, Jawa Barat 40395') ?></textarea>
+                            <textarea name="alamat" class="form-control" rows="2" placeholder="Alamat lengkap sekolah..."><?= htmlspecialchars($settings['alamat'] ?? 'Jalan Babakan Peuteuy Nomor 300, Desa Babakanpeuteuy, Kecamatan Cicalengka, Kabupaten Bandung, Jawa Barat') ?></textarea>
                         </div>
                         <div class="col-12 col-md-6">
                             <label class="form-label small fw-bold">Upload Logo Sekolah (PNG / JPG)</label>

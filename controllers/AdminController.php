@@ -485,9 +485,12 @@ class AdminController {
                 $updateData = [
                     'nama_sekolah' => Security::sanitize($_POST['nama_sekolah'] ?? ''),
                     'npsn' => Security::sanitize($_POST['npsn'] ?? ''),
+                    'akreditasi' => Security::sanitize($_POST['akreditasi'] ?? ''),
                     'kepala_sekolah' => Security::sanitize($_POST['kepala_sekolah'] ?? ''),
                     'nip_kepala_sekolah' => Security::sanitize($_POST['nip_kepala_sekolah'] ?? ''),
                     'telepon' => Security::sanitize($_POST['telepon'] ?? ''),
+                    'email' => Security::sanitize($_POST['email'] ?? ''),
+                    'website' => Security::sanitize($_POST['website'] ?? ''),
                     'alamat' => Security::sanitize($_POST['alamat'] ?? ''),
                 ];
 
@@ -499,7 +502,7 @@ class AdminController {
                 }
 
                 $settingsModel->saveBatch($updateData);
-                $flashSuccess = 'Profil Sekolah berhasil diperbarui dan disimpan ke database!';
+                $flashSuccess = 'Profil Sekolah & Logo berhasil diperbarui dan disimpan ke database!';
             } elseif ($section === 'smtp') {
                 $updateData = [
                     'smtp_host' => Security::sanitize($_POST['smtp_host'] ?? ''),
