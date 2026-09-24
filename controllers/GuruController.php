@@ -3078,6 +3078,7 @@ class GuruController {
                 $nilaiMaks = floatval($_POST['nilai_maksimum'] ?? 100.00);
                 $bobot = floatval($_POST['bobot'] ?? 1.00);
                 $tpIds = !empty($_POST['tp_ids']) && is_array($_POST['tp_ids']) ? array_map('intval', $_POST['tp_ids']) : [];
+                $refQuizId = !empty($_POST['ref_quiz_id']) ? (int)$_POST['ref_quiz_id'] : null;
 
                 // Cari kurikulum_id aktif dari rombel/kelas terpilih
                 $kurikulumInfo = $currModel->getActiveKurikulumForRombel($rombelId);
@@ -3094,7 +3095,8 @@ class GuruController {
                     'jenis_asesmen' => $jenisAsesmen,
                     'tanggal' => $tanggal,
                     'nilai_maksimum' => $nilaiMaks,
-                    'bobot' => $bobot
+                    'bobot' => $bobot,
+                    'ref_quiz_id' => $refQuizId
                 ], $tpIds);
 
                 if ($res['status']) {
@@ -3125,6 +3127,7 @@ class GuruController {
                 $nilaiMaks = floatval($_POST['nilai_maksimum'] ?? 100.00);
                 $bobot = floatval($_POST['bobot'] ?? 1.00);
                 $tpIds = !empty($_POST['tp_ids']) && is_array($_POST['tp_ids']) ? array_map('intval', $_POST['tp_ids']) : [];
+                $refQuizId = !empty($_POST['ref_quiz_id']) ? (int)$_POST['ref_quiz_id'] : null;
 
                 // Cari kurikulum_id aktif dari rombel/kelas terpilih
                 $kurikulumInfo = $currModel->getActiveKurikulumForRombel($rombelId);
@@ -3139,7 +3142,8 @@ class GuruController {
                     'jenis_asesmen' => $jenisAsesmen,
                     'tanggal' => $tanggal,
                     'nilai_maksimum' => $nilaiMaks,
-                    'bobot' => $bobot
+                    'bobot' => $bobot,
+                    'ref_quiz_id' => $refQuizId
                 ], $tpIds);
 
                 if ($res['status']) {
@@ -3194,6 +3198,21 @@ class GuruController {
                 $res = $assessModel->inputNilaiSiswaPerTp($asesmenId, $tpId, $siswaId, $nilaiRemedial, true, $catatan);
                 if ($res['status']) {
                     FlashHelper::setSuccess("Nilai remedial berhasil disimpan! Status saat ini: {$res['status_ketercapaian']} (Kode: {$res['status_code']})");
+                } else {
+                    FlashHelper::setError($res['message']);
+                }
+                header('Location: ' . BASE_URL . 'index.php?url=guru/asesmen&tab=penilaian&asesmen_id=' . $asesmenId);
+                exit();
+
+            } elseif ($action === 'sync_quiz_scores') {
+                $asesmenId = (int)($_POST['asesmen_id'] ?? 0);
+                $quizId = (int)($_POST['quiz_id'] ?? 0);
+                $tpId = (int)($_POST['tp_id'] ?? 0);
+                $sourceMode = Security::sanitize($_POST['source_mode'] ?? 'tertinggi');
+
+                $res = $assessModel->syncNilaiFromQuiz($asesmenId, $quizId, $tpId, $sourceMode);
+                if ($res['status']) {
+                    FlashHelper::setSuccess($res['message']);
                 } else {
                     FlashHelper::setError($res['message']);
                 }
@@ -3259,6 +3278,9 @@ class GuruController {
 
         $selectedAsesmenId = !empty($_GET['asesmen_id']) ? (int)$_GET['asesmen_id'] : 0;
         $selectedSiswaId = !empty($_GET['siswa_id']) ? (int)$_GET['siswa_id'] : 0;
+
+        // Ambil daftar Quiz CBT guru yang relevan untuk integrasi
+        $availableQuizzes = $assessModel->getAvailableQuizzesForTeacher($guruId, null, null);
 
         // Data for Tab 1: Asesmen List
         $asesmenList = $assessModel->getAsesmenList([

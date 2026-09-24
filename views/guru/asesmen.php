@@ -241,6 +241,13 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                                         <td>
                                             <div class="fw-bold text-dark"><?= htmlspecialchars($a['nama_asesmen']) ?></div>
                                             <div class="small text-muted">Bobot: <?= $a['bobot'] ?> | Maks: <?= $a['nilai_maksimum'] ?></div>
+                                            <?php if (!empty($a['ref_quiz_id']) && !empty($a['quiz_judul'])): ?>
+                                                <div class="mt-1">
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                                        <i class="bi bi-laptop me-1"></i>CBT: <?= htmlspecialchars($a['quiz_judul']) ?>
+                                                    </span>
+                                                </div>
+                                            <?php endif; ?>
                                         </td>
                                         <td>
                                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1">
@@ -284,7 +291,8 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                                                         data-jenis="<?= htmlspecialchars($a['jenis_asesmen'], ENT_QUOTES) ?>"
                                                         data-tanggal="<?= htmlspecialchars($a['tanggal'], ENT_QUOTES) ?>"
                                                         data-nilai-maks="<?= $a['nilai_maksimum'] ?>"
-                                                        data-bobot="<?= $a['bobot'] ?>">
+                                                        data-bobot="<?= $a['bobot'] ?>"
+                                                        data-ref-quiz-id="<?= (int)($a['ref_quiz_id'] ?? 0) ?>">
                                                     <i class="bi bi-pencil"></i> <span>Edit</span>
                                                 </button>
                                                 <button type="button" 
@@ -342,6 +350,11 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                             <span class="badge bg-light text-dark border rounded-pill px-3 py-1">
                                 <?= htmlspecialchars($asesmen['nama_mapel']) ?>
                             </span>
+                            <?php if (!empty($asesmen['ref_quiz_id']) && !empty($asesmen['quiz_judul'])): ?>
+                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-3 py-1 font-monospace">
+                                    <i class="bi bi-laptop me-1"></i>Kuis CBT: <?= htmlspecialchars($asesmen['quiz_judul']) ?>
+                                </span>
+                            <?php endif; ?>
                         </div>
                         <h4 class="fw-bold text-dark mb-0"><?= htmlspecialchars($asesmen['nama_asesmen']) ?></h4>
                         <div class="text-muted small mt-1">
@@ -410,9 +423,15 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                         <div class="fw-bold text-dark fs-6 d-flex align-items-center gap-2">
                             <i class="bi bi-table text-primary"></i> Matriks Penilaian Siswa Per-TP (Status 1 = Tercapai, 0 = Belum)
                         </div>
-                        <button type="submit" class="btn btn-success shadow-sm fw-bold px-4 py-2 rounded-3 d-flex align-items-center gap-2">
-                            <i class="bi bi-save-fill"></i> Simpan Semua Nilai
-                        </button>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <button type="button" class="btn btn-outline-primary shadow-sm fw-bold px-3 py-2 rounded-3 d-flex align-items-center gap-2"
+                                    data-bs-toggle="modal" data-bs-target="#modalSyncQuizScore" title="Ambil nilai hasil ujian CBT online siswa secara otomatis">
+                                <i class="bi bi-cloud-arrow-down-fill text-primary"></i> Tarik Nilai dari Quiz CBT
+                            </button>
+                            <button type="submit" class="btn btn-success shadow-sm fw-bold px-4 py-2 rounded-3 d-flex align-items-center gap-2">
+                                <i class="bi bi-save-fill"></i> Simpan Semua Nilai
+                            </button>
+                        </div>
                     </div>
 
                     <div class="card-body p-0">
@@ -912,6 +931,23 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                             <label class="form-label small fw-bold text-secondary mb-1">Bobot Asesmen</label>
                             <input type="number" step="0.1" min="0.1" name="bobot" class="form-control rounded-3 py-2 text-center font-monospace" value="1.0">
                         </div>
+
+                        <div class="col-12 col-md-8">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                <i class="bi bi-laptop me-1 text-primary"></i>Tautkan ke Quiz CBT Online <span class="badge bg-light text-muted border">Opsional</span>
+                            </label>
+                            <select name="ref_quiz_id" id="add_asesmen_ref_quiz" class="form-select rounded-3 py-2">
+                                <option value="">-- Tanpa Tautan Quiz CBT --</option>
+                                <?php if (!empty($availableQuizzes)): ?>
+                                    <?php foreach ($availableQuizzes as $q): ?>
+                                        <option value="<?= $q['id'] ?>">
+                                            <?= htmlspecialchars($q['judul']) ?> [<?= htmlspecialchars($q['nama_mapel']) ?> - <?= (int)$q['total_peserta'] ?> peserta]
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <div class="form-text text-muted small" style="font-size: 0.73rem;">Menautkan kuis memudahkan penarikan nilai CBT langsung ke lembar nilai TP.</div>
+                        </div>
                     </div>
 
                     <!-- Multi-TP Checkbox Selection Section -->
@@ -999,6 +1035,110 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
 </div>
 
 <!-- =========================================================================== -->
+<!-- MODAL TARIK NILAI DARI QUIZ CBT ONLINE (INTEGRASI KKTP) -->
+<!-- =========================================================================== -->
+<div class="modal fade" id="modalSyncQuizScore" tabindex="-1" aria-labelledby="modalSyncQuizScoreLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form action="<?= BASE_URL ?>index.php?url=guru/asesmen" method="POST">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="sync_quiz_scores">
+                <input type="hidden" name="asesmen_id" value="<?= $asesmen['id'] ?? 0 ?>">
+
+                <div class="modal-header bg-primary text-white py-3 px-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 bg-white bg-opacity-25 p-2 d-flex align-items-center justify-content-center">
+                            <i class="bi bi-cloud-arrow-down-fill fs-4 text-white"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0" id="modalSyncQuizScoreLabel">Tarik Nilai dari Quiz CBT Online</h5>
+                            <p class="small text-white-50 mb-0">Impor nilai ujian CBT ke TP & otomatis evaluasi ketercapaian KKTP (Status 1 / 0)</p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4 bg-light">
+                    <!-- Info Alert Alur KKTP -->
+                    <div class="alert alert-info border-0 border-start border-4 border-info shadow-xs rounded-3 mb-3 p-3">
+                        <div class="d-flex align-items-start gap-2.5">
+                            <i class="bi bi-info-circle-fill text-info fs-5 flex-shrink-0 mt-0.5"></i>
+                            <div class="small">
+                                <strong>Logika Evaluasi KKTP Otomatis:</strong><br>
+                                Nilai ujian CBT siswa akan dimasukkan ke kolom TP yang dipilih. Sistem otomatis membandingkannya dengan ambang batas KKTP TP (misal: 75):
+                                <ul class="mb-0 mt-1 ps-3">
+                                    <li>Siswa dengan nilai <strong>&ge; KKTP (75)</strong> otomatis diberi status <strong>1 (Tercapai / Tuntas)</strong>.</li>
+                                    <li>Siswa dengan nilai <strong>&lt; KKTP (75)</strong> otomatis diberi status <strong>0 (Belum Tercapai / Remedial)</strong>.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- Pilih Sumber Kuis CBT -->
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                <i class="bi bi-laptop text-primary me-1"></i>Pilih Paket Ujian / Quiz CBT Sumber <span class="text-danger">*</span>
+                            </label>
+                            <select name="quiz_id" id="sync_quiz_id" class="form-select rounded-3 py-2 fw-semibold" required>
+                                <option value="">-- Pilih Quiz CBT --</option>
+                                <?php if (!empty($availableQuizzes)): ?>
+                                    <?php foreach ($availableQuizzes as $qz): ?>
+                                        <?php 
+                                            $isLinked = !empty($asesmen['ref_quiz_id']) && ((int)$asesmen['ref_quiz_id'] === (int)$qz['id']);
+                                        ?>
+                                        <option value="<?= $qz['id'] ?>" <?= $isLinked ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($qz['judul']) ?> [<?= htmlspecialchars($qz['nama_mapel']) ?>] &mdash; (<?= (int)$qz['total_peserta'] ?> siswa telah mengerjakan) <?= $isLinked ? '★ [Kuis Tertaut]' : '' ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <div class="form-text text-muted small">Hanya menampilkan kuis CBT aktif milik Anda.</div>
+                        </div>
+
+                        <!-- Pilih TP Sasaran -->
+                        <div class="col-12 col-md-7">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                <i class="bi bi-bullseye text-danger me-1"></i>Tujuan Pembelajaran (TP) Target <span class="text-danger">*</span>
+                            </label>
+                            <select name="tp_id" id="sync_tp_id" class="form-select rounded-3 py-2" required>
+                                <?php if (!empty($tps)): ?>
+                                    <?php foreach ($tps as $t): ?>
+                                        <option value="<?= $t['tp_id'] ?>">
+                                            [<?= htmlspecialchars($t['kode_tp']) ?>] <?= htmlspecialchars($t['deskripsi_tp']) ?> (KKTP: <?= number_format($t['kktp_nilai_min'] ?? 75, 0) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                            <div class="form-text text-muted small">Nilai hasil ujian akan diisikan ke kompetensi TP ini.</div>
+                        </div>
+
+                        <!-- Mode Pengambilan Skor -->
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                <i class="bi bi-award text-warning me-1"></i>Metode Pengambilan Skor
+                            </label>
+                            <select name="source_mode" class="form-select rounded-3 py-2">
+                                <option value="tertinggi" selected>Nilai Tertinggi (Best Attempt)</option>
+                                <option value="terakhir">Nilai Pengerjaan Terakhir</option>
+                            </select>
+                            <div class="form-text text-muted small">Disarankan menggunakan nilai tertinggi siswa.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-white py-3 px-4 border-top">
+                    <button type="button" class="btn btn-light border px-4 py-2 fw-semibold rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4 py-2 rounded-3 shadow-sm d-flex align-items-center gap-2">
+                        <i class="bi bi-cloud-arrow-down-fill"></i> Tarik & Evaluasi Ketercapaian
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================================== -->
 <!-- MODAL EDIT ASESMEN (MULTI-TP CHECKBOX SELECTOR) -->
 <!-- =========================================================================== -->
 <div class="modal fade" id="modalEditAsesmen" tabindex="-1" aria-labelledby="modalEditAsesmenLabel" aria-hidden="true">
@@ -1073,6 +1213,22 @@ if (!function_exists('renderRombelOptgroupsHtml')) {
                         <div class="col-12 col-md-4">
                             <label class="form-label small fw-bold text-secondary mb-1">Bobot Asesmen</label>
                             <input type="number" step="0.1" min="0.1" name="bobot" id="edit_bobot" class="form-control rounded-3 py-2 text-center font-monospace" value="1.0">
+                        </div>
+
+                        <div class="col-12 col-md-8">
+                            <label class="form-label small fw-bold text-secondary mb-1">
+                                <i class="bi bi-laptop me-1 text-primary"></i>Tautkan ke Quiz CBT Online <span class="badge bg-light text-muted border">Opsional</span>
+                            </label>
+                            <select name="ref_quiz_id" id="edit_asesmen_ref_quiz" class="form-select rounded-3 py-2">
+                                <option value="">-- Tanpa Tautan Quiz CBT --</option>
+                                <?php if (!empty($availableQuizzes)): ?>
+                                    <?php foreach ($availableQuizzes as $q): ?>
+                                        <option value="<?= $q['id'] ?>">
+                                            <?= htmlspecialchars($q['judul']) ?> [<?= htmlspecialchars($q['nama_mapel']) ?> - <?= (int)$q['total_peserta'] ?> peserta]
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
                         </div>
                     </div>
 
@@ -1474,6 +1630,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const tanggal = this.dataset.tanggal;
             const nilaiMaks = this.dataset.nilaiMaks;
             const bobot = this.dataset.bobot;
+            const refQuizId = this.dataset.refQuizId || '';
 
             document.getElementById('edit_asesmen_id').value = id;
             document.getElementById('edit_nama_asesmen').value = nama;
@@ -1483,6 +1640,9 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('edit_tanggal').value = tanggal;
             document.getElementById('edit_nilai_maksimum').value = nilaiMaks;
             document.getElementById('edit_bobot').value = bobot;
+            if (document.getElementById('edit_asesmen_ref_quiz')) {
+                document.getElementById('edit_asesmen_ref_quiz').value = refQuizId;
+            }
 
             // Fetch detail asesmen to get checked TPs
             fetch(`<?= BASE_URL ?>index.php?url=guru/asesmen&ajax_action=get_asesmen_detail&asesmen_id=${id}`)

@@ -564,9 +564,12 @@ class AssessmentModel extends BaseModel {
         $primaryCpId = (int)$stmtCp->fetchColumn();
 
         // 1. Simpan ke tabel asesmen utama
+        $refQuizId = !empty($data['ref_quiz_id']) ? (int)$data['ref_quiz_id'] : null;
+        $refTugasId = !empty($data['ref_tugas_id']) ? (int)$data['ref_tugas_id'] : null;
+
         $stmt = $this->db->prepare("
-            INSERT INTO asesmen (tahun_ajaran_id, semester, rombel_id, mapel_id, kurikulum_id, guru_id, cp_id, tp_id, jenis_asesmen, nama_asesmen, tanggal, nilai_maksimum, bobot)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO asesmen (tahun_ajaran_id, semester, rombel_id, mapel_id, kurikulum_id, guru_id, cp_id, tp_id, jenis_asesmen, nama_asesmen, tanggal, nilai_maksimum, bobot, ref_quiz_id, ref_tugas_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
             $tahunAjaranId,
@@ -581,7 +584,9 @@ class AssessmentModel extends BaseModel {
             $namaAsesmen,
             $tanggal,
             $nilaiMaks,
-            $bobot
+            $bobot,
+            $refQuizId,
+            $refTugasId
         ]);
         $asesmenId = (int)$this->db->lastInsertId();
 
@@ -616,12 +621,14 @@ class AssessmentModel extends BaseModel {
         $id = (int)$id;
         $stmt = $this->db->prepare("
             SELECT a.*, k.nama_kelas, k.nama_kelas as nama_rombel, k.tingkat, m.nama_mapel, g.nama_lengkap as nama_guru,
-                   kur.nama as nama_kurikulum, kur.kode as kode_kurikulum
+                   kur.nama as nama_kurikulum, kur.kode as kode_kurikulum,
+                   q.judul as quiz_judul
             FROM asesmen a
             JOIN kelas k ON a.rombel_id = k.id
             JOIN mata_pelajaran m ON a.mapel_id = m.id
             LEFT JOIN guru g ON a.guru_id = g.id
             LEFT JOIN kurikulum kur ON a.kurikulum_id = kur.id
+            LEFT JOIN quiz q ON a.ref_quiz_id = q.id
             WHERE a.id = ?
         ");
         $stmt->execute([$id]);
@@ -677,12 +684,14 @@ class AssessmentModel extends BaseModel {
     public function getAsesmenList($filters = []) {
         $sql = "
             SELECT a.*, k.nama_kelas, k.nama_kelas as nama_rombel, k.tingkat, m.nama_mapel, g.nama_lengkap as nama_guru,
+                   q.judul as quiz_judul,
                    (SELECT COUNT(*) FROM asesmen_tp atp WHERE atp.asesmen_id = a.id) as total_tp,
                    (SELECT COUNT(DISTINCT siswa_id) FROM nilai_asesmen_tp natp WHERE natp.asesmen_id = a.id) as total_siswa_dinilai
             FROM asesmen a
             JOIN kelas k ON a.rombel_id = k.id
             JOIN mata_pelajaran m ON a.mapel_id = m.id
             LEFT JOIN guru g ON a.guru_id = g.id
+            LEFT JOIN quiz q ON a.ref_quiz_id = q.id
             WHERE 1=1
         ";
         $params = [];
@@ -755,10 +764,12 @@ class AssessmentModel extends BaseModel {
             $this->db->beginTransaction();
 
             // 1. Update tabel asesmen utama
+            $refQuizId = isset($data['ref_quiz_id']) ? (!empty($data['ref_quiz_id']) ? (int)$data['ref_quiz_id'] : null) : ($existing['ref_quiz_id'] ?? null);
+
             $stmt = $this->db->prepare("
                 UPDATE asesmen 
                 SET rombel_id = ?, mapel_id = ?, kurikulum_id = ?, cp_id = ?, tp_id = ?, 
-                    jenis_asesmen = ?, nama_asesmen = ?, tanggal = ?, nilai_maksimum = ?, bobot = ?
+                    jenis_asesmen = ?, nama_asesmen = ?, tanggal = ?, nilai_maksimum = ?, bobot = ?, ref_quiz_id = ?
                 WHERE id = ?
             ");
             $stmt->execute([
@@ -772,6 +783,7 @@ class AssessmentModel extends BaseModel {
                 $tanggal,
                 $nilaiMaks,
                 $bobot,
+                $refQuizId,
                 $id
             ]);
 
@@ -1323,6 +1335,139 @@ class AssessmentModel extends BaseModel {
             'total_tp' => count($records),
             'total_tercapai' => count($tercapaiTps),
             'total_belum_tercapai' => count($belumTercapaiTps)
+        ];
+    }
+
+    /**
+     * Ambil daftar Quiz CBT guru (atau difilter berdasarkan mapel & rombel)
+     */
+    public function getAvailableQuizzesForTeacher($guruId, $mapelId = null, $rombelId = null) {
+        $sql = "
+            SELECT q.id, q.judul, q.mapel_id, q.kelas_id, q.kelas_ids, q.deadline, q.status,
+                   m.nama_mapel,
+                   (SELECT COUNT(*) FROM hasil_quiz h WHERE h.quiz_id = q.id) as total_peserta
+            FROM quiz q
+            JOIN mata_pelajaran m ON q.mapel_id = m.id
+            WHERE 1=1
+        ";
+        $params = [];
+        if ($guruId) {
+            $sql .= " AND q.guru_id = ?";
+            $params[] = (int)$guruId;
+        }
+        if ($mapelId) {
+            $sql .= " AND q.mapel_id = ?";
+            $params[] = (int)$mapelId;
+        }
+        $sql .= " ORDER BY q.id DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($rombelId) {
+            $filtered = [];
+            foreach ($list as $item) {
+                $kIds = [];
+                if (!empty($item['kelas_ids'])) {
+                    $kIds = array_map('intval', explode(',', $item['kelas_ids']));
+                }
+                if (!empty($item['kelas_id'])) {
+                    $kIds[] = (int)$item['kelas_id'];
+                }
+                if (empty($kIds) || in_array((int)$rombelId, $kIds)) {
+                    $filtered[] = $item;
+                }
+            }
+            return $filtered;
+        }
+
+        return $list;
+    }
+
+    /**
+     * Tarik nilai dari hasil Quiz CBT ke dalam Nilai Asesmen TP secara otomatis.
+     * Otomatis mengevaluasi ketercapaian KKTP (1 = Tercapai, 0 = Belum Tercapai).
+     */
+    public function syncNilaiFromQuiz($asesmenId, $quizId, $tpId, $sourceMode = 'tertinggi') {
+        $asesmen = $this->getAsesmenById($asesmenId);
+        if (!$asesmen) {
+            return ['status' => false, 'message' => 'Asesmen tidak ditemukan.'];
+        }
+
+        $rombelId = (int)$asesmen['rombel_id'];
+        $tpId = (int)$tpId;
+
+        if ($tpId <= 0) {
+            return ['status' => false, 'message' => 'Tujuan Pembelajaran (TP) target wajib dipilih.'];
+        }
+
+        // Ambil daftar siswa di rombel
+        $stmtSiswa = $this->db->prepare("SELECT id FROM siswa WHERE kelas_id = ?");
+        $stmtSiswa->execute([$rombelId]);
+        $siswaIds = $stmtSiswa->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($siswaIds)) {
+            return ['status' => false, 'message' => 'Tidak ada siswa pada rombel kelas asesmen ini.'];
+        }
+
+        // Ambil hasil quiz untuk seluruh siswa ini
+        $inSiswa = implode(',', array_map('intval', $siswaIds));
+        $stmtHasil = $this->db->prepare("
+            SELECT siswa_id, total_nilai, nilai_tertinggi 
+            FROM hasil_quiz 
+            WHERE quiz_id = ? AND siswa_id IN ($inSiswa)
+        ");
+        $stmtHasil->execute([(int)$quizId]);
+        $hasilList = $stmtHasil->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($hasilList)) {
+            return ['status' => false, 'message' => 'Belum ada data pengerjaan kuis siswa pada kelas ini untuk kuis yang dipilih.'];
+        }
+
+        // Ambil info kuis untuk catatan
+        $stmtQ = $this->db->prepare("SELECT judul FROM quiz WHERE id = ?");
+        $stmtQ->execute([(int)$quizId]);
+        $quizJudul = $stmtQ->fetchColumn() ?: 'CBT Online';
+
+        $syncedCount = 0;
+        $tercapaiCount = 0;
+        $belumCount = 0;
+
+        foreach ($hasilList as $h) {
+            $sId = (int)$h['siswa_id'];
+            $nilaiScore = ($sourceMode === 'tertinggi' && isset($h['nilai_tertinggi']) && $h['nilai_tertinggi'] !== null)
+                ? floatval($h['nilai_tertinggi'])
+                : floatval($h['total_nilai'] ?? 0);
+
+            // Batasi nilai maksimum sesuai asesmen jika perlu
+            if ($asesmen['nilai_maksimum'] > 0 && $nilaiScore > $asesmen['nilai_maksimum']) {
+                $nilaiScore = floatval($asesmen['nilai_maksimum']);
+            }
+
+            $catatan = "Diimpor dari CBT: " . $quizJudul . " (" . date('d/m/Y H:i') . ")";
+            $evalRes = $this->inputNilaiSiswaPerTp($asesmenId, $tpId, $sId, $nilaiScore, false, $catatan);
+            if (!empty($evalRes['status'])) {
+                $syncedCount++;
+                if (!empty($evalRes['status_code']) && (int)$evalRes['status_code'] === 1) {
+                    $tercapaiCount++;
+                } else {
+                    $belumCount++;
+                }
+            }
+        }
+
+        // Update ref_quiz_id di asesmen jika belum diset
+        if (empty($asesmen['ref_quiz_id'])) {
+            $stmtUpRef = $this->db->prepare("UPDATE asesmen SET ref_quiz_id = ? WHERE id = ?");
+            $stmtUpRef->execute([(int)$quizId, $asesmenId]);
+        }
+
+        return [
+            'status' => true,
+            'message' => "Berhasil menyinkronkan {$syncedCount} nilai siswa dari Quiz CBT '{$quizJudul}'. Hasil evaluasi KKTP: {$tercapaiCount} siswa Tercapai (1) dan {$belumCount} siswa Belum Tercapai / Remedial (0).",
+            'synced_count' => $syncedCount,
+            'tercapai_count' => $tercapaiCount,
+            'belum_count' => $belumCount
         ];
     }
 }

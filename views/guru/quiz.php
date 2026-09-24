@@ -440,6 +440,13 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                                                     </a>
                                                                 </li>
                                                                 <li><hr class="dropdown-divider my-1"></li>
+                                                                <li><h6 class="dropdown-header text-uppercase fw-bold text-muted px-2 py-1 mb-1" style="font-size:0.68rem;">Integrasi Kurikulum Merdeka</h6></li>
+                                                                <li>
+                                                                    <a class="dropdown-item rounded-2 py-1.5 text-primary fw-semibold" href="<?= BASE_URL ?>index.php?url=guru/asesmen&tab=penilaian">
+                                                                        <i class="bi bi-journal-check me-2 text-danger"></i> Masukkan ke Asesmen KKTP
+                                                                    </a>
+                                                                </li>
+                                                                <li><hr class="dropdown-divider my-1"></li>
                                                                 <li><h6 class="dropdown-header text-uppercase fw-bold text-muted px-2 py-1 mb-1" style="font-size:0.68rem;">Pengaturan Paket</h6></li>
                                                                 <li>
                                                                     <a class="dropdown-item rounded-2 py-1.5 text-dark fw-semibold" href="#" data-bs-toggle="modal" data-bs-target="#modalEditQuiz<?= $q['id'] ?>">
