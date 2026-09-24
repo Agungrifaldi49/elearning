@@ -399,9 +399,11 @@ if (empty($logoUrl)) {
                 </tr>
                 <tr>
                     <?php foreach ($mapelList as $m): ?>
-                        <th style="font-size: 0.66rem; min-width: 55px; padding: 2px 2px;" title="<?= htmlspecialchars($m['nama_mapel']) ?>">
-                            <?= htmlspecialchars(!empty($m['kode_mapel']) ? $m['kode_mapel'] : substr($m['nama_mapel'], 0, 8)) ?><br>
-                            <span style="font-size: 0.6rem; font-weight: normal;">(<?= (float)$m['kkm'] ?>)</span>
+                        <th style="font-size: 0.68rem; min-width: 100px; max-width: 160px; padding: 4px 3px; line-height: 1.25;" title="<?= htmlspecialchars($m['nama_mapel']) ?>">
+                            <div style="font-weight: 700; color: #000;"><?= htmlspecialchars($m['nama_mapel']) ?></div>
+                            <span style="font-size: 0.6rem; font-weight: normal; color: #475569;">
+                                <?= !empty($m['kode_mapel']) ? htmlspecialchars($m['kode_mapel']) . ' • ' : '' ?>KKM <?= (float)$m['kkm'] ?>
+                            </span>
                         </th>
                     <?php endforeach; ?>
                 </tr>

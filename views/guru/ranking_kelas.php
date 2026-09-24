@@ -253,13 +253,20 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                                 
                                 <!-- Kolom Dinamis Per Mata Pelajaran -->
                                 <?php foreach ($mapelList as $m): ?>
-                                    <th class="text-center py-2 px-2" style="min-width: 85px;" title="<?= htmlspecialchars($m['nama_mapel']) ?> (KKM: <?= (float)$m['kkm'] ?>)">
-                                        <div class="fw-bold text-dark text-truncate" style="max-width: 110px;">
-                                            <?= htmlspecialchars(!empty($m['kode_mapel']) ? $m['kode_mapel'] : $m['nama_mapel']) ?>
+                                    <th class="text-center py-2 px-2" style="min-width: 130px; max-width: 200px;" title="<?= htmlspecialchars($m['nama_mapel']) ?> (KKM: <?= (float)$m['kkm'] ?>)">
+                                        <div class="fw-bold text-dark text-wrap lh-sm mb-1" style="font-size: 0.78rem;">
+                                            <?= htmlspecialchars($m['nama_mapel']) ?>
                                         </div>
-                                        <small class="badge bg-secondary-subtle text-secondary border rounded-pill px-1.5 py-0 font-monospace" style="font-size: 0.65rem;">
-                                            KKM <?= (float)$m['kkm'] ?>
-                                        </small>
+                                        <div class="d-flex align-items-center justify-content-center gap-1 flex-wrap">
+                                            <?php if (!empty($m['kode_mapel'])): ?>
+                                                <span class="badge bg-light text-dark border font-monospace px-1.5 py-0" style="font-size: 0.65rem;">
+                                                    <?= htmlspecialchars($m['kode_mapel']) ?>
+                                                </span>
+                                            <?php endif; ?>
+                                            <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-1.5 py-0 font-monospace" style="font-size: 0.65rem;">
+                                                KKM <?= (float)$m['kkm'] ?>
+                                            </span>
+                                        </div>
                                     </th>
                                 <?php endforeach; ?>
 
