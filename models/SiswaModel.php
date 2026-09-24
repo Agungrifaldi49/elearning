@@ -13,7 +13,7 @@ class SiswaModel extends BaseModel {
             JOIN users u ON s.user_id = u.id 
             JOIN kelas k ON s.kelas_id = k.id 
             JOIN jurusan j ON s.jurusan_id = j.id 
-            WHERE 1=1
+            WHERE u.role_id = 3
         ";
         $params = [];
 
@@ -55,7 +55,7 @@ class SiswaModel extends BaseModel {
             JOIN users u ON s.user_id = u.id 
             LEFT JOIN kelas k ON s.kelas_id = k.id 
             LEFT JOIN jurusan j ON s.jurusan_id = j.id 
-            WHERE s.user_id = ?
+            WHERE s.user_id = ? AND u.role_id = 3
         ");
         $stmt->execute([$userId]);
         return $stmt->fetch();
@@ -63,9 +63,19 @@ class SiswaModel extends BaseModel {
 
     public function ensureSiswaProfile($userId, $fullName) {
         if (!$userId) {
-            return ['id' => 0, 'user_id' => 0, 'nama_lengkap' => $fullName, 'kelas_id' => 1, 'jurusan_id' => 1];
+            return null;
         }
 
+        // STRICT ROLE CHECK: Only users with role_id = 3 (Siswa) are allowed to have a student profile
+        $stmtUser = $this->db->prepare("SELECT id, role_id, full_name FROM users WHERE id = ?");
+        $stmtUser->execute([$userId]);
+        $user = $stmtUser->fetch();
+        if (!$user || (int)$user['role_id'] !== 3) {
+            // Non-students (Admin, Guru, Kepsek) MUST NEVER be inserted into siswa or assigned to rombel!
+            return null;
+        }
+
+        $fullName = !empty($fullName) ? $fullName : ($user['full_name'] ?? 'Siswa');
         $siswa = $this->getByUserId($userId);
         if ($siswa) return $siswa;
 
@@ -88,14 +98,13 @@ class SiswaModel extends BaseModel {
             }
         } catch (\Throwable $e) {}
 
-        $fallback = $this->getByUserId($userId);
-        return $fallback ?: ['id' => 0, 'user_id' => $userId, 'nama_lengkap' => $fullName, 'kelas_id' => 1, 'jurusan_id' => 1];
+        return $this->getByUserId($userId);
     }
 
     public function addSiswa($data) {
         $this->db->beginTransaction();
         try {
-            // Create user account
+            // Create user account with explicit role_id = 3 (Siswa)
             $stmtUser = $this->db->prepare("INSERT INTO users (role_id, username, email, password, full_name) VALUES (3, ?, ?, ?, ?)");
             $hash = password_hash($data['password'], PASSWORD_BCRYPT);
             $stmtUser->execute([$data['username'], $data['email'], $hash, $data['nama_lengkap']]);
@@ -143,13 +152,31 @@ class SiswaModel extends BaseModel {
     }
 
     public function deleteSiswa($id) {
-        $stmt = $this->db->prepare("SELECT user_id FROM siswa WHERE id = ?");
-        $stmt->execute([$id]);
-        $siswa = $stmt->fetch();
+        $stmt = $this->db->prepare("SELECT s.user_id, u.role_id FROM siswa s LEFT JOIN users u ON s.user_id = u.id WHERE s.id = ?");
+        $stmt->execute([(int)$id]);
+        $row = $stmt->fetch();
 
-        if ($siswa) {
-            $stmtDel = $this->db->prepare("DELETE FROM users WHERE id = ?");
-            return $stmtDel->execute([$siswa['user_id']]);
+        if ($row) {
+            $userId = (int)$row['user_id'];
+            $roleId = (int)($row['role_id'] ?? 0);
+
+            // Clean related tables
+            $this->db->prepare("DELETE FROM nilai_rapor WHERE siswa_id = ?")->execute([(int)$id]);
+            $this->db->prepare("DELETE FROM rapor_siswa WHERE siswa_id = ?")->execute([(int)$id]);
+            $this->db->prepare("DELETE FROM siswa_mapel_enrollment WHERE siswa_id = ?")->execute([(int)$id]);
+            $this->db->prepare("DELETE FROM absensi WHERE siswa_id = ?")->execute([(int)$id]);
+            $this->db->prepare("DELETE FROM cbt_peserta WHERE siswa_id = ?")->execute([(int)$id]);
+            $this->db->prepare("DELETE FROM cbt_jawaban WHERE siswa_id = ?")->execute([(int)$id]);
+
+            // Delete from siswa table
+            $this->db->prepare("DELETE FROM siswa WHERE id = ?")->execute([(int)$id]);
+
+            // Only delete user account if role is Siswa (role_id = 3). NEVER delete Admin (1) or Guru (2)!
+            if ($userId > 0 && $roleId === 3) {
+                $stmtDel = $this->db->prepare("DELETE FROM users WHERE id = ?");
+                $stmtDel->execute([$userId]);
+            }
+            return true;
         }
         return false;
     }
@@ -398,12 +425,30 @@ class SiswaModel extends BaseModel {
         
         $this->db->beginTransaction();
         try {
-            $stmtUserIds = $this->db->query("SELECT user_id FROM siswa WHERE id IN ({$inClause})");
+            // Find student users that actually have role_id = 3 (Siswa)
+            $stmtUserIds = $this->db->query("
+                SELECT s.user_id 
+                FROM siswa s 
+                JOIN users u ON s.user_id = u.id 
+                WHERE s.id IN ({$inClause}) AND u.role_id = 3
+            ");
             $uIds = $stmtUserIds ? $stmtUserIds->fetchAll(PDO::FETCH_COLUMN) : [];
             
+            // Clean related tables
+            $this->db->exec("DELETE FROM nilai_rapor WHERE siswa_id IN ({$inClause})");
+            $this->db->exec("DELETE FROM rapor_siswa WHERE siswa_id IN ({$inClause})");
+            $this->db->exec("DELETE FROM siswa_mapel_enrollment WHERE siswa_id IN ({$inClause})");
+            $this->db->exec("DELETE FROM absensi WHERE siswa_id IN ({$inClause})");
+            $this->db->exec("DELETE FROM cbt_peserta WHERE siswa_id IN ({$inClause})");
+            $this->db->exec("DELETE FROM cbt_jawaban WHERE siswa_id IN ({$inClause})");
+
+            // Delete from siswa table
+            $this->db->exec("DELETE FROM siswa WHERE id IN ({$inClause})");
+
+            // Only delete users with role_id = 3. NEVER delete Admin (1) or Guru (2)!
             if (!empty($uIds)) {
                 $uIn = implode(',', array_map('intval', $uIds));
-                $this->db->exec("DELETE FROM users WHERE id IN ({$uIn})");
+                $this->db->exec("DELETE FROM users WHERE id IN ({$uIn}) AND role_id = 3");
             }
             $this->db->commit();
             return count($ids);

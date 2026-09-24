@@ -20,8 +20,11 @@ class GameController {
     }
 
     private function getSiswaInfo($userId) {
-        $siswaModel = new SiswaModel();
         $user = AuthHelper::user();
+        if (!$user || (int)($user['role_id'] ?? 0) !== 3) {
+            return null;
+        }
+        $siswaModel = new SiswaModel();
         return $siswaModel->ensureSiswaProfile($userId, $user['full_name'] ?? 'Siswa');
     }
 

@@ -11,7 +11,7 @@ class GuruModel extends BaseModel {
             SELECT g.*, u.username, u.email, u.avatar 
             FROM guru g 
             JOIN users u ON g.user_id = u.id 
-            WHERE 1=1
+            WHERE u.role_id = 2
         ";
         $params = [];
 
@@ -50,7 +50,7 @@ class GuruModel extends BaseModel {
             SELECT g.*, u.username, u.email, u.avatar 
             FROM guru g 
             JOIN users u ON g.user_id = u.id 
-            WHERE g.user_id = ?
+            WHERE g.user_id = ? AND u.role_id = 2
         ");
         $stmt->execute([$userId]);
         return $stmt->fetch();
@@ -58,9 +58,19 @@ class GuruModel extends BaseModel {
 
     public function ensureGuruProfile($userId, $fullName) {
         if (!$userId) {
-            return ['id' => 0, 'user_id' => 0, 'nama_lengkap' => $fullName];
+            return null;
         }
 
+        // STRICT ROLE CHECK: Only users with role_id = 2 (Guru) are allowed to have a teacher profile
+        $stmtUser = $this->db->prepare("SELECT id, role_id, full_name FROM users WHERE id = ?");
+        $stmtUser->execute([$userId]);
+        $user = $stmtUser->fetch();
+        if (!$user || (int)$user['role_id'] !== 2) {
+            // Non-teachers (Admin, Siswa, Kepsek) MUST NEVER be inserted into guru table!
+            return null;
+        }
+
+        $fullName = !empty($fullName) ? $fullName : ($user['full_name'] ?? 'Guru');
         $guru = $this->getByUserId($userId);
         if ($guru) return $guru;
 
@@ -78,14 +88,13 @@ class GuruModel extends BaseModel {
             }
         } catch (\Throwable $e) {}
 
-        $fallback = $this->getByUserId($userId);
-        return $fallback ?: ['id' => 0, 'user_id' => $userId, 'nama_lengkap' => $fullName];
+        return $this->getByUserId($userId);
     }
 
     public function addGuru($data) {
         $this->db->beginTransaction();
         try {
-            // Create user account
+            // Create user account with explicit role_id = 2 (Guru)
             $stmtUser = $this->db->prepare("INSERT INTO users (role_id, username, email, password, full_name) VALUES (2, ?, ?, ?, ?)");
             $hash = password_hash($data['password'], PASSWORD_BCRYPT);
             $stmtUser->execute([$data['username'], $data['email'], $hash, $data['nama_lengkap']]);
@@ -133,13 +142,22 @@ class GuruModel extends BaseModel {
     }
 
     public function deleteGuru($id) {
-        $stmt = $this->db->prepare("SELECT user_id FROM guru WHERE id = ?");
-        $stmt->execute([$id]);
-        $guru = $stmt->fetch();
+        $stmt = $this->db->prepare("SELECT g.user_id, u.role_id FROM guru g LEFT JOIN users u ON g.user_id = u.id WHERE g.id = ?");
+        $stmt->execute([(int)$id]);
+        $row = $stmt->fetch();
 
-        if ($guru) {
-            $stmtDel = $this->db->prepare("DELETE FROM users WHERE id = ?");
-            return $stmtDel->execute([$guru['user_id']]);
+        if ($row) {
+            $userId = (int)$row['user_id'];
+            $roleId = (int)($row['role_id'] ?? 0);
+
+            $this->db->prepare("DELETE FROM guru WHERE id = ?")->execute([(int)$id]);
+
+            // Only delete user account if role is Guru (role_id = 2). NEVER delete Admin (1)!
+            if ($userId > 0 && $roleId === 2) {
+                $stmtDel = $this->db->prepare("DELETE FROM users WHERE id = ?");
+                $stmtDel->execute([$userId]);
+            }
+            return true;
         }
         return false;
     }
@@ -151,12 +169,21 @@ class GuruModel extends BaseModel {
         
         $this->db->beginTransaction();
         try {
-            $stmtUserIds = $this->db->query("SELECT user_id FROM guru WHERE id IN ({$inClause})");
+            // Find guru users that actually have role_id = 2
+            $stmtUserIds = $this->db->query("
+                SELECT g.user_id 
+                FROM guru g 
+                JOIN users u ON g.user_id = u.id 
+                WHERE g.id IN ({$inClause}) AND u.role_id = 2
+            ");
             $uIds = $stmtUserIds ? $stmtUserIds->fetchAll(PDO::FETCH_COLUMN) : [];
             
+            $this->db->exec("DELETE FROM guru WHERE id IN ({$inClause})");
+
+            // Only delete users with role_id = 2. NEVER delete Admin (1)!
             if (!empty($uIds)) {
                 $uIn = implode(',', array_map('intval', $uIds));
-                $this->db->exec("DELETE FROM users WHERE id IN ({$uIn})");
+                $this->db->exec("DELETE FROM users WHERE id IN ({$uIn}) AND role_id = 2");
             }
             $this->db->commit();
             return count($ids);

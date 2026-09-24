@@ -235,7 +235,7 @@ class ApiController {
         }
 
         $siswa = null;
-        if ($userId > 0) {
+        if ($userId > 0 && isset($userObj['role_id']) && (int)$userObj['role_id'] === 3) {
             $siswa = $siswaModel->ensureSiswaProfile($userId, $userObj['full_name'] ?? '');
         }
 
@@ -1849,7 +1849,7 @@ class ApiController {
         }
 
         $guru = null;
-        if ($userId > 0) {
+        if ($userId > 0 && isset($userObj['role_id']) && (int)$userObj['role_id'] === 2) {
             $guru = $guruModel->ensureGuruProfile($userId, $userObj['full_name'] ?? '');
         }
 
