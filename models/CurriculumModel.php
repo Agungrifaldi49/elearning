@@ -1561,9 +1561,32 @@ class CurriculumModel extends BaseModel {
             elseif ($akhir >= 68) $predikat = 'C';
             else $predikat = 'D';
 
-            $capaian = ($akhir >= $kkmVal)
-                ? "Menunjukkan penguasaan sangat baik dalam menuntaskan seluruh tujuan pembelajaran {$lr['nama_mapel']}."
-                : "Perlu bimbingan dan tindak lanjut remedial pada beberapa kompetensi dasar mata pelajaran {$lr['nama_mapel']}.";
+            // Ambil nama siswa
+            $stmtS = $this->db->prepare("SELECT nama_lengkap FROM siswa WHERE id = ?");
+            $stmtS->execute([$sId]);
+            $namaSiswaText = $stmtS->fetchColumn() ?: 'Peserta didik';
+
+            // Coba ambil capaian kompetensi dinamis dari evaluasi TP & KKTP jika ada
+            $capaian = null;
+            try {
+                require_once ROOT_PATH . 'models/AssessmentModel.php';
+                $assessModel = new AssessmentModel();
+                $tpDescRes = $assessModel->generateDeskripsiRaporFromTp($sId, $mId, $taId, $semester);
+                if (!empty($tpDescRes['capaian_kompetensi']) && !empty($tpDescRes['total_tp']) && $tpDescRes['total_tp'] > 0) {
+                    $capaian = $tpDescRes['capaian_kompetensi'];
+                }
+            } catch (\Throwable $eAssess) {}
+
+            if (empty($capaian)) {
+                $stmtCp = $this->db->prepare("SELECT elemen FROM capaian_pembelajaran WHERE mapel_id = ? AND status = 'aktif' LIMIT 1");
+                $stmtCp->execute([$mId]);
+                $cpElemen = $stmtCp->fetchColumn();
+                $cpText = !empty($cpElemen) ? " pada Capaian Pembelajaran (CP) {$cpElemen}" : "";
+
+                $capaian = ($akhir >= $kkmVal)
+                    ? "Ananda {$namaSiswaText} menunjukkan penguasaan yang sangat baik dalam menuntaskan seluruh capaian pembelajaran{$cpText} mata pelajaran {$lr['nama_mapel']}."
+                    : "Ananda {$namaSiswaText} perlu bimbingan dan tindak lanjut remedial{$cpText} mata pelajaran {$lr['nama_mapel']}.";
+            }
 
             $upsertFields = [$colRaporFk, 'mapel_id', 'nilai_akhir'];
             $upsertPlaceholders = ['?', '?', '?'];

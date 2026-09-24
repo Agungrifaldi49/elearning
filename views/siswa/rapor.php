@@ -637,11 +637,25 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                 $totalUas   += (float)($n['nilai_uas'] ?? 0);
                 $totalAkhir += $akhirRow;
 
-                $deskripsiCapaian = $capaianMap[$n['mapel_id']] ?? (
-                    $isTuntas 
-                    ? "Menunjukkan penguasaan sangat baik dalam menuntaskan seluruh tujuan pembelajaran {$n['nama_mapel']}."
-                    : "Perlu bimbingan dan tindak lanjut remedial pada beberapa kompetensi dasar mata pelajaran {$n['nama_mapel']}."
-                );
+                $namaSiswaText = !empty($siswa['nama_lengkap']) ? trim($siswa['nama_lengkap']) : 'Peserta didik';
+                $deskripsiCapaian = !empty($capaianMap[$n['mapel_id']]) ? $capaianMap[$n['mapel_id']] : null;
+
+                if (empty($deskripsiCapaian)) {
+                    try {
+                        require_once ROOT_PATH . 'models/AssessmentModel.php';
+                        $assessModelInst = new AssessmentModel();
+                        $tpDescInst = $assessModelInst->generateDeskripsiRaporFromTp((int)($siswa['id'] ?? 0), (int)$n['mapel_id'], (int)($targetTaId ?? 0), $targetSemester ?? null);
+                        if (!empty($tpDescInst['capaian_kompetensi']) && !empty($tpDescInst['total_tp']) && $tpDescInst['total_tp'] > 0) {
+                            $deskripsiCapaian = $tpDescInst['capaian_kompetensi'];
+                        }
+                    } catch (\Throwable $eRaporTp) {}
+                }
+
+                if (empty($deskripsiCapaian)) {
+                    $deskripsiCapaian = $isTuntas 
+                        ? "Ananda {$namaSiswaText} menunjukkan penguasaan yang sangat baik dalam menuntaskan seluruh capaian pembelajaran mata pelajaran {$n['nama_mapel']}."
+                        : "Ananda {$namaSiswaText} perlu bimbingan dan tindak lanjut remedial pada Capaian Pembelajaran (CP) mata pelajaran {$n['nama_mapel']}.";
+                }
 
                 $calculatedRows[] = [
                     'no' => $i + 1,

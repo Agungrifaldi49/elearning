@@ -1101,11 +1101,13 @@ class AssessmentModel extends BaseModel {
         $sql = "
             SELECT natp.*, a.nama_asesmen, a.jenis_asesmen, a.tanggal,
                    tp.kode_tp, tp.deskripsi as deskripsi_tp, tp.materi_pokok,
+                   cp.kode_cp, cp.elemen as cp_elemen, cp.deskripsi as cp_deskripsi,
                    k.metode as kktp_metode, k.nilai_minimum as kktp_nilai_min,
                    k.target_indikator_count as kktp_target_ind, k.deskripsi_kriteria as kktp_kriteria
             FROM nilai_asesmen_tp natp
             JOIN asesmen a ON natp.asesmen_id = a.id
             JOIN tujuan_pembelajaran tp ON natp.tp_id = tp.id
+            LEFT JOIN capaian_pembelajaran cp ON tp.cp_id = cp.id
             LEFT JOIN kktp k ON natp.kktp_id = k.id
             WHERE natp.siswa_id = ?
               AND a.mapel_id = ?
@@ -1145,6 +1147,9 @@ class AssessmentModel extends BaseModel {
                 'kode_tp' => $r['kode_tp'],
                 'deskripsi_tp' => $r['deskripsi_tp'],
                 'materi_pokok' => $r['materi_pokok'],
+                'kode_cp' => $r['kode_cp'] ?? '',
+                'cp_elemen' => $r['cp_elemen'] ?? '',
+                'cp_deskripsi' => $r['cp_deskripsi'] ?? '',
                 'nilai_asli' => (float)$r['nilai_asli'],
                 'nilai_awal' => ($r['nilai_awal'] !== null) ? (float)$r['nilai_awal'] : null,
                 'is_remedial' => (int)$r['is_remedial'],
@@ -1267,6 +1272,20 @@ class AssessmentModel extends BaseModel {
      * berdasarkan riwayat pencapaian TP siswa (TP mana yang tercapai & yang perlu bimbingan).
      */
     public function generateDeskripsiRaporFromTp($siswaId, $mapelId, $tahunAjaranId, $semester = null) {
+        $siswaId = (int)$siswaId;
+        $mapelId = (int)$mapelId;
+
+        // Ambil nama lengkap peserta didik
+        $stmtSiswa = $this->db->prepare("SELECT nama_lengkap FROM siswa WHERE id = ?");
+        $stmtSiswa->execute([$siswaId]);
+        $namaSiswaRaw = $stmtSiswa->fetchColumn();
+        $namaSiswa = !empty($namaSiswaRaw) ? trim($namaSiswaRaw) : 'Peserta didik';
+
+        // Ambil nama mapel
+        $stmtMapel = $this->db->prepare("SELECT nama_mapel FROM mata_pelajaran WHERE id = ?");
+        $stmtMapel->execute([$mapelId]);
+        $namaMapel = $stmtMapel->fetchColumn() ?: 'mata pelajaran';
+
         $rekap = $this->getRekapKetercapaianSiswa($siswaId, $mapelId, $tahunAjaranId, $semester);
         $records = $rekap['tp_summary'] ?? ($rekap['records'] ?? []);
 
@@ -1278,16 +1297,20 @@ class AssessmentModel extends BaseModel {
             if (empty($desc)) $desc = trim($r['materi_pokok'] ?? $r['kode_tp']);
             $desc = rtrim($desc, '. ');
 
+            $cpNama = !empty($r['cp_elemen']) ? trim($r['cp_elemen']) : (!empty($r['kode_cp']) ? trim($r['kode_cp']) : '');
+
             if ((int)$r['status_code'] === 1) {
                 $tercapaiTps[] = [
                     'kode' => $r['kode_tp'],
                     'deskripsi' => $desc,
+                    'cp_nama' => $cpNama,
                     'nilai' => (float)$r['nilai_asli']
                 ];
             } else {
                 $belumTercapaiTps[] = [
                     'kode' => $r['kode_tp'],
                     'deskripsi' => $desc,
+                    'cp_nama' => $cpNama,
                     'nilai' => (float)$r['nilai_asli']
                 ];
             }
@@ -1298,37 +1321,79 @@ class AssessmentModel extends BaseModel {
             return $b['nilai'] <=> $a['nilai'];
         });
 
-        // Buat kalimat deskripsi tercapai
+        // 1. Buat kalimat deskripsi tercapai
         $deskripsiTercapai = '';
         if (!empty($tercapaiTps)) {
-            $sampleTercapai = array_slice($tercapaiTps, 0, 2); // Ambil 2 TP terbaik
+            $sampleTercapai = array_slice($tercapaiTps, 0, 2);
             $parts = [];
             foreach ($sampleTercapai as $st) {
                 $parts[] = lcfirst($st['deskripsi']);
             }
-            $deskripsiTercapai = "Menunjukkan penguasaan yang sangat baik dalam hal " . implode(' serta ', $parts) . ".";
+            $deskripsiTercapai = "Ananda {$namaSiswa} menunjukkan penguasaan yang sangat baik dalam hal " . implode(' serta ', $parts) . ".";
         } else {
-            $deskripsiTercapai = "Menunjukkan pemahaman dasar pada materi yang diajarkan.";
+            $deskripsiTercapai = "Ananda {$namaSiswa} menunjukkan pemahaman dasar pada materi mata pelajaran {$namaMapel}.";
         }
 
-        // Buat kalimat deskripsi perlu bimbingan
+        // 2. Buat kalimat deskripsi perlu bimbingan (SEBUTKAN SECARA JELAS DI CP MANA YANG KURANG)
         $deskripsiPerluBimbingan = '';
         if (!empty($belumTercapaiTps)) {
-            $sampleBelum = array_slice($belumTercapaiTps, 0, 2); // Ambil 2 TP yang belum tuntas
-            $parts = [];
+            $sampleBelum = array_slice($belumTercapaiTps, 0, 2);
+            $cpGroups = [];
             foreach ($sampleBelum as $sb) {
-                $parts[] = lcfirst($sb['deskripsi']);
+                $cpKey = !empty($sb['cp_nama']) ? $sb['cp_nama'] : 'materi pokok';
+                $cpGroups[$cpKey][] = lcfirst($sb['deskripsi']);
             }
-            $deskripsiPerluBimbingan = "Perlu bimbingan dan pendampingan lebih lanjut dalam hal " . implode(' serta ', $parts) . ".";
+
+            $cpParts = [];
+            foreach ($cpGroups as $cpName => $tps) {
+                if ($cpName !== 'materi pokok') {
+                    $cpParts[] = "Capaian Pembelajaran (CP) {$cpName} khususnya pada " . implode(' serta ', $tps);
+                } else {
+                    $cpParts[] = "kompetensi dasar " . implode(' serta ', $tps);
+                }
+            }
+
+            $deskripsiPerluBimbingan = "Namun, Ananda {$namaSiswa} masih perlu bimbingan dan pendampingan lebih lanjut pada " . implode(' dan ', $cpParts) . ".";
         }
 
-        // Gabungan utuh untuk kolom capaian_kompetensi rapor
-        $fullDeskripsi = $deskripsiTercapai;
-        if (!empty($deskripsiPerluBimbingan)) {
-            $fullDeskripsi .= " " . $deskripsiPerluBimbingan;
+        // 3. Gabungan utuh untuk kolom capaian_kompetensi rapor
+        if (!empty($belumTercapaiTps)) {
+            if (!empty($tercapaiTps)) {
+                $fullDeskripsi = $deskripsiTercapai . " " . $deskripsiPerluBimbingan;
+            } else {
+                $sampleBelum = array_slice($belumTercapaiTps, 0, 2);
+                $cpGroups = [];
+                foreach ($sampleBelum as $sb) {
+                    $cpKey = !empty($sb['cp_nama']) ? $sb['cp_nama'] : 'materi pokok';
+                    $cpGroups[$cpKey][] = lcfirst($sb['deskripsi']);
+                }
+                $cpParts = [];
+                foreach ($cpGroups as $cpName => $tps) {
+                    if ($cpName !== 'materi pokok') {
+                        $cpParts[] = "Capaian Pembelajaran (CP) {$cpName} khususnya pada " . implode(' serta ', $tps);
+                    } else {
+                        $cpParts[] = "kompetensi dasar " . implode(' serta ', $tps);
+                    }
+                }
+                $fullDeskripsi = "Ananda {$namaSiswa} perlu bimbingan dan pendampingan intensif pada " . implode(' dan ', $cpParts) . ".";
+            }
+        } else {
+            $fullDeskripsi = $deskripsiTercapai;
+        }
+
+        // Jika tidak ada record TP sama sekali (fallback), buatkan deskripsi dinamis dengan nama siswa dan CP mapel
+        if (empty($records)) {
+            $stmtCp = $this->db->prepare("SELECT elemen FROM capaian_pembelajaran WHERE mapel_id = ? AND status = 'aktif' LIMIT 1");
+            $stmtCp->execute([$mapelId]);
+            $cpElemen = $stmtCp->fetchColumn();
+            $cpText = !empty($cpElemen) ? " pada Capaian Pembelajaran (CP) {$cpElemen}" : "";
+
+            $fullDeskripsi = "Ananda {$namaSiswa} menunjukkan penguasaan yang baik dalam menuntaskan seluruh capaian pembelajaran{$cpText} mata pelajaran {$namaMapel}.";
+            $deskripsiTercapai = $fullDeskripsi;
         }
 
         return [
+            'nama_siswa' => $namaSiswa,
             'deskripsi_tercapai' => $deskripsiTercapai,
             'deskripsi_perlu_bimbingan' => $deskripsiPerluBimbingan,
             'capaian_kompetensi' => trim($fullDeskripsi),

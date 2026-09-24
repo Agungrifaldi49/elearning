@@ -4061,9 +4061,26 @@ class GuruController {
             }
 
             // 6. Kompilasi data E-Rapor setiap siswa dalam rombel (100% in-memory)
+            require_once ROOT_PATH . 'models/AssessmentModel.php';
+            $assessModel = new AssessmentModel();
+
+            // Pre-load mapel CP map
+            $cpMapelMap = [];
+            try {
+                $stmtCpMap = $db->query("SELECT mapel_id, elemen FROM capaian_pembelajaran WHERE status = 'aktif' ORDER BY id ASC");
+                if ($stmtCpMap) {
+                    foreach ($stmtCpMap->fetchAll(PDO::FETCH_ASSOC) as $cpR) {
+                        if (!isset($cpMapelMap[$cpR['mapel_id']])) {
+                            $cpMapelMap[$cpR['mapel_id']] = $cpR['elemen'];
+                        }
+                    }
+                }
+            } catch (\Throwable $eCp) {}
+
             $allRaporList = [];
             foreach ($allSiswa as $s) {
                 $sId = (int)$s['id'];
+                $namaSiswaText = !empty($s['nama_lengkap']) ? trim($s['nama_lengkap']) : 'Peserta didik';
                 $nilaiList = $nilaiBySiswa[$sId] ?? [];
                 $rHeader = $raporHeaderBySiswa[$sId] ?? [
                     'catatan_wali_kelas' => '',
@@ -4091,9 +4108,23 @@ class GuruController {
                     if (!$isTuntas) $allTuntas = false;
                     $totalAkhir += $akhirRow;
 
-                    $deskripsiCapaian = $isTuntas 
-                        ? "Menunjukkan penguasaan sangat baik dalam menuntaskan seluruh tujuan pembelajaran {$n['nama_mapel']}."
-                        : "Perlu bimbingan dan tindak lanjut remedial pada beberapa kompetensi dasar mata pelajaran {$n['nama_mapel']}.";
+                    // Dapatkan capaian kompetensi dinamis (menyebutkan nama siswa dan CP yang kurang)
+                    $deskripsiCapaian = null;
+                    try {
+                        $tpDesc = $assessModel->generateDeskripsiRaporFromTp($sId, (int)$n['mapel_id'], $taId, $activeSemester);
+                        if (!empty($tpDesc['capaian_kompetensi']) && !empty($tpDesc['total_tp']) && $tpDesc['total_tp'] > 0) {
+                            $deskripsiCapaian = $tpDesc['capaian_kompetensi'];
+                        }
+                    } catch (\Throwable $eTp) {}
+
+                    if (empty($deskripsiCapaian)) {
+                        $cpElemen = $cpMapelMap[$n['mapel_id']] ?? '';
+                        $cpText = !empty($cpElemen) ? " pada Capaian Pembelajaran (CP) {$cpElemen}" : "";
+
+                        $deskripsiCapaian = $isTuntas 
+                            ? "Ananda {$namaSiswaText} menunjukkan penguasaan yang sangat baik dalam menuntaskan seluruh capaian pembelajaran{$cpText} mata pelajaran {$n['nama_mapel']}."
+                            : "Ananda {$namaSiswaText} masih perlu bimbingan dan tindak lanjut remedial{$cpText} mata pelajaran {$n['nama_mapel']}.";
+                    }
 
                     $calculatedRows[] = [
                         'no' => $i + 1,
@@ -4310,6 +4341,23 @@ class GuruController {
             $calculatedRows = [];
             $totalAkhir = 0;
             $allTuntas = true;
+            $namaSiswaText = !empty($s['nama_lengkap']) ? trim($s['nama_lengkap']) : 'Peserta didik';
+
+            require_once ROOT_PATH . 'models/AssessmentModel.php';
+            $assessModel = new AssessmentModel();
+
+            // Pre-load mapel CP map
+            $cpMapelMap = [];
+            try {
+                $stmtCpMap = $db->query("SELECT mapel_id, elemen FROM capaian_pembelajaran WHERE status = 'aktif' ORDER BY id ASC");
+                if ($stmtCpMap) {
+                    foreach ($stmtCpMap->fetchAll(PDO::FETCH_ASSOC) as $cpR) {
+                        if (!isset($cpMapelMap[$cpR['mapel_id']])) {
+                            $cpMapelMap[$cpR['mapel_id']] = $cpR['elemen'];
+                        }
+                    }
+                }
+            } catch (\Throwable $eCp) {}
 
             foreach ($nilaiList as $i => $n) {
                 $kkmVal = (float)($n['kkm'] ?? 75);
@@ -4326,9 +4374,23 @@ class GuruController {
                 if (!$isTuntas) $allTuntas = false;
                 $totalAkhir += $akhirRow;
 
-                $deskripsiCapaian = $isTuntas 
-                    ? "Menunjukkan penguasaan sangat baik dalam menuntaskan seluruh tujuan pembelajaran {$n['nama_mapel']}."
-                    : "Perlu bimbingan dan tindak lanjut remedial pada beberapa kompetensi dasar mata pelajaran {$n['nama_mapel']}.";
+                // Dapatkan capaian kompetensi dinamis (menyebutkan nama siswa dan CP yang kurang)
+                $deskripsiCapaian = null;
+                try {
+                    $tpDesc = $assessModel->generateDeskripsiRaporFromTp($siswaId, (int)$n['mapel_id'], $taId, $activeSemester);
+                    if (!empty($tpDesc['capaian_kompetensi']) && !empty($tpDesc['total_tp']) && $tpDesc['total_tp'] > 0) {
+                        $deskripsiCapaian = $tpDesc['capaian_kompetensi'];
+                    }
+                } catch (\Throwable $eTp) {}
+
+                if (empty($deskripsiCapaian)) {
+                    $cpElemen = $cpMapelMap[$n['mapel_id']] ?? '';
+                    $cpText = !empty($cpElemen) ? " pada Capaian Pembelajaran (CP) {$cpElemen}" : "";
+
+                    $deskripsiCapaian = $isTuntas 
+                        ? "Ananda {$namaSiswaText} menunjukkan penguasaan yang sangat baik dalam menuntaskan seluruh capaian pembelajaran{$cpText} mata pelajaran {$n['nama_mapel']}."
+                        : "Ananda {$namaSiswaText} masih perlu bimbingan dan tindak lanjut remedial{$cpText} mata pelajaran {$n['nama_mapel']}.";
+                }
 
                 $calculatedRows[] = [
                     'no' => $i + 1,
