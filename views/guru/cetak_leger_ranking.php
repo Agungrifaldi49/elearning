@@ -446,8 +446,10 @@ if (empty($logoUrl)) {
                                 $hasScore = !empty($nItem['has_score']);
                                 ?>
                                 <td style="font-family: monospace; font-size: 0.72rem; <?= (!$isTuntas && $val > 0) ? 'color: #dc2626; font-weight: bold;' : '' ?>">
-                                    <?php if (!$hasScore && $val <= 0): ?>
+                                    <?php if (empty($nItem['is_enrolled'])): ?>
                                         <span style="color: #94a3b8;">-</span>
+                                    <?php elseif (!$hasScore && $val <= 0): ?>
+                                        <span style="color: #94a3b8;">0.0</span>
                                     <?php else: ?>
                                         <?= number_format($val, 1) ?>
                                     <?php endif; ?>

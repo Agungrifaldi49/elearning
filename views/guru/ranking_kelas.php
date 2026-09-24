@@ -340,8 +340,10 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                                         $hasScore = !empty($nItem['has_score']);
                                         ?>
                                         <td class="text-center font-monospace">
-                                            <?php if (!$hasScore && $val <= 0): ?>
-                                                <span class="text-muted opacity-50">-</span>
+                                            <?php if (empty($nItem['is_enrolled'])): ?>
+                                                <span class="text-muted opacity-50" title="Tidak Mendaftar Mapel Ini">-</span>
+                                            <?php elseif (!$hasScore && $val <= 0): ?>
+                                                <span class="text-muted opacity-50">0.0</span>
                                             <?php elseif ($isTuntas): ?>
                                                 <span class="fw-semibold text-dark"><?= number_format($val, 1) ?></span>
                                             <?php else: ?>

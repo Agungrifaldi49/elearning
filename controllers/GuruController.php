@@ -4530,23 +4530,28 @@ class GuruController {
         $siswaIds = array_column($siswaList, 'id');
         $inIds = !empty($siswaIds) ? implode(',', array_map('intval', $siswaIds)) : '0';
 
-        // Ambil daftar mata pelajaran rombel secara komprehensif
+        // Ambil pemetaan mata pelajaran yang resmi didaftarkan oleh masing-masing siswa (siswa_mapel_enrollment)
+        $stmtEnrollment = $db->query("
+            SELECT sme.siswa_id, sme.mapel_id
+            FROM siswa_mapel_enrollment sme
+            WHERE sme.siswa_id IN ({$inIds})
+        ");
+        $enrolledBySiswa = [];
+        if ($stmtEnrollment) {
+            foreach ($stmtEnrollment->fetchAll(PDO::FETCH_ASSOC) as $enRow) {
+                $enrolledBySiswa[(int)$enRow['siswa_id']][(int)$enRow['mapel_id']] = true;
+            }
+        }
+        $hasAnyEnrollment = !empty($enrolledBySiswa);
+
+        // Ambil daftar mata pelajaran HANYA yang resmi didaftarkan oleh siswa di rombel ini (siswa_mapel_enrollment)
         $stmtM = $db->query("
             SELECT DISTINCT mp.id, mp.nama_mapel, mp.kode_mapel, COALESCE(km.kkm, mp.kkm, 75) as kkm,
                    COALESCE(km.kelompok_mapel, 'Umum') as kelompok_mapel
-            FROM mata_pelajaran mp
+            FROM siswa_mapel_enrollment sme
+            JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
             LEFT JOIN kurikulum_mapel km ON (mp.id = km.mapel_id AND km.kurikulum_id = {$kurId})
-            WHERE mp.id IN (
-                SELECT mapel_id FROM jadwal WHERE kelas_id = {$kelasId}
-                UNION
-                SELECT mapel_id FROM siswa_mapel_enrollment WHERE siswa_id IN ({$inIds})
-                UNION
-                SELECT mapel_id FROM nilai_rapor WHERE siswa_id IN ({$inIds})
-                UNION
-                SELECT km2.mapel_id FROM kurikulum_mapel km2
-                JOIN rombel_kurikulum rk ON km2.kurikulum_id = rk.kurikulum_id
-                WHERE rk.rombel_id = {$kelasId} AND (km2.is_active = 1 OR km2.is_active IS NULL)
-            )
+            WHERE sme.siswa_id IN ({$inIds})
             ORDER BY 
                 CASE 
                     WHEN mp.kode_mapel LIKE 'MP0%' THEN 1
@@ -4556,6 +4561,20 @@ class GuruController {
                 mp.nama_mapel ASC
         ");
         $mapelList = $stmtM ? ($stmtM->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+
+        // Fallback jika belum ada pendaftaran siswa mandiri di rombel ini: ambil dari jadwal kelas
+        if (empty($mapelList)) {
+            $stmtFallback = $db->query("
+                SELECT DISTINCT mp.id, mp.nama_mapel, mp.kode_mapel, COALESCE(km.kkm, mp.kkm, 75) as kkm,
+                       COALESCE(km.kelompok_mapel, 'Umum') as kelompok_mapel
+                FROM jadwal j
+                JOIN mata_pelajaran mp ON j.mapel_id = mp.id
+                LEFT JOIN kurikulum_mapel km ON (mp.id = km.mapel_id AND km.kurikulum_id = {$kurId})
+                WHERE j.kelas_id = {$kelasId}
+                ORDER BY mp.nama_mapel ASC
+            ");
+            $mapelList = $stmtFallback ? ($stmtFallback->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+        }
 
         // Ambil nilai rapor (Batch Query 1x)
         $nilaiLookup = [];
@@ -4594,23 +4613,24 @@ class GuruController {
         }
 
         $rankingData = [];
-        $totalMapels = count($mapelList);
 
         foreach ($siswaList as $sw) {
             $sId = (int)$sw['id'];
             $rowNilai = [];
             $totalNilai = 0;
             $tuntasCount = 0;
+            $enrolledCount = 0;
             $gradedCount = 0;
 
             foreach ($mapelList as $m) {
                 $mId = (int)$m['id'];
+                $isEnrolled = $hasAnyEnrollment ? isset($enrolledBySiswa[$sId][$mId]) : true;
                 $kkm = (float)$m['kkm'];
                 $nData = $nilaiLookup[$sId][$mId] ?? null;
 
                 $nilaiAkhir = 0;
                 $hasScore = false;
-                if ($nData) {
+                if ($isEnrolled && $nData) {
                     $recalc = NilaiModel::hitungNilaiAkhir(
                         (float)$nData['nilai_tugas'],
                         (float)$nData['nilai_quiz'],
@@ -4622,41 +4642,45 @@ class GuruController {
                     $hasScore = ($nilaiAkhir > 0 || (float)$nData['nilai_tugas'] > 0 || (float)$nData['nilai_quiz'] > 0);
                 }
 
-                $isTuntas = ($nilaiAkhir >= $kkm);
+                $isTuntas = ($isEnrolled && $nilaiAkhir >= $kkm);
                 if ($isTuntas && $nilaiAkhir > 0) {
                     $tuntasCount++;
                 }
-                if ($hasScore) {
+                if ($isEnrolled && $hasScore) {
                     $gradedCount++;
+                }
+
+                if ($isEnrolled) {
+                    $enrolledCount++;
+                    $totalNilai += $nilaiAkhir;
+
+                    // Akumulasi statistik per mapel hanya untuk siswa yang mengambil mapel tersebut
+                    $statsPerMapel[$mId]['sum'] += $nilaiAkhir;
+                    $statsPerMapel[$mId]['count']++;
+                    if ($nilaiAkhir > $statsPerMapel[$mId]['max']) {
+                        $statsPerMapel[$mId]['max'] = $nilaiAkhir;
+                    }
+                    if ($nilaiAkhir < $statsPerMapel[$mId]['min']) {
+                        $statsPerMapel[$mId]['min'] = $nilaiAkhir;
+                    }
+                    if ($isTuntas && $nilaiAkhir > 0) {
+                        $statsPerMapel[$mId]['tuntas_count']++;
+                    }
                 }
 
                 $rowNilai[$mId] = [
                     'nilai' => $nilaiAkhir,
+                    'is_enrolled' => $isEnrolled,
                     'is_tuntas' => $isTuntas,
                     'kkm' => $kkm,
                     'has_score' => $hasScore,
-                    'predikat' => NilaiModel::getPredikat($nilaiAkhir)
+                    'predikat' => $isEnrolled ? NilaiModel::getPredikat($nilaiAkhir) : ['grade' => '-', 'class' => 'bg-secondary']
                 ];
-
-                $totalNilai += $nilaiAkhir;
-
-                // Akumulasi statistik per mapel
-                $statsPerMapel[$mId]['sum'] += $nilaiAkhir;
-                $statsPerMapel[$mId]['count']++;
-                if ($nilaiAkhir > $statsPerMapel[$mId]['max']) {
-                    $statsPerMapel[$mId]['max'] = $nilaiAkhir;
-                }
-                if ($nilaiAkhir < $statsPerMapel[$mId]['min']) {
-                    $statsPerMapel[$mId]['min'] = $nilaiAkhir;
-                }
-                if ($isTuntas && $nilaiAkhir > 0) {
-                    $statsPerMapel[$mId]['tuntas_count']++;
-                }
             }
 
-            // Rata-rata nilai dihitung dari total mapel rombel
-            $avgNilai = $totalMapels > 0 ? round($totalNilai / $totalMapels, 2) : 0.0;
-            $predikatAvg = NilaiModel::getPredikat($avgNilai);
+            // Rata-rata nilai dihitung dari jumlah mapel yang didaftarkan siswa tersebut
+            $avgNilai = $enrolledCount > 0 ? round($totalNilai / $enrolledCount, 2) : 0.0;
+            $predikatAvg = $enrolledCount > 0 ? NilaiModel::getPredikat($avgNilai) : ['grade' => '-', 'class' => 'bg-secondary'];
 
             $rankingData[] = [
                 'siswa' => $sw,
@@ -4666,8 +4690,9 @@ class GuruController {
                 'predikat' => $predikatAvg,
                 'tuntas_count' => $tuntasCount,
                 'graded_count' => $gradedCount,
-                'total_mapels' => $totalMapels,
-                'persen_tuntas' => $totalMapels > 0 ? round(($tuntasCount / $totalMapels) * 100) : 0
+                'enrolled_count' => $enrolledCount,
+                'total_mapels' => $enrolledCount,
+                'persen_tuntas' => $enrolledCount > 0 ? round(($tuntasCount / $enrolledCount) * 100) : 0
             ];
         }
 
@@ -4704,7 +4729,7 @@ class GuruController {
             if ($r['rata_rata'] < $lowestAvg) {
                 $lowestAvg = $r['rata_rata'];
             }
-            if ($r['tuntas_count'] === $totalMapels && $totalMapels > 0) {
+            if ($r['total_mapels'] > 0 && $r['tuntas_count'] === $r['total_mapels']) {
                 $totalSiswaTuntasPenuh++;
             }
             if (count($topThree) < 3) {
