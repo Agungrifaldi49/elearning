@@ -361,8 +361,6 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                         $kelasListMap[$k['id']] = $k['nama_kelas'];
                                     }
                                     foreach ($quizList as $i => $q): 
-                                        $examModel = new ExamModel();
-                                        $soalList = $examModel->getSoalByQuiz($q['id']);
                                     ?>
                                         <tr class="guru-quiz-row" data-title="<?= htmlspecialchars(strtolower($q['judul'])) ?>" data-mapel="<?= $q['mapel_id'] ?>" data-guru="<?= $q['guru_id'] ?? '' ?>">
                                             <td class="fw-bold text-muted"><?= $i + 1 ?></td>
@@ -416,7 +414,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                             <td class="text-center">
                                                 <div class="d-inline-flex gap-1.5 align-items-center justify-content-center">
                                                     <button class="btn btn-sm btn-info text-white px-3 rounded-pill shadow-xs fw-bold" style="font-size:0.78rem;" data-bs-toggle="modal" data-bs-target="#modalPreviewQuiz<?= $q['id'] ?>" title="Detail & Bank Soal">
-                                                        <i class="bi bi-eye-fill me-1"></i> Soal (<?= count($soalList) ?>)
+                                                        <i class="bi bi-eye-fill me-1"></i> Soal (<?= (int)($q['total_soal'] ?? 0) ?>)
                                                     </button>
 
                                                     <?php if (!$isAdminMonitoring): ?>
@@ -1429,8 +1427,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
 
 <!-- Modals Preview, Add Soal, Edit Quiz for Each Quiz -->
 <?php foreach ($quizList as $q): 
-    $examModel = new ExamModel();
-    $soalList = $examModel->getSoalByQuiz($q['id']);
+    $soalList = $allSoalsByQuiz[$q['id']] ?? [];
 ?>
     <!-- Modal Preview Quiz -->
     <div class="modal fade" id="modalPreviewQuiz<?= $q['id'] ?>" tabindex="-1">
@@ -1923,7 +1920,8 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
 
 <!-- Modals Grade Essay for Each Submission -->
 <?php foreach ($hasilQuizSubmissions as $hq): 
-    $essayAnswers = $examModel->getEssayAnswersByHasil($hq['quiz_id'], $hq['siswa_id']);
+    $subKey = "{$hq['quiz_id']}_{$hq['siswa_id']}";
+    $essayAnswers = $allEssayAnswersMap[$subKey] ?? [];
 ?>
     <div class="modal fade" id="modalGradeEssay<?= $hq['quiz_id'] ?>_<?= $hq['siswa_id'] ?>" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -2477,8 +2475,8 @@ function filterGuruEssaySubmissions() {
     renderEssayPage();
 }
 
-// Poll every 4 seconds for instant real-time responsiveness
-setInterval(pollQuizLiveStatus, 4000);
+// Poll every 12 seconds for real-time responsiveness without overloading the server
+setInterval(pollQuizLiveStatus, 12000);
 document.addEventListener('DOMContentLoaded', function() {
     pollQuizLiveStatus();
     filterGuruEssaySubmissions();

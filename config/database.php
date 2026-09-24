@@ -161,7 +161,12 @@ class Database {
             "idx_materi_guru_kelas" => "ALTER TABLE materi ADD INDEX idx_materi_guru_kelas (guru_id, kelas_id)",
             "idx_tugas_guru_kelas" => "ALTER TABLE tugas ADD INDEX idx_tugas_guru_kelas (guru_id, kelas_id)",
             "idx_quiz_guru_kelas" => "ALTER TABLE quiz ADD INDEX idx_quiz_guru_kelas (guru_id, kelas_id)",
-            "idx_sme_guru_siswa" => "ALTER TABLE siswa_mapel_enrollment ADD INDEX idx_sme_guru_siswa (guru_id, siswa_id)"
+            "idx_sme_guru_siswa" => "ALTER TABLE siswa_mapel_enrollment ADD INDEX idx_sme_guru_siswa (guru_id, siswa_id)",
+            "idx_soal_quiz_jenis" => "ALTER TABLE soal ADD INDEX idx_soal_quiz_jenis (quiz_id, jenis_soal)",
+            "idx_hasil_quiz_finished" => "ALTER TABLE hasil_quiz ADD INDEX idx_hasil_quiz_finished (finished_at)",
+            "idx_hasil_quiz_status_lulus" => "ALTER TABLE hasil_quiz ADD INDEX idx_hasil_quiz_status_lulus (status_lulus)",
+            "idx_quiz_susulan_status" => "ALTER TABLE quiz_susulan ADD INDEX idx_quiz_susulan_status (status)",
+            "idx_jawaban_siswa_lookup" => "ALTER TABLE jawaban_siswa ADD INDEX idx_jawaban_siswa_lookup (quiz_id, siswa_id, soal_id)"
         ];
 
         foreach ($indexes as $name => $sql) {

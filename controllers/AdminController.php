@@ -761,8 +761,29 @@ class AdminController {
         $quizList = $examModel->getQuizList();
         $susulanRequests = $examModel->getSusulanRequestsByGuru(null);
         $hasilQuizSubmissions = $examModel->getHasilQuizListByGuru(null);
+
+        // Preload all questions and essay answers in single batch queries to eliminate N+1 loops in view
+        $allSoalsByQuiz = $examModel->getSoalMapByQuizIds(array_column($quizList, 'id'));
+        $allEssayAnswersMap = $examModel->getEssayAnswersMapForSubmissions($hasilQuizSubmissions);
+
+        $currentTab = $_GET['tab'] ?? 'paket';
+        $reportQuizId = isset($_GET['report_quiz_id']) ? $_GET['report_quiz_id'] : 'all';
+        $reportKelasId = isset($_GET['report_kelas_id']) && !empty($_GET['report_kelas_id']) ? (int)$_GET['report_kelas_id'] : null;
+
+        $quizReportDetail = null;
+        if ($reportQuizId !== 'all' && (int)$reportQuizId > 0) {
+            $quizReportDetail = $examModel->getDetailedReportByQuiz((int)$reportQuizId);
+        }
+
+        if ($currentTab === 'laporan' || isset($_GET['report_kelas_id']) || isset($_GET['report_quiz_id'])) {
+            $rekapCbtMatrix = $examModel->getRekapNilaiCbtMatrixByGuru(null, $reportKelasId);
+        } else {
+            $rekapCbtMatrix = ['quizzes' => [], 'matrix' => []];
+        }
+
         $mapelList = $academicModel->getMapel();
         $kelasList = $academicModel->getKelas();
+        $jurusanList = $academicModel->getJurusan();
 
         require_once ROOT_PATH . 'views/guru/quiz.php';
     }
@@ -1925,36 +1946,42 @@ class AdminController {
 
     public function quizLiveStatus() {
         header('Content-Type: application/json');
-        $examModel = new ExamModel();
+        $db = Database::getConnection();
 
-        $susulanRequests = $examModel->getSusulanRequestsByGuru(null);
-        $hasilQuizSubmissions = $examModel->getHasilQuizListByGuru(null);
-        $quizList = $examModel->getQuizList();
+        // 1. Pending susulan count
+        $stmtSusulan = $db->query("SELECT COUNT(*) FROM quiz_susulan WHERE status = 'pending'");
+        $pendingSusulanCount = (int)$stmtSusulan->fetchColumn();
 
-        $pendingEssayCount = 0;
-        if (!empty($hasilQuizSubmissions)) {
-            foreach ($hasilQuizSubmissions as $hqItem) {
-                if (($hqItem['ungraded_essay_count'] ?? 0) > 0) {
-                    $pendingEssayCount++;
-                }
-            }
-        }
+        // 2. Pending essay count
+        $stmtEssay = $db->query("
+            SELECT COUNT(DISTINCT hq.id) 
+            FROM hasil_quiz hq
+            WHERE hq.status_banned = 1
+            OR (
+                hq.status_lulus = 'menunggu'
+                AND EXISTS (
+                    SELECT 1 FROM soal s 
+                    LEFT JOIN jawaban_siswa js ON js.soal_id = s.id AND js.siswa_id = hq.siswa_id AND js.quiz_id = hq.quiz_id
+                    WHERE s.quiz_id = hq.quiz_id AND s.jenis_soal = 'essay' AND (js.nilai IS NULL OR js.id IS NULL)
+                )
+            )
+        ");
+        $pendingEssayCount = (int)$stmtEssay->fetchColumn();
 
-        $pendingSusulanCount = 0;
-        if (!empty($susulanRequests)) {
-            foreach ($susulanRequests as $srItem) {
-                if (($srItem['status'] ?? '') === 'pending') {
-                    $pendingSusulanCount++;
-                }
-            }
-        }
+        // 3. Total submissions
+        $stmtSub = $db->query("SELECT COUNT(*) FROM hasil_quiz");
+        $totalSubmissions = (int)$stmtSub->fetchColumn();
+
+        // 4. Total quizzes
+        $stmtQ = $db->query("SELECT COUNT(*) FROM quiz");
+        $totalQuizzes = (int)$stmtQ->fetchColumn();
 
         echo json_encode([
             'status' => true,
             'pending_essay_count' => $pendingEssayCount,
             'pending_susulan_count' => $pendingSusulanCount,
-            'total_submissions' => count($hasilQuizSubmissions ?? []),
-            'total_quizzes' => count($quizList ?? [])
+            'total_submissions' => $totalSubmissions,
+            'total_quizzes' => $totalQuizzes
         ]);
         exit();
     }

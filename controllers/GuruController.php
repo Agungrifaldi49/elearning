@@ -1084,11 +1084,15 @@ class GuruController {
         }
 
         $quizList = $examModel->getQuizList(null, $queryGuruId);
-
         $susulanRequests = $examModel->getSusulanRequestsByGuru($queryGuruId);
         $hasilQuizSubmissions = $examModel->getHasilQuizListByGuru($queryGuruId);
 
+        // Preload all questions and essay answers in single batch queries to eliminate N+1 loops in view
+        $allSoalsByQuiz = $examModel->getSoalMapByQuizIds(array_column($quizList, 'id'));
+        $allEssayAnswersMap = $examModel->getEssayAnswersMapForSubmissions($hasilQuizSubmissions);
+
         // --- NEW REPORT & MATRIX DATA FOR QUIZ & CBT ---
+        $currentTab = $_GET['tab'] ?? 'paket';
         $reportQuizId = isset($_GET['report_quiz_id']) ? $_GET['report_quiz_id'] : 'all';
         $reportKelasId = isset($_GET['report_kelas_id']) && !empty($_GET['report_kelas_id']) ? (int)$_GET['report_kelas_id'] : null;
 
@@ -1099,7 +1103,13 @@ class GuruController {
                 $quizReportDetail = null;
             }
         }
-        $rekapCbtMatrix = $examModel->getRekapNilaiCbtMatrixByGuru($queryGuruId, $reportKelasId);
+
+        // Only compute matrix when viewing report tab or explicitly filtering reports
+        if ($currentTab === 'laporan' || isset($_GET['report_kelas_id']) || isset($_GET['report_quiz_id'])) {
+            $rekapCbtMatrix = $examModel->getRekapNilaiCbtMatrixByGuru($queryGuruId, $reportKelasId);
+        } else {
+            $rekapCbtMatrix = ['quizzes' => [], 'matrix' => []];
+        }
 
         $mapelList = $academicModel->getMapelByGuru($guruId);
         if (empty($mapelList)) $mapelList = $academicModel->getMapel();
@@ -2013,41 +2023,80 @@ class GuruController {
 
         $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
         $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+        $targetGuruId = $isAdmin ? null : (int)$guruId;
 
-        $examModel = new ExamModel();
-        $targetGuruId = $isAdmin ? null : $guruId;
+        $db = Database::getConnection();
 
-        $susulanRequests = $examModel->getSusulanRequestsByGuru($targetGuruId);
-        $hasilQuizSubmissions = $examModel->getHasilQuizListByGuru($targetGuruId);
-        $quizList = $examModel->getQuizList(null, $targetGuruId);
-
-        $pendingEssayCount = 0;
-        if (!empty($hasilQuizSubmissions)) {
-            foreach ($hasilQuizSubmissions as $hqItem) {
-                $tEssay = (int)($hqItem['total_essay_count'] ?? 0);
-                $uEssay = (int)($hqItem['ungraded_essay_count'] ?? 0);
-                $isBanned = (!empty($hqItem['status_banned']) && (string)$hqItem['status_banned'] !== '0');
-                if (($tEssay > 0 && $uEssay > 0) || $isBanned) {
-                    $pendingEssayCount++;
-                }
-            }
+        // 1. Pending susulan count
+        if ($targetGuruId) {
+            $stmtSusulan = $db->prepare("SELECT COUNT(*) FROM quiz_susulan qs JOIN quiz q ON qs.quiz_id = q.id WHERE qs.status = 'pending' AND (q.guru_id = ? OR q.guru_id IN (SELECT user_id FROM guru WHERE id = ?))");
+            $stmtSusulan->execute([$targetGuruId, $targetGuruId]);
+        } else {
+            $stmtSusulan = $db->query("SELECT COUNT(*) FROM quiz_susulan WHERE status = 'pending'");
         }
+        $pendingSusulanCount = (int)$stmtSusulan->fetchColumn();
 
-        $pendingSusulanCount = 0;
-        if (!empty($susulanRequests)) {
-            foreach ($susulanRequests as $srItem) {
-                if (($srItem['status'] ?? '') === 'pending') {
-                    $pendingSusulanCount++;
-                }
-            }
+        // 2. Pending essay count (ungraded essay or banned)
+        if ($targetGuruId) {
+            $stmtEssay = $db->prepare("
+                SELECT COUNT(DISTINCT hq.id) 
+                FROM hasil_quiz hq
+                JOIN quiz q ON hq.quiz_id = q.id
+                WHERE (q.guru_id = ? OR q.guru_id IN (SELECT user_id FROM guru WHERE id = ?))
+                AND (
+                    hq.status_banned = 1
+                    OR (
+                        hq.status_lulus = 'menunggu'
+                        AND EXISTS (
+                            SELECT 1 FROM soal s 
+                            LEFT JOIN jawaban_siswa js ON js.soal_id = s.id AND js.siswa_id = hq.siswa_id AND js.quiz_id = hq.quiz_id
+                            WHERE s.quiz_id = hq.quiz_id AND s.jenis_soal = 'essay' AND (js.nilai IS NULL OR js.id IS NULL)
+                        )
+                    )
+                )
+            ");
+            $stmtEssay->execute([$targetGuruId, $targetGuruId]);
+        } else {
+            $stmtEssay = $db->query("
+                SELECT COUNT(DISTINCT hq.id) 
+                FROM hasil_quiz hq
+                WHERE hq.status_banned = 1
+                OR (
+                    hq.status_lulus = 'menunggu'
+                    AND EXISTS (
+                        SELECT 1 FROM soal s 
+                        LEFT JOIN jawaban_siswa js ON js.soal_id = s.id AND js.siswa_id = hq.siswa_id AND js.quiz_id = hq.quiz_id
+                        WHERE s.quiz_id = hq.quiz_id AND s.jenis_soal = 'essay' AND (js.nilai IS NULL OR js.id IS NULL)
+                    )
+                )
+            ");
         }
+        $pendingEssayCount = (int)$stmtEssay->fetchColumn();
+
+        // 3. Total submissions
+        if ($targetGuruId) {
+            $stmtSub = $db->prepare("SELECT COUNT(DISTINCT hq.id) FROM hasil_quiz hq JOIN quiz q ON hq.quiz_id = q.id WHERE (q.guru_id = ? OR q.guru_id IN (SELECT user_id FROM guru WHERE id = ?))");
+            $stmtSub->execute([$targetGuruId, $targetGuruId]);
+        } else {
+            $stmtSub = $db->query("SELECT COUNT(*) FROM hasil_quiz");
+        }
+        $totalSubmissions = (int)$stmtSub->fetchColumn();
+
+        // 4. Total quizzes
+        if ($targetGuruId) {
+            $stmtQ = $db->prepare("SELECT COUNT(*) FROM quiz WHERE guru_id = ? OR guru_id IN (SELECT user_id FROM guru WHERE id = ?)");
+            $stmtQ->execute([$targetGuruId, $targetGuruId]);
+        } else {
+            $stmtQ = $db->query("SELECT COUNT(*) FROM quiz");
+        }
+        $totalQuizzes = (int)$stmtQ->fetchColumn();
 
         echo json_encode([
             'status' => true,
             'pending_essay_count' => $pendingEssayCount,
             'pending_susulan_count' => $pendingSusulanCount,
-            'total_submissions' => count($hasilQuizSubmissions ?? []),
-            'total_quizzes' => count($quizList ?? [])
+            'total_submissions' => $totalSubmissions,
+            'total_quizzes' => $totalQuizzes
         ]);
         exit();
     }

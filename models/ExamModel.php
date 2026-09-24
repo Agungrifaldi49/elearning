@@ -8,10 +8,17 @@ class ExamModel extends BaseModel {
 
     public function __construct() {
         parent::__construct();
+        $this->ensureTablesAndColumns();
+    }
+
+    private function ensureTablesAndColumns() {
+        static $ensured = false;
+        if ($ensured) return;
+        $ensured = true;
+
         $this->ensureGambarColumn();
         $this->ensureDeadlineAndSusulanTables();
         $this->ensureQuizKelasIdsColumn();
-        $this->recalibrateAllQuizScores();
     }
 
     private function ensureGambarColumn() {
@@ -62,6 +69,14 @@ class ExamModel extends BaseModel {
             $cols = $this->db->query("SHOW COLUMNS FROM hasil_quiz LIKE 'nilai_tertinggi'")->fetchAll();
             if (empty($cols)) {
                 $this->db->exec("ALTER TABLE hasil_quiz ADD COLUMN nilai_tertinggi DECIMAL(5,2) DEFAULT 0.00");
+            }
+        } catch (Exception $e) {}
+
+        try {
+            $cols = $this->db->query("SHOW COLUMNS FROM hasil_quiz LIKE 'status_banned'")->fetchAll();
+            if (empty($cols)) {
+                $this->db->exec("ALTER TABLE hasil_quiz ADD COLUMN status_banned TINYINT(1) DEFAULT 0");
+                $this->db->exec("UPDATE hasil_quiz SET status_banned = COALESCE(is_disqualified, 0)");
             }
         } catch (Exception $e) {}
 
@@ -699,17 +714,79 @@ class ExamModel extends BaseModel {
         $sql = "SELECT * FROM soal WHERE quiz_id = " . (int)$quiz_id;
         if ($random) {
             $sql .= " ORDER BY RAND()";
+        } else {
+            $sql .= " ORDER BY id ASC";
         }
         $soals = $this->db->query($sql)->fetchAll();
+        if (empty($soals)) return [];
 
-        foreach ($soals as &$s) {
+        $soalIds = [];
+        foreach ($soals as $s) {
             if ($s['jenis_soal'] === 'pg' || $s['jenis_soal'] === 'tf') {
-                $stmtPil = $this->db->prepare("SELECT * FROM pilihan_jawaban WHERE soal_id = ? " . ($random ? "ORDER BY RAND()" : "ORDER BY id ASC"));
-                $stmtPil->execute([$s['id']]);
-                $s['pilihan'] = $stmtPil->fetchAll();
+                $soalIds[] = (int)$s['id'];
             }
         }
+
+        $pilihanMap = [];
+        if (!empty($soalIds)) {
+            $inSoal = implode(',', $soalIds);
+            $pilSql = "SELECT * FROM pilihan_jawaban WHERE soal_id IN ({$inSoal}) " . ($random ? "ORDER BY RAND()" : "ORDER BY id ASC");
+            $pilRows = $this->db->query($pilSql)->fetchAll();
+            foreach ($pilRows as $p) {
+                $pilihanMap[$p['soal_id']][] = $p;
+            }
+        }
+
+        foreach ($soals as &$s) {
+            $s['pilihan'] = $pilihanMap[$s['id']] ?? [];
+        }
         return $soals;
+    }
+
+    public function getSoalMapByQuizIds(array $quizIds) {
+        if (empty($quizIds)) {
+            return [];
+        }
+        $quizIds = array_values(array_filter(array_unique(array_map('intval', $quizIds)), function($id) { return $id > 0; }));
+        if (empty($quizIds)) return [];
+
+        $result = [];
+        foreach ($quizIds as $qid) {
+            $result[$qid] = [];
+        }
+
+        $inQuiz = implode(',', $quizIds);
+        $sql = "SELECT * FROM soal WHERE quiz_id IN ({$inQuiz}) ORDER BY id ASC";
+        $soals = $this->db->query($sql)->fetchAll();
+        if (empty($soals)) return $result;
+
+        $soalMap = [];
+        $soalIdsForPil = [];
+        foreach ($soals as $s) {
+            $sId = (int)$s['id'];
+            $s['pilihan'] = [];
+            $soalMap[$sId] = $s;
+            if ($s['jenis_soal'] === 'pg' || $s['jenis_soal'] === 'tf') {
+                $soalIdsForPil[] = $sId;
+            }
+        }
+
+        if (!empty($soalIdsForPil)) {
+            $inPil = implode(',', $soalIdsForPil);
+            $pilihanRows = $this->db->query("SELECT * FROM pilihan_jawaban WHERE soal_id IN ({$inPil}) ORDER BY id ASC")->fetchAll();
+            foreach ($pilihanRows as $p) {
+                $sId = (int)$p['soal_id'];
+                if (isset($soalMap[$sId])) {
+                    $soalMap[$sId]['pilihan'][] = $p;
+                }
+            }
+        }
+
+        foreach ($soalMap as $s) {
+            $result[(int)$s['quiz_id']][] = $s;
+        }
+
+        return $result;
     }
 
     public function getSoalByQuizOrdered($quiz_id, $orderedIds = [], $randomPilihan = false) {
@@ -721,13 +798,27 @@ class ExamModel extends BaseModel {
             $sql = "SELECT * FROM soal WHERE quiz_id = {$quizId} ORDER BY id ASC";
         }
         $soals = $this->db->query($sql)->fetchAll();
+        if (empty($soals)) return [];
+
+        $soalIds = [];
+        foreach ($soals as $s) {
+            if ($s['jenis_soal'] === 'pg' || $s['jenis_soal'] === 'tf') {
+                $soalIds[] = (int)$s['id'];
+            }
+        }
+
+        $pilihanMap = [];
+        if (!empty($soalIds)) {
+            $inSoal = implode(',', $soalIds);
+            $pilSql = "SELECT * FROM pilihan_jawaban WHERE soal_id IN ({$inSoal}) " . ($randomPilihan ? "ORDER BY RAND()" : "ORDER BY id ASC");
+            $pilRows = $this->db->query($pilSql)->fetchAll();
+            foreach ($pilRows as $p) {
+                $pilihanMap[$p['soal_id']][] = $p;
+            }
+        }
 
         foreach ($soals as &$s) {
-            if ($s['jenis_soal'] === 'pg' || $s['jenis_soal'] === 'tf') {
-                $stmtPil = $this->db->prepare("SELECT * FROM pilihan_jawaban WHERE soal_id = ? " . ($randomPilihan ? "ORDER BY RAND()" : "ORDER BY id ASC"));
-                $stmtPil->execute([$s['id']]);
-                $s['pilihan'] = $stmtPil->fetchAll();
-            }
+            $s['pilihan'] = $pilihanMap[$s['id']] ?? [];
         }
         return $soals;
     }
@@ -886,18 +977,21 @@ class ExamModel extends BaseModel {
     }
 
     public function getHasilQuizListByGuru($guruId = null) {
-        // Auto-heal any stale 'menunggu' status in database where ungraded_essay_count is 0
+        // Auto-heal any stale 'menunggu' status only if there are pending results
         try {
-            $this->db->exec("
-                UPDATE hasil_quiz hq
-                SET hq.status_lulus = IF(hq.total_nilai >= 70, 'lulus', 'tidak_lulus')
-                WHERE hq.status_lulus = 'menunggu'
-                AND NOT EXISTS (
-                    SELECT 1 FROM soal s 
-                    LEFT JOIN jawaban_siswa js ON js.soal_id = s.id AND js.siswa_id = hq.siswa_id AND js.quiz_id = hq.quiz_id
-                    WHERE s.quiz_id = hq.quiz_id AND s.jenis_soal = 'essay' AND (js.nilai IS NULL OR js.id IS NULL)
-                )
-            ");
+            $hasMenunggu = (bool)$this->db->query("SELECT 1 FROM hasil_quiz WHERE status_lulus = 'menunggu' LIMIT 1")->fetchColumn();
+            if ($hasMenunggu) {
+                $this->db->exec("
+                    UPDATE hasil_quiz hq
+                    SET hq.status_lulus = IF(hq.total_nilai >= 70, 'lulus', 'tidak_lulus')
+                    WHERE hq.status_lulus = 'menunggu'
+                    AND NOT EXISTS (
+                        SELECT 1 FROM soal s 
+                        LEFT JOIN jawaban_siswa js ON js.soal_id = s.id AND js.siswa_id = hq.siswa_id AND js.quiz_id = hq.quiz_id
+                        WHERE s.quiz_id = hq.quiz_id AND s.jenis_soal = 'essay' AND (js.nilai IS NULL OR js.id IS NULL)
+                    )
+                ");
+            }
         } catch (Exception $e) {}
 
         $sql = "
@@ -927,6 +1021,49 @@ class ExamModel extends BaseModel {
         }
         $sql .= " ORDER BY hq.finished_at DESC, hq.id DESC";
         return $this->db->query($sql)->fetchAll();
+    }
+
+    public function getEssayAnswersMapForSubmissions(array $submissions) {
+        if (empty($submissions)) return [];
+
+        $quizIds = [];
+        $siswaIds = [];
+        foreach ($submissions as $sub) {
+            if ((int)($sub['total_essay_count'] ?? 0) > 0) {
+                $quizIds[] = (int)$sub['quiz_id'];
+                $siswaIds[] = (int)$sub['siswa_id'];
+            }
+        }
+
+        if (empty($quizIds)) return [];
+
+        $quizIds = array_values(array_unique(array_filter($quizIds)));
+        $siswaIds = array_values(array_unique(array_filter($siswaIds)));
+
+        if (empty($quizIds) || empty($siswaIds)) return [];
+
+        $inQuiz = implode(',', $quizIds);
+        $inSiswa = implode(',', $siswaIds);
+
+        $sql = "
+            SELECT s.id as soal_id, s.quiz_id, s.pertanyaan, s.bobot, 
+                   js.id as jawaban_id, js.siswa_id, js.teks_jawaban_essay, js.nilai
+            FROM soal s
+            LEFT JOIN jawaban_siswa js ON js.soal_id = s.id AND js.siswa_id IN ({$inSiswa}) AND js.quiz_id = s.quiz_id
+            WHERE s.quiz_id IN ({$inQuiz}) AND s.jenis_soal = 'essay'
+            ORDER BY s.id ASC
+        ";
+        $rows = $this->db->query($sql)->fetchAll();
+
+        $map = [];
+        foreach ($rows as $r) {
+            $sId = (int)($r['siswa_id'] ?? 0);
+            $qId = (int)$r['quiz_id'];
+            if ($sId > 0) {
+                $map["{$qId}_{$sId}"][] = $r;
+            }
+        }
+        return $map;
     }
 
     public function getEssayAnswersByHasil($quizId, $siswaId) {
@@ -1126,16 +1263,18 @@ class ExamModel extends BaseModel {
         $quizIds = array_column($quizzes, 'id');
         $kelasIds = array_filter(array_unique(array_column($quizzes, 'kelas_id')));
 
+        $inQuiz = implode(',', array_map('intval', $quizIds));
         if (!empty($kelasIds)) {
             $inKelas = implode(',', array_map('intval', $kelasIds));
             $sqlSiswa = "SELECT DISTINCT s.id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas
                          FROM siswa s
                          LEFT JOIN kelas k ON s.kelas_id = k.id
-                         WHERE s.kelas_id IN ($inKelas) OR s.id IN (SELECT siswa_id FROM hasil_quiz)";
+                         WHERE s.kelas_id IN ($inKelas) OR s.id IN (SELECT siswa_id FROM hasil_quiz WHERE quiz_id IN ($inQuiz))";
         } else {
             $sqlSiswa = "SELECT DISTINCT s.id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas
                          FROM siswa s
-                         LEFT JOIN kelas k ON s.kelas_id = k.id";
+                         LEFT JOIN kelas k ON s.kelas_id = k.id
+                         WHERE s.id IN (SELECT siswa_id FROM hasil_quiz WHERE quiz_id IN ($inQuiz))";
         }
         if ($kelasId) {
             $sqlSiswa .= " AND s.kelas_id = " . (int)$kelasId;

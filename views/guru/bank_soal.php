@@ -13,6 +13,35 @@ $totalPgAll = 0;
 $totalEssayAll = 0;
 
 if (!empty($quizList)) {
+    // Collect all quiz IDs for single batch query
+    $quizIds = array_values(array_filter(array_unique(array_map('intval', array_column($quizList, 'id')))));
+    $allSoalAnalysis = [];
+    if (!empty($quizIds)) {
+        $inQuiz = implode(',', $quizIds);
+        try {
+            $stmtAllSoal = $db->query("
+                SELECT s.*, COUNT(js.id) as total_jawaban, SUM(COALESCE(js.is_benar, 0)) as total_benar 
+                FROM soal s 
+                LEFT JOIN jawaban_siswa js ON s.id = js.soal_id 
+                WHERE s.quiz_id IN ($inQuiz) 
+                GROUP BY s.id 
+                ORDER BY s.quiz_id ASC, s.id ASC
+            ");
+            while ($row = $stmtAllSoal->fetch(PDO::FETCH_ASSOC)) {
+                $allSoalAnalysis[(int)$row['quiz_id']][] = $row;
+            }
+        } catch (Throwable $e) {
+            try {
+                $stmtAllSoal = $db->query("SELECT s.*, 0 as total_jawaban, 0 as total_benar FROM soal s WHERE s.quiz_id IN ($inQuiz) ORDER BY s.quiz_id ASC, s.id ASC");
+                while ($row = $stmtAllSoal->fetch(PDO::FETCH_ASSOC)) {
+                    $allSoalAnalysis[(int)$row['quiz_id']][] = $row;
+                }
+            } catch (Throwable $e2) {
+                $allSoalAnalysis = [];
+            }
+        }
+    }
+
     foreach ($quizList as $q) {
         $mapelName = !empty($q['nama_mapel']) ? $q['nama_mapel'] : 'Umum / Lainnya';
         if (!isset($mapelGroups[$mapelName])) {
@@ -24,22 +53,7 @@ if (!empty($quizList)) {
             ];
         }
 
-        // Fetch questions and analysis for this quiz
-        $soalList = [];
-        try {
-            $stmtSoal = $db->prepare("SELECT s.*, COUNT(js.id) as total_jawaban, SUM(COALESCE(js.is_benar, 0)) as total_benar FROM soal s LEFT JOIN jawaban_siswa js ON s.id = js.soal_id WHERE s.quiz_id = ? GROUP BY s.id ORDER BY s.id ASC");
-            $stmtSoal->execute([$q['id']]);
-            $soalList = $stmtSoal->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        } catch (Throwable $e) {
-            try {
-                $stmtSoal = $db->prepare("SELECT s.*, 0 as total_jawaban, 0 as total_benar FROM soal s WHERE s.quiz_id = ? ORDER BY s.id ASC");
-                $stmtSoal->execute([$q['id']]);
-                $soalList = $stmtSoal->fetchAll(PDO::FETCH_ASSOC) ?: [];
-            } catch (Throwable $e2) {
-                $soalList = [];
-            }
-        }
-
+        $soalList = $allSoalAnalysis[(int)$q['id']] ?? [];
         $qCount = count($soalList);
         $q['soal_list'] = $soalList;
 
