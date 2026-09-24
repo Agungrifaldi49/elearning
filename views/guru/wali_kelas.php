@@ -27,6 +27,9 @@ require_once ROOT_PATH . 'views/layouts/sidebar.php';
                     <i class="bi bi-calendar3 me-1"></i> TA <?= htmlspecialchars($activeTa['tahun'] ?? 'Aktif') ?> (<?= htmlspecialchars($activeSemester) ?>)
                 </span>
                 <?php if ($selectedKelas && !empty($siswaList)): ?>
+                    <a href="<?= BASE_URL ?>index.php?url=guru/rankingKelas&kelas_id=<?= $selectedKelasId ?>" class="btn btn-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-sm">
+                        <i class="bi bi-trophy-fill me-1.5"></i> Leger & Ranking Siswa
+                    </a>
                     <a href="<?= BASE_URL ?>index.php?url=guru/cetakRaporRombel&kelas_id=<?= $selectedKelasId ?>" target="_blank" class="btn btn-primary rounded-pill px-3 py-2 fw-bold shadow-sm">
                         <i class="bi bi-printer-fill me-1.5"></i> Cetak E-Rapor Sekaligus (<?= $countSiswa ?> Siswa)
                     </a>

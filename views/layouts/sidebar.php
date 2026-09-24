@@ -278,6 +278,9 @@ if (!empty($sidebarRawLogo)) {
                 <li><a class="nav-link <?= isActive($currentUrl,'guru/waliKelas') ?>" href="<?= BASE_URL ?>index.php?url=guru/waliKelas">
                     <i class="bi bi-person-workspace text-info"></i> Kelas Binaan (Wali Kelas)
                 </a></li>
+                <li><a class="nav-link <?= isActive($currentUrl,'guru/rankingKelas') ?>" href="<?= BASE_URL ?>index.php?url=guru/rankingKelas">
+                    <i class="bi bi-trophy-fill text-warning"></i> Leger & Ranking Siswa
+                </a></li>
             <?php endif; ?>
 
             <li class="nav-section-title">Komunikasi & Virtual Meeting</li>

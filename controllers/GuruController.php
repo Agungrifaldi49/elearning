@@ -4431,4 +4431,370 @@ class GuruController {
             exit();
         }
     }
+
+    /**
+     * Helper privat: Menyiapkan data Leger Nilai & Ranking Siswa untuk Rombel Binaan Wali Kelas
+     */
+    private function prepareRankingLegerData($kelasId) {
+        $guru = $this->getGuruInfo();
+        $guruId = (int)($guru['id'] ?? 0);
+        $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
+        $isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
+
+        $db = Database::getConnection();
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        require_once ROOT_PATH . 'models/CurriculumModel.php';
+        require_once ROOT_PATH . 'models/NilaiModel.php';
+        require_once ROOT_PATH . 'models/SettingsModel.php';
+
+        $academicModel = new AcademicModel();
+        $currModel = new CurriculumModel();
+        $nilaiModel = new NilaiModel();
+        $settingsModel = new SettingsModel();
+
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $taId = (int)($activeTa['id'] ?? 4);
+        $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+        $settings = $settingsModel->getAll();
+
+        // 1. Ambil daftar kelas binaan guru (atau semua kelas jika admin)
+        if ($isAdmin) {
+            $stmtWali = $db->query("
+                SELECT k.*, j.nama_jurusan, j.kode_jurusan, g.nama_lengkap as nama_walikelas, g.nip as nip_walikelas,
+                       (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id) as total_siswa
+                FROM kelas k
+                LEFT JOIN jurusan j ON k.jurusan_id = j.id
+                LEFT JOIN guru g ON k.wali_kelas_id = g.id
+                ORDER BY k.tingkat ASC, k.nama_kelas ASC
+            ");
+            $myWaliKelas = $stmtWali->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } else {
+            $stmtWali = $db->prepare("
+                SELECT k.*, j.nama_jurusan, j.kode_jurusan, g.nama_lengkap as nama_walikelas, g.nip as nip_walikelas,
+                       (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id) as total_siswa
+                FROM kelas k
+                LEFT JOIN jurusan j ON k.jurusan_id = j.id
+                LEFT JOIN guru g ON k.wali_kelas_id = g.id
+                WHERE k.wali_kelas_id = ?
+                ORDER BY k.tingkat ASC, k.nama_kelas ASC
+            ");
+            $stmtWali->execute([$guruId]);
+            $myWaliKelas = $stmtWali->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        }
+
+        if (empty($myWaliKelas)) {
+            return [
+                'error' => 'Anda tidak terdaftar sebagai Wali Kelas pada rombel manapun.',
+                'myWaliKelas' => []
+            ];
+        }
+
+        // Tentukan kelas terpilih
+        $selectedKelas = null;
+        if ($kelasId > 0) {
+            foreach ($myWaliKelas as $mwk) {
+                if ((int)$mwk['id'] === $kelasId) {
+                    $selectedKelas = $mwk;
+                    break;
+                }
+            }
+        }
+        if (!$selectedKelas && !empty($myWaliKelas)) {
+            $selectedKelas = $myWaliKelas[0];
+            $kelasId = (int)$selectedKelas['id'];
+        }
+
+        // Validasi akses kelas
+        if (!$isAdmin && (int)($selectedKelas['wali_kelas_id'] ?? 0) !== $guruId) {
+            return [
+                'error' => 'Anda tidak memiliki hak akses sebagai Wali Kelas untuk rombel ini.',
+                'myWaliKelas' => $myWaliKelas
+            ];
+        }
+
+        // Kurikulum & Bobot
+        $kurInfo = $currModel->getActiveKurikulumForRombel($kelasId, $taId);
+        $kurId = (int)($kurInfo['kurikulum_id'] ?? 1);
+        $bobotKomponen = $nilaiModel->getBobotKomponenByKurikulum($kurId);
+
+        // Ambil data siswa di rombel
+        $stmtS = $db->prepare("
+            SELECT s.*, u.username
+            FROM siswa s
+            LEFT JOIN users u ON s.user_id = u.id
+            WHERE s.kelas_id = ?
+            ORDER BY s.nama_lengkap ASC
+        ");
+        $stmtS->execute([$kelasId]);
+        $siswaList = $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $siswaIds = array_column($siswaList, 'id');
+        $inIds = !empty($siswaIds) ? implode(',', array_map('intval', $siswaIds)) : '0';
+
+        // Ambil daftar mata pelajaran rombel secara komprehensif
+        $stmtM = $db->query("
+            SELECT DISTINCT mp.id, mp.nama_mapel, mp.kode_mapel, COALESCE(km.kkm, mp.kkm, 75) as kkm,
+                   COALESCE(km.kelompok_mapel, 'Umum') as kelompok_mapel
+            FROM mata_pelajaran mp
+            LEFT JOIN kurikulum_mapel km ON (mp.id = km.mapel_id AND km.kurikulum_id = {$kurId})
+            WHERE mp.id IN (
+                SELECT mapel_id FROM jadwal WHERE kelas_id = {$kelasId}
+                UNION
+                SELECT mapel_id FROM siswa_mapel_enrollment WHERE siswa_id IN ({$inIds})
+                UNION
+                SELECT mapel_id FROM nilai_rapor WHERE siswa_id IN ({$inIds})
+                UNION
+                SELECT km2.mapel_id FROM kurikulum_mapel km2
+                JOIN rombel_kurikulum rk ON km2.kurikulum_id = rk.kurikulum_id
+                WHERE rk.rombel_id = {$kelasId} AND (km2.is_active = 1 OR km2.is_active IS NULL)
+            )
+            ORDER BY 
+                CASE 
+                    WHEN mp.kode_mapel LIKE 'MP0%' THEN 1
+                    WHEN mp.kode_mapel LIKE 'MP1%' THEN 2
+                    ELSE 3
+                END,
+                mp.nama_mapel ASC
+        ");
+        $mapelList = $stmtM ? ($stmtM->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+
+        // Ambil nilai rapor (Batch Query 1x)
+        $nilaiLookup = [];
+        try {
+            $stmtNilai = $db->query("
+                SELECT nr.siswa_id, nr.mapel_id,
+                       COALESCE(nr.nilai_tugas, 0) as nilai_tugas,
+                       COALESCE(nr.nilai_quiz, 0) as nilai_quiz,
+                       COALESCE(nr.nilai_uts, 0) as nilai_uts,
+                       COALESCE(nr.nilai_uas, 0) as nilai_uas,
+                       COALESCE(nr.nilai_akhir, 0) as nilai_akhir
+                FROM nilai_rapor nr
+                WHERE nr.siswa_id IN ({$inIds})
+            ");
+            if ($stmtNilai) {
+                $allNilai = $stmtNilai->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                foreach ($allNilai as $n) {
+                    $nilaiLookup[$n['siswa_id']][$n['mapel_id']] = $n;
+                }
+            }
+        } catch (\Throwable $eNilai) {}
+
+        // Inisialisasi statistik per mapel
+        $statsPerMapel = [];
+        foreach ($mapelList as $m) {
+            $statsPerMapel[$m['id']] = [
+                'nama' => $m['nama_mapel'],
+                'kode' => $m['kode_mapel'],
+                'kkm' => (float)$m['kkm'],
+                'sum' => 0,
+                'count' => 0,
+                'max' => 0,
+                'min' => 100,
+                'tuntas_count' => 0
+            ];
+        }
+
+        $rankingData = [];
+        $totalMapels = count($mapelList);
+
+        foreach ($siswaList as $sw) {
+            $sId = (int)$sw['id'];
+            $rowNilai = [];
+            $totalNilai = 0;
+            $tuntasCount = 0;
+            $gradedCount = 0;
+
+            foreach ($mapelList as $m) {
+                $mId = (int)$m['id'];
+                $kkm = (float)$m['kkm'];
+                $nData = $nilaiLookup[$sId][$mId] ?? null;
+
+                $nilaiAkhir = 0;
+                $hasScore = false;
+                if ($nData) {
+                    $recalc = NilaiModel::hitungNilaiAkhir(
+                        (float)$nData['nilai_tugas'],
+                        (float)$nData['nilai_quiz'],
+                        (float)$nData['nilai_uts'],
+                        (float)$nData['nilai_uas'],
+                        $bobotKomponen
+                    );
+                    $nilaiAkhir = ($recalc > 0 || (float)$nData['nilai_akhir'] <= 0) ? $recalc : (float)$nData['nilai_akhir'];
+                    $hasScore = ($nilaiAkhir > 0 || (float)$nData['nilai_tugas'] > 0 || (float)$nData['nilai_quiz'] > 0);
+                }
+
+                $isTuntas = ($nilaiAkhir >= $kkm);
+                if ($isTuntas && $nilaiAkhir > 0) {
+                    $tuntasCount++;
+                }
+                if ($hasScore) {
+                    $gradedCount++;
+                }
+
+                $rowNilai[$mId] = [
+                    'nilai' => $nilaiAkhir,
+                    'is_tuntas' => $isTuntas,
+                    'kkm' => $kkm,
+                    'has_score' => $hasScore,
+                    'predikat' => NilaiModel::getPredikat($nilaiAkhir)
+                ];
+
+                $totalNilai += $nilaiAkhir;
+
+                // Akumulasi statistik per mapel
+                $statsPerMapel[$mId]['sum'] += $nilaiAkhir;
+                $statsPerMapel[$mId]['count']++;
+                if ($nilaiAkhir > $statsPerMapel[$mId]['max']) {
+                    $statsPerMapel[$mId]['max'] = $nilaiAkhir;
+                }
+                if ($nilaiAkhir < $statsPerMapel[$mId]['min']) {
+                    $statsPerMapel[$mId]['min'] = $nilaiAkhir;
+                }
+                if ($isTuntas && $nilaiAkhir > 0) {
+                    $statsPerMapel[$mId]['tuntas_count']++;
+                }
+            }
+
+            // Rata-rata nilai dihitung dari total mapel rombel
+            $avgNilai = $totalMapels > 0 ? round($totalNilai / $totalMapels, 2) : 0.0;
+            $predikatAvg = NilaiModel::getPredikat($avgNilai);
+
+            $rankingData[] = [
+                'siswa' => $sw,
+                'nilai_mapel' => $rowNilai,
+                'total_nilai' => $totalNilai,
+                'rata_rata' => $avgNilai,
+                'predikat' => $predikatAvg,
+                'tuntas_count' => $tuntasCount,
+                'graded_count' => $gradedCount,
+                'total_mapels' => $totalMapels,
+                'persen_tuntas' => $totalMapels > 0 ? round(($tuntasCount / $totalMapels) * 100) : 0
+            ];
+        }
+
+        // Urutkan siswa secara descending berdasarkan rata_rata (dan total_nilai)
+        usort($rankingData, function($a, $b) {
+            if ($b['rata_rata'] != $a['rata_rata']) {
+                return ($b['rata_rata'] > $a['rata_rata']) ? 1 : -1;
+            }
+            if ($b['total_nilai'] != $a['total_nilai']) {
+                return ($b['total_nilai'] > $a['total_nilai']) ? 1 : -1;
+            }
+            return strcasecmp($a['siswa']['nama_lengkap'], $b['siswa']['nama_lengkap']);
+        });
+
+        // Berikan nomor peringkat
+        foreach ($rankingData as $idx => &$item) {
+            $item['ranking'] = $idx + 1;
+        }
+        unset($item);
+
+        // Ringkasan Statistik Rombel
+        $countSiswa = count($rankingData);
+        $rombelSumAvg = 0;
+        $highestAvg = 0;
+        $lowestAvg = $countSiswa > 0 ? 100 : 0;
+        $totalSiswaTuntasPenuh = 0;
+        $topThree = [];
+
+        foreach ($rankingData as $r) {
+            $rombelSumAvg += $r['rata_rata'];
+            if ($r['rata_rata'] > $highestAvg) {
+                $highestAvg = $r['rata_rata'];
+            }
+            if ($r['rata_rata'] < $lowestAvg) {
+                $lowestAvg = $r['rata_rata'];
+            }
+            if ($r['tuntas_count'] === $totalMapels && $totalMapels > 0) {
+                $totalSiswaTuntasPenuh++;
+            }
+            if (count($topThree) < 3) {
+                $topThree[] = $r;
+            }
+        }
+        $rombelAvgTotal = $countSiswa > 0 ? round($rombelSumAvg / $countSiswa, 2) : 0;
+        if ($lowestAvg > $highestAvg) {
+            $lowestAvg = 0;
+        }
+
+        // Finalisasi rata-rata per mapel di footer
+        foreach ($statsPerMapel as &$spm) {
+            $spm['avg'] = $spm['count'] > 0 ? round($spm['sum'] / $spm['count'], 2) : 0;
+            if ($spm['min'] > $spm['max']) {
+                $spm['min'] = 0;
+            }
+        }
+        unset($spm);
+
+        $kepsekNama = !empty($settings['kepala_sekolah']) ? $settings['kepala_sekolah'] : 'H. ASEP SAEPULLOH, S. Ag';
+        $kepsekNip  = !empty($settings['nip_kepala_sekolah']) ? $settings['nip_kepala_sekolah'] : (!empty($settings['nip_kepsek']) ? $settings['nip_kepsek'] : 'G202608503');
+
+        $waliKelas = [
+            'nama_lengkap' => $selectedKelas['nama_walikelas'] ?? '',
+            'nip' => $selectedKelas['nip_walikelas'] ?? ''
+        ];
+
+        return [
+            'selectedKelas' => $selectedKelas,
+            'selectedKelasId' => $kelasId,
+            'myWaliKelas' => $myWaliKelas,
+            'mapelList' => $mapelList,
+            'rankingData' => $rankingData,
+            'statsPerMapel' => $statsPerMapel,
+            'topThree' => $topThree,
+            'countSiswa' => $countSiswa,
+            'rombelAvgTotal' => $rombelAvgTotal,
+            'highestAvg' => $highestAvg,
+            'lowestAvg' => $lowestAvg,
+            'totalSiswaTuntasPenuh' => $totalSiswaTuntasPenuh,
+            'persenTuntasRombel' => $countSiswa > 0 ? round(($totalSiswaTuntasPenuh / $countSiswa) * 100) : 0,
+            'activeTa' => $activeTa,
+            'activeSemester' => $activeSemester,
+            'kurInfo' => $kurInfo,
+            'waliKelas' => $waliKelas,
+            'kepsekNama' => $kepsekNama,
+            'kepsekNip' => $kepsekNip,
+            'settings' => $settings
+        ];
+    }
+
+    /**
+     * Halaman Khusus Leger Nilai & Ranking Siswa untuk Wali Kelas
+     */
+    public function rankingKelas() {
+        $kelasId = isset($_GET['kelas_id']) ? (int)$_GET['kelas_id'] : 0;
+        $data = $this->prepareRankingLegerData($kelasId);
+
+        if (!empty($data['error'])) {
+            FlashHelper::setError($data['error']);
+            header('Location: ' . BASE_URL . 'index.php?url=guru/dashboard');
+            exit();
+        }
+
+        // Ekstrak data untuk view
+        extract($data);
+
+        require_once ROOT_PATH . 'views/guru/ranking_kelas.php';
+    }
+
+    /**
+     * Cetak Leger Nilai & Peringkat Siswa Siap Print (Format Landscape Resmi)
+     */
+    public function cetakLegerRanking() {
+        @ini_set('max_execution_time', '180');
+        @ini_set('memory_limit', '256M');
+
+        $kelasId = isset($_GET['kelas_id']) ? (int)$_GET['kelas_id'] : 0;
+        $data = $this->prepareRankingLegerData($kelasId);
+
+        if (!empty($data['error'])) {
+            FlashHelper::setError($data['error']);
+            header('Location: ' . BASE_URL . 'index.php?url=guru/waliKelas');
+            exit();
+        }
+
+        // Ekstrak data untuk view
+        extract($data);
+
+        require_once ROOT_PATH . 'views/guru/cetak_leger_ranking.php';
+    }
 }
