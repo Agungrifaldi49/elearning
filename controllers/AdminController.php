@@ -592,6 +592,8 @@ class AdminController {
         }
 
         $settings = $settingsModel->getAll();
+        $siswaModel = new SiswaModel();
+        $sampleSiswaList = $siswaModel->getAll();
         require_once ROOT_PATH . 'views/admin/pengaturan.php';
     }
 
@@ -611,6 +613,7 @@ class AdminController {
             require_once ROOT_PATH . 'helpers/WhatsAppHelper.php';
             $phone = trim($_POST['phone'] ?? '');
             $message = trim($_POST['message'] ?? '');
+            $scenario = trim($_POST['scenario'] ?? 'uji_coba');
 
             if (empty($phone)) {
                 echo json_encode(['status' => false, 'message' => 'Nomor WhatsApp tujuan wajib diisi.']);

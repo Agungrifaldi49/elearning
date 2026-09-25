@@ -653,7 +653,12 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                                     <label class="form-label fw-bold text-success mb-0">
                                         <i class="bi bi-box-arrow-in-right me-1"></i> 1. Template Presensi Masuk (Tepat Waktu)
                                     </label>
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle">Masuk Pagi</span>
+                                    <div class="d-flex gap-1 align-items-center">
+                                        <button type="button" class="btn btn-xs btn-outline-success fw-bold rounded-pill px-2.5 py-0.5" style="font-size:0.75rem;" onclick="openTestModalScenario('masuk_tepat')" title="Uji coba pengiriman template ini">
+                                            <i class="bi bi-play-circle-fill me-1"></i> Uji Coba
+                                        </button>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Masuk Pagi</span>
+                                    </div>
                                 </div>
                                 <textarea name="wa_template_masuk_tepat" id="tpl_masuk_tepat" class="form-control font-monospace small" rows="7" required><?= htmlspecialchars($settings['wa_template_masuk_tepat'] ?? "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nKami menginformasikan bahwa putra/putri Anda telah tiba di {sekolah} dan berhasil melakukan presensi MASUK pada:\n📅 Hari/Tanggal: {tanggal}\n⏰ Pukul: {jam}\n📌 Status: {status}\n\nTerima kasih atas kerja sama Bapak/Ibu dalam mendukung kedisiplinan belajar ananda.") ?></textarea>
                                 <small class="text-muted d-block mt-1">Dikirim instan saat siswa scan QR masuk tepat waktu.</small>
@@ -667,7 +672,12 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                                     <label class="form-label fw-bold text-warning mb-0">
                                         <i class="bi bi-clock-history me-1"></i> 2. Template Presensi Masuk (Terlambat)
                                     </label>
-                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Terlambat</span>
+                                    <div class="d-flex gap-1 align-items-center">
+                                        <button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold rounded-pill px-2.5 py-0.5" style="font-size:0.75rem;" onclick="openTestModalScenario('masuk_terlambat')" title="Uji coba pengiriman template ini">
+                                            <i class="bi bi-play-circle-fill me-1"></i> Uji Coba
+                                        </button>
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Terlambat</span>
+                                    </div>
                                 </div>
                                 <textarea name="wa_template_masuk_terlambat" id="tpl_masuk_terlambat" class="form-control font-monospace small" rows="7" required><?= htmlspecialchars($settings['wa_template_masuk_terlambat'] ?? "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nKami menginformasikan bahwa putra/putri Anda telah tiba di {sekolah} dan melakukan presensi MASUK (TERLAMBAT) pada:\n📅 Hari/Tanggal: {tanggal}\n⏰ Pukul: {jam}\n📌 Status: {status}\nℹ️ Keterangan: {keterangan}\n\nMohon perhatian Bapak/Ibu untuk dapat memotivasi ananda agar tiba lebih awal di sekolah. Terima kasih.") ?></textarea>
                                 <small class="text-muted d-block mt-1">Dikirim saat siswa scan presensi masuk setelah jam batas toleransi.</small>
@@ -681,7 +691,12 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                                     <label class="form-label fw-bold text-primary mb-0">
                                         <i class="bi bi-box-arrow-right me-1"></i> 3. Template Presensi Pulang Sekolah
                                     </label>
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Pulang</span>
+                                    <div class="d-flex gap-1 align-items-center">
+                                        <button type="button" class="btn btn-xs btn-outline-primary fw-bold rounded-pill px-2.5 py-0.5" style="font-size:0.75rem;" onclick="openTestModalScenario('pulang')" title="Uji coba pengiriman template ini">
+                                            <i class="bi bi-play-circle-fill me-1"></i> Uji Coba
+                                        </button>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Pulang</span>
+                                    </div>
                                 </div>
                                 <textarea name="wa_template_pulang" id="tpl_pulang" class="form-control font-monospace small" rows="7" required><?= htmlspecialchars($settings['wa_template_pulang'] ?? "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nKami menginformasikan bahwa kegiatan pembelajaran di {sekolah} hari ini telah selesai. Putra/putri Anda telah melakukan presensi PULANG pada:\n📅 Hari/Tanggal: {tanggal}\n⏰ Pukul: {jam}\n📌 Status: {status}\n\nSemoga ananda sampai di rumah dengan selamat dan sehat walafiat. Terima kasih.") ?></textarea>
                                 <small class="text-muted d-block mt-1">Dikirim saat siswa scan QR pulang sekolah.</small>
@@ -695,7 +710,12 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                                     <label class="form-label fw-bold text-danger mb-0">
                                         <i class="bi bi-exclamation-triangle me-1"></i> 4. Template Berhalangan Hadir (Izin / Sakit / Alpha)
                                     </label>
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Tidak Hadir</span>
+                                    <div class="d-flex gap-1 align-items-center">
+                                        <button type="button" class="btn btn-xs btn-outline-danger fw-bold rounded-pill px-2.5 py-0.5" style="font-size:0.75rem;" onclick="openTestModalScenario('tidak_hadir')" title="Uji coba pengiriman template ini">
+                                            <i class="bi bi-play-circle-fill me-1"></i> Uji Coba
+                                        </button>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Tidak Hadir</span>
+                                    </div>
                                 </div>
                                 <textarea name="wa_template_tidak_hadir" id="tpl_tidak_hadir" class="form-control font-monospace small" rows="7" required><?= htmlspecialchars($settings['wa_template_tidak_hadir'] ?? "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nInformasi Presensi Sekolah dari {sekolah}:\nPutra/putri Anda hari ini tercatat dengan status:\n📅 Hari/Tanggal: {tanggal}\n📌 Status: {status}\nℹ️ Keterangan: {keterangan}\n\nJika terdapat kekeliruan atau kendala terkait kehadiran ananda, silakan hubungi pihak sekolah / wali kelas. Terima kasih.") ?></textarea>
                                 <small class="text-muted d-block mt-1">Dikirim saat guru / petugas mencatat status izin/sakit/alpha.</small>
@@ -1134,6 +1154,163 @@ function insertPlaceholder(placeholder) {
     lastActiveTemplateInput.selectionStart = lastActiveTemplateInput.selectionEnd = start + placeholder.length;
 }
 
+// Data Master Simulasi Uji Coba WhatsApp
+const sampleSiswaData = <?= json_encode(array_map(function($s) {
+    return [
+        'id' => $s['id'],
+        'nama_lengkap' => $s['nama_lengkap'],
+        'nis' => $s['nis'] ?: ($s['nisn'] ?: '-'),
+        'nisn' => $s['nisn'] ?: '-',
+        'kelas' => $s['nama_kelas'] ?? 'XII RPL 1',
+        'jurusan' => $s['nama_jurusan'] ?? 'Rekayasa Perangkat Lunak',
+        'no_ortu' => $s['no_ortu'] ?? ''
+    ];
+}, $sampleSiswaList ?? [])) ?>;
+
+const namaSekolahGlobal = <?= json_encode($settings['nama_sekolah'] ?? 'SMK Muthia Harapan Cicalengka') ?>;
+let activeTestScenario = 'masuk_tepat';
+
+// Buka Modal Uji Coba langsung ke skenario tertentu
+function openTestModalScenario(scenarioType) {
+    activeTestScenario = scenarioType;
+    const modalEl = document.getElementById('modalTestWhatsApp');
+    if (!modalEl) return;
+    
+    const bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+    bsModal.show();
+    
+    // Set scenario button active
+    switchTestScenario(scenarioType);
+}
+
+// Ganti Skenario Uji Coba Presensi
+function switchTestScenario(scenario) {
+    activeTestScenario = scenario;
+
+    // Update active button state
+    document.querySelectorAll('.btn-scenario-test').forEach(btn => {
+        btn.classList.remove('btn-success', 'btn-warning', 'btn-primary', 'btn-danger', 'btn-dark', 'active');
+        btn.classList.add('btn-outline-secondary');
+    });
+
+    const activeBtn = document.getElementById('btnScen_' + scenario);
+    if (activeBtn) {
+        activeBtn.classList.remove('btn-outline-secondary');
+        if (scenario === 'masuk_tepat') activeBtn.classList.add('btn-success', 'active');
+        else if (scenario === 'masuk_terlambat') activeBtn.classList.add('btn-warning', 'text-dark', 'active');
+        else if (scenario === 'pulang') activeBtn.classList.add('btn-primary', 'active');
+        else if (scenario === 'tidak_hadir') activeBtn.classList.add('btn-danger', 'active');
+        else activeBtn.classList.add('btn-dark', 'active');
+    }
+
+    // Tampilkan / sembunyikan opsi status khusus (Izin/Sakit/Alpha)
+    const optAbsent = document.getElementById('optAbsenceStatusGroup');
+    if (optAbsent) {
+        if (scenario === 'tidak_hadir') {
+            optAbsent.classList.remove('d-none');
+        } else {
+            optAbsent.classList.add('d-none');
+        }
+    }
+
+    generateScenarioMessage();
+}
+
+// Generate teks pesan berdasarkan skenario, data siswa, dan template yang sedang diedit
+function generateScenarioMessage() {
+    const msgTextarea = document.getElementById('testWaMsg');
+    if (!msgTextarea) return;
+
+    // Jika custom, biarkan pengguna menulis bebas
+    if (activeTestScenario === 'custom') {
+        msgTextarea.value = "🔔 [UJI COBA GATEWAY]\nHalo! Ini adalah pesan uji coba koneksi API WhatsApp Gateway E-Learning " + namaSekolahGlobal + ".\nWaktu: " + new Date().toLocaleString('id-ID') + " WIB.\nStatus: Terkoneksi Lancar! ✅";
+        return;
+    }
+
+    // Ambil data siswa terpilih atau default
+    const studentSelect = document.getElementById('testWaStudentSelect');
+    let student = {
+        nama_lengkap: 'Muhammad Rizky Fadhilah',
+        nis: '20261001',
+        nisn: '0061234567',
+        kelas: 'XII RPL 1',
+        jurusan: 'Rekayasa Perangkat Lunak',
+        no_ortu: ''
+    };
+
+    if (studentSelect && studentSelect.value && sampleSiswaData && sampleSiswaData.length > 0) {
+        const found = sampleSiswaData.find(s => s.id == studentSelect.value);
+        if (found) student = found;
+    }
+
+    // Update nomor HP tujuan jika siswa memiliki no_ortu dan field nomor masih default/kosong
+    const phoneInput = document.getElementById('testWaPhone');
+    if (phoneInput && student.no_ortu && !phoneInput.dataset.userEdited) {
+        phoneInput.value = student.no_ortu;
+    }
+
+    // Format tanggal Indonesia
+    const now = new Date();
+    const hariArr = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const bulanArr = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const formattedDate = hariArr[now.getDay()] + ', ' + now.getDate() + ' ' + bulanArr[now.getMonth()] + ' ' + now.getFullYear();
+
+    let jamStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0') + ' WIB';
+    let statusStr = 'Hadir Tepat Waktu';
+    let ketStr = 'Tepat Waktu';
+    let templateSourceId = 'tpl_masuk_tepat';
+
+    if (activeTestScenario === 'masuk_tepat') {
+        templateSourceId = 'tpl_masuk_tepat';
+        jamStr = '07:05 WIB';
+        statusStr = 'Hadir Tepat Waktu';
+        ketStr = 'Tiba di sekolah sebelum batas jam masuk 07:15 WIB';
+    } else if (activeTestScenario === 'masuk_terlambat') {
+        templateSourceId = 'tpl_masuk_terlambat';
+        jamStr = '07:42 WIB';
+        statusStr = 'Hadir (Terlambat)';
+        ketStr = 'Tiba di sekolah pukul 07:42 WIB (Batas Toleransi: 07:15 WIB)';
+    } else if (activeTestScenario === 'pulang') {
+        templateSourceId = 'tpl_pulang';
+        jamStr = '15:10 WIB';
+        statusStr = 'Pulang Sekolah';
+        ketStr = 'KBM Selesai (Jam Masuk: 07:05 WIB)';
+    } else if (activeTestScenario === 'tidak_hadir') {
+        templateSourceId = 'tpl_tidak_hadir';
+        const subStatus = document.querySelector('input[name="test_absence_substatus"]:checked')?.value || 'Izin';
+        statusStr = subStatus;
+        if (subStatus === 'Sakit') {
+            ketStr = 'Kondisi demam / beristirahat di rumah (Surat dokter terlampir)';
+        } else if (subStatus === 'Izin') {
+            ketStr = 'Keperluan keluarga mendesak';
+        } else {
+            ketStr = 'Tidak hadir tanpa keterangan (Alpha)';
+        }
+    }
+
+    // Ambil isi template dari textarea yang ada di tab pengaturan
+    let template = document.getElementById(templateSourceId)?.value || '';
+    if (!template.trim()) {
+        template = "Halo Bapak/Ibu Orang Tua dari {nama_siswa} (Kelas {kelas}),\n\nPresensi di {sekolah}:\nTanggal: {tanggal}\nJam: {jam}\nStatus: {status}\nKeterangan: {keterangan}\n\nTerima kasih.";
+    }
+
+    // Ganti placeholder
+    let result = template
+        .replace(/\{nama_siswa\}/g, student.nama_lengkap)
+        .replace(/\{nis\}/g, student.nis)
+        .replace(/\{nisn\}/g, student.nisn)
+        .replace(/\{kelas\}/g, student.kelas)
+        .replace(/\{jurusan\}/g, student.jurusan)
+        .replace(/\{tanggal\}/g, formattedDate)
+        .replace(/\{jam\}/g, jamStr)
+        .replace(/\{status\}/g, statusStr)
+        .replace(/\{keterangan\}/g, ketStr)
+        .replace(/\{sekolah\}/g, namaSekolahGlobal)
+        .replace(/\{petugas\}/g, 'Sistem Presensi Digital');
+
+    msgTextarea.value = result;
+}
+
 // Live Test WhatsApp AJAX Handler
 function sendLiveWhatsAppTest() {
     const phoneInput = document.getElementById('testWaPhone');
@@ -1145,7 +1322,7 @@ function sendLiveWhatsAppTest() {
     const message = msgInput ? msgInput.value.trim() : '';
 
     if (!phone) {
-        alert('Silakan masukkan nomor WhatsApp tujuan!');
+        alert('Silakan masukkan nomor WhatsApp tujuan uji coba!');
         phoneInput.focus();
         return;
     }
@@ -1160,6 +1337,7 @@ function sendLiveWhatsAppTest() {
     const formData = new FormData();
     formData.append('phone', phone);
     formData.append('message', message);
+    formData.append('scenario', activeTestScenario);
     formData.append('csrf_token', csrfToken);
 
     fetch('<?= BASE_URL ?>index.php?url=admin/testWhatsAppAjax', {
@@ -1169,61 +1347,144 @@ function sendLiveWhatsAppTest() {
     .then(res => res.json())
     .then(data => {
         btnSend.disabled = false;
-        btnSend.innerHTML = '<i class="bi bi-send-fill me-1"></i> Kirim Pesan Sekarang';
+        btnSend.innerHTML = '<i class="bi bi-send-fill me-1"></i> Kirim Uji Coba Sekarang';
         alertBox.classList.remove('d-none');
 
         if (data.status === true) {
-            alertBox.className = 'alert alert-success mt-3';
-            alertBox.innerHTML = `<strong><i class="bi bi-check-circle-fill me-1"></i> Berhasil Terkirim!</strong><br>${data.message || 'Pesan berhasil diproses gateway.'}<br><pre class="small mt-2 mb-0 bg-white p-2 rounded border" style="max-height:120px; overflow:auto;">${JSON.stringify(data.response || data, null, 2)}</pre>`;
+            alertBox.className = 'alert alert-success mt-3 shadow-xs';
+            alertBox.innerHTML = `<strong><i class="bi bi-check-circle-fill me-1"></i> Berhasil Terkirim ke WhatsApp!</strong><br>${data.message || 'Pesan berhasil diterima dan diproses oleh gateway.'}<br><pre class="small mt-2 mb-0 bg-white p-2 rounded border" style="max-height:130px; overflow:auto;">${JSON.stringify(data.response || data, null, 2)}</pre>`;
         } else {
-            alertBox.className = 'alert alert-danger mt-3';
-            alertBox.innerHTML = `<strong><i class="bi bi-exclamation-triangle-fill me-1"></i> Gagal Mengirim Pesan!</strong><br>${data.message || 'Terjadi kesalahan gateway.'}<br><pre class="small mt-2 mb-0 bg-white p-2 rounded border" style="max-height:120px; overflow:auto;">${JSON.stringify(data.response || data, null, 2)}</pre>`;
+            alertBox.className = 'alert alert-danger mt-3 shadow-xs';
+            alertBox.innerHTML = `<strong><i class="bi bi-exclamation-triangle-fill me-1"></i> Gagal Mengirim Pesan!</strong><br>${data.message || 'Terjadi kesalahan respon dari WhatsApp Gateway.'}<br><pre class="small mt-2 mb-0 bg-white p-2 rounded border" style="max-height:130px; overflow:auto;">${JSON.stringify(data.response || data, null, 2)}</pre>`;
         }
     })
     .catch(err => {
         btnSend.disabled = false;
-        btnSend.innerHTML = '<i class="bi bi-send-fill me-1"></i> Kirim Pesan Sekarang';
+        btnSend.innerHTML = '<i class="bi bi-send-fill me-1"></i> Kirim Uji Coba Sekarang';
         alertBox.classList.remove('d-none');
-        alertBox.className = 'alert alert-danger mt-3';
-        alertBox.innerHTML = `<strong><i class="bi bi-x-circle-fill me-1"></i> Gagal Koneksi:</strong> ${err.message || 'Jaringan terputus atau server tidak merespon.'}`;
+        alertBox.className = 'alert alert-danger mt-3 shadow-xs';
+        alertBox.innerHTML = `<strong><i class="bi bi-x-circle-fill me-1"></i> Kendala Jaringan:</strong> ${err.message || 'Tidak dapat terhubung ke server.'}`;
     });
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const pInput = document.getElementById('testWaPhone');
+    if (pInput) {
+        pInput.addEventListener('input', function() {
+            this.dataset.userEdited = 'true';
+        });
+    }
+});
 </script>
 
-<!-- Modal Uji Coba WhatsApp Gateway (Live Test) -->
+<!-- Modal Uji Coba WhatsApp Gateway & 4 Skenario Presensi (Live Test) -->
 <div class="modal fade" id="modalTestWhatsApp" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
             <div class="modal-header border-0 pb-0">
-                <h5 class="fw-bold modal-title text-success"><i class="bi bi-whatsapp me-2"></i>Uji Coba WhatsApp Gateway</h5>
+                <div>
+                    <h5 class="fw-bold modal-title text-success mb-1">
+                        <i class="bi bi-whatsapp me-2"></i>Uji Coba Kirim Notifikasi WhatsApp Absensi
+                    </h5>
+                    <p class="text-muted small mb-0">Simulasikan pengiriman pesan notifikasi ke orang tua berdasarkan berbagai kondisi absensi.</p>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p class="text-muted small">Kirimkan pesan tes langsung ke nomor WhatsApp Anda untuk memverifikasi bahwa URL Gateway dan API Key berfungsi dengan baik.</p>
-                
+            
+            <div class="modal-body pt-3">
+                <!-- 1. Pilihan 4 Skenario Presensi -->
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Nomor WhatsApp Tujuan</label>
-                    <div class="input-group">
-                        <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
-                        <input type="text" class="form-control" id="testWaPhone" placeholder="Contoh: 081234567890 atau 6281234567890" value="<?= htmlspecialchars($settings['telepon'] ?? '') ?>">
+                    <label class="form-label small fw-bold text-dark d-block">Pilih Skenario Presensi untuk Diuji Coba:</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-sm btn-scenario-test btn-success active fw-bold px-3 py-2 rounded-3 shadow-2xs" id="btnScen_masuk_tepat" onclick="switchTestScenario('masuk_tepat')">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> 1. Masuk (Tepat Waktu)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-scenario-test btn-outline-secondary fw-bold px-3 py-2 rounded-3 shadow-2xs" id="btnScen_masuk_terlambat" onclick="switchTestScenario('masuk_terlambat')">
+                            <i class="bi bi-clock-history me-1"></i> 2. Masuk (Terlambat)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-scenario-test btn-outline-secondary fw-bold px-3 py-2 rounded-3 shadow-2xs" id="btnScen_pulang" onclick="switchTestScenario('pulang')">
+                            <i class="bi bi-box-arrow-right me-1"></i> 3. Pulang Sekolah
+                        </button>
+                        <button type="button" class="btn btn-sm btn-scenario-test btn-outline-secondary fw-bold px-3 py-2 rounded-3 shadow-2xs" id="btnScen_tidak_hadir" onclick="switchTestScenario('tidak_hadir')">
+                            <i class="bi bi-exclamation-triangle me-1"></i> 4. Tidak Hadir (Izin/Sakit/Alpha)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-scenario-test btn-outline-secondary fw-bold px-3 py-2 rounded-3 shadow-2xs" id="btnScen_custom" onclick="switchTestScenario('custom')">
+                            <i class="bi bi-chat-dots me-1"></i> Pesan Bebas
+                        </button>
                     </div>
-                    <small class="text-muted" style="font-size:0.75rem;">Mendukung awalan 08 atau 62 (otomatis diformat).</small>
                 </div>
 
+                <!-- 2. Parameter Simulasi (Siswa & Status) -->
+                <div class="p-3 bg-light rounded-3 border mb-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-md-7">
+                            <label class="form-label small fw-bold text-secondary mb-1">Simulasi Data Siswa:</label>
+                            <select class="form-select form-select-sm rounded-3" id="testWaStudentSelect" onchange="generateScenarioMessage()">
+                                <option value="">-- Gunakan Siswa Contoh (Muhammad Rizky - XII RPL 1) --</option>
+                                <?php if (!empty($sampleSiswaList)): ?>
+                                    <?php foreach (array_slice($sampleSiswaList, 0, 20) as $sw): ?>
+                                        <option value="<?= $sw['id'] ?>">
+                                            <?= htmlspecialchars($sw['nama_lengkap']) ?> (<?= htmlspecialchars($sw['nama_kelas'] ?? '-') ?>) <?= !empty($sw['no_ortu']) ? ' - [WA: ' . htmlspecialchars($sw['no_ortu']) . ']' : '' ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-5 d-none" id="optAbsenceStatusGroup">
+                            <label class="form-label small fw-bold text-danger mb-1">Status Kehadiran:</label>
+                            <div class="d-flex gap-2">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="test_absence_substatus" id="stIzin" value="Izin" checked onchange="generateScenarioMessage()">
+                                    <label class="form-check-label small fw-semibold" for="stIzin">Izin</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="test_absence_substatus" id="stSakit" value="Sakit" onchange="generateScenarioMessage()">
+                                    <label class="form-check-label small fw-semibold" for="stSakit">Sakit</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="test_absence_substatus" id="stAlpha" value="Alpha" onchange="generateScenarioMessage()">
+                                    <label class="form-check-label small fw-semibold" for="stAlpha">Alpha</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Nomor WhatsApp Tujuan Uji Coba -->
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Isi Pesan Uji Coba</label>
-                    <textarea class="form-control font-monospace small" id="testWaMsg" rows="4">🔔 [UJI COBA GATEWAY]
-Halo! Pesan ini adalah uji coba koneksi API WhatsApp Gateway dari E-Learning SMK Muthia Harapan Cicalengka.
-Waktu Pengujian: <?= date('d/m/Y H:i:s') ?> WIB.
-Status: Terkoneksi Sukses! ✅</textarea>
+                    <label class="form-label small fw-bold text-dark mb-1">
+                        <i class="bi bi-phone text-success me-1"></i> Nomor WhatsApp Penerima Uji Coba
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-whatsapp text-success"></i></span>
+                        <input type="text" class="form-control border-start-0" id="testWaPhone" placeholder="Contoh: 081234567890 atau 6281234567890" value="<?= htmlspecialchars($settings['telepon'] ?? '') ?>">
+                        <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('testWaPhone').value=''; document.getElementById('testWaPhone').focus();" title="Kosongkan">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted" style="font-size:0.75rem;">Masukkan nomor WhatsApp Anda sendiri / nomor penguji untuk memverifikasi pesan masuk.</small>
                 </div>
 
+                <!-- 4. Textarea Preview & Edit Pesan -->
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-bold text-dark mb-0">Preview Pesan yang Akan Dikirim:</label>
+                        <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 text-muted" onclick="generateScenarioMessage()" title="Reset ke teks template awal">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Muat Ulang dari Template
+                        </button>
+                    </div>
+                    <textarea class="form-control font-monospace small bg-light-subtle" id="testWaMsg" rows="6"></textarea>
+                    <small class="text-muted" style="font-size:0.75rem;">Anda dapat mengedit teks ini secara bebas sebelum mengklik kirim.</small>
+                </div>
+
+                <!-- Alert Hasil Pengiriman -->
                 <div id="testWaResultBox" class="alert mt-3 d-none"></div>
             </div>
+
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Tutup</button>
-                <button type="button" class="btn btn-success fw-bold px-4" id="btnSubmitTestWa" onclick="sendLiveWhatsAppTest()">
-                    <i class="bi bi-send-fill me-1"></i> Kirim Pesan Sekarang
+                <button type="button" class="btn btn-success fw-bold px-4 rounded-3 shadow-xs" id="btnSubmitTestWa" onclick="sendLiveWhatsAppTest()">
+                    <i class="bi bi-send-fill me-1"></i> Kirim Uji Coba Sekarang
                 </button>
             </div>
         </div>
