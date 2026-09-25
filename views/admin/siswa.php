@@ -742,18 +742,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         <input type="file" name="excel_file" class="form-control" accept=".csv, .xls, .xlsx" required>
                     </div>
                     <div class="p-3 bg-light rounded-3 border mb-2">
-                        <small class="fw-bold text-dark d-block mb-1">Panduan Pengisian Template:</small>
+                        <small class="fw-bold text-dark d-block mb-1"><i class="bi bi-info-circle-fill text-primary me-1"></i>Panduan Pengisian Template Excel:</small>
                         <ul class="small text-muted mb-0 ps-3">
-                            <li>Kolom wajib: NIS, NISN, & Nama Lengkap</li>
-                            <li>Kesesuaian Kelas & Jurusan: Isi nama kelas (contoh: <code>X RPL 1</code>) dan nama jurusan</li>
-                            <li>Password default: <code>123456</code> (jika diubah/kosong)</li>
-                            <li>No. Ortu (WA): Format nomor WhatsApp orang tua (contoh: <code>081234567890</code>) untuk notifikasi presensi otomatis</li>
+                            <li><strong>Kolom Wajib:</strong> NIS, NISN, & Nama Lengkap</li>
+                            <li><strong>Kelas & Jurusan:</strong> Isi sesuai data master (contoh: <code>X RPL 1</code> / <code>Rekayasa Perangkat Lunak</code>)</li>
+                            <li><strong>Akun & Password:</strong> Jika dikosongkan, sistem otomatis membuat username unik dan password default <code>123456</code></li>
+                            <li><strong>No Ortu (WhatsApp):</strong> Masukkan nomor WA orang tua (contoh: <code>081234567890</code>) agar notifikasi presensi otomatis terkirim via WhatsApp</li>
+                            <li><strong>Alamat:</strong> Masukkan alamat domisili siswa (opsional)</li>
                         </ul>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 justify-content-between">
-                    <a href="<?= BASE_URL ?>index.php?url=admin/templateSiswa" class="btn btn-outline-success btn-sm">
-                        <i class="bi bi-download me-1"></i> Unduh Template
+                    <a href="<?= BASE_URL ?>index.php?url=admin/templateSiswa" class="btn btn-outline-success btn-sm fw-bold">
+                        <i class="bi bi-download me-1"></i> Unduh Template Excel (.csv)
                     </a>
                     <div>
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>

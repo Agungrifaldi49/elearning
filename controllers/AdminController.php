@@ -1238,11 +1238,74 @@ class AdminController {
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=template_import_siswa.csv');
         $output = fopen('php://output', 'w');
+        // UTF-8 BOM agar terbaca rapi saat dibuka langsung di Microsoft Excel
         fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
         fwrite($output, "sep=;\n");
-        fputcsv($output, ['NIS', 'NISN', 'Nama Lengkap', 'Nama Kelas', 'Nama Jurusan', 'Username', 'Email', 'Password', 'Jenis Kelamin (L/P)', 'No Telepon', 'No Ortu (WA)'], ';');
-        fputcsv($output, ['222310001', '0051234567', 'Ahmad Fauzi', 'X RPL 1', 'Rekayasa Perangkat Lunak', 'fauzi22', 'fauzi@smkmh-cicalengka.sch.id', '123456', 'L', '081234567891', '081234567890'], ';');
-        fputcsv($output, ['222310002', '0051234568', 'Annisa Putri', 'XI TKJ 1', 'Teknik Komputer dan Jaringan', 'annisa22', 'annisa@smkmh-cicalengka.sch.id', '123456', 'P', '081234567892', '081234567899'], ';');
+        
+        // Header kolom resmi
+        fputcsv($output, [
+            'NIS', 
+            'NISN', 
+            'Nama Lengkap', 
+            'Nama Kelas', 
+            'Nama Jurusan', 
+            'Username', 
+            'Email', 
+            'Password', 
+            'Jenis Kelamin (L/P)', 
+            'No Telepon Siswa', 
+            'No Ortu (WhatsApp)', 
+            'Alamat'
+        ], ';');
+
+        // Baris Contoh 1
+        fputcsv($output, [
+            '222310001', 
+            '0051234567', 
+            'Ahmad Fauzi', 
+            'X RPL 1', 
+            'Rekayasa Perangkat Lunak', 
+            'fauzi22', 
+            'fauzi@smkmh-cicalengka.sch.id', 
+            '123456', 
+            'L', 
+            '081234567891', 
+            '081234567890', 
+            'Jl. Raya Cicalengka No. 10'
+        ], ';');
+
+        // Baris Contoh 2
+        fputcsv($output, [
+            '222310002', 
+            '0051234568', 
+            'Annisa Putri', 
+            'XI TKJ 1', 
+            'Teknik Komputer dan Jaringan', 
+            'annisa22', 
+            'annisa@smkmh-cicalengka.sch.id', 
+            '123456', 
+            'P', 
+            '081234567892', 
+            '081298765432', 
+            'Kp. Babakan RT 01/RW 04'
+        ], ';');
+
+        // Baris Contoh 3
+        fputcsv($output, [
+            '222310003', 
+            '0051234569', 
+            'Budi Pratama', 
+            'XII RPL 1', 
+            'Rekayasa Perangkat Lunak', 
+            'budi22', 
+            'budi@smkmh-cicalengka.sch.id', 
+            '123456', 
+            'L', 
+            '081234567893', 
+            '085712345678', 
+            'Jl. Alun-Alun Cicalengka No. 5'
+        ], ';');
+
         fclose($output);
         exit();
     }
@@ -1259,60 +1322,93 @@ class AdminController {
 
             $rows = $this->parseCsvFile($tmpFile);
             if (!empty($rows)) {
+                $headerRow = $rows[0] ?? [];
+                
+                // Pemetaan header secara fleksibel (case-insensitive & abaikan simbol)
+                $colMap = [];
+                foreach ($headerRow as $idx => $hName) {
+                    $norm = strtolower(trim(preg_replace('/[^a-zA-Z0-9]/', '', $hName)));
+                    $colMap[$norm] = $idx;
+                }
+
+                $findCol = function($keys, $defaultIndex) use ($colMap) {
+                    foreach ($keys as $k) {
+                        if (isset($colMap[$k])) return $colMap[$k];
+                    }
+                    return $defaultIndex;
+                };
+
+                $idxNis      = $findCol(['nis'], 0);
+                $idxNisn     = $findCol(['nisn'], 1);
+                $idxNama     = $findCol(['namalengkap', 'nama', 'namasiswa'], 2);
+                $idxKelas    = $findCol(['namakelas', 'kelas'], 3);
+                $idxJurusan  = $findCol(['namajurusan', 'jurusan'], 4);
+                $idxUsername = $findCol(['username', 'user'], 5);
+                $idxEmail    = $findCol(['email', 'surel'], 6);
+                $idxPass     = $findCol(['password', 'pass', 'katasandi'], 7);
+                $idxJk       = $findCol(['jeniskelaminlp', 'jeniskelamin', 'jk', 'gender'], 8);
+                $idxTelp     = $findCol(['noteleponsiswa', 'notelepon', 'telepon', 'nohp', 'nohpsiswa'], 9);
+                $idxNoOrtu   = $findCol(['noortuwhatsapp', 'noortuwa', 'noortu', 'nohportu', 'teleponortu', 'waortu', 'whatsapportu', 'nomorortu', 'no_ortu'], 10);
+                $idxAlamat   = $findCol(['alamat', 'domisili', 'alamattinggal'], 11);
+
                 $dataRows = array_slice($rows, 1);
                 foreach ($dataRows as $data) {
-                    if (count($data) >= 3 && !empty(trim($data[2] ?? ''))) {
-                        $nis = Security::sanitize(trim($data[0] ?? ''));
-                        $nisn = Security::sanitize(trim($data[1] ?? ''));
-                        $nama = Security::sanitize(trim($data[2] ?? ''));
-                        $namaKelas = trim($data[3] ?? '');
-                        $namaJurusan = trim($data[4] ?? '');
-                        $username = Security::sanitize(trim($data[5] ?? ''));
-                        $email = Security::sanitize(trim($data[6] ?? ''));
-                        $password = trim($data[7] ?? '123456');
-                        $jk = strtoupper(trim($data[8] ?? 'L')) === 'P' ? 'P' : 'L';
-                        $telp = Security::sanitize(trim($data[9] ?? ''));
-                        $noOrtu = Security::sanitize(trim($data[10] ?? ''));
+                    $namaVal = trim($data[$idxNama] ?? ($data[2] ?? ''));
+                    if (empty($namaVal)) continue;
 
-                        $kelasId = $kelasList[0]['id'] ?? 1;
-                        foreach ($kelasList as $k) {
-                            if (strcasecmp($k['nama_kelas'], $namaKelas) === 0) {
-                                $kelasId = $k['id'];
-                                break;
-                            }
-                        }
+                    $nis = Security::sanitize(trim($data[$idxNis] ?? ($data[0] ?? '')));
+                    $nisn = Security::sanitize(trim($data[$idxNisn] ?? ($data[1] ?? '')));
+                    $nama = Security::sanitize($namaVal);
+                    $namaKelas = trim($data[$idxKelas] ?? ($data[3] ?? ''));
+                    $namaJurusan = trim($data[$idxJurusan] ?? ($data[4] ?? ''));
+                    $username = Security::sanitize(trim($data[$idxUsername] ?? ($data[5] ?? '')));
+                    $email = Security::sanitize(trim($data[$idxEmail] ?? ($data[6] ?? '')));
+                    $password = trim($data[$idxPass] ?? ($data[7] ?? '123456'));
+                    if (empty($password)) $password = '123456';
+                    $jkRaw = strtoupper(trim($data[$idxJk] ?? ($data[8] ?? 'L')));
+                    $jk = ($jkRaw === 'P') ? 'P' : 'L';
+                    $telp = Security::sanitize(trim($data[$idxTelp] ?? ($data[9] ?? '')));
+                    $noOrtu = Security::sanitize(trim($data[$idxNoOrtu] ?? ($data[10] ?? '')));
+                    $alamat = Security::sanitize(trim($data[$idxAlamat] ?? ($data[11] ?? '')));
 
-                        $jurusanId = $jurusanList[0]['id'] ?? 1;
-                        foreach ($jurusanList as $j) {
-                            if (strcasecmp($j['nama_jurusan'], $namaJurusan) === 0 || strcasecmp($j['kode_jurusan'], $namaJurusan) === 0) {
-                                $jurusanId = $j['id'];
-                                break;
-                            }
+                    $kelasId = $kelasList[0]['id'] ?? 1;
+                    foreach ($kelasList as $k) {
+                        if (strcasecmp($k['nama_kelas'], $namaKelas) === 0) {
+                            $kelasId = $k['id'];
+                            break;
                         }
-
-                        if (empty($username)) {
-                            $username = 'siswa_' . strtolower(str_replace(' ', '', $nama)) . rand(10, 99);
-                        }
-                        if (empty($email)) {
-                            $email = $username . '@smkmh-cicalengka.sch.id';
-                        }
-
-                        $success = $siswaModel->addSiswa([
-                            'nis' => $nis,
-                            'nisn' => $nisn,
-                            'nama_lengkap' => $nama,
-                            'kelas_id' => $kelasId,
-                            'jurusan_id' => $jurusanId,
-                            'username' => $username,
-                            'email' => $email,
-                            'password' => $password,
-                            'jenis_kelamin' => $jk,
-                            'no_telepon' => $telp,
-                            'no_ortu' => $noOrtu,
-                            'alamat' => ''
-                        ]);
-                        if ($success) $importedCount++;
                     }
+
+                    $jurusanId = $jurusanList[0]['id'] ?? 1;
+                    foreach ($jurusanList as $j) {
+                        if (strcasecmp($j['nama_jurusan'], $namaJurusan) === 0 || strcasecmp($j['kode_jurusan'], $namaJurusan) === 0) {
+                            $jurusanId = $j['id'];
+                            break;
+                        }
+                    }
+
+                    if (empty($username)) {
+                        $username = 'siswa_' . strtolower(str_replace(' ', '', $nama)) . rand(10, 99);
+                    }
+                    if (empty($email)) {
+                        $email = $username . '@smkmh-cicalengka.sch.id';
+                    }
+
+                    $success = $siswaModel->addSiswa([
+                        'nis' => $nis,
+                        'nisn' => $nisn,
+                        'nama_lengkap' => $nama,
+                        'kelas_id' => $kelasId,
+                        'jurusan_id' => $jurusanId,
+                        'username' => $username,
+                        'email' => $email,
+                        'password' => $password,
+                        'jenis_kelamin' => $jk,
+                        'no_telepon' => $telp,
+                        'no_ortu' => $noOrtu,
+                        'alamat' => $alamat
+                    ]);
+                    if ($success) $importedCount++;
                 }
             }
             FlashHelper::setSuccess("Berhasil mengimpor {$importedCount} data siswa dari file Excel!");
