@@ -222,36 +222,46 @@ class AdminController {
 
             $action = $_POST['action'] ?? '';
             if ($action === 'create') {
-                $siswaModel->addSiswa([
-                    'username' => Security::sanitize($_POST['username']),
-                    'email' => Security::sanitize($_POST['email']),
-                    'password' => $_POST['password'],
-                    'nis' => Security::sanitize($_POST['nis']),
-                    'nisn' => Security::sanitize($_POST['nisn']),
-                    'nama_lengkap' => Security::sanitize($_POST['nama_lengkap']),
-                    'kelas_id' => (int)$_POST['kelas_id'],
-                    'jurusan_id' => (int)$_POST['jurusan_id'],
-                    'jenis_kelamin' => $_POST['jenis_kelamin'],
-                    'no_telepon' => Security::sanitize($_POST['no_telepon'] ?? ''),
-                    'no_ortu' => Security::sanitize($_POST['no_ortu'] ?? ''),
-                    'alamat' => Security::sanitize($_POST['alamat'] ?? '')
-                ]);
-                FlashHelper::setSuccess('Data Siswa berhasil ditambahkan.');
-            } elseif ($action === 'update') {
-                $siswaModel->updateSiswa((int)$_POST['id'], [
-                    'email' => Security::sanitize($_POST['email']),
+                $noOrtu = Security::sanitize($_POST['no_ortu'] ?? $_POST['no_hp_ortu'] ?? $_POST['no_hp'] ?? $_POST['telepon_ortu'] ?? '');
+                $res = $siswaModel->addSiswa([
+                    'username' => Security::sanitize($_POST['username'] ?? ''),
+                    'email' => Security::sanitize($_POST['email'] ?? ''),
                     'password' => $_POST['password'] ?? '',
-                    'nis' => Security::sanitize($_POST['nis']),
-                    'nisn' => Security::sanitize($_POST['nisn']),
-                    'nama_lengkap' => Security::sanitize($_POST['nama_lengkap']),
-                    'kelas_id' => (int)$_POST['kelas_id'],
-                    'jurusan_id' => (int)$_POST['jurusan_id'],
-                    'jenis_kelamin' => $_POST['jenis_kelamin'],
+                    'nis' => Security::sanitize($_POST['nis'] ?? ''),
+                    'nisn' => Security::sanitize($_POST['nisn'] ?? ''),
+                    'nama_lengkap' => Security::sanitize($_POST['nama_lengkap'] ?? ''),
+                    'kelas_id' => (int)($_POST['kelas_id'] ?? 0),
+                    'jurusan_id' => (int)($_POST['jurusan_id'] ?? 0),
+                    'jenis_kelamin' => $_POST['jenis_kelamin'] ?? 'L',
                     'no_telepon' => Security::sanitize($_POST['no_telepon'] ?? ''),
-                    'no_ortu' => Security::sanitize($_POST['no_ortu'] ?? ''),
+                    'no_ortu' => $noOrtu,
                     'alamat' => Security::sanitize($_POST['alamat'] ?? '')
                 ]);
-                FlashHelper::setSuccess('Data Siswa berhasil diperbarui.');
+                if ($res) {
+                    FlashHelper::setSuccess('Data Siswa berhasil ditambahkan.');
+                } else {
+                    FlashHelper::setError('Gagal menambahkan data siswa.');
+                }
+            } elseif ($action === 'update') {
+                $noOrtu = Security::sanitize($_POST['no_ortu'] ?? $_POST['no_hp_ortu'] ?? $_POST['no_hp'] ?? $_POST['telepon_ortu'] ?? '');
+                $res = $siswaModel->updateSiswa((int)$_POST['id'], [
+                    'email' => Security::sanitize($_POST['email'] ?? ''),
+                    'password' => $_POST['password'] ?? '',
+                    'nis' => Security::sanitize($_POST['nis'] ?? ''),
+                    'nisn' => Security::sanitize($_POST['nisn'] ?? ''),
+                    'nama_lengkap' => Security::sanitize($_POST['nama_lengkap'] ?? ''),
+                    'kelas_id' => (int)($_POST['kelas_id'] ?? 0),
+                    'jurusan_id' => (int)($_POST['jurusan_id'] ?? 0),
+                    'jenis_kelamin' => $_POST['jenis_kelamin'] ?? 'L',
+                    'no_telepon' => Security::sanitize($_POST['no_telepon'] ?? ''),
+                    'no_ortu' => $noOrtu,
+                    'alamat' => Security::sanitize($_POST['alamat'] ?? '')
+                ]);
+                if ($res) {
+                    FlashHelper::setSuccess('Data Siswa berhasil diperbarui.');
+                } else {
+                    FlashHelper::setError('Gagal memperbarui data siswa.');
+                }
             } elseif ($action === 'delete') {
                 $siswaModel->deleteSiswa((int)$_POST['id']);
                 FlashHelper::setSuccess('Data Siswa berhasil dihapus.');
@@ -285,7 +295,11 @@ class AdminController {
                 $matrixData = $_POST['matrix_siswa'] ?? [];
                 if (!empty($matrixData) && is_array($matrixData)) {
                     $cnt = $siswaModel->bulkUpdateMatrix($matrixData);
-                    FlashHelper::setSuccess("Berhasil memperbarui {$cnt} data siswa sekaligus dalam sekali simpan!");
+                    if ($cnt > 0) {
+                        FlashHelper::setSuccess("Berhasil memperbarui {$cnt} data siswa sekaligus dalam sekali simpan!");
+                    } else {
+                        FlashHelper::setError('Tidak ada data siswa yang berhasil diperbarui. Periksa kelengkapan data.');
+                    }
                 } else {
                     FlashHelper::setError('Tidak ada data perubahan yang dikirimkan.');
                 }
@@ -294,7 +308,11 @@ class AdminController {
             // Build redirect URL keeping active filters
             $redirectUrl = BASE_URL . 'index.php?url=admin/siswa';
             if (!empty($_POST['redirect_query'])) {
-                $redirectUrl .= '&' . ltrim($_POST['redirect_query'], '&');
+                parse_str($_POST['redirect_query'], $parsedQuery);
+                unset($parsedQuery['url']);
+                if (!empty($parsedQuery)) {
+                    $redirectUrl .= '&' . http_build_query($parsedQuery);
+                }
             }
             header('Location: ' . $redirectUrl);
             exit();

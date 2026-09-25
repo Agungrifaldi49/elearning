@@ -124,28 +124,56 @@ class SiswaModel extends BaseModel {
 
     public function updateSiswa($id, $data) {
         $stmt = $this->db->prepare("SELECT user_id FROM siswa WHERE id = ?");
-        $stmt->execute([$id]);
+        $stmt->execute([(int)$id]);
         $siswa = $stmt->fetch();
 
         if (!$siswa) return false;
 
+        $noOrtu = trim($data['no_ortu'] ?? $data['no_hp_ortu'] ?? $data['no_hp'] ?? $data['telepon_ortu'] ?? '');
+        $alamat = isset($data['alamat']) ? trim($data['alamat']) : null;
+
         $this->db->beginTransaction();
         try {
-            $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ? WHERE id = ?");
-            $stmtSiswa->execute([$data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $data['no_ortu'] ?? null, $id]);
+            if ($alamat !== null) {
+                $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ?, alamat = ? WHERE id = ?");
+                $stmtSiswa->execute([$data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $noOrtu, $alamat, (int)$id]);
+            } else {
+                $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ? WHERE id = ?");
+                $stmtSiswa->execute([$data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $noOrtu, (int)$id]);
+            }
 
-            $stmtUser = $this->db->prepare("UPDATE users SET full_name = ?, email = ? WHERE id = ?");
-            $stmtUser->execute([$data['nama_lengkap'], $data['email'], $siswa['user_id']]);
+            if (!empty($siswa['user_id'])) {
+                $userId = (int)$siswa['user_id'];
+                $newEmail = trim($data['email'] ?? '');
+                
+                // Cek apakah email sudah dipakai user lain
+                $emailToSave = null;
+                if (!empty($newEmail)) {
+                    $chkEmail = $this->db->prepare("SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1");
+                    $chkEmail->execute([$newEmail, $userId]);
+                    if (!$chkEmail->fetch()) {
+                        $emailToSave = $newEmail;
+                    }
+                }
 
-            if (!empty($data['password'])) {
-                $hash = password_hash($data['password'], PASSWORD_BCRYPT);
-                $stmtPass = $this->db->prepare("UPDATE users SET password = ? WHERE id = ?");
-                $stmtPass->execute([$hash, $siswa['user_id']]);
+                if ($emailToSave !== null) {
+                    $stmtUser = $this->db->prepare("UPDATE users SET full_name = ?, email = ? WHERE id = ?");
+                    $stmtUser->execute([$data['nama_lengkap'], $emailToSave, $userId]);
+                } else {
+                    $stmtUser = $this->db->prepare("UPDATE users SET full_name = ? WHERE id = ?");
+                    $stmtUser->execute([$data['nama_lengkap'], $userId]);
+                }
+
+                if (!empty($data['password'])) {
+                    $hash = password_hash($data['password'], PASSWORD_BCRYPT);
+                    $stmtPass = $this->db->prepare("UPDATE users SET password = ? WHERE id = ?");
+                    $stmtPass->execute([$hash, $userId]);
+                }
             }
 
             $this->db->commit();
             return true;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->db->rollBack();
             return false;
         }
@@ -464,7 +492,7 @@ class SiswaModel extends BaseModel {
         $this->db->beginTransaction();
         try {
             $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_ortu = ? WHERE id = ?");
-            $stmtUser = $this->db->prepare("UPDATE users u JOIN siswa s ON u.id = s.user_id SET u.full_name = ? WHERE s.id = ?");
+            $stmtUser = $this->db->prepare("UPDATE users SET full_name = ? WHERE id = (SELECT user_id FROM siswa WHERE id = ?)");
 
             foreach ($matrixData as $id => $row) {
                 $sId = (int)$id;
@@ -474,10 +502,16 @@ class SiswaModel extends BaseModel {
                 $nama = Security::sanitize($row['nama_lengkap'] ?? '');
                 $kelasId = (int)($row['kelas_id'] ?? 0);
                 $jurusanId = (int)($row['jurusan_id'] ?? 0);
-                $jk = in_array(strtoupper($row['jenis_kelamin'] ?? 'L'), ['L', 'P']) ? strtoupper($row['jenis_kelamin']) : 'L';
-                $noOrtu = Security::sanitize($row['no_ortu'] ?? '');
+                $jkRaw = strtoupper($row['jenis_kelamin'] ?? 'L');
+                $jk = in_array($jkRaw, ['L', 'P']) ? $jkRaw : 'L';
+                $noOrtu = Security::sanitize($row['no_ortu'] ?? $row['no_hp_ortu'] ?? $row['no_hp'] ?? $row['telepon_ortu'] ?? '');
 
-                if (!empty($nama) && $kelasId > 0 && $jurusanId > 0) {
+                if (!empty($nama)) {
+                    if ($kelasId <= 0 || $jurusanId <= 0) {
+                        $curr = $this->db->query("SELECT kelas_id, jurusan_id FROM siswa WHERE id = {$sId}")->fetch();
+                        if ($kelasId <= 0) $kelasId = (int)($curr['kelas_id'] ?? 1);
+                        if ($jurusanId <= 0) $jurusanId = (int)($curr['jurusan_id'] ?? 1);
+                    }
                     $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noOrtu, $sId]);
                     $stmtUser->execute([$nama, $sId]);
                     $count++;
