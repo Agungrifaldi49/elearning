@@ -435,7 +435,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="modal-header border-0 pb-0">
                 <div>
                     <h5 class="fw-bold modal-title"><i class="bi bi-pencil-square text-warning me-2"></i>Mode Edit Massal Data Siswa (Tabel Spreadsheet)</h5>
-                    <p class="text-muted small mb-0">Ubah data NIS, NISN, Nama, Kelas, Jurusan, & JK secara sekaligus dalam 1 kali simpan.</p>
+                    <p class="text-muted small mb-0">Ubah data NIS, NISN, Nama, Kelas, Jurusan, JK, & No. WhatsApp Ortu secara massal sekaligus dalam 1 kali simpan.</p>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -450,12 +450,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <thead class="table-primary sticky-top">
                                 <tr>
                                     <th style="width: 40px;">No</th>
-                                    <th style="width: 140px;">NIS</th>
-                                    <th style="width: 140px;">NISN</th>
+                                    <th style="width: 130px;">NIS</th>
+                                    <th style="width: 130px;">NISN</th>
                                     <th>Nama Lengkap Siswa</th>
-                                    <th style="width: 160px;">Kelas</th>
-                                    <th style="width: 160px;">Jurusan</th>
-                                    <th style="width: 90px;">JK</th>
+                                    <th style="width: 150px;">Kelas</th>
+                                    <th style="width: 150px;">Jurusan</th>
+                                    <th style="width: 70px;">JK</th>
+                                    <th style="width: 160px;"><i class="bi bi-whatsapp me-1 text-success"></i>No. Ortu (WA)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -494,6 +495,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <option value="L" <?= $sw['jenis_kelamin'] === 'L' ? 'selected' : '' ?>>L</option>
                                                 <option value="P" <?= $sw['jenis_kelamin'] === 'P' ? 'selected' : '' ?>>P</option>
                                             </select>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="matrix_siswa[<?= $sw['id'] ?>][no_ortu]" value="<?= htmlspecialchars($sw['no_ortu'] ?? '') ?>" class="form-control form-control-sm font-monospace border-success-subtle" placeholder="08xxxxxxxxxx">
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -743,6 +747,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <li>Kolom wajib: NIS, NISN, & Nama Lengkap</li>
                             <li>Kesesuaian Kelas & Jurusan: Isi nama kelas (contoh: <code>X RPL 1</code>) dan nama jurusan</li>
                             <li>Password default: <code>123456</code> (jika diubah/kosong)</li>
+                            <li>No. Ortu (WA): Format nomor WhatsApp orang tua (contoh: <code>081234567890</code>) untuk notifikasi presensi otomatis</li>
                         </ul>
                     </div>
                 </div>

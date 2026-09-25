@@ -463,7 +463,7 @@ class SiswaModel extends BaseModel {
         $count = 0;
         $this->db->beginTransaction();
         try {
-            $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ? WHERE id = ?");
+            $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_ortu = ? WHERE id = ?");
             $stmtUser = $this->db->prepare("UPDATE users u JOIN siswa s ON u.id = s.user_id SET u.full_name = ? WHERE s.id = ?");
 
             foreach ($matrixData as $id => $row) {
@@ -475,9 +475,10 @@ class SiswaModel extends BaseModel {
                 $kelasId = (int)($row['kelas_id'] ?? 0);
                 $jurusanId = (int)($row['jurusan_id'] ?? 0);
                 $jk = in_array(strtoupper($row['jenis_kelamin'] ?? 'L'), ['L', 'P']) ? strtoupper($row['jenis_kelamin']) : 'L';
+                $noOrtu = Security::sanitize($row['no_ortu'] ?? '');
 
                 if (!empty($nama) && $kelasId > 0 && $jurusanId > 0) {
-                    $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $sId]);
+                    $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noOrtu, $sId]);
                     $stmtUser->execute([$nama, $sId]);
                     $count++;
                 }

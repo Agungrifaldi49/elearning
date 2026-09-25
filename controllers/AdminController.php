@@ -1221,9 +1221,9 @@ class AdminController {
         $output = fopen('php://output', 'w');
         fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
         fwrite($output, "sep=;\n");
-        fputcsv($output, ['NIS', 'NISN', 'Nama Lengkap', 'Nama Kelas', 'Nama Jurusan', 'Username', 'Email', 'Password', 'Jenis Kelamin (L/P)', 'No Telepon'], ';');
-        fputcsv($output, ['222310001', '0051234567', 'Ahmad Fauzi', 'X RPL 1', 'Rekayasa Perangkat Lunak', 'fauzi22', 'fauzi@smkmh-cicalengka.sch.id', '123456', 'L', '081234567891'], ';');
-        fputcsv($output, ['222310002', '0051234568', 'Annisa Putri', 'XI TKJ 1', 'Teknik Komputer dan Jaringan', 'annisa22', 'annisa@smkmh-cicalengka.sch.id', '123456', 'P', '081234567892'], ';');
+        fputcsv($output, ['NIS', 'NISN', 'Nama Lengkap', 'Nama Kelas', 'Nama Jurusan', 'Username', 'Email', 'Password', 'Jenis Kelamin (L/P)', 'No Telepon', 'No Ortu (WA)'], ';');
+        fputcsv($output, ['222310001', '0051234567', 'Ahmad Fauzi', 'X RPL 1', 'Rekayasa Perangkat Lunak', 'fauzi22', 'fauzi@smkmh-cicalengka.sch.id', '123456', 'L', '081234567891', '081234567890'], ';');
+        fputcsv($output, ['222310002', '0051234568', 'Annisa Putri', 'XI TKJ 1', 'Teknik Komputer dan Jaringan', 'annisa22', 'annisa@smkmh-cicalengka.sch.id', '123456', 'P', '081234567892', '081234567899'], ';');
         fclose($output);
         exit();
     }
@@ -1253,6 +1253,7 @@ class AdminController {
                         $password = trim($data[7] ?? '123456');
                         $jk = strtoupper(trim($data[8] ?? 'L')) === 'P' ? 'P' : 'L';
                         $telp = Security::sanitize(trim($data[9] ?? ''));
+                        $noOrtu = Security::sanitize(trim($data[10] ?? ''));
 
                         $kelasId = $kelasList[0]['id'] ?? 1;
                         foreach ($kelasList as $k) {
@@ -1288,6 +1289,7 @@ class AdminController {
                             'password' => $password,
                             'jenis_kelamin' => $jk,
                             'no_telepon' => $telp,
+                            'no_ortu' => $noOrtu,
                             'alamat' => ''
                         ]);
                         if ($success) $importedCount++;
