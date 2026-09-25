@@ -653,14 +653,22 @@ class AbsensiModel extends BaseModel {
                     $jamPulang = date('H:i', strtotime($now));
 
                     // Kirim Notifikasi WhatsApp Pulang ke Orang Tua Siswa
+                    $waStatusInfo = '';
                     try {
                         require_once ROOT_PATH . 'helpers/WhatsAppHelper.php';
-                        WhatsAppHelper::sendNotificationAbsensi($siswa, 'pulang', [
+                        $waRes = WhatsAppHelper::sendNotificationAbsensi($siswa, 'pulang', [
                             'tanggal' => $today,
                             'jam' => $jamPulang . ' WIB',
                             'status' => 'Pulang Sekolah',
                             'keterangan' => "KBM Hari Ini Selesai (Jam Masuk: {$jamMasuk} WIB)"
                         ]);
+                        if (!empty($waRes['status'])) {
+                            $waStatusInfo = ' 📲 [WA Ortu Terkirim]';
+                        } elseif (!empty($siswa['no_ortu'])) {
+                            $waStatusInfo = ' ⚠️ [WA Ortu: ' . ($waRes['message'] ?? 'Pending') . ']';
+                        } else {
+                            $waStatusInfo = ' (ℹ️ No. Ortu belum diisi)';
+                        }
                     } catch (\Throwable $eWa) {}
 
                     return [
@@ -672,7 +680,8 @@ class AbsensiModel extends BaseModel {
                         'jam' => $jamPulang . ' WIB',
                         'jam_masuk' => $jamMasuk . ' WIB',
                         'jam_pulang' => $jamPulang . ' WIB',
-                        'message' => "Presensi PULANG {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat pukul {$jamPulang} WIB! (Jam Masuk: {$jamMasuk} WIB)."
+                        'wa_info' => $waStatusInfo,
+                        'message' => "Presensi PULANG {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat pukul {$jamPulang} WIB!{$waStatusInfo}"
                     ];
                 }
             }
@@ -691,15 +700,23 @@ class AbsensiModel extends BaseModel {
                 $statusKet = $isLate ? 'Terlambat' : 'Hadir Tepat Waktu';
 
                 // Kirim Notifikasi WhatsApp Masuk ke Orang Tua Siswa
+                $waStatusInfo = '';
                 try {
                     require_once ROOT_PATH . 'helpers/WhatsAppHelper.php';
                     $waType = $isLate ? 'masuk_terlambat' : 'masuk_tepat';
-                    WhatsAppHelper::sendNotificationAbsensi($siswa, $waType, [
+                    $waRes = WhatsAppHelper::sendNotificationAbsensi($siswa, $waType, [
                         'tanggal' => $today,
                         'jam' => $jamMasuk . ' WIB',
                         'status' => $statusKet,
                         'keterangan' => $isLate ? 'Tiba di sekolah setelah batas waktu masuk 07:15 WIB' : 'Tepat Waktu'
                     ]);
+                    if (!empty($waRes['status'])) {
+                        $waStatusInfo = ' 📲 [WA Ortu Terkirim]';
+                    } elseif (!empty($siswa['no_ortu'])) {
+                        $waStatusInfo = ' ⚠️ [WA Ortu: ' . ($waRes['message'] ?? 'Pending') . ']';
+                    } else {
+                        $waStatusInfo = ' (ℹ️ No. Ortu belum diisi)';
+                    }
                 } catch (\Throwable $eWa) {}
 
                 return [
@@ -712,7 +729,8 @@ class AbsensiModel extends BaseModel {
                     'jam_masuk' => $jamMasuk . ' WIB',
                     'is_late' => $isLate,
                     'status_keterangan' => $statusKet,
-                    'message' => "Presensi MASUK {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat pukul {$jamMasuk} WIB! Status: {$statusKet}."
+                    'wa_info' => $waStatusInfo,
+                    'message' => "Presensi MASUK {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat pukul {$jamMasuk} WIB! Status: {$statusKet}.{$waStatusInfo}"
                 ];
             } else {
                 return ['success' => false, 'message' => 'Gagal menyimpan data presensi ke database.'];

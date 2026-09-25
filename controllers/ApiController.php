@@ -1568,6 +1568,18 @@ class ApiController {
                     'st' => $status
                 ]);
 
+                try {
+                    require_once ROOT_PATH . 'helpers/WhatsAppHelper.php';
+                    if (!empty($siswa['no_ortu'])) {
+                        WhatsAppHelper::sendNotificationAbsensi($siswa, 'masuk_tepat', [
+                            'tanggal' => $today,
+                            'jam' => date('H:i') . ' WIB',
+                            'status' => $status,
+                            'keterangan' => 'Presensi Siswa Mandiri'
+                        ]);
+                    }
+                } catch (\Throwable $eWa) {}
+
                 $this->jsonResponse(true, 'Presensi berhasil dicatat!');
                 break;
 
