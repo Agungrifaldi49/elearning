@@ -592,6 +592,40 @@ class Database {
                     INDEX `idx_natp_status` (`status_code`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
             ");
+
+            // Self-healing: Pastikan kolom no_ortu ada di tabel siswa
+            try {
+                $colCheck = self::$conn->query("SHOW COLUMNS FROM `siswa` LIKE 'no_ortu'")->fetch();
+                if (!$colCheck) {
+                    try {
+                        self::$conn->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL AFTER `no_telepon`");
+                    } catch (\Throwable $eAlter) {
+                        self::$conn->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL");
+                    }
+                }
+            } catch (\Throwable $eNoOrtu) {
+                // Abaikan jika tabel siswa belum ada
+            }
+
+            // Self-healing: Pastikan tabel wa_logs tersedia untuk log pengiriman WhatsApp
+            try {
+                self::$conn->exec("
+                    CREATE TABLE IF NOT EXISTS `wa_logs` (
+                        `id` INT AUTO_INCREMENT PRIMARY KEY,
+                        `siswa_id` INT NULL,
+                        `phone` VARCHAR(30) NOT NULL,
+                        `type` VARCHAR(50) NOT NULL DEFAULT 'absensi',
+                        `status` VARCHAR(30) NOT NULL DEFAULT 'pending',
+                        `message` TEXT NOT NULL,
+                        `response` TEXT NULL,
+                        `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        INDEX `idx_phone` (`phone`),
+                        INDEX `idx_created` (`created_at`)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                ");
+            } catch (\Throwable $eWaLogs) {
+                // Abaikan jika tabel sudah ada
+            }
         } catch (\Throwable $e) {
             // Silently ignore if table already exists or DDL restricted
         }

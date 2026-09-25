@@ -48,6 +48,19 @@ class SiswaModel extends BaseModel {
         return $stmt->fetchAll();
     }
 
+    public function getById($id) {
+        $stmt = $this->db->prepare("
+            SELECT s.*, k.nama_kelas, k.tingkat, j.nama_jurusan, u.username, u.email, u.avatar 
+            FROM siswa s 
+            LEFT JOIN users u ON s.user_id = u.id 
+            LEFT JOIN kelas k ON s.kelas_id = k.id 
+            LEFT JOIN jurusan j ON s.jurusan_id = j.id 
+            WHERE s.id = ?
+        ");
+        $stmt->execute([(int)$id]);
+        return $stmt->fetch();
+    }
+
     public function getByUserId($userId) {
         $stmt = $this->db->prepare("
             SELECT s.*, k.nama_kelas, k.tingkat, j.nama_jurusan, u.username, u.email, u.avatar 
@@ -101,7 +114,24 @@ class SiswaModel extends BaseModel {
         return $this->getByUserId($userId);
     }
 
+    public static function ensureNoOrtuColumn($db) {
+        static $checked = false;
+        if ($checked) return;
+        $checked = true;
+        try {
+            $colCheck = $db->query("SHOW COLUMNS FROM `siswa` LIKE 'no_ortu'")->fetch();
+            if (!$colCheck) {
+                try {
+                    $db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL AFTER `no_telepon`");
+                } catch (\Throwable $eAlter) {
+                    $db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL");
+                }
+            }
+        } catch (\Throwable $e) {}
+    }
+
     public function addSiswa($data) {
+        self::ensureNoOrtuColumn($this->db);
         $this->db->beginTransaction();
         try {
             // Create user account with explicit role_id = 3 (Siswa)
@@ -110,14 +140,24 @@ class SiswaModel extends BaseModel {
             $stmtUser->execute([$data['username'], $data['email'], $hash, $data['nama_lengkap']]);
             $userId = $this->db->lastInsertId();
 
-            // Create siswa profile
-            $stmtSiswa = $this->db->prepare("INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, no_telepon, no_ortu, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmtSiswa->execute([$userId, $data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $data['no_ortu'] ?? null, $data['alamat']]);
+            // Create siswa profile with self-healing fallback
+            try {
+                $stmtSiswa = $this->db->prepare("INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, no_telepon, no_ortu, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmtSiswa->execute([$userId, $data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $data['no_ortu'] ?? null, $data['alamat']]);
+            } catch (\Throwable $eInsert) {
+                if (strpos($eInsert->getMessage(), 'no_ortu') !== false || $eInsert->getCode() == '42S22') {
+                    $stmtSiswa = $this->db->prepare("INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, no_telepon, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmtSiswa->execute([$userId, $data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $data['alamat']]);
+                } else {
+                    throw $eInsert;
+                }
+            }
 
             $this->db->commit();
             return true;
         } catch (Exception $e) {
             $this->db->rollBack();
+            $this->lastError = $e->getMessage();
             return false;
         }
     }
@@ -178,14 +218,48 @@ class SiswaModel extends BaseModel {
             }
         }
 
+        self::ensureNoOrtuColumn($this->db);
+
         $this->db->beginTransaction();
         try {
-            $stmtSiswa = $this->db->prepare("
-                UPDATE siswa 
-                SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ?, alamat = ? 
-                WHERE id = ?
-            ");
-            $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $noOrtu, $alamat, $id]);
+            try {
+                $stmtSiswa = $this->db->prepare("
+                    UPDATE siswa 
+                    SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ?, alamat = ? 
+                    WHERE id = ?
+                ");
+                $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $noOrtu, $alamat, $id]);
+            } catch (\Throwable $eSiswa) {
+                // Self-healing jika kolom no_ortu belum ada di database ini (error 1054)
+                if (strpos($eSiswa->getMessage(), 'no_ortu') !== false || $eSiswa->getCode() == '42S22') {
+                    try {
+                        $this->db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL AFTER `no_telepon`");
+                    } catch (\Throwable $eAlter) {
+                        try {
+                            $this->db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL");
+                        } catch (\Throwable $eIgn) {}
+                    }
+
+                    try {
+                        $stmtSiswa = $this->db->prepare("
+                            UPDATE siswa 
+                            SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ?, alamat = ? 
+                            WHERE id = ?
+                        ");
+                        $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $noOrtu, $alamat, $id]);
+                    } catch (\Throwable $eRetry) {
+                        // Fallback update tanpa no_ortu jika DDL dibatasi
+                        $stmtSiswa = $this->db->prepare("
+                            UPDATE siswa 
+                            SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, alamat = ? 
+                            WHERE id = ?
+                        ");
+                        $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $alamat, $id]);
+                    }
+                } else {
+                    throw $eSiswa;
+                }
+            }
 
             if (!empty($siswa['user_id'])) {
                 $userId = (int)$siswa['user_id'];
@@ -534,10 +608,17 @@ class SiswaModel extends BaseModel {
 
     public function bulkUpdateMatrix($matrixData) {
         if (empty($matrixData) || !is_array($matrixData)) return 0;
+        self::ensureNoOrtuColumn($this->db);
         $count = 0;
         $this->db->beginTransaction();
         try {
-            $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_ortu = ? WHERE id = ?");
+            $hasNoOrtu = true;
+            try {
+                $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_ortu = ? WHERE id = ?");
+            } catch (\Throwable $ePrep) {
+                $hasNoOrtu = false;
+                $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ? WHERE id = ?");
+            }
             $stmtUser = $this->db->prepare("UPDATE users SET full_name = ? WHERE id = (SELECT user_id FROM siswa WHERE id = ?)");
 
             foreach ($matrixData as $id => $row) {
@@ -558,7 +639,33 @@ class SiswaModel extends BaseModel {
                         if ($kelasId <= 0) $kelasId = (int)($curr['kelas_id'] ?? 1);
                         if ($jurusanId <= 0) $jurusanId = (int)($curr['jurusan_id'] ?? 1);
                     }
-                    $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noOrtu, $sId]);
+
+                    if ($hasNoOrtu) {
+                        try {
+                            $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noOrtu, $sId]);
+                        } catch (\Throwable $eExec) {
+                            if (strpos($eExec->getMessage(), 'no_ortu') !== false || $eExec->getCode() == '42S22') {
+                                try {
+                                    $this->db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL AFTER `no_telepon`");
+                                } catch (\Throwable $eAlter) {
+                                    try {
+                                        $this->db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL");
+                                    } catch (\Throwable $eIgn) {}
+                                }
+                                try {
+                                    $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noOrtu, $sId]);
+                                } catch (\Throwable $eRetry) {
+                                    $stmtFallback = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ? WHERE id = ?");
+                                    $stmtFallback->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $sId]);
+                                }
+                            } else {
+                                throw $eExec;
+                            }
+                        }
+                    } else {
+                        $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $sId]);
+                    }
+
                     $stmtUser->execute([$nama, $sId]);
                     $count++;
                 }
