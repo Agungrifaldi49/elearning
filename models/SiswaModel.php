@@ -308,23 +308,54 @@ class SiswaModel extends BaseModel {
             $userId = (int)$row['user_id'];
             $roleId = (int)($row['role_id'] ?? 0);
 
-            // Clean related tables
-            $this->db->prepare("DELETE FROM nilai_rapor WHERE siswa_id = ?")->execute([(int)$id]);
-            $this->db->prepare("DELETE FROM rapor_siswa WHERE siswa_id = ?")->execute([(int)$id]);
-            $this->db->prepare("DELETE FROM siswa_mapel_enrollment WHERE siswa_id = ?")->execute([(int)$id]);
-            $this->db->prepare("DELETE FROM absensi WHERE siswa_id = ?")->execute([(int)$id]);
-            $this->db->prepare("DELETE FROM cbt_peserta WHERE siswa_id = ?")->execute([(int)$id]);
-            $this->db->prepare("DELETE FROM cbt_jawaban WHERE siswa_id = ?")->execute([(int)$id]);
+            try {
+                $this->db->exec("SET FOREIGN_KEY_CHECKS = 0");
+            } catch (\Throwable $eFk) {}
+
+            $cleanTables = [
+                'nilai_rapor',
+                'rapor_siswa',
+                'nilai',
+                'nilai_asesmen_siswa',
+                'nilai_asesmen_tp',
+                'hasil_quiz',
+                'hasil_ujian',
+                'jawaban_siswa',
+                'pengumpulan_tugas',
+                'sertifikat',
+                'siswa_mapel_enrollment',
+                'absensi',
+                'cbt_peserta',
+                'cbt_jawaban',
+                'pembayaran_riwayat',
+                'pembayaran_tagihan',
+                'wa_logs'
+            ];
+
+            foreach ($cleanTables as $tbl) {
+                try {
+                    $this->db->prepare("DELETE FROM `{$tbl}` WHERE siswa_id = ?")->execute([(int)$id]);
+                } catch (\Throwable $eTbl) {
+                    // Abaikan jika tabel tidak ada di database ini
+                }
+            }
 
             // Delete from siswa table
-            $this->db->prepare("DELETE FROM siswa WHERE id = ?")->execute([(int)$id]);
+            $res = $this->db->prepare("DELETE FROM siswa WHERE id = ?")->execute([(int)$id]);
 
             // Only delete user account if role is Siswa (role_id = 3). NEVER delete Admin (1) or Guru (2)!
             if ($userId > 0 && $roleId === 3) {
-                $stmtDel = $this->db->prepare("DELETE FROM users WHERE id = ?");
-                $stmtDel->execute([$userId]);
+                try {
+                    $stmtDel = $this->db->prepare("DELETE FROM users WHERE id = ?");
+                    $stmtDel->execute([$userId]);
+                } catch (\Throwable $eUser) {}
             }
-            return true;
+
+            try {
+                $this->db->exec("SET FOREIGN_KEY_CHECKS = 1");
+            } catch (\Throwable $eFk) {}
+
+            return $res;
         }
         return false;
     }
@@ -582,13 +613,37 @@ class SiswaModel extends BaseModel {
             ");
             $uIds = $stmtUserIds ? $stmtUserIds->fetchAll(PDO::FETCH_COLUMN) : [];
             
-            // Clean related tables
-            $this->db->exec("DELETE FROM nilai_rapor WHERE siswa_id IN ({$inClause})");
-            $this->db->exec("DELETE FROM rapor_siswa WHERE siswa_id IN ({$inClause})");
-            $this->db->exec("DELETE FROM siswa_mapel_enrollment WHERE siswa_id IN ({$inClause})");
-            $this->db->exec("DELETE FROM absensi WHERE siswa_id IN ({$inClause})");
-            $this->db->exec("DELETE FROM cbt_peserta WHERE siswa_id IN ({$inClause})");
-            $this->db->exec("DELETE FROM cbt_jawaban WHERE siswa_id IN ({$inClause})");
+            try {
+                $this->db->exec("SET FOREIGN_KEY_CHECKS = 0");
+            } catch (\Throwable $eFk) {}
+
+            $cleanTables = [
+                'nilai_rapor',
+                'rapor_siswa',
+                'nilai',
+                'nilai_asesmen_siswa',
+                'nilai_asesmen_tp',
+                'hasil_quiz',
+                'hasil_ujian',
+                'jawaban_siswa',
+                'pengumpulan_tugas',
+                'sertifikat',
+                'siswa_mapel_enrollment',
+                'absensi',
+                'cbt_peserta',
+                'cbt_jawaban',
+                'pembayaran_riwayat',
+                'pembayaran_tagihan',
+                'wa_logs'
+            ];
+
+            foreach ($cleanTables as $tbl) {
+                try {
+                    $this->db->exec("DELETE FROM `{$tbl}` WHERE siswa_id IN ({$inClause})");
+                } catch (\Throwable $eTbl) {
+                    // Abaikan jika tabel tidak ada di database ini
+                }
+            }
 
             // Delete from siswa table
             $this->db->exec("DELETE FROM siswa WHERE id IN ({$inClause})");
@@ -596,11 +651,21 @@ class SiswaModel extends BaseModel {
             // Only delete users with role_id = 3. NEVER delete Admin (1) or Guru (2)!
             if (!empty($uIds)) {
                 $uIn = implode(',', array_map('intval', $uIds));
-                $this->db->exec("DELETE FROM users WHERE id IN ({$uIn}) AND role_id = 3");
+                try {
+                    $this->db->exec("DELETE FROM users WHERE id IN ({$uIn}) AND role_id = 3");
+                } catch (\Throwable $eUser) {}
             }
+
+            try {
+                $this->db->exec("SET FOREIGN_KEY_CHECKS = 1");
+            } catch (\Throwable $eFk) {}
+
             $this->db->commit();
             return count($ids);
         } catch (\Throwable $e) {
+            try {
+                $this->db->exec("SET FOREIGN_KEY_CHECKS = 1");
+            } catch (\Throwable $eFk) {}
             $this->db->rollBack();
             return 0;
         }
