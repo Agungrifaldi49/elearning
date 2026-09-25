@@ -260,7 +260,8 @@ class AdminController {
                 if ($res) {
                     FlashHelper::setSuccess('Data Siswa berhasil diperbarui.');
                 } else {
-                    FlashHelper::setError('Gagal memperbarui data siswa.');
+                    $err = $siswaModel->getLastError() ?: 'Periksa kembali data yang diinput.';
+                    FlashHelper::setError('Gagal memperbarui data siswa: ' . $err);
                 }
             } elseif ($action === 'delete') {
                 $siswaModel->deleteSiswa((int)$_POST['id']);

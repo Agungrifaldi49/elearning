@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <h5 class="fw-bold modal-title"><i class="bi bi-pencil-square text-warning me-2"></i>Edit Data Siswa</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form action="<?= BASE_URL ?>index.php?url=admin/siswa" method="POST">
+                <form action="<?= BASE_URL ?>index.php?url=admin/siswa" method="POST" autocomplete="off">
                     <div class="modal-body">
                         <?= Security::csrfField() ?>
                         <input type="hidden" name="action" value="update">
@@ -698,11 +698,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Email</label>
-                                <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($s['email']) ?>" required>
+                                <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($s['email']) ?>" autocomplete="off" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Password Baru (Kosongkan jika tidak diubah)</label>
-                                <input type="password" name="password" class="form-control" placeholder="••••••••">
+                                <input type="password" name="password" class="form-control" placeholder="••••••••" autocomplete="new-password">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">No Telepon / WA Siswa</label>
