@@ -163,6 +163,7 @@
                             <th>Kelas</th>
                             <th>Jurusan</th>
                             <th>JK</th>
+                            <th>No. Ortu (WA)</th>
                             <th class="text-center" style="width: 220px;">Aksi</th>
                         </tr>
                     </thead>
@@ -178,6 +179,15 @@
                                 <td><span class="badge bg-info text-dark"><?= htmlspecialchars($s['nama_kelas']) ?></span></td>
                                 <td><span class="badge bg-secondary"><?= htmlspecialchars($s['nama_jurusan']) ?></span></td>
                                 <td><?= $s['jenis_kelamin'] ?></td>
+                                <td>
+                                    <?php if (!empty($s['no_ortu'])): ?>
+                                        <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', (strpos($s['no_ortu'], '0') === 0 ? '62' . substr($s['no_ortu'], 1) : $s['no_ortu'])) ?>" target="_blank" class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none py-1.5 px-2 d-inline-flex align-items-center gap-1" title="Chat WhatsApp Orang Tua">
+                                            <i class="bi bi-whatsapp"></i> <?= htmlspecialchars($s['no_ortu']) ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="badge bg-light text-muted border">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="text-center">
                                     <div class="d-inline-flex gap-1">
                                         <!-- Detail Button -->
@@ -566,8 +576,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <input type="password" name="password" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">No Telepon / WA</label>
-                            <input type="text" name="no_telepon" class="form-control">
+                            <label class="form-label small fw-semibold">No Telepon / WA Siswa</label>
+                            <input type="text" name="no_telepon" class="form-control" placeholder="08xxxxxxxxxx">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold text-success"><i class="bi bi-whatsapp me-1"></i>No. HP / WA Orang Tua (Notifikasi Absen)</label>
+                            <input type="text" name="no_ortu" class="form-control border-success-subtle" placeholder="Contoh: 081234567890">
+                            <small class="text-muted" style="font-size:0.75rem;">Otomatis menerima pesan WhatsApp saat siswa absensi</small>
                         </div>
                     </div>
                 </div>
@@ -605,6 +620,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         <tr><td class="text-muted">Email</td><td class="fw-semibold">: <?= htmlspecialchars($s['email']) ?></td></tr>
                         <tr><td class="text-muted">Jenis Kelamin</td><td class="fw-semibold">: <?= $s['jenis_kelamin'] === 'L' ? 'Laki-Laki' : 'Perempuan' ?></td></tr>
                         <tr><td class="text-muted">No Telepon / WA</td><td class="fw-semibold">: <?= htmlspecialchars($s['no_telepon'] ?? '-') ?></td></tr>
+                        <tr>
+                            <td class="text-muted"><i class="bi bi-whatsapp text-success me-1"></i>No. Ortu (WA)</td>
+                            <td class="fw-semibold">: 
+                                <?php if (!empty($s['no_ortu'])): ?>
+                                    <a href="https://wa.me/<?= preg_replace('/[^0-9]/', '', (strpos($s['no_ortu'], '0') === 0 ? '62' . substr($s['no_ortu'], 1) : $s['no_ortu'])) ?>" target="_blank" class="text-success fw-bold text-decoration-none">
+                                        <i class="bi bi-whatsapp me-1"></i><?= htmlspecialchars($s['no_ortu']) ?> <i class="bi bi-box-arrow-up-right small"></i>
+                                    </a>
+                                <?php else: ?>
+                                    <span class="text-muted">Belum Diisi</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
                     </table>
                 </div>
                 <div class="modal-footer border-0 pt-0">
@@ -673,9 +700,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <label class="form-label small fw-semibold">Password Baru (Kosongkan jika tidak diubah)</label>
                                 <input type="password" name="password" class="form-control" placeholder="••••••••">
                             </div>
-                            <div class="col-12">
-                                <label class="form-label small fw-semibold">No Telepon / WA</label>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">No Telepon / WA Siswa</label>
                                 <input type="text" name="no_telepon" class="form-control" value="<?= htmlspecialchars($s['no_telepon'] ?? '') ?>">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-success"><i class="bi bi-whatsapp me-1"></i>No. HP / WA Orang Tua (Notifikasi Absen)</label>
+                                <input type="text" name="no_ortu" class="form-control border-success-subtle" value="<?= htmlspecialchars($s['no_ortu'] ?? '') ?>" placeholder="Contoh: 081234567890">
+                                <small class="text-muted" style="font-size:0.75rem;">Otomatis menerima pesan WhatsApp saat siswa absensi</small>
                             </div>
                         </div>
                     </div>

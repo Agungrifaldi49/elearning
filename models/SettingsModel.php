@@ -75,7 +75,16 @@ class SettingsModel {
             'presensi_guru_tanpa_jadwal' => 'standar',
             'presensi_jam_masuk_mulai' => '06:00',
             'presensi_jam_masuk_batas' => '07:30',
-            'presensi_jam_pulang_mulai' => '15:00'
+            'presensi_jam_pulang_mulai' => '15:00',
+            // WhatsApp Gateway & Parent Notification Settings
+            'wa_gateway_enabled' => '1',
+            'wa_gateway_url' => 'https://whatsaap-gateway.smkmuthiaharapancicalengka.my.id/api/send-message',
+            'wa_api_key' => 'my_secret_api_key_123',
+            'wa_webhook_secret' => 'whsec_secret_anda',
+            'wa_template_masuk_tepat' => "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nKami menginformasikan bahwa putra/putri Anda telah tiba di {sekolah} dan berhasil melakukan presensi MASUK pada:\n📅 Hari/Tanggal: {tanggal}\n⏰ Pukul: {jam}\n📌 Status: {status}\n\nTerima kasih atas kerja sama Bapak/Ibu dalam mendukung kedisiplinan belajar ananda.",
+            'wa_template_masuk_terlambat' => "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nKami menginformasikan bahwa putra/putri Anda telah tiba di {sekolah} dan melakukan presensi MASUK (TERLAMBAT) pada:\n📅 Hari/Tanggal: {tanggal}\n⏰ Pukul: {jam}\n📌 Status: {status}\nℹ️ Keterangan: {keterangan}\n\nMohon perhatian Bapak/Ibu untuk dapat memotivasi ananda agar tiba lebih awal di sekolah. Terima kasih.",
+            'wa_template_pulang' => "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nKami menginformasikan bahwa kegiatan pembelajaran di {sekolah} hari ini telah selesai. Putra/putri Anda telah melakukan presensi PULANG pada:\n📅 Hari/Tanggal: {tanggal}\n⏰ Pukul: {jam}\n📌 Status: {status}\n\nSemoga ananda sampai di rumah dengan selamat dan sehat walafiat. Terima kasih.",
+            'wa_template_tidak_hadir' => "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nInformasi Presensi Sekolah dari {sekolah}:\nPutra/putri Anda hari ini tercatat dengan status:\n📅 Hari/Tanggal: {tanggal}\n📌 Status: {status}\nℹ️ Keterangan: {keterangan}\n\nJika terdapat kekeliruan atau kendala terkait kehadiran ananda, silakan hubungi pihak sekolah / wali kelas. Terima kasih."
         ];
 
         foreach ($defaults as $key => $val) {

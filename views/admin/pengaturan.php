@@ -55,6 +55,11 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                 <i class="bi bi-geo-alt-fill text-danger me-1"></i> Titik Lokasi Presensi (Geofencing)
             </button>
         </li>
+        <li class="nav-item">
+            <button class="nav-link <?= $currentTab === 'whatsapp' ? 'active' : '' ?> fw-bold text-success" id="whatsapp-tab" data-bs-toggle="tab" data-bs-target="#whatsappTab" type="button">
+                <i class="bi bi-whatsapp me-1"></i> WhatsApp Gateway & Notifikasi Ortu
+            </button>
+        </li>
     </ul>
 
     <div class="tab-content" id="settingsTabContent">
@@ -557,6 +562,158 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                 </form>
             </div>
         </div>
+
+        <!-- Tab 7: WhatsApp Gateway & Template Notifikasi Ortu -->
+        <div class="tab-pane fade <?= $currentTab === 'whatsapp' ? 'show active' : '' ?>" id="whatsappTab" role="tabpanel">
+            <div class="card card-custom p-4 p-md-5 mb-4 shadow-sm border-0 rounded-4">
+                
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pb-3 mb-4 border-bottom">
+                    <div>
+                        <h5 class="fw-bold text-dark mb-1"><i class="bi bi-whatsapp text-success me-2"></i>Konfigurasi WhatsApp Gateway & Notifikasi Orang Tua</h5>
+                        <p class="text-muted small mb-0">Atur koneksi API WhatsApp Gateway dan sesuaikan format template pesan otomatis yang dikirim ke nomor orang tua saat siswa absensi.</p>
+                    </div>
+                    <span class="badge <?= ($settings['wa_gateway_enabled'] ?? '1') === '1' ? 'bg-success' : 'bg-secondary' ?> px-3 py-2 fs-6 rounded-pill">
+                        <i class="bi bi-broadcast me-1"></i> <?= ($settings['wa_gateway_enabled'] ?? '1') === '1' ? 'Gateway Aktif' : 'Gateway Nonaktif' ?>
+                    </span>
+                </div>
+
+                <form action="<?= BASE_URL ?>index.php?url=admin/pengaturan" method="POST">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="section" value="whatsapp">
+
+                    <!-- Switch Aktifkan Gateway -->
+                    <div class="p-3 mb-4 rounded-3 border bg-light-subtle d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <div class="fw-bold text-dark"><i class="bi bi-bell-fill text-success me-1"></i> Notifikasi WhatsApp Otomatis ke Orang Tua Siswa</div>
+                            <small class="text-muted">Kirim pesan WhatsApp real-time ke nomor HP orang tua/wali (<code>no_ortu</code>) saat siswa melakukan presensi scan QR atau manual.</small>
+                        </div>
+                        <div class="form-check form-switch fs-4 mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch" name="wa_gateway_enabled" id="waGatewaySwitch" value="1" <?= ($settings['wa_gateway_enabled'] ?? '1') === '1' ? 'checked' : '' ?>>
+                        </div>
+                    </div>
+
+                    <!-- Pengaturan API Gateway -->
+                    <div class="card p-3 mb-4 border rounded-3 bg-white shadow-xs">
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-hdd-network-fill me-1"></i> Endpoint API & Kredensial Gateway</h6>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-8">
+                                <label class="form-label small fw-bold">WhatsApp Gateway URL API</label>
+                                <input type="url" name="wa_gateway_url" class="form-control" value="<?= htmlspecialchars($settings['wa_gateway_url'] ?? 'https://whatsaap-gateway.smkmuthiaharapancicalengka.my.id/api/send-message') ?>" placeholder="https://domain-anda.com/api/send-message" required>
+                                <small class="text-muted">Endpoint cURL untuk mengirim pesan teks dan lampiran.</small>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold">API Key (x-api-key)</label>
+                                <input type="text" name="wa_api_key" class="form-control" value="<?= htmlspecialchars($settings['wa_api_key'] ?? 'my_secret_api_key_123') ?>" placeholder="my_secret_api_key_123" required>
+                                <small class="text-muted">Header autentikasi API Gateway Anda.</small>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Webhook Secret Key (Opsional)</label>
+                                <input type="text" name="wa_webhook_secret" class="form-control" value="<?= htmlspecialchars($settings['wa_webhook_secret'] ?? 'whsec_secret_anda') ?>" placeholder="whsec_secret_anda">
+                                <small class="text-muted">Token pengaman untuk verifikasi webhook incoming payload.</small>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold">Webhook URL (Di Server Anda)</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control bg-light" id="webhookUrlInput" value="<?= BASE_URL ?>webhook.php" readonly>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText('<?= BASE_URL ?>webhook.php'); alert('URL Webhook berhasil disalin!');">
+                                        <i class="bi bi-clipboard"></i> Salin
+                                    </button>
+                                </div>
+                                <small class="text-muted">Pasang URL ini pada menu Webhook di dashboard WhatsApp Gateway Anda.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Panel Bantuan Placeholder / Variabel Template -->
+                    <div class="alert alert-info border-0 rounded-4 shadow-sm mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-info-circle-fill fs-5"></i>
+                            <h6 class="fw-bold mb-0">Variabel Dinamis Template Pesan WhatsApp (Klik untuk Menyisipkan)</h6>
+                        </div>
+                        <p class="small mb-2">Anda dapat mencantumkan kode variabel di bawah ini ke dalam kotak template. Sistem akan otomatis menggantinya dengan informasi presensi riil siswa:</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-light border shadow-xs fw-semibold" onclick="insertPlaceholder('{nama_siswa}')"><code>{nama_siswa}</code> <small class="text-muted">(Nama Siswa)</small></button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-xs fw-semibold" onclick="insertPlaceholder('{nis}')"><code>{nis}</code> <small class="text-muted">(NIS)</small></button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-xs fw-semibold" onclick="insertPlaceholder('{kelas}')"><code>{kelas}</code> <small class="text-muted">(Nama Kelas)</small></button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-xs fw-semibold" onclick="insertPlaceholder('{jurusan}')"><code>{jurusan}</code> <small class="text-muted">(Jurusan)</small></button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-xs fw-semibold" onclick="insertPlaceholder('{tanggal}')"><code>{tanggal}</code> <small class="text-muted">(Hari, Tanggal)</small></button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-xs fw-semibold" onclick="insertPlaceholder('{jam}')"><code>{jam}</code> <small class="text-muted">(Jam WIB)</small></button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-xs fw-semibold" onclick="insertPlaceholder('{status}')"><code>{status}</code> <small class="text-muted">(Hadir / Terlambat / Pulang / Izin)</small></button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-xs fw-semibold" onclick="insertPlaceholder('{keterangan}')"><code>{keterangan}</code> <small class="text-muted">(Catatan)</small></button>
+                            <button type="button" class="btn btn-sm btn-light border shadow-xs fw-semibold" onclick="insertPlaceholder('{sekolah}')"><code>{sekolah}</code> <small class="text-muted">(Nama Sekolah)</small></button>
+                        </div>
+                    </div>
+
+                    <!-- Editor Template Pesan Sesuai Kondisi -->
+                    <div class="row g-4 mb-4">
+                        <!-- Template 1: Masuk Tepat Waktu -->
+                        <div class="col-12 col-lg-6">
+                            <div class="border rounded-4 p-3 bg-white h-100 shadow-xs">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <label class="form-label fw-bold text-success mb-0">
+                                        <i class="bi bi-box-arrow-in-right me-1"></i> 1. Template Presensi Masuk (Tepat Waktu)
+                                    </label>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">Masuk Pagi</span>
+                                </div>
+                                <textarea name="wa_template_masuk_tepat" id="tpl_masuk_tepat" class="form-control font-monospace small" rows="7" required><?= htmlspecialchars($settings['wa_template_masuk_tepat'] ?? "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nKami menginformasikan bahwa putra/putri Anda telah tiba di {sekolah} dan berhasil melakukan presensi MASUK pada:\n📅 Hari/Tanggal: {tanggal}\n⏰ Pukul: {jam}\n📌 Status: {status}\n\nTerima kasih atas kerja sama Bapak/Ibu dalam mendukung kedisiplinan belajar ananda.") ?></textarea>
+                                <small class="text-muted d-block mt-1">Dikirim instan saat siswa scan QR masuk tepat waktu.</small>
+                            </div>
+                        </div>
+
+                        <!-- Template 2: Masuk Terlambat -->
+                        <div class="col-12 col-lg-6">
+                            <div class="border rounded-4 p-3 bg-white h-100 shadow-xs">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <label class="form-label fw-bold text-warning mb-0">
+                                        <i class="bi bi-clock-history me-1"></i> 2. Template Presensi Masuk (Terlambat)
+                                    </label>
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Terlambat</span>
+                                </div>
+                                <textarea name="wa_template_masuk_terlambat" id="tpl_masuk_terlambat" class="form-control font-monospace small" rows="7" required><?= htmlspecialchars($settings['wa_template_masuk_terlambat'] ?? "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nKami menginformasikan bahwa putra/putri Anda telah tiba di {sekolah} dan melakukan presensi MASUK (TERLAMBAT) pada:\n📅 Hari/Tanggal: {tanggal}\n⏰ Pukul: {jam}\n📌 Status: {status}\nℹ️ Keterangan: {keterangan}\n\nMohon perhatian Bapak/Ibu untuk dapat memotivasi ananda agar tiba lebih awal di sekolah. Terima kasih.") ?></textarea>
+                                <small class="text-muted d-block mt-1">Dikirim saat siswa scan presensi masuk setelah jam batas toleransi.</small>
+                            </div>
+                        </div>
+
+                        <!-- Template 3: Presensi Pulang -->
+                        <div class="col-12 col-lg-6">
+                            <div class="border rounded-4 p-3 bg-white h-100 shadow-xs">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <label class="form-label fw-bold text-primary mb-0">
+                                        <i class="bi bi-box-arrow-right me-1"></i> 3. Template Presensi Pulang Sekolah
+                                    </label>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Pulang</span>
+                                </div>
+                                <textarea name="wa_template_pulang" id="tpl_pulang" class="form-control font-monospace small" rows="7" required><?= htmlspecialchars($settings['wa_template_pulang'] ?? "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nKami menginformasikan bahwa kegiatan pembelajaran di {sekolah} hari ini telah selesai. Putra/putri Anda telah melakukan presensi PULANG pada:\n📅 Hari/Tanggal: {tanggal}\n⏰ Pukul: {jam}\n📌 Status: {status}\n\nSemoga ananda sampai di rumah dengan selamat dan sehat walafiat. Terima kasih.") ?></textarea>
+                                <small class="text-muted d-block mt-1">Dikirim saat siswa scan QR pulang sekolah.</small>
+                            </div>
+                        </div>
+
+                        <!-- Template 4: Izin, Sakit, Alpha -->
+                        <div class="col-12 col-lg-6">
+                            <div class="border rounded-4 p-3 bg-white h-100 shadow-xs">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <label class="form-label fw-bold text-danger mb-0">
+                                        <i class="bi bi-exclamation-triangle me-1"></i> 4. Template Berhalangan Hadir (Izin / Sakit / Alpha)
+                                    </label>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Tidak Hadir</span>
+                                </div>
+                                <textarea name="wa_template_tidak_hadir" id="tpl_tidak_hadir" class="form-control font-monospace small" rows="7" required><?= htmlspecialchars($settings['wa_template_tidak_hadir'] ?? "Halo Bapak/Ibu Orang Tua/Wali dari {nama_siswa} (Kelas {kelas}),\n\nInformasi Presensi Sekolah dari {sekolah}:\nPutra/putri Anda hari ini tercatat dengan status:\n📅 Hari/Tanggal: {tanggal}\n📌 Status: {status}\nℹ️ Keterangan: {keterangan}\n\nJika terdapat kekeliruan atau kendala terkait kehadiran ananda, silakan hubungi pihak sekolah / wali kelas. Terima kasih.") ?></textarea>
+                                <small class="text-muted d-block mt-1">Dikirim saat guru / petugas mencatat status izin/sakit/alpha.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 border-top">
+                        <button type="submit" class="btn btn-primary fw-bold px-4 rounded-3 shadow-sm">
+                            <i class="bi bi-save me-1"></i> Simpan Konfigurasi & Template WhatsApp
+                        </button>
+                        <button type="button" class="btn btn-outline-success fw-bold px-3 rounded-3" data-bs-toggle="modal" data-bs-target="#modalTestWhatsApp">
+                            <i class="bi bi-send-check me-1"></i> Uji Coba Kirim Pesan (Live Test)
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -954,7 +1111,124 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(initAdminGeofenceMap, 300);
     }
 });
+// WhatsApp Placeholder Helper: Menambahkan placeholder ke textarea yang sedang aktif atau terakhir difokuskan
+let lastActiveTemplateInput = document.getElementById('tpl_masuk_tepat');
+['tpl_masuk_tepat', 'tpl_masuk_terlambat', 'tpl_pulang', 'tpl_tidak_hadir'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener('focus', () => { lastActiveTemplateInput = el; });
+    }
+});
+
+function insertPlaceholder(placeholder) {
+    if (!lastActiveTemplateInput) {
+        lastActiveTemplateInput = document.getElementById('tpl_masuk_tepat');
+    }
+    if (!lastActiveTemplateInput) return;
+
+    const start = lastActiveTemplateInput.selectionStart || 0;
+    const end = lastActiveTemplateInput.selectionEnd || 0;
+    const text = lastActiveTemplateInput.value;
+    lastActiveTemplateInput.value = text.substring(0, start) + placeholder + text.substring(end);
+    lastActiveTemplateInput.focus();
+    lastActiveTemplateInput.selectionStart = lastActiveTemplateInput.selectionEnd = start + placeholder.length;
+}
+
+// Live Test WhatsApp AJAX Handler
+function sendLiveWhatsAppTest() {
+    const phoneInput = document.getElementById('testWaPhone');
+    const msgInput = document.getElementById('testWaMsg');
+    const btnSend = document.getElementById('btnSubmitTestWa');
+    const alertBox = document.getElementById('testWaResultBox');
+
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const message = msgInput ? msgInput.value.trim() : '';
+
+    if (!phone) {
+        alert('Silakan masukkan nomor WhatsApp tujuan!');
+        phoneInput.focus();
+        return;
+    }
+
+    btnSend.disabled = true;
+    btnSend.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Mengirim via Gateway...';
+    alertBox.classList.add('d-none');
+    alertBox.className = 'alert mt-3 d-none';
+
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+
+    const formData = new FormData();
+    formData.append('phone', phone);
+    formData.append('message', message);
+    formData.append('csrf_token', csrfToken);
+
+    fetch('<?= BASE_URL ?>index.php?url=admin/testWhatsAppAjax', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        btnSend.disabled = false;
+        btnSend.innerHTML = '<i class="bi bi-send-fill me-1"></i> Kirim Pesan Sekarang';
+        alertBox.classList.remove('d-none');
+
+        if (data.status === true) {
+            alertBox.className = 'alert alert-success mt-3';
+            alertBox.innerHTML = `<strong><i class="bi bi-check-circle-fill me-1"></i> Berhasil Terkirim!</strong><br>${data.message || 'Pesan berhasil diproses gateway.'}<br><pre class="small mt-2 mb-0 bg-white p-2 rounded border" style="max-height:120px; overflow:auto;">${JSON.stringify(data.response || data, null, 2)}</pre>`;
+        } else {
+            alertBox.className = 'alert alert-danger mt-3';
+            alertBox.innerHTML = `<strong><i class="bi bi-exclamation-triangle-fill me-1"></i> Gagal Mengirim Pesan!</strong><br>${data.message || 'Terjadi kesalahan gateway.'}<br><pre class="small mt-2 mb-0 bg-white p-2 rounded border" style="max-height:120px; overflow:auto;">${JSON.stringify(data.response || data, null, 2)}</pre>`;
+        }
+    })
+    .catch(err => {
+        btnSend.disabled = false;
+        btnSend.innerHTML = '<i class="bi bi-send-fill me-1"></i> Kirim Pesan Sekarang';
+        alertBox.classList.remove('d-none');
+        alertBox.className = 'alert alert-danger mt-3';
+        alertBox.innerHTML = `<strong><i class="bi bi-x-circle-fill me-1"></i> Gagal Koneksi:</strong> ${err.message || 'Jaringan terputus atau server tidak merespon.'}`;
+    });
+}
 </script>
+
+<!-- Modal Uji Coba WhatsApp Gateway (Live Test) -->
+<div class="modal fade" id="modalTestWhatsApp" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold modal-title text-success"><i class="bi bi-whatsapp me-2"></i>Uji Coba WhatsApp Gateway</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Kirimkan pesan tes langsung ke nomor WhatsApp Anda untuk memverifikasi bahwa URL Gateway dan API Key berfungsi dengan baik.</p>
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Nomor WhatsApp Tujuan</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="bi bi-telephone"></i></span>
+                        <input type="text" class="form-control" id="testWaPhone" placeholder="Contoh: 081234567890 atau 6281234567890" value="<?= htmlspecialchars($settings['telepon'] ?? '') ?>">
+                    </div>
+                    <small class="text-muted" style="font-size:0.75rem;">Mendukung awalan 08 atau 62 (otomatis diformat).</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Isi Pesan Uji Coba</label>
+                    <textarea class="form-control font-monospace small" id="testWaMsg" rows="4">🔔 [UJI COBA GATEWAY]
+Halo! Pesan ini adalah uji coba koneksi API WhatsApp Gateway dari E-Learning SMK Muthia Harapan Cicalengka.
+Waktu Pengujian: <?= date('d/m/Y H:i:s') ?> WIB.
+Status: Terkoneksi Sukses! ✅</textarea>
+                </div>
+
+                <div id="testWaResultBox" class="alert mt-3 d-none"></div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-success fw-bold px-4" id="btnSubmitTestWa" onclick="sendLiveWhatsAppTest()">
+                    <i class="bi bi-send-fill me-1"></i> Kirim Pesan Sekarang
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Leaflet CSS & JS Assets -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />

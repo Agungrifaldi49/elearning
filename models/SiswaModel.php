@@ -111,8 +111,8 @@ class SiswaModel extends BaseModel {
             $userId = $this->db->lastInsertId();
 
             // Create siswa profile
-            $stmtSiswa = $this->db->prepare("INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, no_telepon, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmtSiswa->execute([$userId, $data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $data['alamat']]);
+            $stmtSiswa = $this->db->prepare("INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, no_telepon, no_ortu, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmtSiswa->execute([$userId, $data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $data['no_ortu'] ?? null, $data['alamat']]);
 
             $this->db->commit();
             return true;
@@ -131,8 +131,8 @@ class SiswaModel extends BaseModel {
 
         $this->db->beginTransaction();
         try {
-            $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ? WHERE id = ?");
-            $stmtSiswa->execute([$data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $id]);
+            $stmtSiswa = $this->db->prepare("UPDATE siswa SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ? WHERE id = ?");
+            $stmtSiswa->execute([$data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $data['no_ortu'] ?? null, $id]);
 
             $stmtUser = $this->db->prepare("UPDATE users SET full_name = ?, email = ? WHERE id = ?");
             $stmtUser->execute([$data['nama_lengkap'], $data['email'], $siswa['user_id']]);

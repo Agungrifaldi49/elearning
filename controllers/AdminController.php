@@ -232,8 +232,9 @@ class AdminController {
                     'kelas_id' => (int)$_POST['kelas_id'],
                     'jurusan_id' => (int)$_POST['jurusan_id'],
                     'jenis_kelamin' => $_POST['jenis_kelamin'],
-                    'no_telepon' => Security::sanitize($_POST['no_telepon']),
-                    'alamat' => Security::sanitize($_POST['alamat'])
+                    'no_telepon' => Security::sanitize($_POST['no_telepon'] ?? ''),
+                    'no_ortu' => Security::sanitize($_POST['no_ortu'] ?? ''),
+                    'alamat' => Security::sanitize($_POST['alamat'] ?? '')
                 ]);
                 FlashHelper::setSuccess('Data Siswa berhasil ditambahkan.');
             } elseif ($action === 'update') {
@@ -246,7 +247,8 @@ class AdminController {
                     'kelas_id' => (int)$_POST['kelas_id'],
                     'jurusan_id' => (int)$_POST['jurusan_id'],
                     'jenis_kelamin' => $_POST['jenis_kelamin'],
-                    'no_telepon' => Security::sanitize($_POST['no_telepon']),
+                    'no_telepon' => Security::sanitize($_POST['no_telepon'] ?? ''),
+                    'no_ortu' => Security::sanitize($_POST['no_ortu'] ?? ''),
                     'alamat' => Security::sanitize($_POST['alamat'] ?? '')
                 ]);
                 FlashHelper::setSuccess('Data Siswa berhasil diperbarui.');
@@ -559,11 +561,73 @@ class AdminController {
                 $settingsModel->saveBatch($updateData);
                 $flashSuccess = 'Titik Lokasi Presensi (Geofencing) dan Skema Jadwal Presensi Guru berhasil disimpan!';
                 $_GET['tab'] = 'geofencing';
+            } elseif ($section === 'whatsapp') {
+                $enabled = isset($_POST['wa_gateway_enabled']) ? '1' : '0';
+                $updateData = [
+                    'wa_gateway_enabled' => $enabled,
+                    'wa_gateway_url' => trim($_POST['wa_gateway_url'] ?? ''),
+                    'wa_api_key' => trim($_POST['wa_api_key'] ?? ''),
+                    'wa_webhook_secret' => trim($_POST['wa_webhook_secret'] ?? ''),
+                    'wa_template_masuk_tepat' => trim($_POST['wa_template_masuk_tepat'] ?? ''),
+                    'wa_template_masuk_terlambat' => trim($_POST['wa_template_masuk_terlambat'] ?? ''),
+                    'wa_template_pulang' => trim($_POST['wa_template_pulang'] ?? ''),
+                    'wa_template_tidak_hadir' => trim($_POST['wa_template_tidak_hadir'] ?? ''),
+                ];
+                $settingsModel->saveBatch($updateData);
+                $flashSuccess = 'Pengaturan WhatsApp Gateway & Template Notifikasi Orang Tua berhasil disimpan!';
+                $_GET['tab'] = 'whatsapp';
+            } elseif ($section === 'test_whatsapp') {
+                require_once ROOT_PATH . 'helpers/WhatsAppHelper.php';
+                $testPhone = trim($_POST['test_phone'] ?? '');
+                $testMessage = trim($_POST['test_message'] ?? 'Tes Notifikasi WhatsApp Sistem Presensi SMK Muthia Harapan Cicalengka.');
+                
+                $res = WhatsAppHelper::send($testPhone, $testMessage);
+                if (!empty($res['status'])) {
+                    $flashSuccess = 'Uji coba berhasil! ' . ($res['message'] ?? 'Pesan WhatsApp telah terkirim.');
+                } else {
+                    $flashError = 'Uji coba gagal: ' . ($res['message'] ?? 'Tidak dapat terhubung ke WhatsApp Gateway.');
+                }
+                $_GET['tab'] = 'whatsapp';
             }
         }
 
         $settings = $settingsModel->getAll();
         require_once ROOT_PATH . 'views/admin/pengaturan.php';
+    }
+
+    public function testWhatsAppAjax() {
+        header('Content-Type: application/json');
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                echo json_encode(['status' => false, 'message' => 'Metode request tidak diizinkan.']);
+                exit();
+            }
+
+            if (!Security::verifyCsrfToken()) {
+                echo json_encode(['status' => false, 'message' => 'CSRF Token Invalid.']);
+                exit();
+            }
+
+            require_once ROOT_PATH . 'helpers/WhatsAppHelper.php';
+            $phone = trim($_POST['phone'] ?? '');
+            $message = trim($_POST['message'] ?? '');
+
+            if (empty($phone)) {
+                echo json_encode(['status' => false, 'message' => 'Nomor WhatsApp tujuan wajib diisi.']);
+                exit();
+            }
+
+            if (empty($message)) {
+                $message = "🔔 [TEST GATEWAY] Halo! Ini adalah pesan uji coba integrasi WhatsApp Gateway E-Learning SMK Muthia Harapan Cicalengka.";
+            }
+
+            $res = WhatsAppHelper::send($phone, $message);
+            echo json_encode($res);
+            exit();
+        } catch (\Throwable $e) {
+            echo json_encode(['status' => false, 'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()]);
+            exit();
+        }
     }
 
     public function landingPage() {

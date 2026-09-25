@@ -572,9 +572,10 @@ class AbsensiModel extends BaseModel {
             // Otherwise, search for Siswa
             $numericId = ctype_digit($cleanId) ? (int)$cleanId : -1;
             $stmtS = $this->db->prepare("
-                SELECT s.*, k.nama_kelas 
+                SELECT s.*, k.nama_kelas, j.nama_jurusan 
                 FROM siswa s 
                 LEFT JOIN kelas k ON s.kelas_id = k.id 
+                LEFT JOIN jurusan j ON s.jurusan_id = j.id 
                 WHERE s.nisn = ? OR s.nis = ? OR s.id = ? OR s.nama_lengkap LIKE ?
                 LIMIT 1
             ");
@@ -651,6 +652,17 @@ class AbsensiModel extends BaseModel {
                     $jamMasuk = date('H:i', strtotime($exist['waktu_masuk'] ?? $exist['waktu_hadir'] ?? $exist['created_at']));
                     $jamPulang = date('H:i', strtotime($now));
 
+                    // Kirim Notifikasi WhatsApp Pulang ke Orang Tua Siswa
+                    try {
+                        require_once ROOT_PATH . 'helpers/WhatsAppHelper.php';
+                        WhatsAppHelper::sendNotificationAbsensi($siswa, 'pulang', [
+                            'tanggal' => $today,
+                            'jam' => $jamPulang . ' WIB',
+                            'status' => 'Pulang Sekolah',
+                            'keterangan' => "KBM Hari Ini Selesai (Jam Masuk: {$jamMasuk} WIB)"
+                        ]);
+                    } catch (\Throwable $eWa) {}
+
                     return [
                         'success' => true,
                         'type' => 'pulang',
@@ -677,6 +689,19 @@ class AbsensiModel extends BaseModel {
                 $jamMasuk = date('H:i', strtotime($now));
                 $isLate = ($currentTime > '07:15:00');
                 $statusKet = $isLate ? 'Terlambat' : 'Hadir Tepat Waktu';
+
+                // Kirim Notifikasi WhatsApp Masuk ke Orang Tua Siswa
+                try {
+                    require_once ROOT_PATH . 'helpers/WhatsAppHelper.php';
+                    $waType = $isLate ? 'masuk_terlambat' : 'masuk_tepat';
+                    WhatsAppHelper::sendNotificationAbsensi($siswa, $waType, [
+                        'tanggal' => $today,
+                        'jam' => $jamMasuk . ' WIB',
+                        'status' => $statusKet,
+                        'keterangan' => $isLate ? 'Tiba di sekolah setelah batas waktu masuk 07:15 WIB' : 'Tepat Waktu'
+                    ]);
+                } catch (\Throwable $eWa) {}
+
                 return [
                     'success' => true,
                     'type' => 'masuk',
@@ -709,15 +734,43 @@ class AbsensiModel extends BaseModel {
         $stmtExist->execute([$siswa_id, $tanggal, $jadwal_id]);
         $exist = $stmtExist->fetch();
 
+        $resAtt = false;
         if ($exist) {
             $stmt = $this->db->prepare("UPDATE absensi SET jadwal_id = ?, status = ?, keterangan = ? WHERE id = ?");
-            return $stmt->execute([$jadwal_id, $status, $keterangan, $exist['id']]);
+            $resAtt = $stmt->execute([$jadwal_id, $status, $keterangan, $exist['id']]);
         } else {
             $now = date('Y-m-d H:i:s');
             $qrCode = "ATT_" . $jadwal_id . "_" . $siswa_id . "_" . date('Ymd');
             $stmt = $this->db->prepare("INSERT INTO absensi (jadwal_id, siswa_id, tanggal, waktu_masuk, waktu_hadir, status, qr_code, keterangan) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            return $stmt->execute([$jadwal_id, $siswa_id, $tanggal, $now, $now, $status, $qrCode, $keterangan]);
+            $resAtt = $stmt->execute([$jadwal_id, $siswa_id, $tanggal, $now, $now, $status, $qrCode, $keterangan]);
         }
+
+        if ($resAtt) {
+            try {
+                $stmtSiswa = $this->db->prepare("
+                    SELECT s.*, k.nama_kelas, j.nama_jurusan 
+                    FROM siswa s 
+                    LEFT JOIN kelas k ON s.kelas_id = k.id 
+                    LEFT JOIN jurusan j ON s.jurusan_id = j.id 
+                    WHERE s.id = ? LIMIT 1
+                ");
+                $stmtSiswa->execute([$siswa_id]);
+                $sData = $stmtSiswa->fetch();
+                if ($sData && !empty($sData['no_ortu'])) {
+                    require_once ROOT_PATH . 'helpers/WhatsAppHelper.php';
+                    $statusLower = strtolower(trim($status));
+                    $waType = in_array($statusLower, ['izin', 'sakit', 'alpha', 'alpa']) ? $statusLower : 'masuk_tepat';
+                    WhatsAppHelper::sendNotificationAbsensi($sData, $waType, [
+                        'tanggal' => $tanggal,
+                        'jam' => date('H:i') . ' WIB',
+                        'status' => $status,
+                        'keterangan' => $keterangan ?: "Presensi {$status}"
+                    ]);
+                }
+            } catch (\Throwable $eWa) {}
+        }
+
+        return $resAtt;
     }
 
     public function getRecap($jadwal_id, $tanggal) {
@@ -1483,16 +1536,17 @@ class AbsensiModel extends BaseModel {
 
         $isAbsent = in_array($status, ['Izin', 'Sakit', 'Alpha']);
         $now = date('Y-m-d H:i:s');
+        $resSave = false;
         if ($exist) {
             if ($isAbsent) {
                 $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_pulang = NULL, keterangan = ? WHERE id = ?");
-                return $stmt->execute([$guruId, $status, $keterangan ?: 'Tidak Hadir Ke Sekolah (' . $status . ')', $exist['id']]);
+                $resSave = $stmt->execute([$guruId, $status, $keterangan ?: 'Tidak Hadir Ke Sekolah (' . $status . ')', $exist['id']]);
             } else if ($kategori === 'pulang') {
                 $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_pulang = COALESCE(waktu_pulang, ?), keterangan = ? WHERE id = ?");
-                return $stmt->execute([$guruId, $status, $now, $keterangan ?: 'Presensi Manual Pulang Guru', $exist['id']]);
+                $resSave = $stmt->execute([$guruId, $status, $now, $keterangan ?: 'Presensi Manual Pulang Guru', $exist['id']]);
             } else {
                 $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_masuk = COALESCE(waktu_masuk, ?), keterangan = ? WHERE id = ?");
-                return $stmt->execute([$guruId, $status, $now, $keterangan ?: 'Presensi Manual Masuk Guru', $exist['id']]);
+                $resSave = $stmt->execute([$guruId, $status, $now, $keterangan ?: 'Presensi Manual Masuk Guru', $exist['id']]);
             }
         } else {
             $qrCodeVal = "MANUAL_" . $siswaId . "_" . date('YmdHis');
@@ -1501,21 +1555,49 @@ class AbsensiModel extends BaseModel {
                     INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
                     VALUES (NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)
                 ");
-                return $stmt->execute([$siswaId, $guruId, $tanggal, $now, $status, $qrCodeVal, $keterangan ?: 'Tidak Hadir Ke Sekolah (' . $status . ')']);
+                $resSave = $stmt->execute([$siswaId, $guruId, $tanggal, $now, $status, $qrCodeVal, $keterangan ?: 'Tidak Hadir Ke Sekolah (' . $status . ')']);
             } else if ($kategori === 'pulang') {
                 $stmt = $this->db->prepare("
                     INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
                     VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
-                return $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Pulang Guru']);
+                $resSave = $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Pulang Guru']);
             } else {
                 $stmt = $this->db->prepare("
                     INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
                     VALUES (NULL, ?, ?, ?, ?, NULL, ?, ?, ?, ?)
                 ");
-                return $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Masuk Guru']);
+                $resSave = $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Masuk Guru']);
             }
         }
+
+        // Kirim Notifikasi WhatsApp ke Orang Tua
+        if ($resSave) {
+            try {
+                $stmtS = $this->db->prepare("
+                    SELECT s.*, k.nama_kelas, j.nama_jurusan 
+                    FROM siswa s 
+                    LEFT JOIN kelas k ON s.kelas_id = k.id 
+                    LEFT JOIN jurusan j ON s.jurusan_id = j.id 
+                    WHERE s.id = ? LIMIT 1
+                ");
+                $stmtS->execute([$siswaId]);
+                $sData = $stmtS->fetch();
+
+                if ($sData && !empty($sData['no_ortu'])) {
+                    require_once ROOT_PATH . 'helpers/WhatsAppHelper.php';
+                    $waType = $isAbsent ? strtolower($status) : ($kategori === 'pulang' ? 'pulang' : 'masuk_tepat');
+                    WhatsAppHelper::sendNotificationAbsensi($sData, $waType, [
+                        'tanggal' => $tanggal,
+                        'jam' => date('H:i') . ' WIB',
+                        'status' => $status,
+                        'keterangan' => $keterangan ?: ($isAbsent ? "Siswa berhalangan hadir ({$status})" : "Presensi {$status}")
+                    ]);
+                }
+            } catch (\Throwable $eWa) {}
+        }
+
+        return $resSave;
     }
 
     public function getMonthlyRecapForGuru($guruId, $bulan, $tahun, $mapelId = null, $kelasId = null) {

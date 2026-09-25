@@ -101,6 +101,7 @@ CREATE TABLE siswa (
     jurusan_id INT NOT NULL,
     jenis_kelamin ENUM('L', 'P') NOT NULL,
     no_telepon VARCHAR(20),
+    no_ortu VARCHAR(25) NULL,
     alamat TEXT,
     status ENUM('aktif', 'alumni', 'drop') DEFAULT 'aktif',
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
