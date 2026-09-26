@@ -60,45 +60,45 @@
     </div>
 
     <!-- 2. Alur Utama KBM Digital Guru (Diagram Step-by-Step 5 Tahapan) -->
-    <div class="card-custom p-3 p-md-4 mb-3 mb-md-4 shadow-sm">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="card-custom p-3 p-sm-4 mb-3 mb-md-4 shadow-sm roadmap-container">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
             <h6 class="fw-bold text-success mb-0"><i class="bi bi-diagram-3-fill me-2"></i>Roadmap KBM Digital & Evaluasi Pembelajaran Guru</h6>
             <span class="text-muted small d-none d-md-inline"><i class="bi bi-info-circle me-1"></i>Alur 5 Tahap dari Awal Semester hingga Cetak Rapor</span>
         </div>
-        <div class="row g-2 g-md-3">
+        <div class="row g-3">
             <div class="col-12 col-sm-6 col-lg">
-                <div class="p-2.5 p-md-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-primary">
-                    <span class="badge bg-primary mb-2">Tahap 1</span>
-                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-key-fill text-primary me-1"></i>Key Mapel & CP-TP</h6>
-                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Buat Kode Akses unik per-mapel di <i>Kelas Virtual Saya</i>, susun CP-TP Kurikulum Merdeka, dan bagikan key ke siswa.</p>
+                <div class="roadmap-step-card bg-light rounded-4 border h-100 position-relative border-start border-4 border-primary">
+                    <span class="badge bg-primary mb-2.5 px-2.5 py-1">Tahap 1</span>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-key-fill text-primary me-1.5"></i>Key Mapel & CP-TP</h6>
+                    <p class="text-muted small mb-0 lh-base" style="font-size:0.82rem;">Buat Kode Akses unik per-mapel di <i>Kelas Virtual Saya</i>, susun CP-TP Kurikulum Merdeka, dan bagikan key ke siswa.</p>
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-lg">
-                <div class="p-2.5 p-md-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-success">
-                    <span class="badge bg-success mb-2">Tahap 2</span>
-                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-cloud-upload-fill text-success me-1"></i>Materi & Path</h6>
-                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Unggah modul PDF/Video MP4/YouTube, atur alur belajar (*Learning Path*), dan manfaatkan referensi Perpustakaan Digital.</p>
+                <div class="roadmap-step-card bg-light rounded-4 border h-100 position-relative border-start border-4 border-success">
+                    <span class="badge bg-success mb-2.5 px-2.5 py-1">Tahap 2</span>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-cloud-upload-fill text-success me-1.5"></i>Materi & Path</h6>
+                    <p class="text-muted small mb-0 lh-base" style="font-size:0.82rem;">Unggah modul PDF/Video MP4/YouTube, atur alur belajar (*Learning Path*), dan manfaatkan referensi Perpustakaan Digital.</p>
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-lg">
-                <div class="p-2.5 p-md-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-warning">
-                    <span class="badge bg-warning text-dark mb-2">Tahap 3</span>
-                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-patch-question-fill text-warning me-1"></i>Tugas & CBT Ujian</h6>
-                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Rancang tugas ber-deadline, susun CBT multi-soal (PG, B/S, Essay) dengan anti-curang, timer otomatis, dan Bank Soal.</p>
+                <div class="roadmap-step-card bg-light rounded-4 border h-100 position-relative border-start border-4 border-warning">
+                    <span class="badge bg-warning text-dark mb-2.5 px-2.5 py-1">Tahap 3</span>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-patch-question-fill text-warning me-1.5"></i>Tugas & CBT Ujian</h6>
+                    <p class="text-muted small mb-0 lh-base" style="font-size:0.82rem;">Rancang tugas ber-deadline, susun CBT multi-soal (PG, B/S, Essay) dengan anti-curang, timer otomatis, dan Bank Soal.</p>
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-lg">
-                <div class="p-2.5 p-md-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-info">
-                    <span class="badge bg-info text-dark mb-2">Tahap 4</span>
-                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-camera-fill text-info me-1"></i>Presensi GPS & QR</h6>
-                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Lakukan Presensi Selfie GPS saat tiba di sekolah, pantau jadwal mengajar hari ini, serta scan QR presensi kartu siswa di kelas.</p>
+                <div class="roadmap-step-card bg-light rounded-4 border h-100 position-relative border-start border-4 border-info">
+                    <span class="badge bg-info text-dark mb-2.5 px-2.5 py-1">Tahap 4</span>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-camera-fill text-info me-1.5"></i>Presensi GPS & QR</h6>
+                    <p class="text-muted small mb-0 lh-base" style="font-size:0.82rem;">Lakukan Presensi Selfie GPS saat tiba di sekolah, pantau jadwal mengajar hari ini, serta scan QR presensi kartu siswa di kelas.</p>
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-lg">
-                <div class="p-2.5 p-md-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-danger">
-                    <span class="badge bg-danger mb-2">Tahap 5</span>
-                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-pencil-fill text-danger me-1"></i>Leger Rapor & Wali</h6>
-                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Input Leger E-Rapor Batch 1-klik, kalkulasi nilai akhir otomatis, dan jalankan tugas Wali Kelas binaan serta WhatsApp Ortu.</p>
+                <div class="roadmap-step-card bg-light rounded-4 border h-100 position-relative border-start border-4 border-danger">
+                    <span class="badge bg-danger mb-2.5 px-2.5 py-1">Tahap 5</span>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-pencil-fill text-danger me-1.5"></i>Leger Rapor & Wali</h6>
+                    <p class="text-muted small mb-0 lh-base" style="font-size:0.82rem;">Input Leger E-Rapor Batch 1-klik, kalkulasi nilai akhir otomatis, dan jalankan tugas Wali Kelas binaan serta WhatsApp Ortu.</p>
                 </div>
             </div>
         </div>
@@ -676,6 +676,16 @@
     scrollbar-width: none;
 }
 
+/* Roadmap Step Cards Styling & Padding */
+.roadmap-step-card {
+    padding: 1.25rem 1.15rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.roadmap-step-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
 /* Penyesuaian Responsif Khusus Mobile */
 @media (max-width: 768px) {
     .page-title {
@@ -690,6 +700,22 @@
     }
     .hero-icon-box i {
         font-size: 1.5rem !important;
+    }
+    /* Padding ekstra lega pada Roadmap KBM di layar HP agar isi tidak berdempetan */
+    .roadmap-container {
+        padding: 1.25rem 1rem !important;
+    }
+    .roadmap-step-card {
+        padding: 1.25rem 1.25rem !important;
+        margin-bottom: 0.25rem;
+    }
+    .roadmap-step-card h6 {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .roadmap-step-card p {
+        font-size: 0.82rem !important;
+        line-height: 1.5 !important;
     }
     .accordion-button {
         font-size: 0.92rem !important;

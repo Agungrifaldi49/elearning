@@ -32,69 +32,69 @@
 
         <!-- Action Bar: Filter Kategori & Kontrol Cepat -->
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4 pt-3 border-top">
-            <div class="d-flex flex-wrap gap-1" id="categoryFilterContainer">
-                <button class="btn btn-sm btn-primary active cat-btn" onclick="filterByCategory('all', this)"><i class="bi bi-collection me-1"></i>Semua Topik</button>
-                <button class="btn btn-sm btn-outline-primary cat-btn" onclick="filterByCategory('master', this)"><i class="bi bi-people-fill me-1"></i>Master Data & Ortu WA</button>
-                <button class="btn btn-sm btn-outline-primary cat-btn" onclick="filterByCategory('lms', this)"><i class="bi bi-laptop me-1"></i>LMS & CBT Ujian</button>
-                <button class="btn btn-sm btn-outline-primary cat-btn" onclick="filterByCategory('presensi', this)"><i class="bi bi-geo-alt-fill me-1"></i>Presensi & E-Rapor</button>
-                <button class="btn btn-sm btn-outline-success cat-btn" onclick="filterByCategory('whatsapp', this)"><i class="bi bi-whatsapp me-1"></i>WhatsApp Gateway</button>
-                <button class="btn btn-sm btn-outline-primary cat-btn" onclick="filterByCategory('pengaturan', this)"><i class="bi bi-shield-lock me-1"></i>Sistem & Keamanan</button>
-                <button class="btn btn-sm btn-outline-danger cat-btn" onclick="filterByCategory('faq', this)"><i class="bi bi-question-circle me-1"></i>FAQ & Kendala</button>
+            <div class="d-flex gap-1.5 overflow-x-auto no-scrollbar py-1" id="categoryFilterContainer">
+                <button class="btn btn-sm btn-primary active cat-btn text-nowrap flex-shrink-0" onclick="filterByCategory('all', this)"><i class="bi bi-collection me-1"></i>Semua Topik</button>
+                <button class="btn btn-sm btn-outline-primary cat-btn text-nowrap flex-shrink-0" onclick="filterByCategory('master', this)"><i class="bi bi-people-fill me-1"></i>Master Data & Ortu WA</button>
+                <button class="btn btn-sm btn-outline-primary cat-btn text-nowrap flex-shrink-0" onclick="filterByCategory('lms', this)"><i class="bi bi-laptop me-1"></i>LMS & CBT Ujian</button>
+                <button class="btn btn-sm btn-outline-primary cat-btn text-nowrap flex-shrink-0" onclick="filterByCategory('presensi', this)"><i class="bi bi-geo-alt-fill me-1"></i>Presensi & E-Rapor</button>
+                <button class="btn btn-sm btn-outline-success cat-btn text-nowrap flex-shrink-0" onclick="filterByCategory('whatsapp', this)"><i class="bi bi-whatsapp me-1"></i>WhatsApp Gateway</button>
+                <button class="btn btn-sm btn-outline-primary cat-btn text-nowrap flex-shrink-0" onclick="filterByCategory('pengaturan', this)"><i class="bi bi-shield-lock me-1"></i>Sistem & Keamanan</button>
+                <button class="btn btn-sm btn-outline-danger cat-btn text-nowrap flex-shrink-0" onclick="filterByCategory('faq', this)"><i class="bi bi-question-circle me-1"></i>FAQ & Kendala</button>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-1.5 ms-auto flex-shrink-0 action-btn-group">
                 <button class="btn btn-sm btn-outline-secondary" type="button" onclick="toggleAllAccordions(true)" title="Buka Semua Modul">
-                    <i class="bi bi-arrows-expand me-1"></i>Buka Semua
+                    <i class="bi bi-arrows-expand me-1"></i><span class="d-none d-sm-inline">Buka Semua</span>
                 </button>
                 <button class="btn btn-sm btn-outline-secondary" type="button" onclick="toggleAllAccordions(false)" title="Tutup Semua Modul">
-                    <i class="bi bi-arrows-collapse me-1"></i>Tutup Semua
+                    <i class="bi bi-arrows-collapse me-1"></i><span class="d-none d-sm-inline">Tutup Semua</span>
                 </button>
                 <button class="btn btn-sm btn-outline-dark" type="button" onclick="window.print()" title="Cetak Manual">
-                    <i class="bi bi-printer-fill me-1"></i>Cetak Panduan
+                    <i class="bi bi-printer-fill me-1"></i><span class="d-none d-sm-inline">Cetak</span>
                 </button>
             </div>
         </div>
     </div>
 
     <!-- Alur Kerja Utama Sistem (Diagram Step-by-Step 5 Tahap) -->
-    <div class="card-custom p-4 mb-4 shadow-sm">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="card-custom p-3 p-sm-4 mb-3 mb-md-4 shadow-sm roadmap-container">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
             <h6 class="fw-bold text-primary mb-0"><i class="bi bi-diagram-3-fill me-2"></i>Roadmap Operasional Pengelolaan Portal E-Learning Terpadu</h6>
             <span class="text-muted small d-none d-md-inline"><i class="bi bi-info-circle me-1"></i>5 Tahapan Terstruktur Menjalankan Portal</span>
         </div>
         <div class="row g-3">
-            <div class="col-12 col-md-6 col-lg">
-                <div class="p-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-primary">
-                    <span class="badge bg-primary mb-2">Tahap 1</span>
-                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-gear-wide-connected text-primary me-1"></i>Setup Sistem</h6>
-                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Konfigurasi Profil Sekolah, Logo Resmi, Token WhatsApp Gateway Fonnte, dan Geofencing GPS Presensi.</p>
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="roadmap-step-card bg-light rounded-4 border h-100 position-relative border-start border-4 border-primary">
+                    <span class="badge bg-primary mb-2.5 px-2.5 py-1">Tahap 1</span>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-gear-wide-connected text-primary me-1.5"></i>Setup Sistem</h6>
+                    <p class="text-muted small mb-0 lh-base" style="font-size:0.82rem;">Konfigurasi Profil Sekolah, Logo Resmi, Token WhatsApp Gateway Fonnte, dan Geofencing GPS Presensi.</p>
                 </div>
             </div>
-            <div class="col-12 col-md-6 col-lg">
-                <div class="p-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-success">
-                    <span class="badge bg-success mb-2">Tahap 2</span>
-                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-database-fill-gear text-success me-1"></i>Master Data & Ortu</h6>
-                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Atur Tahun Ajaran Aktif, CP-TP, Rombel, Wali Kelas, serta Impor Guru & Siswa lengkap dengan No. HP Orang Tua.</p>
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="roadmap-step-card bg-light rounded-4 border h-100 position-relative border-start border-4 border-success">
+                    <span class="badge bg-success mb-2.5 px-2.5 py-1">Tahap 2</span>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-database-fill-gear text-success me-1.5"></i>Master Data & Ortu</h6>
+                    <p class="text-muted small mb-0 lh-base" style="font-size:0.82rem;">Atur Tahun Ajaran Aktif, CP-TP, Rombel, Wali Kelas, serta Impor Guru & Siswa lengkap dengan No. HP Orang Tua.</p>
                 </div>
             </div>
-            <div class="col-12 col-md-6 col-lg">
-                <div class="p-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-warning">
-                    <span class="badge bg-warning text-dark mb-2">Tahap 3</span>
-                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-laptop text-warning me-1"></i>KBM & CBT Ujian</h6>
-                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Kelola Kelas Virtual, Modul PDF/Video, Tugas & Rubrik, CBT Anti-Curang, Game Edukasi, dan Live Meeting.</p>
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="roadmap-step-card bg-light rounded-4 border h-100 position-relative border-start border-4 border-warning">
+                    <span class="badge bg-warning text-dark mb-2.5 px-2.5 py-1">Tahap 3</span>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-laptop text-warning me-1.5"></i>KBM & CBT Ujian</h6>
+                    <p class="text-muted small mb-0 lh-base" style="font-size:0.82rem;">Kelola Kelas Virtual, Modul PDF/Video, Tugas & Rubrik, CBT Anti-Curang, Game Edukasi, dan Live Meeting.</p>
                 </div>
             </div>
-            <div class="col-12 col-md-6 col-lg">
-                <div class="p-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-info">
-                    <span class="badge bg-info text-dark mb-2">Tahap 4</span>
-                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-qr-code-scan text-info me-1"></i>Presensi & SPP</h6>
-                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Presensi Selfie Guru GPS, Scan QR Siswa Gerbang, Rekap Absensi 1-31 Hari, dan Portal Keuangan SPP.</p>
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="roadmap-step-card bg-light rounded-4 border h-100 position-relative border-start border-4 border-info">
+                    <span class="badge bg-info text-dark mb-2.5 px-2.5 py-1">Tahap 4</span>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-qr-code-scan text-info me-1.5"></i>Presensi & SPP</h6>
+                    <p class="text-muted small mb-0 lh-base" style="font-size:0.82rem;">Presensi Selfie Guru GPS, Scan QR Siswa Gerbang, Rekap Absensi 1-31 Hari, dan Portal Keuangan SPP.</p>
                 </div>
             </div>
-            <div class="col-12 col-md-6 col-lg">
-                <div class="p-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-danger">
-                    <span class="badge bg-danger mb-2">Tahap 5</span>
-                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-shield-check text-danger me-1"></i>WA & Keamanan</h6>
-                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Kirim Broadcast Notifikasi WA ke Ortu, Analitik Laporan PDF, Audit Log Jejak User, dan Backup SQL 1-Klik.</p>
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="roadmap-step-card bg-light rounded-4 border h-100 position-relative border-start border-4 border-danger">
+                    <span class="badge bg-danger mb-2.5 px-2.5 py-1">Tahap 5</span>
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-shield-check text-danger me-1.5"></i>WA & Keamanan</h6>
+                    <p class="text-muted small mb-0 lh-base" style="font-size:0.82rem;">Kirim Broadcast Notifikasi WA ke Ortu, Analitik Laporan PDF, Audit Log Jejak User, dan Backup SQL 1-Klik.</p>
                 </div>
             </div>
         </div>
@@ -768,6 +768,44 @@
 }
 .cat-btn.active {
     box-shadow: 0 2px 6px rgba(13, 110, 253, 0.3);
+}
+
+/* Sembunyikan scrollbar bawaan pada swipe chips */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Roadmap Step Cards Styling & Padding */
+.roadmap-step-card {
+    padding: 1.25rem 1.15rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.roadmap-step-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Penyesuaian Responsif Khusus Mobile */
+@media (max-width: 768px) {
+    .roadmap-container {
+        padding: 1.25rem 1rem !important;
+    }
+    .roadmap-step-card {
+        padding: 1.25rem 1.25rem !important;
+        margin-bottom: 0.25rem;
+    }
+    .roadmap-step-card h6 {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    .roadmap-step-card p {
+        font-size: 0.82rem !important;
+        line-height: 1.5 !important;
+    }
 }
 
 /* Print styling khusus agar jika di-print hasilnya rapi layaknya buku manual */
