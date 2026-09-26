@@ -82,6 +82,9 @@
                             <a href="<?= BASE_URL ?>index.php?url=kepsek/supervisiGuru" class="btn btn-sm btn-white bg-white border shadow-xs fw-semibold">
                                 <i class="bi bi-award-fill text-warning me-1"></i> Supervisi Kinerja Guru
                             </a>
+                            <a href="<?= BASE_URL ?>index.php?url=kepsek/monitoringPerangkatAjar" class="btn btn-sm btn-white bg-white border shadow-xs fw-semibold">
+                                <i class="bi bi-diagram-3-fill text-warning me-1"></i> Monitoring CP, TP & KKTP
+                            </a>
                             <a href="<?= BASE_URL ?>index.php?url=kepsek/monitoringTugas" class="btn btn-sm btn-white bg-white border shadow-xs fw-semibold">
                                 <i class="bi bi-card-checklist text-primary me-1"></i> Monitoring Tugas
                             </a>

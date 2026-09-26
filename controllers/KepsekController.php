@@ -756,4 +756,159 @@ class KepsekController {
 
         require_once ROOT_PATH . 'views/kepsek/cetak_laporan_keuangan.php';
     }
+
+    /**
+     * 24. Monitoring Perangkat Ajar Kurikulum Merdeka (CP, TP, KKTP/Asesmen dari Seluruh Guru)
+     */
+    public function monitoringPerangkatAjar() {
+        $db = Database::getConnection();
+        require_once ROOT_PATH . 'models/CurriculumModel.php';
+        require_once ROOT_PATH . 'models/AssessmentModel.php';
+        $currModel = new CurriculumModel();
+
+        // Master Kurikulum & Mapel untuk filter
+        $kurikulumList = $currModel->getAllKurikulum();
+        $mapelList = $db->query("SELECT id, nama_mapel, kode_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $allGuruDropdown = $db->query("SELECT id, nama_lengkap, nip FROM guru ORDER BY nama_lengkap ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Filter state
+        $filterGuruId = !empty($_GET['guru_id']) ? (int)$_GET['guru_id'] : null;
+        $filterMapelId = !empty($_GET['mapel_id']) ? (int)$_GET['mapel_id'] : null;
+        $filterStatus = $_GET['status'] ?? 'all';
+        $search = trim($_GET['q'] ?? '');
+
+        // Query daftar guru beserta data perangkat ajarnya
+        $sqlGuru = "
+            SELECT g.id, g.nama_lengkap, g.nip, g.foto, u.email, u.username,
+                   (SELECT GROUP_CONCAT(DISTINCT m.nama_mapel SEPARATOR ', ') 
+                    FROM jadwal j 
+                    JOIN mata_pelajaran m ON j.mapel_id = m.id 
+                    WHERE j.guru_id = g.id) as mapel_ampu,
+                   (SELECT GROUP_CONCAT(DISTINCT k.nama_kelas SEPARATOR ', ') 
+                    FROM jadwal j 
+                    JOIN kelas k ON j.kelas_id = k.id 
+                    WHERE j.guru_id = g.id) as kelas_ampu,
+                   (SELECT COUNT(*) FROM capaian_pembelajaran cp WHERE cp.guru_id = g.id AND cp.status = 'aktif') as total_cp,
+                   (SELECT COUNT(*) FROM tujuan_pembelajaran tp WHERE tp.guru_id = g.id AND tp.status = 'aktif') as total_tp,
+                   (SELECT COUNT(DISTINCT kktp.id) 
+                    FROM kktp 
+                    JOIN tujuan_pembelajaran tp ON kktp.tp_id = tp.id 
+                    WHERE tp.guru_id = g.id AND kktp.status = 'aktif') as total_kktp,
+                   (SELECT COUNT(DISTINCT asm.id) 
+                    FROM asesmen asm 
+                    WHERE asm.guru_id = g.id) as total_asesmen
+            FROM guru g
+            JOIN users u ON g.user_id = u.id
+            WHERE 1=1
+        ";
+        $paramsGuru = [];
+        if ($filterGuruId) {
+            $sqlGuru .= " AND g.id = ?";
+            $paramsGuru[] = $filterGuruId;
+        }
+        if ($search !== '') {
+            $sqlGuru .= " AND (g.nama_lengkap LIKE ? OR g.nip LIKE ? OR u.email LIKE ?)";
+            $paramsGuru[] = "%{$search}%";
+            $paramsGuru[] = "%{$search}%";
+            $paramsGuru[] = "%{$search}%";
+        }
+        $sqlGuru .= " ORDER BY g.nama_lengkap ASC";
+        
+        $stmtGuru = $db->prepare($sqlGuru);
+        $stmtGuru->execute($paramsGuru);
+        $rawGuruList = $stmtGuru->fetchAll(PDO::FETCH_ASSOC);
+
+        $teacherList = [];
+        $totalLengkap = 0;
+        $totalSebagian = 0;
+        $totalBelum = 0;
+        $globalCp = 0;
+        $globalTp = 0;
+        $globalKktp = 0;
+
+        foreach ($rawGuruList as $g) {
+            $tcp = (int)$g['total_cp'];
+            $ttp = (int)$g['total_tp'];
+            $tkktp = (int)$g['total_kktp'];
+
+            $globalCp += $tcp;
+            $globalTp += $ttp;
+            $globalKktp += $tkktp;
+
+            if ($tcp > 0 && $ttp > 0 && $tkktp > 0) {
+                $statusPerangkat = 'lengkap';
+                $totalLengkap++;
+            } elseif ($tcp > 0 || $ttp > 0 || $tkktp > 0) {
+                $statusPerangkat = 'sebagian';
+                $totalSebagian++;
+            } else {
+                $statusPerangkat = 'belum';
+                $totalBelum++;
+            }
+            $g['status_perangkat'] = $statusPerangkat;
+
+            if ($filterStatus !== 'all' && $filterStatus !== $statusPerangkat) {
+                continue;
+            }
+            $teacherList[] = $g;
+        }
+
+        // Jika requested modal detail guru
+        $detailGuru = null;
+        $detailCpList = [];
+        $detailGuruId = !empty($_GET['detail_guru_id']) ? (int)$_GET['detail_guru_id'] : null;
+        if ($detailGuruId) {
+            $stmtDet = $db->prepare("SELECT g.*, u.email FROM guru g JOIN users u ON g.user_id = u.id WHERE g.id = ?");
+            $stmtDet->execute([$detailGuruId]);
+            $detailGuru = $stmtDet->fetch(PDO::FETCH_ASSOC);
+
+            if ($detailGuru) {
+                $sqlCp = "
+                    SELECT cp.*, m.nama_mapel, f.nama as nama_fase, k.nama as nama_kurikulum
+                    FROM capaian_pembelajaran cp
+                    JOIN mata_pelajaran m ON cp.mapel_id = m.id
+                    LEFT JOIN fase f ON cp.fase_id = f.id
+                    LEFT JOIN kurikulum k ON cp.kurikulum_id = k.id
+                    WHERE cp.guru_id = ? AND cp.status = 'aktif'
+                    ORDER BY cp.created_at ASC
+                ";
+                $stmtCp = $db->prepare($sqlCp);
+                $stmtCp->execute([$detailGuruId]);
+                $detailCpList = $stmtCp->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($detailCpList as &$cItem) {
+                    $sqlTp = "
+                        SELECT tp.*, 
+                               (SELECT COUNT(*) FROM kktp k WHERE k.tp_id = tp.id AND k.status = 'aktif') as has_kktp,
+                               (SELECT metode FROM kktp k WHERE k.tp_id = tp.id AND k.status = 'aktif' LIMIT 1) as kktp_metode,
+                               (SELECT nilai_minimum FROM kktp k WHERE k.tp_id = tp.id AND k.status = 'aktif' LIMIT 1) as kktp_nilai_min,
+                               (SELECT deskripsi_kriteria FROM kktp k WHERE k.tp_id = tp.id AND k.status = 'aktif' LIMIT 1) as kktp_kriteria
+                        FROM tujuan_pembelajaran tp
+                        WHERE tp.cp_id = ? AND tp.status = 'aktif'
+                        ORDER BY tp.urutan ASC, tp.id ASC
+                    ";
+                    $stmtTp = $db->prepare($sqlTp);
+                    $stmtTp->execute([(int)$cItem['id']]);
+                    $tpList = $stmtTp->fetchAll(PDO::FETCH_ASSOC);
+
+                    foreach ($tpList as &$tItem) {
+                        $sqlInd = "
+                            SELECT ki.* 
+                            FROM kktp_indikator ki
+                            JOIN kktp k ON ki.kktp_id = k.id
+                            WHERE k.tp_id = ? AND k.status = 'aktif'
+                            ORDER BY ki.urutan ASC
+                        ";
+                        $stmtInd = $db->prepare($sqlInd);
+                        $stmtInd->execute([(int)$tItem['id']]);
+                        $tItem['indikator'] = $stmtInd->fetchAll(PDO::FETCH_ASSOC);
+                    }
+                    $cItem['tp_list'] = $tpList;
+                }
+            }
+        }
+
+        require_once ROOT_PATH . 'views/kepsek/monitoring_perangkat_ajar.php';
+    }
 }
+

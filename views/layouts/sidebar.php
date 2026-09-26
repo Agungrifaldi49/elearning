@@ -400,6 +400,9 @@ if (!empty($sidebarRawLogo)) {
             </a></li>
 
             <li class="nav-section-title">Pembelajaran & Kurikulum</li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringPerangkatAjar') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringPerangkatAjar">
+                <i class="bi bi-diagram-3-fill text-warning"></i> Monitoring CP, TP & KKTP Guru
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringPembelajaran') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringPembelajaran">
                 <i class="bi bi-display-fill text-primary"></i> Monitoring Rombel Virtual
             </a></li>
