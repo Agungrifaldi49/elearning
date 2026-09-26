@@ -989,11 +989,15 @@ class KepsekController {
             $hasCatatanWali = !empty($colsRapor);
         } catch (\Throwable $e) {}
 
-        // Check if pembayaran_tagihan exists
+        // Check if pembayaran_tagihan exists and has actual data records
         $hasPembayaran = false;
+        $totalBillsInDb = 0;
         try {
             $pCheck = $db->query("SHOW TABLES LIKE 'pembayaran_tagihan'")->fetch();
             $hasPembayaran = !empty($pCheck);
+            if ($hasPembayaran) {
+                $totalBillsInDb = (int)$db->query("SELECT COUNT(*) FROM pembayaran_tagihan")->fetchColumn();
+            }
         } catch (\Throwable $e) {}
 
         // Enrich each rombel with attendance rate, report progress, and finance rate
@@ -1048,10 +1052,17 @@ class KepsekController {
             }
             $r['catatan_rapor_persen'] = $totSiswa > 0 ? round(($r['catatan_rapor_terisi'] / $totSiswa) * 100) : 0;
 
-            // 3. Kepatuhan Pembayaran SPP Kelas Binaan
-            if ($hasPembayaran && $totSiswa > 0) {
+            // 3. Kepatuhan Pembayaran SPP Kelas Binaan (Sesuai Ketersediaan Data Riil)
+            $r['spp_has_data'] = false;
+            $r['spp_rate'] = null;
+            $r['spp_target'] = 0;
+            $r['spp_terbayar'] = 0;
+            $r['spp_count_tagihan'] = 0;
+
+            if ($hasPembayaran && $totSiswa > 0 && $totalBillsInDb > 0) {
                 $stmtPay = $db->prepare("
                     SELECT 
+                        COUNT(t.id) as count_tagihan,
                         SUM(t.nominal) as target_spp,
                         SUM(t.nominal_terbayar) as bayar_spp
                     FROM pembayaran_tagihan t
@@ -1060,15 +1071,17 @@ class KepsekController {
                 ");
                 $stmtPay->execute([$kId]);
                 $payData = $stmtPay->fetch(PDO::FETCH_ASSOC);
+                $countTagihan = (int)($payData['count_tagihan'] ?? 0);
                 $targetSpp = (float)($payData['target_spp'] ?? 0);
                 $bayarSpp = (float)($payData['bayar_spp'] ?? 0);
-                $r['spp_rate'] = $targetSpp > 0 ? round(($bayarSpp / $targetSpp) * 100) : 100;
-                $r['spp_target'] = $targetSpp;
-                $r['spp_terbayar'] = $bayarSpp;
-            } else {
-                $r['spp_rate'] = 100;
-                $r['spp_target'] = 0;
-                $r['spp_terbayar'] = 0;
+
+                if ($countTagihan > 0 && $targetSpp > 0) {
+                    $r['spp_has_data'] = true;
+                    $r['spp_count_tagihan'] = $countTagihan;
+                    $r['spp_rate'] = round(($bayarSpp / $targetSpp) * 100);
+                    $r['spp_target'] = $targetSpp;
+                    $r['spp_terbayar'] = $bayarSpp;
+                }
             }
 
             $rombelList[] = $r;
@@ -1121,12 +1134,29 @@ class KepsekController {
                         $ds['catatan_wali'] = $stmtC->fetchColumn() ?: '';
                     }
 
-                    // Status SPP
-                    $ds['spp_lunas'] = true;
-                    if ($hasPembayaran) {
-                        $stmtTg = $db->prepare("SELECT COUNT(*) FROM pembayaran_tagihan WHERE siswa_id = ? AND status != 'lunas'");
-                        $stmtTg->execute([(int)$ds['id']]);
-                        $ds['spp_lunas'] = ((int)$stmtTg->fetchColumn() === 0);
+                    // Status SPP Siswa: sesuai ketersediaan data tagihan riil
+                    $ds['spp_status'] = 'belum_ada_data';
+                    $ds['spp_unpaid_count'] = 0;
+                    $ds['spp_total_count'] = 0;
+
+                    if ($hasPembayaran && $totalBillsInDb > 0) {
+                        $stmtCountAll = $db->prepare("SELECT COUNT(*) FROM pembayaran_tagihan WHERE siswa_id = ?");
+                        $stmtCountAll->execute([(int)$ds['id']]);
+                        $totTagihan = (int)$stmtCountAll->fetchColumn();
+                        $ds['spp_total_count'] = $totTagihan;
+
+                        if ($totTagihan > 0) {
+                            $stmtTg = $db->prepare("SELECT COUNT(*) FROM pembayaran_tagihan WHERE siswa_id = ? AND status != 'lunas'");
+                            $stmtTg->execute([(int)$ds['id']]);
+                            $unpaid = (int)$stmtTg->fetchColumn();
+                            $ds['spp_unpaid_count'] = $unpaid;
+
+                            if ($unpaid === 0) {
+                                $ds['spp_status'] = 'lunas';
+                            } else {
+                                $ds['spp_status'] = 'tunggakan';
+                            }
+                        }
                     }
                 }
             }

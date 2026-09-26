@@ -252,6 +252,30 @@ if (!function_exists('resolveWaliAvatarUrl')) {
         </div>
     </div>
 
+    <!-- Notice Integrasi Sistem Pembayaran (Jika data belum disinkronkan dari server pembayaran) -->
+    <?php 
+        $anySppData = false;
+        foreach ($rombelList as $chkR) {
+            if (!empty($chkR['spp_has_data'])) { $anySppData = true; break; }
+        }
+    ?>
+    <?php if (!$anySppData): ?>
+        <div class="alert alert-light border border-info-subtle rounded-4 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-xs no-print">
+            <div class="d-flex align-items-center gap-2.5">
+                <div class="bg-info-subtle text-info rounded-circle p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                    <i class="bi bi-cloud-arrow-down-fill fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-0 text-dark small">Status Integrasi Sistem Pembayaran (Menunggu Data)</h6>
+                    <p class="text-muted small mb-0">Kolom <em>Kepatuhan SPP</em> saat ini berstatus <strong>Belum Ada Data</strong> karena data tagihan belum ditarik/disinkronkan dari sistem pembayaran eksternal (API Bridge). Metrik dan grafik kepatuhan akan terhitung otomatis begitu sinkronisasi dijalankan.</p>
+                </div>
+            </div>
+            <a href="<?= BASE_URL ?>index.php?url=kepsek/pembayaran" class="btn btn-sm btn-outline-info rounded-pill px-3 fw-semibold">
+                <i class="bi bi-wallet2 me-1"></i> Buka Portal SPP
+            </a>
+        </div>
+    <?php endif; ?>
+
     <!-- 4. Matriks Rombel & Wali Kelas Table -->
     <div class="card card-custom border-0 shadow-sm rounded-4 bg-white overflow-hidden mb-4">
         <div class="card-header bg-white py-3 px-3 px-md-4 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -375,14 +399,22 @@ if (!function_exists('resolveWaliAvatarUrl')) {
 
                                 <!-- Kepatuhan SPP -->
                                 <td class="text-center">
-                                    <?php 
-                                        $sppRate = $r['spp_rate'];
-                                        $sppClr = ($sppRate >= 80) ? 'text-success' : (($sppRate >= 50) ? 'text-warning' : 'text-danger');
-                                    ?>
-                                    <div class="fw-bold <?= $sppClr ?>"><?= $sppRate ?>% Lunas</div>
-                                    <div class="progress mx-auto mt-1" style="height: 5px; width: 75px; border-radius: 10px;">
-                                        <div class="progress-bar <?= $sppRate >= 80 ? 'bg-success' : ($sppRate >= 50 ? 'bg-warning' : 'bg-danger') ?>" style="width: <?= min(100, $sppRate) ?>%;"></div>
-                                    </div>
+                                    <?php if (!empty($r['spp_has_data'])): ?>
+                                        <?php 
+                                            $sppRate = $r['spp_rate'] ?? 0;
+                                            $sppClr = ($sppRate >= 80) ? 'text-success' : (($sppRate >= 50) ? 'text-warning' : 'text-danger');
+                                        ?>
+                                        <div class="fw-bold <?= $sppClr ?>"><?= $sppRate ?>% Lunas</div>
+                                        <div class="progress mx-auto mt-1" style="height: 5px; width: 75px; border-radius: 10px;">
+                                            <div class="progress-bar <?= $sppRate >= 80 ? 'bg-success' : ($sppRate >= 50 ? 'bg-warning' : 'bg-danger') ?>" style="width: <?= min(100, $sppRate) ?>%;"></div>
+                                        </div>
+                                        <small class="d-block text-muted mt-0.5" style="font-size: 0.7rem;"><?= (int)$r['spp_count_tagihan'] ?> Tagihan</small>
+                                    <?php else: ?>
+                                        <span class="badge bg-light text-muted border px-2 py-1 rounded-pill small" title="Data tagihan belum disinkronkan dari server sistem pembayaran">
+                                            <i class="bi bi-cloud-arrow-down me-1 text-secondary"></i>Belum Ada Data
+                                        </span>
+                                        <small class="d-block text-muted mt-0.5" style="font-size: 0.7rem;">Sinkronisasi API</small>
+                                    <?php endif; ?>
                                 </td>
 
                                 <!-- Aksi Supervisi -->
@@ -517,13 +549,17 @@ if (!function_exists('resolveWaliAvatarUrl')) {
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center">
-                                        <?php if ($ds['spp_lunas']): ?>
+                                        <?php if ($ds['spp_status'] === 'lunas'): ?>
                                             <span class="badge bg-success text-white px-2.5 py-1 rounded-pill small">
-                                                <i class="bi bi-check2 me-1"></i>Lunas
+                                                <i class="bi bi-check2 me-1"></i>Lunas (<?= (int)$ds['spp_total_count'] ?>)
+                                            </span>
+                                        <?php elseif ($ds['spp_status'] === 'tunggakan'): ?>
+                                            <span class="badge bg-danger text-white px-2.5 py-1 rounded-pill small" title="<?= (int)$ds['spp_unpaid_count'] ?> tagihan belum lunas">
+                                                <i class="bi bi-exclamation-circle me-1"></i>Tunggakan (<?= (int)$ds['spp_unpaid_count'] ?>)
                                             </span>
                                         <?php else: ?>
-                                            <span class="badge bg-danger text-white px-2.5 py-1 rounded-pill small">
-                                                <i class="bi bi-exclamation-circle me-1"></i>Tunggakan
+                                            <span class="badge bg-light text-muted border px-2.5 py-1 rounded-pill small" title="Belum ada data tagihan yang dimuat dari sistem pembayaran">
+                                                <i class="bi bi-dash-circle me-1 text-secondary"></i>Belum Ada Data
                                             </span>
                                         <?php endif; ?>
                                     </td>
