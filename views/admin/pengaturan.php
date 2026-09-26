@@ -380,6 +380,47 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                                 <input type="text" name="landing_maps_url" class="form-control" value="<?= htmlspecialchars($settings['landing_maps_url'] ?? 'https://maps.google.com/maps?q=Cicalengka&t=&z=13&ie=UTF8&iwloc=&output=embed') ?>" placeholder="https://maps.google.com/maps?q=...">
                             </div>
                         </div>
+
+                        <!-- Pengaturan Floating Chat WhatsApp Landing Page -->
+                        <div class="mt-4 pt-3 border-top">
+                            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                                <h6 class="fw-bold text-success mb-0 d-flex align-items-center gap-2">
+                                    <i class="bi bi-whatsapp fs-5"></i> Tombol Chat Cepat WhatsApp (Helpdesk / Bantuan Pengguna)
+                                </h6>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="landingWaSwitch" name="landing_wa_enabled" value="1" <?= (!isset($settings['landing_wa_enabled']) || $settings['landing_wa_enabled'] === '1') ? 'checked' : '' ?>>
+                                    <label class="form-check-label small fw-bold" for="landingWaSwitch">Tampilkan di Landing Page</label>
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-3">
+                                Tombol mengapung (floating button) logo WhatsApp di pojok kanan bawah landing page agar siswa, guru, orang tua, atau tamu yang mengalami kesalahan/kendala bisa langsung menghubungi admin atau tim teknis sekolah.
+                            </p>
+                            <div class="row g-3">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label small fw-bold">Nomor WhatsApp Admin / Helpdesk</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-success text-white"><i class="bi bi-whatsapp"></i></span>
+                                        <input type="text" name="landing_wa_number" id="landingWaNumberInput" class="form-control" value="<?= htmlspecialchars($settings['landing_wa_number'] ?? '082198765433') ?>" placeholder="Contoh: 082198765433">
+                                    </div>
+                                    <small class="text-muted" style="font-size: 0.75rem;">Mendukung format 08xx, +62xx, atau 62xx (otomatis dikonversi).</small>
+                                </div>
+                                <div class="col-12 col-md-8">
+                                    <label class="form-label small fw-bold">Label / Teks Balon Chat (Tooltip)</label>
+                                    <input type="text" name="landing_wa_label" class="form-control" value="<?= htmlspecialchars($settings['landing_wa_label'] ?? 'Butuh Bantuan? Chat Admin') ?>" placeholder="Contoh: Butuh Bantuan? Chat Admin">
+                                    <small class="text-muted" style="font-size: 0.75rem;">Teks sapaan yang muncul saat kursor diarahkan ke tombol WhatsApp.</small>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-bold">Template Pesan Otomatis (Pre-filled Message)</label>
+                                    <textarea name="landing_wa_text" id="landingWaTextInput" class="form-control" rows="2" placeholder="Tuliskan pesan pembuka otomatis saat pengguna membuka WhatsApp..."><?= htmlspecialchars($settings['landing_wa_text'] ?? 'Halo Tim Bantuan E-Learning SMK Muthia Harapan, saya mengalami kendala teknis saat menggunakan website. Mohon bantuannya.') ?></textarea>
+                                    <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
+                                        <small class="text-muted" style="font-size: 0.75rem;">Pesan ini otomatis terisi di chat WhatsApp pengguna ketika tombol diklik.</small>
+                                        <a href="#" id="btnTestWaLanding" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                            <i class="bi bi-box-arrow-up-right me-1"></i> Uji Coba Tautan WhatsApp
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mt-4">
@@ -979,6 +1020,25 @@ function parseInitialMisi() {
 
 document.addEventListener('DOMContentLoaded', function() {
     parseInitialMisi();
+
+    // Live update test WhatsApp link
+    const btnTestWa = document.getElementById('btnTestWaLanding');
+    const waPhoneInp = document.getElementById('landingWaNumberInput');
+    const waTextInp = document.getElementById('landingWaTextInput');
+    function updateWaTestLink() {
+        if (!btnTestWa || !waPhoneInp) return;
+        let phone = (waPhoneInp.value || '').replace(/\D/g, '');
+        if (phone.startsWith('0')) {
+            phone = '62' + phone.substring(1);
+        } else if (phone.startsWith('8')) {
+            phone = '62' + phone;
+        }
+        let text = encodeURIComponent(waTextInp ? waTextInp.value : '');
+        btnTestWa.href = `https://wa.me/${phone}?text=${text}`;
+    }
+    if (waPhoneInp) waPhoneInp.addEventListener('input', updateWaTestLink);
+    if (waTextInp) waTextInp.addEventListener('input', updateWaTestLink);
+    updateWaTestLink();
 });
 
 // Leaflet Map Initialization for Admin Geofence

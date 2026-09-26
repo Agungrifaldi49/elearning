@@ -22,6 +22,23 @@ $mapsUrl = !empty($settings['landing_maps_url']) ? $settings['landing_maps_url']
 $schoolName = Security::safeText($settings['nama_sekolah'] ?? 'SMK Muthia Harapan Cicalengka');
 $misiContent = Security::safeHtml($settings['landing_misi_desc'] ?? 'Mengembangkan kurikulum industri & sertifikasi kompetensi keahlian.');
 $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK Unggulan berstandar Nasional berbasis Teknologi & Imtaq.');
+
+// Pengaturan Chat Cepat WhatsApp Landing Page
+$waChatEnabled = !isset($settings['landing_wa_enabled']) || $settings['landing_wa_enabled'] === '1';
+$rawWaPhone = !empty($settings['landing_wa_number']) ? $settings['landing_wa_number'] : ($settings['telepon'] ?? '082198765433');
+$cleanWaPhone = preg_replace('/[^0-9]/', '', (string)$rawWaPhone);
+if (strpos($cleanWaPhone, '0') === 0) {
+    $cleanWaPhone = '62' . substr($cleanWaPhone, 1);
+} elseif (strpos($cleanWaPhone, '8') === 0) {
+    $cleanWaPhone = '62' . $cleanWaPhone;
+}
+if (empty($cleanWaPhone) || strlen($cleanWaPhone) < 8) {
+    $cleanWaPhone = '6282198765433';
+}
+
+$waChatLabel = !empty($settings['landing_wa_label']) ? Security::safeText($settings['landing_wa_label']) : 'Butuh Bantuan? Chat Admin';
+$waChatMsg = !empty($settings['landing_wa_text']) ? $settings['landing_wa_text'] : 'Halo Tim Bantuan E-Learning SMK Muthia Harapan, saya mengalami kendala teknis saat menggunakan website. Mohon bantuannya.';
+$waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatMsg);
 ?>
 
 <style>
@@ -83,6 +100,244 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
     text-align: justify !important;
     text-justify: inter-word !important;
     line-height: 1.75 !important;
+}
+
+/* WhatsApp Floating Quick Chat Widget Styling */
+.wa-floating-container {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 1045;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
+}
+
+.wa-floating-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    color: #ffffff !important;
+    text-decoration: none !important;
+    padding: 10px 20px 10px 14px;
+    border-radius: 50px;
+    box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45), 0 4px 12px rgba(0, 0, 0, 0.12);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    user-select: none;
+}
+
+.wa-floating-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 14px 30px rgba(37, 211, 102, 0.6), 0 6px 16px rgba(0, 0, 0, 0.18);
+    color: #ffffff !important;
+}
+
+.wa-btn-pulse {
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50px;
+    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
+    animation: waPulseAnim 2.2s infinite;
+    pointer-events: none;
+}
+
+@keyframes waPulseAnim {
+    0% {
+        box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.75);
+    }
+    70% {
+        box-shadow: 0 0 0 16px rgba(37, 211, 102, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
+    }
+}
+
+.wa-icon-box {
+    width: 38px;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+
+.wa-floating-btn:hover .wa-icon-box {
+    transform: rotate(8deg) scale(1.1);
+}
+
+.wa-text-label {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    line-height: 1.2;
+}
+
+.wa-text-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    letter-spacing: -0.2px;
+}
+
+.wa-text-subtitle {
+    font-size: 0.72rem;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.wa-online-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #4ade80;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+    box-shadow: 0 0 6px #4ade80;
+    animation: waDotBlink 2s infinite ease-in-out;
+}
+
+@keyframes waDotBlink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* Chat Card Popup (Modern WhatsApp Box) */
+.wa-chat-popup {
+    width: 320px;
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2), 0 6px 16px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    margin-bottom: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transform-origin: bottom right;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.85) translateY(20px);
+    pointer-events: none;
+}
+
+.wa-chat-popup.show {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1) translateY(0);
+    pointer-events: auto;
+}
+
+.wa-popup-header {
+    background: linear-gradient(135deg, #128C7E 0%, #075E54 100%);
+    color: #ffffff;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.wa-popup-avatar {
+    width: 38px;
+    height: 38px;
+    background: #25D366;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.wa-popup-body {
+    padding: 16px;
+    background: #efeae2;
+    background-image: radial-gradient(#d1c7b7 0.75px, transparent 0.75px);
+    background-size: 12px 12px;
+}
+
+.wa-chat-bubble {
+    background: #ffffff;
+    border-radius: 14px;
+    border-top-left-radius: 3px;
+    padding: 12px 14px;
+    font-size: 0.84rem;
+    color: #1e293b;
+    line-height: 1.45;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    position: relative;
+}
+
+.wa-chat-bubble::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -7px;
+    width: 0;
+    height: 0;
+    border-top: 7px solid #ffffff;
+    border-left: 7px solid transparent;
+}
+
+.wa-popup-footer {
+    padding: 12px 16px;
+    background: #ffffff;
+    border-top: 1px solid #f1f5f9;
+}
+
+.wa-btn-close-popup {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.wa-btn-close-popup:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Responsive adjustments */
+@media (max-width: 575.98px) {
+    .wa-floating-container {
+        bottom: 18px;
+        right: 18px;
+    }
+    .wa-text-label {
+        display: none;
+    }
+    .wa-floating-btn {
+        padding: 0;
+        border-radius: 50%;
+        width: 54px;
+        height: 54px;
+        justify-content: center;
+    }
+    .wa-icon-box {
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        font-size: 26px;
+    }
+    .wa-chat-popup {
+        width: calc(100vw - 36px);
+        max-width: 310px;
+    }
 }
 </style>
 
@@ -596,5 +851,93 @@ $visiContent = Security::safeHtml($settings['landing_visi_desc'] ?? 'Menjadi SMK
         </div>
     </div>
 </footer>
+
+<?php if ($waChatEnabled): ?>
+<!-- Floating WhatsApp Quick Chat Widget -->
+<div class="wa-floating-container" id="waQuickChatContainer">
+    <!-- Popup Chat Bubble Card -->
+    <div class="wa-chat-popup shadow-lg" id="waChatPopup" role="dialog" aria-label="Bantuan WhatsApp">
+        <div class="wa-popup-header">
+            <div class="d-flex align-items-center gap-2">
+                <div class="wa-popup-avatar">
+                    <i class="bi bi-whatsapp"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold fs-6 text-white">Helpdesk E-Learning</h6>
+                    <small class="text-white-50 d-flex align-items-center" style="font-size: 0.72rem;">
+                        <span class="wa-online-dot"></span> Admin Online & Siap Bantu
+                    </small>
+                </div>
+            </div>
+            <button type="button" class="wa-btn-close-popup" id="waClosePopup" title="Tutup pesan">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="wa-popup-body">
+            <div class="wa-chat-bubble">
+                <p class="mb-1 fw-semibold text-dark">Halo! 👋 Butuh bantuan terkait sistem?</p>
+                <p class="mb-0 text-secondary" style="font-size: 0.8rem;">
+                    Jika ada kesalahan akun, kendala login, materi, atau sistem, tim teknis kami siap membantu Anda secara langsung via WhatsApp.
+                </p>
+                <div class="text-end mt-1">
+                    <span class="text-muted" style="font-size: 0.68rem;"><?= date('H:i') ?></span>
+                </div>
+            </div>
+        </div>
+        <div class="wa-popup-footer">
+            <a href="<?= htmlspecialchars($waChatUrl) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-success w-100 fw-bold rounded-pill py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm" style="background: #25D366; border-color: #25D366;">
+                <i class="bi bi-whatsapp fs-5"></i> Chat via WhatsApp
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Floating WhatsApp Button -->
+    <a href="<?= htmlspecialchars($waChatUrl) ?>" target="_blank" rel="noopener noreferrer" class="wa-floating-btn shadow-lg" id="waFloatingBtn" aria-label="Chat WhatsApp Bantuan E-Learning" title="<?= htmlspecialchars($waChatLabel) ?>">
+        <div class="wa-btn-pulse"></div>
+        <div class="wa-icon-box">
+            <i class="bi bi-whatsapp"></i>
+        </div>
+        <div class="wa-text-label">
+            <span class="wa-text-title"><?= htmlspecialchars($waChatLabel) ?></span>
+            <span class="wa-text-subtitle">
+                <span class="wa-online-dot"></span> Online Siap Bantu
+            </span>
+        </div>
+    </a>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const waPopup = document.getElementById('waChatPopup');
+    const waCloseBtn = document.getElementById('waClosePopup');
+    const waBtn = document.getElementById('waFloatingBtn');
+
+    // Tampilkan popup otomatis setelah 3.5 detik jika belum pernah ditutup di sesi ini
+    const popupDismissed = sessionStorage.getItem('smk_wa_popup_dismissed');
+    if (!popupDismissed && waPopup) {
+        setTimeout(function() {
+            waPopup.classList.add('show');
+        }, 3500);
+    }
+
+    if (waCloseBtn && waPopup) {
+        waCloseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            waPopup.classList.remove('show');
+            sessionStorage.setItem('smk_wa_popup_dismissed', '1');
+        });
+    }
+
+    // Klik kanan atau tahan tombol untuk toggle popup jika ingin membaca info
+    if (waBtn && waPopup) {
+        waBtn.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            waPopup.classList.toggle('show');
+        });
+    }
+});
+</script>
+<?php endif; ?>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>

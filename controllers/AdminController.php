@@ -553,6 +553,10 @@ class AdminController {
                     'landing_kontak_title' => Security::sanitize($_POST['landing_kontak_title'] ?? ''),
                     'landing_email' => Security::sanitize($_POST['landing_email'] ?? ''),
                     'landing_maps_url' => trim($_POST['landing_maps_url'] ?? ''),
+                    'landing_wa_enabled' => isset($_POST['landing_wa_enabled']) ? '1' : '0',
+                    'landing_wa_number' => Security::sanitize($_POST['landing_wa_number'] ?? ''),
+                    'landing_wa_label' => Security::sanitize($_POST['landing_wa_label'] ?? ''),
+                    'landing_wa_text' => Security::sanitize($_POST['landing_wa_text'] ?? ''),
                 ];
                 $settingsModel->saveBatch($updateData);
                 $flashSuccess = 'Pengaturan Halaman Landing & Visi Misi berhasil disimpan!';
