@@ -441,6 +441,80 @@ class KepsekController {
     }
 
     /**
+     * Unduh File Backup SQL Arsip dari Disk
+     */
+    public function downloadBackupFile() {
+        $file = basename($_GET['file'] ?? '');
+        if (empty($file) || !preg_match('/^[a-zA-Z0-9_\-\.]+\.sql$/i', $file)) {
+            FlashHelper::setError("Nama berkas cadangan database tidak valid.");
+            header('Location: ' . BASE_URL . 'index.php?url=kepsek/backupStatus');
+            exit();
+        }
+
+        $filePath = ROOT_PATH . 'database/' . $file;
+        if (!file_exists($filePath)) {
+            FlashHelper::setError("Berkas cadangan '{$file}' tidak ditemukan di server.");
+            header('Location: ' . BASE_URL . 'index.php?url=kepsek/backupStatus');
+            exit();
+        }
+
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/sql');
+        header('Content-Disposition: attachment; filename="' . $file . '"');
+        header('Content-Transfer-Encoding: binary');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($filePath));
+
+        readfile($filePath);
+        exit();
+    }
+
+    /**
+     * Generate & Download Live Snapshot Database Terkini
+     */
+    public function downloadLiveBackup() {
+        $reportModel = new ReportModel();
+        $user = AuthHelper::user();
+        $userName = $user ? ($user['full_name'] ?? 'Kepala Sekolah') : 'Kepala Sekolah';
+        $fileName = $reportModel->createDatabaseBackup('manual', "Unduhan Live Snapshot oleh Kepala Sekolah ({$userName})");
+
+        if (!$fileName) {
+            FlashHelper::setError("Gagal membuat snapshot database langsung.");
+            header('Location: ' . BASE_URL . 'index.php?url=kepsek/backupStatus');
+            exit();
+        }
+
+        $filePath = ROOT_PATH . 'database/' . $fileName;
+        if (!file_exists($filePath)) {
+            FlashHelper::setError("Berkas backup tidak ditemukan.");
+            header('Location: ' . BASE_URL . 'index.php?url=kepsek/backupStatus');
+            exit();
+        }
+
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        header('Content-Description: File Transfer');
+        header('Content-Type: application/sql');
+        header('Content-Disposition: attachment; filename="' . $fileName . '"');
+        header('Content-Transfer-Encoding: binary');
+        header('Expires: 0');
+        header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+        header('Pragma: public');
+        header('Content-Length: ' . filesize($filePath));
+
+        readfile($filePath);
+        exit();
+    }
+
+    /**
      * 19. Cetak Laporan Eksekutif Resmi (PDF)
      */
     public function cetakLaporan() {
