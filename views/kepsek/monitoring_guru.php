@@ -16,7 +16,7 @@
 
         <div class="card card-custom p-4 shadow-sm border-0 rounded-4">
             <div class="table-responsive">
-                <table class="table table-hover align-middle <?= !empty($guruList) ? 'datatable' : '' ?>">
+                <table class="table table-hover align-middle <?= !empty($guruList) ? 'datatable' : '' ?>" data-page-length="20">
                     <thead class="table-light">
                         <tr>
                             <th style="width:40px;">No</th>
