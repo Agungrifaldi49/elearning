@@ -392,6 +392,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'kepsek/supervisiGuru') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/supervisiGuru">
                 <i class="bi bi-award-fill text-warning"></i> Supervisi Akademik & Kinerja
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/monitoringWaliKelas') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/monitoringWaliKelas">
+                <i class="bi bi-person-workspace text-info"></i> Monitoring Wali Kelas & Rombel
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'kepsek/presensiGuru') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/presensiGuru">
                 <i class="bi bi-camera-fill text-success"></i> Presensi Selfie Guru Hari Ini
             </a></li>

@@ -221,11 +221,11 @@
                         <div class="d-flex flex-column flex-grow-1 overflow-hidden">
                             <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
                                 <span class="badge bg-warning text-dark px-2 py-0.5 rounded-pill small">Modul 3</span>
-                                <span class="fw-bold text-dark modul-title-text">Supervisi Akademik & Kinerja Pengajar (PKG)</span>
+                                <span class="fw-bold text-dark modul-title-text">Supervisi Kinerja Guru (PKG) & Monitoring Wali Kelas</span>
                             </div>
                             <div class="d-flex align-items-center justify-content-between gap-2">
-                                <small class="text-muted modul-desc-text">Rubrik Supervisi Pembelajaran di Kelas & Rekomendasi Kepsek</small>
-                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">kepsek/supervisiGuru</code>
+                                <small class="text-muted modul-desc-text">Rubrik PKG KBM Kelas & Pengawasan Dewan Wali Kelas Rombel Binaan</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">kepsek/monitoringWaliKelas</code>
                             </div>
                         </div>
                     </div>
@@ -233,7 +233,13 @@
             </h2>
             <div id="collapseKepsekModul3" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanKepsek">
                 <div class="accordion-body bg-white p-3 p-md-4">
-                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-clipboard2-check-fill text-warning me-1"></i>Instrumen Penilaian Kinerja Guru Terpadu</h6>
+                    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1"><i class="bi bi-award me-1"></i>PKG: index.php?url=kepsek/supervisiGuru</span>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1"><i class="bi bi-person-workspace me-1"></i>Wali Kelas: index.php?url=kepsek/monitoringWaliKelas</span>
+                    </div>
+
+                    <!-- 1. Supervisi PKG -->
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-clipboard2-check-fill text-warning me-1"></i>1. Instrumen Penilaian Kinerja Guru Terpadu (`kepsek/supervisiGuru`)</h6>
                     <p class="small text-muted mb-3">Kepala Sekolah dapat melakukan observasi KBM kelas secara berkala menggunakan instrumen rubrik digital terstandar:</p>
 
                     <div class="row g-2 g-md-3 mb-3">
@@ -257,8 +263,28 @@
                         </div>
                     </div>
 
+                    <!-- 2. Monitoring Wali Kelas -->
+                    <div class="p-3 border rounded-4 bg-light mb-3">
+                        <h6 class="fw-bold text-info mb-2"><i class="bi bi-person-workspace me-1"></i>2. Monitoring Dewan Wali Kelas & Rombel Binaan (`kepsek/monitoringWaliKelas`)</h6>
+                        <p class="small text-muted mb-2">Mengawasi penugasan wali kelas di seluruh rombongan belajar tingkat X, XI, dan XII:</p>
+                        <div class="row g-2">
+                            <div class="col-12 col-md-6">
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1"><strong>Rasio Penugasan:</strong> Memantau persentase rombel yang sudah memiliki wali kelas vs yang masih kosong (belum ditugaskan).</li>
+                                    <li class="mb-1"><strong>Kehadiran Rombel:</strong> Memantau rekap persentase presensi harian siswa yang dibina langsung oleh wali kelas bersangkutan.</li>
+                                </ul>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1"><strong>Progres Catatan E-Rapor:</strong> Mengetahui berapa siswa binaan yang sudah diberikan catatan perkembangan/rapor semester.</li>
+                                    <li class="mb-1"><strong>Akses Rapor & Kontak WA:</strong> Kepsek dapat langsung membuka rincian siswa rombel, mencetak E-Rapor massal, atau menghubungi wali kelas via WhatsApp.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="alert alert-warning border-0 rounded-3 mb-0 small">
-                        <i class="bi bi-check-circle-fill text-success me-1"></i>Hasil supervisi menghasilkan skor akhir (0-100), predikat kinerja (*Amat Baik / Baik / Cukup*), serta lembaran cetak Berita Acara Supervisi Akademik.
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>Hasil supervisi menghasilkan skor akhir (0-100), predikat kinerja (*Amat Baik / Baik / Cukup*), serta lembaran cetak Berita Acara Supervisi Akademik resmi.
                     </div>
                 </div>
             </div>
@@ -512,15 +538,15 @@
                 <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseKepsekModul9">
                     <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
                         <div class="modul-icon-box bg-success-subtle text-success">
-                            <i class="bi bi-wallet2 fs-5"></i>
+                            <i class="bi bi-pie-chart-fill fs-5"></i>
                         </div>
                         <div class="d-flex flex-column flex-grow-1 overflow-hidden">
                             <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
                                 <span class="badge bg-success text-white px-2 py-0.5 rounded-pill small">Modul 9</span>
-                                <span class="fw-bold text-dark modul-title-text">Monitoring Portal Keuangan SPP & Ekstrakurikuler</span>
+                                <span class="fw-bold text-dark modul-title-text">Monitoring Keuangan SPP & Ekstrakurikuler</span>
                             </div>
                             <div class="d-flex align-items-center justify-content-between gap-2">
-                                <small class="text-muted modul-desc-text">Realisasi Penerimaan Iuran, Status Tunggakan & Laporan PDF</small>
+                                <small class="text-muted modul-desc-text">Target Realisasi Penerimaan, Rasio Kepatuhan Rombel & Cetak Laporan</small>
                                 <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">kepsek/pembayaran</code>
                             </div>
                         </div>
@@ -529,19 +555,60 @@
             </h2>
             <div id="collapseKepsekModul9" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanKepsek">
                 <div class="accordion-body bg-white p-3 p-md-4">
-                    <div class="row g-2 g-md-3">
+                    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-wallet2 me-1"></i>Portal: index.php?url=kepsek/pembayaran</span>
+                        <span class="badge bg-light text-muted border px-2 py-1">Cetak PDF: index.php?url=kepsek/cetakLaporanPembayaran</span>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-cash-coin text-success me-1"></i>Pengawasan Strategis Kas & Realisasi Iuran Sekolah</h6>
+                    <p class="small text-muted mb-3">Portal ini menyajikan gambaran makro kesehatan finansial sekolah yang terintegrasi dengan loket pembayaran TU dan data transfer siswa:</p>
+
+                    <!-- 4 Financial KPI Explanation -->
+                    <div class="row g-2 g-md-3 mb-3">
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <strong class="text-primary small d-block mb-1"><i class="bi bi-cash-stack me-1"></i>Target Penerimaan</strong>
+                                <p class="small text-muted mb-0">Total estimasi kewajiban iuran seluruh siswa aktif untuk tahun ajaran berjalan.</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <strong class="text-success small d-block mb-1"><i class="bi bi-check2-circle me-1"></i>Realisasi Kas Masuk</strong>
+                                <p class="small text-muted mb-0">Nominal pembayaran yang telah tervalidasi lunas beserta persentase capaian pelunasan.</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <strong class="text-danger small d-block mb-1"><i class="bi bi-clock-history me-1"></i>Total Sisa Piutang</strong>
+                                <p class="small text-muted mb-0">Total tunggakan iuran yang belum terselesaikan untuk tindak lanjut bersama wali kelas.</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-lg-3">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <strong class="text-info small d-block mb-1"><i class="bi bi-pie-chart-fill me-1"></i>Kepatuhan Siswa</strong>
+                                <p class="small text-muted mb-0">Perbandingan jumlah peserta didik yang tertib lunas berbanding yang memiliki tanggungan.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Breakdown Panels -->
+                    <div class="row g-2 g-md-3 mb-3">
                         <div class="col-12 col-md-6">
                             <div class="p-3 border rounded-4 bg-light h-100">
-                                <h6 class="fw-bold text-success mb-2"><i class="bi bi-cash-coin me-1"></i>1. Pengawasan Keuangan SPP (`kepsek/pembayaran`)</h6>
-                                <p class="small text-muted mb-0">Mengetahui total realisasi penerimaan iuran, sisa piutang/tunggakan per-tingkat kelas, serta kuitansi resmi bendahara sekolah dengan tombol cetak PDF laporan keuangan eksekutif.</p>
+                                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-tags-fill me-1"></i>Realisasi Per Pos Biaya</h6>
+                                <p class="small text-muted mb-0">Menampilkan persentase pencapaian per jenis tagihan, seperti SPP Bulanan, DSP/Uang Pangkal, Ujian Sekolah, dan Praktik Kejuruan.</p>
                             </div>
                         </div>
                         <div class="col-12 col-md-6">
                             <div class="p-3 border rounded-4 bg-light h-100">
-                                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-activity me-1"></i>2. Kegiatan Ekstrakurikuler</h6>
-                                <p class="small text-muted mb-0">Memantau pendaftaran anggota ekskul (Pramuka, IT Club, Robotik, Futsal, dll.), pembina yang bertugas, serta rekapan nilai ekskul siswa di E-Rapor.</p>
+                                <h6 class="fw-bold text-success mb-2"><i class="bi bi-mortarboard-fill me-1"></i>Peringkat Kepatuhan Per-Rombel</h6>
+                                <p class="small text-muted mb-0">Memetakan rombel kelas mana yang memiliki tingkat kepatuhan pembayaran tertinggi hingga yang memerlukan pendampingan wali kelas.</p>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="alert alert-info border-0 rounded-3 mb-0 small">
+                        <i class="bi bi-printer-fill text-primary me-1"></i><strong>Cetak Laporan Keuangan Eksekutif:</strong> Klik tombol kuning <em>Cetak Laporan Keuangan Eksekutif</em> di bagian atas untuk mencetak lembaran resmi format A4 bertanda tangan Kepala Sekolah.
                     </div>
                 </div>
             </div>

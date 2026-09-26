@@ -910,5 +910,230 @@ class KepsekController {
 
         require_once ROOT_PATH . 'views/kepsek/monitoring_perangkat_ajar.php';
     }
+
+    /**
+     * 17. Monitoring Wali Kelas & Rombel Binaan Eksekutif
+     */
+    public function monitoringWaliKelas() {
+        $db = Database::getConnection();
+        require_once ROOT_PATH . 'models/AcademicModel.php';
+        $academicModel = new AcademicModel();
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $activeTaId = (int)($activeTa['id'] ?? 4);
+
+        // Filter parameters
+        $filterTingkat = trim($_GET['tingkat'] ?? 'all');
+        $filterJurusan = !empty($_GET['jurusan_id']) ? (int)$_GET['jurusan_id'] : null;
+        $filterStatusWali = trim($_GET['status_wali'] ?? 'all'); // 'all', 'terisi', 'kosong'
+        $search = trim($_GET['q'] ?? '');
+
+        // Fetch Jurusan for filter dropdown
+        $jurusanList = $db->query("SELECT id, nama_jurusan, kode_jurusan FROM jurusan ORDER BY nama_jurusan ASC")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Base query for Rombel & Wali Kelas
+        $sql = "
+            SELECT 
+                k.id as kelas_id,
+                k.nama_kelas,
+                k.tingkat,
+                k.jurusan_id,
+                j.nama_jurusan,
+                k.wali_kelas_id,
+                g.id as guru_id,
+                g.nama_lengkap as nama_wali,
+                g.nip as nip_wali,
+                g.no_telepon as kontak_wali,
+                u.email as email_wali,
+                u.avatar as avatar_wali,
+                (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id AND s.status = 'aktif') as total_siswa,
+                (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id AND s.jenis_kelamin = 'L' AND s.status = 'aktif') as siswa_l,
+                (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id AND s.jenis_kelamin = 'P' AND s.status = 'aktif') as siswa_p
+            FROM kelas k
+            LEFT JOIN jurusan j ON k.jurusan_id = j.id
+            LEFT JOIN guru g ON k.wali_kelas_id = g.id
+            LEFT JOIN users u ON g.user_id = u.id
+            WHERE 1=1
+        ";
+
+        $params = [];
+        if ($filterTingkat !== 'all') {
+            $sql .= " AND k.tingkat = ?";
+            $params[] = $filterTingkat;
+        }
+        if ($filterJurusan) {
+            $sql .= " AND k.jurusan_id = ?";
+            $params[] = $filterJurusan;
+        }
+        if ($filterStatusWali === 'terisi') {
+            $sql .= " AND k.wali_kelas_id IS NOT NULL";
+        } elseif ($filterStatusWali === 'kosong') {
+            $sql .= " AND k.wali_kelas_id IS NULL";
+        }
+        if ($search !== '') {
+            $sql .= " AND (k.nama_kelas LIKE ? OR g.nama_lengkap LIKE ? OR g.nip LIKE ? OR j.nama_jurusan LIKE ?)";
+            $params[] = "%{$search}%";
+            $params[] = "%{$search}%";
+            $params[] = "%{$search}%";
+            $params[] = "%{$search}%";
+        }
+        $sql .= " ORDER BY k.tingkat ASC, k.nama_kelas ASC";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $rawRombelList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Check if catatan_wali_kelas column exists in rapor_siswa
+        $hasCatatanWali = false;
+        try {
+            $colsRapor = $db->query("SHOW COLUMNS FROM rapor_siswa LIKE 'catatan_wali_kelas'")->fetchAll();
+            $hasCatatanWali = !empty($colsRapor);
+        } catch (\Throwable $e) {}
+
+        // Check if pembayaran_tagihan exists
+        $hasPembayaran = false;
+        try {
+            $pCheck = $db->query("SHOW TABLES LIKE 'pembayaran_tagihan'")->fetch();
+            $hasPembayaran = !empty($pCheck);
+        } catch (\Throwable $e) {}
+
+        // Enrich each rombel with attendance rate, report progress, and finance rate
+        $rombelList = [];
+        $totalSiswaAll = 0;
+        $totalRombelTerisi = 0;
+        $sumAttendanceRate = 0;
+        $countWithAttendance = 0;
+
+        foreach ($rawRombelList as $r) {
+            $kId = (int)$r['kelas_id'];
+            $totSiswa = (int)$r['total_siswa'];
+            $totalSiswaAll += $totSiswa;
+
+            if (!empty($r['wali_kelas_id'])) {
+                $totalRombelTerisi++;
+            }
+
+            // 1. Presensi / Kehadiran Rombel
+            $stmtAtt = $db->prepare("
+                SELECT 
+                    COUNT(*) as total_abs,
+                    SUM(CASE WHEN a.status = 'Hadir' THEN 1 ELSE 0 END) as hadir_count
+                FROM absensi a
+                JOIN siswa s ON a.siswa_id = s.id
+                WHERE s.kelas_id = ?
+            ");
+            $stmtAtt->execute([$kId]);
+            $attData = $stmtAtt->fetch(PDO::FETCH_ASSOC);
+            $totalAbs = (int)($attData['total_abs'] ?? 0);
+            $hadirCount = (int)($attData['hadir_count'] ?? 0);
+            $kehadiranPersen = $totalAbs > 0 ? round(($hadirCount / $totalAbs) * 100) : 100;
+            $r['kehadiran_persen'] = $kehadiranPersen;
+            $r['total_absensi'] = $totalAbs;
+            if ($totalAbs > 0) {
+                $sumAttendanceRate += $kehadiranPersen;
+                $countWithAttendance++;
+            }
+
+            // 2. Progres Catatan Rapor Wali Kelas
+            if ($hasCatatanWali && $totSiswa > 0) {
+                $stmtRap = $db->prepare("
+                    SELECT COUNT(*) 
+                    FROM rapor_siswa rs
+                    JOIN siswa s ON rs.siswa_id = s.id
+                    WHERE s.kelas_id = ? AND rs.catatan_wali_kelas IS NOT NULL AND TRIM(rs.catatan_wali_kelas) != ''
+                ");
+                $stmtRap->execute([$kId]);
+                $r['catatan_rapor_terisi'] = (int)$stmtRap->fetchColumn();
+            } else {
+                $r['catatan_rapor_terisi'] = 0;
+            }
+            $r['catatan_rapor_persen'] = $totSiswa > 0 ? round(($r['catatan_rapor_terisi'] / $totSiswa) * 100) : 0;
+
+            // 3. Kepatuhan Pembayaran SPP Kelas Binaan
+            if ($hasPembayaran && $totSiswa > 0) {
+                $stmtPay = $db->prepare("
+                    SELECT 
+                        SUM(t.nominal) as target_spp,
+                        SUM(t.nominal_terbayar) as bayar_spp
+                    FROM pembayaran_tagihan t
+                    JOIN siswa s ON t.siswa_id = s.id
+                    WHERE s.kelas_id = ?
+                ");
+                $stmtPay->execute([$kId]);
+                $payData = $stmtPay->fetch(PDO::FETCH_ASSOC);
+                $targetSpp = (float)($payData['target_spp'] ?? 0);
+                $bayarSpp = (float)($payData['bayar_spp'] ?? 0);
+                $r['spp_rate'] = $targetSpp > 0 ? round(($bayarSpp / $targetSpp) * 100) : 100;
+                $r['spp_target'] = $targetSpp;
+                $r['spp_terbayar'] = $bayarSpp;
+            } else {
+                $r['spp_rate'] = 100;
+                $r['spp_target'] = 0;
+                $r['spp_terbayar'] = 0;
+            }
+
+            $rombelList[] = $r;
+        }
+
+        $totalRombel = count($rawRombelList);
+        $avgAttendanceAll = $countWithAttendance > 0 ? round($sumAttendanceRate / $countWithAttendance) : 100;
+
+        // Drill-Down: Jika ada detail_kelas_id
+        $detailKelas = null;
+        $detailSiswaList = [];
+        $detailKelasId = !empty($_GET['detail_kelas_id']) ? (int)$_GET['detail_kelas_id'] : null;
+        if ($detailKelasId) {
+            $stmtDetK = $db->prepare("
+                SELECT k.*, j.nama_jurusan, g.nama_lengkap as nama_wali, g.nip as nip_wali, g.no_telepon as kontak_wali, u.email as email_wali, u.avatar as avatar_wali
+                FROM kelas k
+                LEFT JOIN jurusan j ON k.jurusan_id = j.id
+                LEFT JOIN guru g ON k.wali_kelas_id = g.id
+                LEFT JOIN users u ON g.user_id = u.id
+                WHERE k.id = ?
+            ");
+            $stmtDetK->execute([$detailKelasId]);
+            $detailKelas = $stmtDetK->fetch(PDO::FETCH_ASSOC);
+
+            if ($detailKelas) {
+                $sqlSiswa = "
+                    SELECT s.id, s.nis, s.nisn, s.nama_lengkap, s.jenis_kelamin, s.no_telepon, s.status,
+                           u.avatar,
+                           (SELECT COUNT(*) FROM absensi a WHERE a.siswa_id = s.id) as total_presensi,
+                           (SELECT COUNT(*) FROM absensi a WHERE a.siswa_id = s.id AND a.status = 'Hadir') as hadir_presensi
+                    FROM siswa s
+                    LEFT JOIN users u ON s.user_id = u.id
+                    WHERE s.kelas_id = ?
+                    ORDER BY s.nama_lengkap ASC
+                ";
+                $stmtSiswa = $db->prepare($sqlSiswa);
+                $stmtSiswa->execute([$detailKelasId]);
+                $detailSiswaList = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($detailSiswaList as &$ds) {
+                    $totP = (int)$ds['total_presensi'];
+                    $hdrP = (int)$ds['hadir_presensi'];
+                    $ds['presensi_pct'] = $totP > 0 ? round(($hdrP / $totP) * 100) : 100;
+
+                    // Catatan wali kelas
+                    $ds['catatan_wali'] = '';
+                    if ($hasCatatanWali) {
+                        $stmtC = $db->prepare("SELECT catatan_wali_kelas FROM rapor_siswa WHERE siswa_id = ? LIMIT 1");
+                        $stmtC->execute([(int)$ds['id']]);
+                        $ds['catatan_wali'] = $stmtC->fetchColumn() ?: '';
+                    }
+
+                    // Status SPP
+                    $ds['spp_lunas'] = true;
+                    if ($hasPembayaran) {
+                        $stmtTg = $db->prepare("SELECT COUNT(*) FROM pembayaran_tagihan WHERE siswa_id = ? AND status != 'lunas'");
+                        $stmtTg->execute([(int)$ds['id']]);
+                        $ds['spp_lunas'] = ((int)$stmtTg->fetchColumn() === 0);
+                    }
+                }
+            }
+        }
+
+        require_once ROOT_PATH . 'views/kepsek/monitoring_wali_kelas.php';
+    }
 }
+
 
