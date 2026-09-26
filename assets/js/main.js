@@ -39,20 +39,28 @@ document.addEventListener('DOMContentLoaded', function () {
     // DataTables Initialization (wrapped in responsive div)
     if (window.jQuery && $.fn.DataTable) {
         $.fn.dataTable.ext.errMode = 'none';
-        $('.datatable').DataTable({
-            responsive: true,
-            language: {
-                search: "Cari:",
-                lengthMenu: "Tampilkan _MENU_ data",
-                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
-                paginate: {
-                    first: "Awal",
-                    last: "Akhir",
-                    next: "Lanjut",
-                    previous: "Kembali"
-                },
-                zeroRecords: "Tidak ada data yang ditemukan"
-            }
+        $('.datatable').each(function() {
+            var customLength = parseInt($(this).data('page-length')) || 20;
+            $(this).DataTable({
+                responsive: true,
+                pageLength: customLength,
+                lengthMenu: [
+                    [10, 20, 25, 50, 100, -1],
+                    [10, 20, 25, 50, 100, "Semua"]
+                ],
+                language: {
+                    search: "Cari:",
+                    lengthMenu: "Tampilkan _MENU_ data",
+                    info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                    paginate: {
+                        first: "Awal",
+                        last: "Akhir",
+                        next: "Lanjut",
+                        previous: "Kembali"
+                    },
+                    zeroRecords: "Tidak ada data yang ditemukan"
+                }
+            });
         });
     }
 });
