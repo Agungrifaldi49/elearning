@@ -1,12 +1,43 @@
+# ==============================================================================
+# E-LEARNING SYSTEM APACHE CONFIGURATION & SECURITY HARDENING
+# ==============================================================================
+
+# 1. Matikan Directory Browsing (Mencegah publik melihat isi folder)
+Options -Indexes
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Route /api/* endpoints directly to api.php
+    # 2. Blokir akses ke file & folder tersembunyi (.git, .env, .htaccess, dll)
+    RewriteRule ^\.(.*)$ - [F,L]
+    RewriteRule (^|/)\.(?!well-known) - [F,L]
+
+    # 3. Blokir akses langsung ke ekstensi file sensitif (database dump, log, config)
+    RewriteRule \.(sql|json|env|log|bak|config|dist|md|lock|sh|bat)$ - [F,L]
+
+    # 4. Blokir akses langsung ke folder backend internal
+    RewriteRule ^(config|database|models|controllers|views|scratch|helpers)/.*$ - [F,L]
+
+    # 5. Routing API
     RewriteRule ^api/(.*)$ api.php?action=$1 [QSA,L]
     RewriteRule ^api$ api.php?action=index [QSA,L]
 
-    # Standard routing for non-file and non-directory requests
+    # 6. Standard routing untuk URL E-Learning
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^(.*)$ index.php?url=$1 [QSA,L]
+</IfModule>
+
+# 7. Proteksi ganda untuk file sensitif
+<FilesMatch "(?i)\.(sql|env|log|json|ini|yml|yaml|bak|sh|bat|dist|md)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# 8. Proteksi Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>

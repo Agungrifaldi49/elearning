@@ -1,0 +1,20 @@
+# ==============================================================================
+# SECURITY PROTECTION FOR UPLOADS DIRECTORY
+# Mencegah eksekusi script PHP, Perl, CGI, Executable, atau file shell berbahaya
+# ==============================================================================
+
+<FilesMatch "(?i)\.(php|phtml|php3|php4|php5|php7|php8|phps|pht|phar|inc|sh|pl|cgi|exe|bat|cmd|py)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Mencegah penjelajahan direktori (Directory Browsing)
+Options -Indexes -ExecCGI
+
+# Mencegah mod_php dari mengeksekusi file
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
