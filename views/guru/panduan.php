@@ -2,255 +2,280 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
-<main class="main-content px-2 px-sm-3 px-md-4 py-3">
-<div class="container-fluid max-w-1200">
+<main class="main-content px-2 px-sm-3 px-md-4">
+<div class="container-fluid">
 
-    <!-- 1. Compact Hero Header (Mobile-First) -->
-    <div class="card border-0 rounded-4 shadow-sm bg-white p-3 p-md-4 mb-3 border-start border-4 border-success">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <!-- 1. Hero Executive Header -->
+    <div class="card-custom p-3 p-md-4 mb-3 mb-md-4 border-start border-5 border-success shadow-sm">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div class="d-flex align-items-center gap-3">
-                <div class="bg-success bg-opacity-10 text-success rounded-3 p-2.5 p-md-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
-                    <i class="bi bi-book-half fs-4"></i>
+                <div class="bg-success-subtle text-success rounded-4 p-2.5 p-md-3 d-flex align-items-center justify-content-center flex-shrink-0 hero-icon-box">
+                    <i class="bi bi-book-half fs-2"></i>
                 </div>
                 <div>
-                    <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
-                        <h5 class="fw-bold mb-0 text-dark">Panduan Mengajar & KBM Guru</h5>
-                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5" style="font-size: 0.7rem;">Hak Akses Guru</span>
+                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        <h4 class="fw-bold mb-0 text-dark page-title">Panduan Pengguna & Manual Mengajar Sistem</h4>
+                        <span class="badge bg-success px-2.5 py-1">Hak Akses: Guru / Pendidik</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 small d-none d-sm-inline-block">Kurikulum Merdeka & KBM Digital</span>
                     </div>
-                    <p class="text-muted small mb-0 d-none d-sm-block" style="font-size: 0.8rem;">
-                        Manual praktis KBM digital, Key Mapel, CBT anti-curang, Presensi Selfie GPS, Leger E-Rapor, & Wali Kelas.
-                    </p>
+                    <p class="text-muted small mb-0 page-subtitle">Petunjuk teknis pengajaran digital, pembuatan Kode Akses (Key Mapel), Learning Path, upload modul & video, kuis CBT anti-curang, presensi selfie GPS, scan QR kartu siswa, penyusunan CP-TP, leger E-Rapor batch, peran Wali Kelas, hingga komunikasi WhatsApp orang tua murid.</p>
                 </div>
             </div>
-
-            <!-- Single Quick Action Dropdown + Print (Minimal & Rapi) -->
-            <div class="d-flex align-items-center gap-2 ms-auto ms-md-0">
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-sliders2 me-1"></i>Opsi Tampilan
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 small">
-                        <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="toggleAllAccordionsGuru(true)"><i class="bi bi-arrows-expand me-2 text-primary"></i>Buka Semua Topik</a></li>
-                        <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="toggleAllAccordionsGuru(false)"><i class="bi bi-arrows-collapse me-2 text-secondary"></i>Tutup Semua Topik</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item py-2" href="javascript:void(0)" onclick="window.print()"><i class="bi bi-printer me-2 text-dark"></i>Cetak / Simpan PDF</a></li>
-                    </ul>
+            <div class="col-12 col-md-5 col-lg-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-success"></i></span>
+                    <input type="text" id="searchPanduanGuru" class="form-control border-start-0 ps-0" placeholder="Ketik kata kunci (misal: key mapel, gps, e-rapor, cbt)..." onkeyup="filterPanduanGuru()">
+                    <button class="btn btn-outline-secondary border-start-0 bg-white" type="button" onclick="resetSearchGuru()" title="Reset Pencarian"><i class="bi bi-x-circle"></i></button>
                 </div>
             </div>
         </div>
 
-        <!-- Live Search Bar -->
-        <div class="mt-3">
-            <div class="input-group search-input-group">
-                <span class="input-group-text bg-light border-end-0 text-success ps-3"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchPanduanGuru" class="form-control border-start-0 bg-light py-2" placeholder="Cari topik (misal: key mapel, gps, cbt, e-rapor, wali kelas)..." onkeyup="filterPanduanGuru()">
-                <button class="btn btn-light border-start-0 text-muted pe-3" type="button" onclick="resetSearchGuru()" title="Reset"><i class="bi bi-x-circle"></i></button>
-            </div>
-        </div>
-
-        <!-- Horizontal Swipeable Filter Chips (Clean, No-Wrap on Mobile) -->
-        <div class="mt-2.5 pt-2 border-top">
+        <!-- Action Bar: Filter Kategori & Kontrol Cepat (Responsif Mobile) -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 pt-3 border-top">
+            <!-- Scrollable Chips di Layar HP agar Rapi dan Tidak Menumpuk -->
             <div class="d-flex gap-1.5 overflow-x-auto no-scrollbar py-1" id="categoryFilterContainerGuru">
-                <button class="btn btn-sm rounded-pill btn-success active cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('all', this)">
-                    <i class="bi bi-collection me-1"></i>Semua
+                <button class="btn btn-sm btn-success active cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('all', this)"><i class="bi bi-collection me-1"></i>Semua Topik</button>
+                <button class="btn btn-sm btn-outline-success cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('key', this)"><i class="bi bi-key-fill me-1"></i>Key Mapel & Siswa</button>
+                <button class="btn btn-sm btn-outline-success cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('materi', this)"><i class="bi bi-book-fill me-1"></i>Materi & Path</button>
+                <button class="btn btn-sm btn-outline-success cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('evaluasi', this)"><i class="bi bi-patch-question-fill me-1"></i>Tugas & CBT</button>
+                <button class="btn btn-sm btn-outline-success cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('presensi', this)"><i class="bi bi-camera-fill me-1"></i>Presensi GPS & QR</button>
+                <button class="btn btn-sm btn-outline-success cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('rapor', this)"><i class="bi bi-pencil-fill me-1"></i>Leger E-Rapor</button>
+                <button class="btn btn-sm btn-outline-primary cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('walikelas', this)"><i class="bi bi-person-workspace me-1"></i>Wali Kelas & Ortu</button>
+                <button class="btn btn-sm btn-outline-danger cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('faq', this)"><i class="bi bi-question-circle me-1"></i>FAQ Kendala</button>
+            </div>
+            
+            <!-- Tombol Aksi Praktis -->
+            <div class="d-flex gap-1.5 ms-auto flex-shrink-0 action-btn-group">
+                <button class="btn btn-sm btn-outline-secondary" type="button" onclick="toggleAllAccordionsGuru(true)" title="Buka Semua Modul">
+                    <i class="bi bi-arrows-expand me-1"></i><span class="d-none d-sm-inline">Buka Semua</span>
                 </button>
-                <button class="btn btn-sm rounded-pill btn-light text-secondary border cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('key', this)">
-                    <i class="bi bi-key-fill text-warning me-1"></i>Key & Materi
+                <button class="btn btn-sm btn-outline-secondary" type="button" onclick="toggleAllAccordionsGuru(false)" title="Tutup Semua Modul">
+                    <i class="bi bi-arrows-collapse me-1"></i><span class="d-none d-sm-inline">Tutup Semua</span>
                 </button>
-                <button class="btn btn-sm rounded-pill btn-light text-secondary border cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('evaluasi', this)">
-                    <i class="bi bi-patch-question-fill text-danger me-1"></i>Tugas & CBT
-                </button>
-                <button class="btn btn-sm rounded-pill btn-light text-secondary border cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('presensi', this)">
-                    <i class="bi bi-camera-fill text-success me-1"></i>Presensi GPS & QR
-                </button>
-                <button class="btn btn-sm rounded-pill btn-light text-secondary border cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('rapor', this)">
-                    <i class="bi bi-pencil-fill text-info me-1"></i>E-Rapor & CP-TP
-                </button>
-                <button class="btn btn-sm rounded-pill btn-light text-secondary border cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('walikelas', this)">
-                    <i class="bi bi-person-workspace text-primary me-1"></i>Wali Kelas
-                </button>
-                <button class="btn btn-sm rounded-pill btn-light text-secondary border cat-btn-guru text-nowrap flex-shrink-0" onclick="filterByCategoryGuru('faq', this)">
-                    <i class="bi bi-question-circle text-danger me-1"></i>FAQ
+                <button class="btn btn-sm btn-outline-dark" type="button" onclick="window.print()" title="Cetak Manual">
+                    <i class="bi bi-printer-fill me-1"></i><span class="d-none d-sm-inline">Cetak</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- 2. Alur Mengajar KBM (Swipeable Horizontal Step Strip on Mobile) -->
-    <div class="card border-0 rounded-4 shadow-sm bg-white p-3 mb-3">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="text-success fw-bold small"><i class="bi bi-diagram-3-fill me-1.5"></i>Alur Mengajar KBM Digital</span>
-            <small class="text-muted d-none d-md-inline" style="font-size:0.75rem;">5 Langkah Mudah Mengajar</small>
+    <!-- 2. Alur Utama KBM Digital Guru (Diagram Step-by-Step 5 Tahapan) -->
+    <div class="card-custom p-3 p-md-4 mb-3 mb-md-4 shadow-sm">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-bold text-success mb-0"><i class="bi bi-diagram-3-fill me-2"></i>Roadmap KBM Digital & Evaluasi Pembelajaran Guru</h6>
+            <span class="text-muted small d-none d-md-inline"><i class="bi bi-info-circle me-1"></i>Alur 5 Tahap dari Awal Semester hingga Cetak Rapor</span>
         </div>
-        <div class="d-flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            <div class="step-chip flex-shrink-0 p-2 rounded-3 bg-light border text-nowrap">
-                <span class="badge bg-primary me-1">1</span>
-                <span class="small fw-semibold text-dark">Key Mapel & CP-TP</span>
+        <div class="row g-2 g-md-3">
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="p-2.5 p-md-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-primary">
+                    <span class="badge bg-primary mb-2">Tahap 1</span>
+                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-key-fill text-primary me-1"></i>Key Mapel & CP-TP</h6>
+                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Buat Kode Akses unik per-mapel di <i>Kelas Virtual Saya</i>, susun CP-TP Kurikulum Merdeka, dan bagikan key ke siswa.</p>
+                </div>
             </div>
-            <div class="step-chip flex-shrink-0 p-2 rounded-3 bg-light border text-nowrap">
-                <span class="badge bg-success me-1">2</span>
-                <span class="small fw-semibold text-dark">Materi & Learning Path</span>
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="p-2.5 p-md-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-success">
+                    <span class="badge bg-success mb-2">Tahap 2</span>
+                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-cloud-upload-fill text-success me-1"></i>Materi & Path</h6>
+                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Unggah modul PDF/Video MP4/YouTube, atur alur belajar (*Learning Path*), dan manfaatkan referensi Perpustakaan Digital.</p>
+                </div>
             </div>
-            <div class="step-chip flex-shrink-0 p-2 rounded-3 bg-light border text-nowrap">
-                <span class="badge bg-warning text-dark me-1">3</span>
-                <span class="small fw-semibold text-dark">Tugas & CBT Ujian</span>
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="p-2.5 p-md-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-warning">
+                    <span class="badge bg-warning text-dark mb-2">Tahap 3</span>
+                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-patch-question-fill text-warning me-1"></i>Tugas & CBT Ujian</h6>
+                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Rancang tugas ber-deadline, susun CBT multi-soal (PG, B/S, Essay) dengan anti-curang, timer otomatis, dan Bank Soal.</p>
+                </div>
             </div>
-            <div class="step-chip flex-shrink-0 p-2 rounded-3 bg-light border text-nowrap">
-                <span class="badge bg-info text-dark me-1">4</span>
-                <span class="small fw-semibold text-dark">Presensi GPS & Scan QR</span>
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="p-2.5 p-md-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-info">
+                    <span class="badge bg-info text-dark mb-2">Tahap 4</span>
+                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-camera-fill text-info me-1"></i>Presensi GPS & QR</h6>
+                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Lakukan Presensi Selfie GPS saat tiba di sekolah, pantau jadwal mengajar hari ini, serta scan QR presensi kartu siswa di kelas.</p>
+                </div>
             </div>
-            <div class="step-chip flex-shrink-0 p-2 rounded-3 bg-light border text-nowrap">
-                <span class="badge bg-danger me-1">5</span>
-                <span class="small fw-semibold text-dark">Leger E-Rapor & Wali</span>
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="p-2.5 p-md-3 bg-light rounded-4 border h-100 position-relative border-start border-4 border-danger">
+                    <span class="badge bg-danger mb-2">Tahap 5</span>
+                    <h6 class="fw-bold text-dark mb-1"><i class="bi bi-pencil-fill text-danger me-1"></i>Leger Rapor & Wali</h6>
+                    <p class="text-muted small mb-0" style="font-size:0.78rem;">Input Leger E-Rapor Batch 1-klik, kalkulasi nilai akhir otomatis, dan jalankan tugas Wali Kelas binaan serta WhatsApp Ortu.</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 3. Accordion Modul Panduan Guru (Ergonomic Touch Targets) -->
+    <!-- 3. Modul-by-Modul Comprehensive Guides Accordion -->
     <div class="accordion" id="accordionPanduanGuru">
 
         <!-- =========================================================================
-             MODUL 1: DASHBOARD MENGAJAR
+             MODUL 1: DASHBOARD EXECUTIVE & PENGINGAT KBM
         ========================================================================= -->
-        <div class="card border-0 rounded-4 shadow-sm mb-2.5 overflow-hidden panduan-card-guru" data-category="key">
-            <div class="card-header bg-white border-0 p-0">
-                <button class="accordion-button fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul1">
-                    <div class="d-flex align-items-center gap-2.5 text-start w-100">
-                        <div class="rounded-3 bg-success bg-opacity-10 text-success p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="bi bi-grid-1x2-fill fs-5"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-dark d-block text-truncate">Modul 1: Dashboard Mengajar & Pengingat Sesi</span>
-                            <small class="text-muted fw-normal d-block" style="font-size: 0.75rem;">Statistik KBM, Jadwal Sesi Hari Ini, dan Jadwal Sholat</small>
-                        </div>
-                    </div>
+        <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card-guru" data-category="dashboard">
+            <h2 class="accordion-header">
+                <button class="accordion-button fw-bold fs-6 py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul1">
+                    <i class="bi bi-grid-1x2-fill text-success me-2 fs-5"></i> Modul 1: Dashboard Mengajar, Pengingat KBM & Waktu Sholat (`guru/dashboard`)
                 </button>
-            </div>
+            </h2>
             <div id="collapseGuruModul1" class="accordion-collapse collapse show" data-bs-parent="#accordionPanduanGuru">
-                <div class="card-body p-3 p-md-4 pt-1">
-                    <p class="small text-muted mb-3">Pusat pemantauan tugas mengajar harian Anda. Begitu login, periksa informasi prioritas berikut:</p>
-                    
+                <div class="accordion-body bg-white p-3 p-md-4">
+                    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-link-45deg me-1"></i>Navigasi: Dashboard Mengajar</span>
+                        <span class="badge bg-light text-muted border px-2 py-1">URL: index.php?url=guru/dashboard</span>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-info-circle text-success me-1"></i>Pusat Monitoring Harian Guru</h6>
+                    <p class="small text-muted mb-3">Dashboard dirancang khusus sebagai asisten mengajar digital Anda. Setiap kali login, sistem akan langsung menyajikan informasi prioritas tugas hari ini:</p>
+
                     <div class="row g-2 g-md-3">
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <div class="p-3 border rounded-4 bg-light h-100">
                                 <h6 class="fw-bold text-primary small mb-1"><i class="bi bi-clock-history me-1"></i>Sesi Mengajar Hari Ini</h6>
-                                <p class="text-muted small mb-0" style="font-size:0.8rem;">Mendeteksi hari aktif otomatis (Senin-Sabtu) lengkap dengan Jam KBM (WIB), Mapel, Rombel Target, dan Ruang Kelas/Lab.</p>
+                                <p class="small text-muted mb-0">Mendeteksi otomatis hari aktif (Senin-Sabtu) dan menampilkan jam KBM, rombel kelas target, mapel, serta ruangan/lab.</p>
                             </div>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-success small mb-1"><i class="bi bi-bar-chart-line-fill me-1"></i>Statistik Realtime KBM</h6>
-                                <p class="text-muted small mb-0" style="font-size:0.8rem;">Memantau jumlah Materi Aktif, Tugas Berjalan, Kuis CBT, dan Siswa Terdaftar di kelas Anda.</p>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-success small mb-1"><i class="bi bi-bar-chart-line-fill me-1"></i>Statistik Pembelajaran</h6>
+                                <p class="small text-muted mb-0">Menampilkan jumlah Materi Aktif, Tugas Berjalan, Kuis CBT, dan Siswa Terdaftar di kelas Anda secara realtime.</p>
                             </div>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-warning text-dark small mb-1"><i class="bi bi-moon-stars-fill me-1"></i>Waktu Sholat Sekolah</h6>
-                                <p class="text-muted small mb-0" style="font-size:0.8rem;">Jadwal waktu ibadah terintegrasi sesuai titik lokasi sekolah untuk mendukung pembiasaan religi siswa.</p>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-warning text-dark small mb-1"><i class="bi bi-pie-chart-fill me-1"></i>Distribusi Siswa Terdaftar</h6>
+                                <p class="small text-muted mb-0">Grafik donat yang memetakan proporsi jumlah siswa terdaftar di setiap mata pelajaran yang Anda ampu.</p>
                             </div>
                         </div>
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-info small mb-1"><i class="bi bi-megaphone-fill me-1"></i>Pengumuman Resmi</h6>
-                                <p class="text-muted small mb-0" style="font-size:0.8rem;">Surat edaran atau instruksi penting dari Kepala Sekolah dan Administrator.</p>
+                        <div class="col-12 col-md-6 col-lg-3">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-danger small mb-1"><i class="bi bi-moon-stars-fill me-1"></i>Waktu Sholat Sekolah</h6>
+                                <p class="small text-muted mb-0">Pengingat waktu ibadah Subuh, Dzuhur, Ashar, Maghrib, Isya terintegrasi berdasarkan koordinat wilayah sekolah.</p>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="alert alert-info border-0 rounded-3 mt-3 mb-0 small">
+                        <i class="bi bi-megaphone-fill me-1"></i><strong>Informasi Resmi Sekolah:</strong> Bagian bawah dashboard juga menampilkan surat edaran atau pengumuman resmi yang diterbitkan oleh Kepala Sekolah atau Administrator.
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- =========================================================================
-             MODUL 2: KELAS VIRTUAL & KEY MAPEL
+             MODUL 2: KELAS VIRTUAL, KODE AKSES (KEY MAPEL) & SISWA TERDAFTAR
         ========================================================================= -->
-        <div class="card border-0 rounded-4 shadow-sm mb-2.5 overflow-hidden panduan-card-guru" data-category="key">
-            <div class="card-header bg-white border-0 p-0">
-                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul2">
-                    <div class="d-flex align-items-center gap-2.5 text-start w-100">
-                        <div class="rounded-3 bg-warning bg-opacity-10 text-warning text-dark p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="bi bi-key-fill fs-5"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-dark d-block text-truncate">Modul 2: Kelas Virtual & Kode Akses (Key Mapel)</span>
-                            <small class="text-muted fw-normal d-block" style="font-size: 0.75rem;">Pembuatan Passcode, Proteksi KBM, dan Siswa Terdaftar</small>
-                        </div>
-                    </div>
+        <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card-guru" data-category="key">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold fs-6 py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul2">
+                    <i class="bi bi-bounding-box-circles text-primary me-2 fs-5"></i> Modul 2: Kelas Virtual, Kode Akses (Key Mapel), & Data Siswa Terdaftar (`guru/kelasVirtual`)
                 </button>
-            </div>
+            </h2>
             <div id="collapseGuruModul2" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
-                <div class="card-body p-3 p-md-4 pt-1">
-                    <p class="small text-muted mb-3">Modul ini terletak pada menu <strong>Kelas Virtual Saya (`guru/kelasVirtual`)</strong> yang memiliki 3 tab terpisah:</p>
+                <div class="accordion-body bg-white p-3 p-md-4">
+                    <p class="small text-muted mb-3">Halaman ini merupakan pintu gerbang utama mengorganisir rombel belajar Anda. Terdiri atas <strong>3 Tab Navigasi Terstruktur</strong>:</p>
 
-                    <div class="row g-2 g-md-3">
+                    <div class="row g-2 g-md-3 mb-3">
                         <div class="col-12 col-md-4">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <span class="badge bg-primary mb-1.5">Tab 1: Rombel Saya</span>
-                                <h6 class="fw-bold text-dark small mb-1">Daftar Kelas yang Diampu</h6>
-                                <p class="text-muted small mb-0" style="font-size:0.78rem;">Kartu rombel kelas yang diajar Guru. Dilengkapi penanda khusus jika Anda ditugaskan sebagai <strong>Wali Kelas</strong>.</p>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-success"><i class="bi bi-building me-1"></i>Tab 1: Rombel Kelas Saya</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5">Menampilkan seluruh kartu rombel kelas yang Anda ampu sesuai jadwal resmi.</li>
+                                    <li class="mb-1.5">Badge khusus <span class="badge bg-success">Saya Wali Kelas</span> jika Anda ditugaskan sebagai Wali Kelas.</li>
+                                    <li class="mb-1.5">Tombol pintas menuju Presensi Kelas, Upload Materi, dan Pembuatan Tugas.</li>
+                                </ul>
                             </div>
                         </div>
                         <div class="col-12 col-md-4">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <span class="badge bg-warning text-dark mb-1.5">Tab 2: Key Mapel</span>
-                                <h6 class="fw-bold text-dark small mb-1">Passcode Pendaftaran Siswa</h6>
-                                <p class="text-muted small mb-0" style="font-size:0.78rem;"><strong>Wajib Dibuat:</strong> Buat kunci unik per-mapel (contoh: <code>RPL-WEB-2026</code>). Siswa yang belum join tidak bisa melihat materi & ujian.</p>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-warning text-dark"><i class="bi bi-key-fill me-1"></i>Tab 2: Kode Akses (Key Mapel)</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5"><strong>Wajib Dibuat di Awal Semester:</strong> Buat Passcode / Enrollment Key unik per-mapel (contoh: <code>RPL-WEB-2026</code>).</li>
+                                    <li class="mb-1.5"><strong>Proteksi Belajar:</strong> Siswa yang belum memasukkan Key Mapel ini <strong>tidak dapat mengakses materi, tugas, maupun ujian CBT</strong>.</li>
+                                    <li class="mb-1.5">Kunci dapat diganti atau dinonaktifkan jika masa pendaftaran telah ditutup.</li>
+                                </ul>
                             </div>
                         </div>
                         <div class="col-12 col-md-4">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <span class="badge bg-success mb-1.5">Tab 3: Siswa Terdaftar</span>
-                                <h6 class="fw-bold text-dark small mb-1">Monitoring Siswa Realtime</h6>
-                                <p class="text-muted small mb-0" style="font-size:0.78rem;">Melihat daftar siswa yang berhasil memasukkan Key Mapel Anda, dilengkapi pencarian nama & NISN.</p>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-info"><i class="bi bi-people-fill me-1"></i>Tab 3: Siswa Terdaftar Mapel</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5">Monitoring real-time seluruh siswa yang berhasil bergabung ke mapel Anda.</li>
+                                    <li class="mb-1.5">Filter terisolasi khusus rombel yang Anda ampu.</li>
+                                    <li class="mb-1.5">Pencarian cepat berdasarkan Nama Siswa, NIS, NISN, atau Jurusan.</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
 
-                    <div class="alert alert-success border-0 rounded-3 mt-3 mb-0 p-2.5 small" style="font-size: 0.8rem;">
-                        <i class="bi bi-lightbulb-fill text-warning me-1"></i><strong>Tips Praktis:</strong> Bagikan Key Mapel saat sesi tatap muka pertama agar seluruh siswa serentak terdaftar di kelas digital Anda.
+                    <div class="alert alert-success border-0 rounded-3 mb-0 small">
+                        <i class="bi bi-lightbulb-fill text-warning me-1"></i><strong>Tips Praktis Guru:</strong> Pada pertemuan pertama KBM, tampilkan Kode Akses (Key Mapel) Anda di layar proyektor kelas atau bagikan melalui grup kelas agar siswa mendaftar serentak.
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- =========================================================================
-             MODUL 3: MATERI, VIDEO & LEARNING PATH
+             MODUL 3: URUTAN LEARNING PATH SISWA
         ========================================================================= -->
-        <div class="card border-0 rounded-4 shadow-sm mb-2.5 overflow-hidden panduan-card-guru" data-category="key">
-            <div class="card-header bg-white border-0 p-0">
-                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul3">
-                    <div class="d-flex align-items-center gap-2.5 text-start w-100">
-                        <div class="rounded-3 bg-success bg-opacity-10 text-success p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="bi bi-book-fill fs-5"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-dark d-block text-truncate">Modul 3: Materi Multimedia & Urutan Learning Path</span>
-                            <small class="text-muted fw-normal d-block" style="font-size: 0.75rem;">Upload Modul PDF, Video MP4, YouTube, dan Alur Belajar</small>
-                        </div>
-                    </div>
+        <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card-guru" data-category="materi">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold fs-6 py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul3">
+                    <i class="bi bi-compass-fill text-warning me-2 fs-5"></i> Modul 3: Menyusun Urutan Alur Belajar (Learning Path) (`guru/learningPath`)
                 </button>
-            </div>
+            </h2>
             <div id="collapseGuruModul3" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
-                <div class="card-body p-3 p-md-4 pt-1">
+                <div class="accordion-body bg-white p-3 p-md-4">
+                    <h6 class="fw-bold text-dark"><i class="bi bi-diagram-2 text-warning me-1"></i>Konsep Alur Belajar Mandiri Terstruktur</h6>
+                    <p class="small text-muted mb-3">Fitur Learning Path memungkinkan Guru menyusun peta perjalanan belajar siswa secara runtut (Bab 1 &gt; Bab 2 &gt; Ujian Tengah &gt; Bab 3). Siswa dapat mengikuti alur belajar secara bertahap:</p>
+
                     <div class="row g-2 g-md-3">
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-success small mb-1"><i class="bi bi-cloud-upload me-1"></i>Unggah Modul & Video (`guru/materi`)</h6>
-                                <ul class="small text-muted ps-3 mb-0" style="font-size:0.8rem;">
-                                    <li class="mb-1"><strong>Otomatis Terkunci:</strong> Pilihan kelas & mapel hanya sesuai tugas mengajar Anda.</li>
-                                    <li class="mb-1"><strong>Format Berkas:</strong> Mendukung PDF, Word, PowerPoint, Excel, Gambar, dan Video MP4.</li>
-                                    <li class="mb-1"><strong>Player YouTube:</strong> Cukup tempel tautan video YouTube, siswa dapat menonton langsung di aplikasi tanpa iklan luar.</li>
-                                    <li class="mb-1"><strong>Modal Pratinjau:</strong> Berkas PDF dapat dibaca langsung tanpa wajib download.</li>
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <h6 class="fw-bold text-dark small mb-1"><i class="bi bi-list-ol text-primary me-1"></i>1. Menentukan Langkah Pembelajaran</h6>
+                                <p class="small text-muted mb-0">Pilih mata pelajaran, buat judul tahapan (misal: <i>Tahap 1: Pengenalan Logika Pemrograman</i>), tautkan materi modul yang relevan, lalu tentukan evaluasi kuis pendukung di akhir tahapan.</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <h6 class="fw-bold text-dark small mb-1"><i class="bi bi-lock-fill text-danger me-1"></i>2. Penguncian Prasyarat (*Prerequisite*)</h6>
+                                <p class="small text-muted mb-0">Anda dapat mengatur agar tahapan berikutnya baru terbuka jika siswa telah menyelesaikan membaca modul atau mencapai batas KKM pada evaluasi tahapan sebelumnya.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =========================================================================
+             MODUL 4: UPLOAD MATERI MULTIMEDIA & PERPUSTAKAAN DIGITAL
+        ========================================================================= -->
+        <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card-guru" data-category="materi">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold fs-6 py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul4">
+                    <i class="bi bi-cloud-upload-fill text-success me-2 fs-5"></i> Modul 4: Upload Materi Multimedia & Perpustakaan Digital (`guru/materi` & `library`)
+                </button>
+            </h2>
+            <div id="collapseGuruModul4" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
+                <div class="accordion-body bg-white p-3 p-md-4">
+                    <div class="row g-2 g-md-3 mb-3">
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-success mb-2"><i class="bi bi-file-earmark-arrow-up-fill me-1"></i>1. Unggah Materi & Video (`guru/materi`)</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5"><strong>Restriksi Pengampuan:</strong> Dropdown Mapel dan Kelas otomatis terkunci hanya untuk mapel yang Anda ajar.</li>
+                                    <li class="mb-1.5"><strong>Format Berkas:</strong> Dokumen PDF, Word (DOCX), PowerPoint (PPTX), Excel (XLSX), Gambar, dan Video lokal MP4.</li>
+                                    <li class="mb-1.5"><strong>Integrasi YouTube:</strong> Cukup tempel tautan video YouTube, siswa dapat menonton langsung di aplikasi tanpa iklan luar.</li>
+                                    <li class="mb-1.5"><strong>Modal Pratinjau:</strong> Berkas PDF dapat dibaca langsung tanpa wajib mendownload file besar.</li>
                                 </ul>
                             </div>
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-primary small mb-1"><i class="bi bi-compass me-1"></i>Learning Path Terstruktur (`guru/learningPath`)</h6>
-                                <ul class="small text-muted ps-3 mb-0" style="font-size:0.8rem;">
-                                    <li class="mb-1">Menyusun urutan tahapan belajar bab-demi-bab (*Tahap 1 &gt; Tahap 2 &gt; Evaluasi*).</li>
-                                    <li class="mb-1">Pengaturan prasyarat (*prerequisite*) agar siswa tidak melompat sebelum memahami bab dasar.</li>
-                                    <li class="mb-1">Pemanfaatan koleksi <strong>Perpustakaan Digital (`library`)</strong> untuk referensi e-book kejuruan.</li>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-bookshelf me-1"></i>2. Perpustakaan Digital Sekolah (`library`)</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5">Guru dapat memanfaatkan katalog E-Book resmi sekolah sebagai materi pengayaan atau referensi belajar siswa.</li>
+                                    <li class="mb-1.5">Pencarian buku berdasarkan kategori kejuruan, pengarang, dan tahun terbit.</li>
+                                    <li class="mb-1.5">Guru juga dapat mengunggah modul ajar PDF ke perpustakaan sekolah agar dapat diakses oleh seluruh siswa.</li>
                                 </ul>
                             </div>
                         </div>
@@ -260,43 +285,42 @@
         </div>
 
         <!-- =========================================================================
-             MODUL 4: PENUGASAN, RUBRIK & GAME EDUKASI
+             MODUL 5: TUGAS, RUBRIK PENILAIAN & GAME EDUKASI
         ========================================================================= -->
-        <div class="card border-0 rounded-4 shadow-sm mb-2.5 overflow-hidden panduan-card-guru" data-category="evaluasi">
-            <div class="card-header bg-white border-0 p-0">
-                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul4">
-                    <div class="d-flex align-items-center gap-2.5 text-start w-100">
-                        <div class="rounded-3 bg-danger bg-opacity-10 text-danger p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="bi bi-card-checklist fs-5"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-dark d-block text-truncate">Modul 4: Kelola Penugasan, Rubrik & Game Edukasi</span>
-                            <small class="text-muted fw-normal d-block" style="font-size: 0.75rem;">Deadline, Periksa Kiriman Siswa, dan Gamifikasi</small>
-                        </div>
-                    </div>
+        <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card-guru" data-category="evaluasi">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold fs-6 py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul5">
+                    <i class="bi bi-card-checklist text-danger me-2 fs-5"></i> Modul 5: Kelola Penugasan, Rubrik Evaluasi & Game Edukasi (`guru/tugas` & `game`)
                 </button>
-            </div>
-            <div id="collapseGuruModul4" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
-                <div class="card-body p-3 p-md-4 pt-1">
+            </h2>
+            <div id="collapseGuruModul5" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
+                <div class="accordion-body bg-white p-3 p-md-4">
                     <div class="row g-2 g-md-3">
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-danger small mb-1"><i class="bi bi-pencil-square me-1"></i>1. Membuat Tugas & Deadline</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Tentukan instruksi penugasan, lampiran berkas soal, batas tanggal & jam akhir (*deadline*). Pengumpulan yang lewat batas waktu akan ditandai terlambat oleh sistem.</p>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-danger"><i class="bi bi-pencil-square me-1"></i>1. Membuat Penugasan Baru</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5">Tentukan Judul Tugas, Petunjuk Pengerjaan, serta Kelas dan Mata Pelajaran target.</li>
+                                    <li class="mb-1.5"><strong>Batas Waktu (*Deadline*):</strong> Tentukan tanggal dan jam batas akhir secara presisi. Siswa yang mengumpulkan terlambat akan ditandai otomatis.</li>
+                                    <li class="mb-1.5"><strong>Lampiran Soal:</strong> Anda dapat melampirkan berkas lembar kerja siswa (PDF/Word).</li>
+                                </ul>
                             </div>
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-success small mb-1"><i class="bi bi-award me-1"></i>2. Nilai Siswa & Umpan Balik</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Klik tombol <strong>Nilai Siswa</strong> untuk memeriksa file kiriman tugas, input nilai skor (0-100), dan berikan komentar evaluasi yang otomatis tersinkron ke komponen E-Rapor.</p>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-success"><i class="bi bi-award-fill me-1"></i>2. Pemeriksaan & Penilaian Siswa</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5">Klik tombol <strong>Nilai Siswa</strong> untuk memeriksa file kiriman jawaban siswa.</li>
+                                    <li class="mb-1.5">Input nilai (skala 0 - 100) dan berikan catatan evaluasi/umpan balik konstruktif. Nilai ini otomatis tersimpan ke komponen E-Rapor.</li>
+                                </ul>
                             </div>
                         </div>
 
                         <div class="col-12">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border">
-                                <h6 class="fw-bold text-dark small mb-1"><i class="bi bi-controller text-warning me-1"></i>3. Game Edukasi Kejuruan (`game`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Gunakan game edukasi interaktif sebagai variasi *ice breaking* di sela-sela KBM untuk melatih kecepatan daya tangkap siswa SMK.</p>
+                            <div class="p-3 border rounded-4 bg-light">
+                                <h6 class="fw-bold text-dark"><i class="bi bi-controller text-warning me-1"></i>3. Game Edukasi Interaktif (`game`)</h6>
+                                <p class="small text-muted mb-0">Manfaatkan fitur game edukasi kejuruan sebagai variasi KBM di kelas atau penugasan mandiri untuk melatih daya ingat istilah teknis kejuruan siswa SMK secara menyenangkan.</p>
                             </div>
                         </div>
                     </div>
@@ -305,97 +329,37 @@
         </div>
 
         <!-- =========================================================================
-             MODUL 5: KUIS, UJIAN CBT ANTI-CURANG & BANK SOAL
+             MODUL 6: KUIS, UJIAN CBT ANTI-CURANG & BANK SOAL
         ========================================================================= -->
-        <div class="card border-0 rounded-4 shadow-sm mb-2.5 overflow-hidden panduan-card-guru" data-category="evaluasi">
-            <div class="card-header bg-white border-0 p-0">
-                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul5">
-                    <div class="d-flex align-items-center gap-2.5 text-start w-100">
-                        <div class="rounded-3 bg-warning bg-opacity-10 text-dark p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="bi bi-patch-question-fill fs-5 text-warning"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-dark d-block text-truncate">Modul 5: Kuis, Ujian CBT Anti-Curang & Bank Soal</span>
-                            <small class="text-muted fw-normal d-block" style="font-size: 0.75rem;">Pengacakan Ganda, Timer Hitung Mundur, dan Bank Soal</small>
-                        </div>
-                    </div>
+        <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card-guru" data-category="evaluasi">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold fs-6 py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul6">
+                    <i class="bi bi-patch-question-fill text-warning me-2 fs-5"></i> Modul 6: Kuis, Ujian Online CBT Anti-Curang & Bank Soal (`guru/quiz` & `guru/bankSoal`)
                 </button>
-            </div>
-            <div id="collapseGuruModul5" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
-                <div class="card-body p-3 p-md-4 pt-1">
-                    <div class="row g-2 g-md-3">
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-dark small mb-1"><i class="bi bi-shield-check text-success me-1"></i>Fitur Unggulan CBT Ujian (`guru/quiz`)</h6>
-                                <ul class="small text-muted ps-3 mb-0" style="font-size:0.8rem;">
-                                    <li class="mb-1"><strong>3 Tipe Soal:</strong> Pilihan Ganda (PG), Benar/Salah, dan Essay.</li>
-                                    <li class="mb-1"><strong>Pengacakan Ganda:</strong> Acak urutan butir soal & opsi jawaban (A/B/C/D/E) agar siswa tidak saling contek.</li>
-                                    <li class="mb-1"><strong>Timer & Auto-Submit:</strong> Jawaban otomatis terkirim saat waktu habis.</li>
-                                    <li class="mb-1"><strong>Deteksi Anti-Curang:</strong> Peringatan otomatis jika siswa berganti aplikasi atau membuka tab browser lain.</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-dark small mb-1"><i class="bi bi-database text-info me-1"></i>Bank Soal & Analisis (`guru/bankSoal`)</h6>
-                                <ul class="small text-muted ps-3 mb-0" style="font-size:0.8rem;">
-                                    <li class="mb-1"><strong>Repositori Terpusat:</strong> Seluruh soal yang disusun tersimpan di Bank Soal.</li>
-                                    <li class="mb-1"><strong>Daur Ulang Soal:</strong> Butir soal dapat diimpor langsung saat membuat paket ujian kelas lain.</li>
-                                    <li class="mb-1"><strong>Koreksi Instan:</strong> Nilai pilihan ganda otomatis terhitung dan menghasilkan peringkat nilai secara instan.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- =========================================================================
-             MODUL 6: PRESENSI SELFIE GPS, SCAN QR & JADWAL
-        ========================================================================= -->
-        <div class="card border-0 rounded-4 shadow-sm mb-2.5 overflow-hidden panduan-card-guru" data-category="presensi">
-            <div class="card-header bg-white border-0 p-0">
-                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul6">
-                    <div class="d-flex align-items-center gap-2.5 text-start w-100">
-                        <div class="rounded-3 bg-danger bg-opacity-10 text-danger p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="bi bi-camera-fill fs-5"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-dark d-block text-truncate">Modul 6: Presensi Selfie GPS, Scan QR & Jadwal Mengajar</span>
-                            <small class="text-muted fw-normal d-block" style="font-size: 0.75rem;">Absen Mandiri GPS Sekolah, Scanner QR Kartu Siswa di Kelas</small>
-                        </div>
-                    </div>
-                </button>
-            </div>
+            </h2>
             <div id="collapseGuruModul6" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
-                <div class="card-body p-3 p-md-4 pt-1">
+                <div class="accordion-body bg-white p-3 p-md-4">
                     <div class="row g-2 g-md-3">
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-danger small mb-1"><i class="bi bi-geo-alt-fill me-1"></i>Presensi Selfie Guru GPS (`guru/presensiGuru`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Buka menu ini lewat smartphone saat tiba di sekolah. Izinkan akses Kamera dan Lokasi GPS. Sistem akan memverifikasi apakah Anda berada di dalam radius sekolah sebelum mengizinkan pengiriman absensi Masuk/Pulang.</p>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-dark"><i class="bi bi-stopwatch text-warning me-1"></i>1. Konfigurasi Ujian CBT (`guru/quiz`)</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5"><strong>3 Tipe Soal:</strong> Pilihan Ganda (PG), Benar / Salah (True/False), dan Uraian / Essay.</li>
+                                    <li class="mb-1.5"><strong>Pengacakan Ganda:</strong> Aktifkan <code>Acak Soal</code> dan <code>Acak Jawaban</code> agar setiap siswa menerima urutan pertanyaan dan opsi (A/B/C/D/E) yang berbeda untuk meminimalisir contek.</li>
+                                    <li class="mb-1.5"><strong>Timer & Auto-Submit:</strong> Tentukan durasi menit pengerjaan. Jawaban otomatis dikirim jika waktu habis.</li>
+                                    <li class="mb-1.5"><strong>Proteksi Anti-Curang:</strong> Sistem memonitor jika siswa berpindah aplikasi atau tab browser, dan akan memberikan peringatan hingga penguncian lembar ujian.</li>
+                                </ul>
                             </div>
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-success small mb-1"><i class="bi bi-qr-code-scan me-1"></i>Scan QR Kartu Siswa (`guru/scanQr`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Gunakan kamera HP saat jam pelajaran untuk memindai QR Code pada Kartu Pelajar siswa. Sekali arahkan kamera, nama siswa dan status "Hadir" seketika tercatat dengan bunyi <i>beep</i>.</p>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-primary small mb-1"><i class="bi bi-calendar-check me-1"></i>Presensi Siswa & Rekap Matrix (`guru/absensi`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Pencatatan status Hadir, Izin, Sakit, Alpa per pertemuan. Menu <strong>Rekap Bulanan (`guru/recapBulanan`)</strong> menyajikan matriks tanggal 1-31 hari dan persentase kehadiran rombel.</p>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-warning text-dark small mb-1"><i class="bi bi-clock-history me-1"></i>Jadwal Mengajar Saya (`guru/jadwal`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Rincian jadwal mengajar mingguan (Senin-Sabtu) dengan tanda <span class="badge bg-success">Hari Ini ✔</span> pada sesi yang sedang aktif berjalan.</p>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-dark"><i class="bi bi-database text-info me-1"></i>2. Bank Soal & Analisis Butir Soal (`guru/bankSoal`)</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5"><strong>Penyimpanan Master Soal:</strong> Seluruh butir soal yang Anda susun tersimpan aman di Bank Soal Guru.</li>
+                                    <li class="mb-1.5"><strong>Daur Ulang (*Reuse*):</strong> Soal pada bank soal dapat diimpor langsung saat membuat paket kuis baru kelas paralel tanpa mengetik ulang.</li>
+                                    <li class="mb-1.5"><strong>Analisis Nilai Instan:</strong> Soal pilihan ganda dinilai otomatis oleh sistem dan menghasilkan tabel perankingan seketika.</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -404,150 +368,180 @@
         </div>
 
         <!-- =========================================================================
-             MODUL 7: CP-TP, ASESMEN & LEGER E-RAPOR BATCH
+             MODUL 7: PRESENSI SELFIE GPS, SCAN QR & JADWAL KBM
         ========================================================================= -->
-        <div class="card border-0 rounded-4 shadow-sm mb-2.5 overflow-hidden panduan-card-guru" data-category="rapor">
-            <div class="card-header bg-white border-0 p-0">
-                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul7">
-                    <div class="d-flex align-items-center gap-2.5 text-start w-100">
-                        <div class="rounded-3 bg-info bg-opacity-10 text-info p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="bi bi-pencil-fill fs-5"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-dark d-block text-truncate">Modul 7: CP-TP, Asesmen & Leger E-Rapor Batch 1-Klik</span>
-                            <small class="text-muted fw-normal d-block" style="font-size: 0.75rem;">Kurikulum Merdeka dan Pengisian Nilai Rombel Cepat</small>
-                        </div>
-                    </div>
+        <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card-guru" data-category="presensi">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold fs-6 py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul7">
+                    <i class="bi bi-camera-fill text-danger me-2 fs-5"></i> Modul 7: Presensi Selfie GPS Guru, Scan QR Siswa & Jadwal Mengajar (`guru/presensiGuru`, `guru/scanQr`, `guru/jadwal`)
                 </button>
-            </div>
+            </h2>
             <div id="collapseGuruModul7" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
-                <div class="card-body p-3 p-md-4 pt-1">
-                    <div class="row g-2 g-md-3 mb-2">
+                <div class="accordion-body bg-white p-3 p-md-4">
+                    <div class="row g-2 g-md-3">
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-primary small mb-1"><i class="bi bi-diagram-3 me-1"></i>Penyusunan CP & TP (`guru/cptp`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Penyusunan Capaian Pembelajaran (CP) dan Tujuan Pembelajaran (TP) sesuai Kurikulum Merdeka Fase E (Kelas X) & Fase F (Kelas XI-XII SMK).</p>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-danger"><i class="bi bi-geo-alt-fill me-1"></i>1. Presensi Selfie Guru GPS (`guru/presensiGuru`)</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5"><strong>Wajib Dilakukan Setiap Hari Mengajar:</strong> Buka menu ini melalui smartphone atau laptop Anda saat tiba di lingkungan sekolah.</li>
+                                    <li class="mb-1.5"><strong>Izinkan Kamera & Lokasi:</strong> Izinkan peramban browser mengakses Kamera Depan dan Lokasi GPS perangkat.</li>
+                                    <li class="mb-1.5"><strong>Validasi Geofencing:</strong> Sistem akan memeriksa posisi Anda terhadap titik koordinat sekolah dalam radius yang ditentukan sebelum mengizinkan presensi.</li>
+                                </ul>
                             </div>
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-danger small mb-1"><i class="bi bi-bullseye me-1"></i>Asesmen & KKTP (`guru/asesmen`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Penentuan Kriteria Ketercapaian Tujuan Pembelajaran dan kategori asesmen diagnostik, formatif, dan sumatif.</p>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-success"><i class="bi bi-qr-code-scan me-1"></i>2. Scan QR Code Presensi Siswa di Kelas (`guru/scanQr`)</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5">Saat memulai jam pelajaran di kelas, Guru dapat membuka pemindai kamera untuk scan QR Code Kartu Pelajar siswa.</li>
+                                    <li class="mb-1.5">Siswa cukup menghadapkan kartu ke kamera. Status "Hadir" seketika tercatat disertai nada <i>beep</i> konfirmasi.</li>
+                                    <li class="mb-1.5">Menghemat waktu presensi manual dibandingkan memanggil absen satu-persatu.</li>
+                                </ul>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Leger E-Rapor Batch Highlight -->
-                    <div class="p-3 rounded-3 bg-light border">
-                        <h6 class="fw-bold text-success small mb-1.5"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Leger E-Rapor Batch (`guru/inputNilai`)</h6>
-                        <p class="small text-muted mb-2" style="font-size:0.8rem;">Tabel pengisian nilai rombel otomatis dengan kalkulasi Nilai Akhir & Predikat (A/B/C/D) instan:</p>
-                        
-                        <div class="d-flex flex-wrap gap-1 mb-2">
-                            <span class="badge bg-white text-primary border">Tugas (20%)</span>
-                            <span class="badge bg-white text-success border">Formatif (20%)</span>
-                            <span class="badge bg-white text-warning text-dark border">STS (30%)</span>
-                            <span class="badge bg-white text-danger border">SAS (30%)</span>
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-primary"><i class="bi bi-calendar-check-fill me-1"></i>3. Presensi Siswa & Rekap Bulanan (`guru/absensi` & `guru/recapBulanan`)</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5">Pencatatan manual status <code>Hadir</code>, <code>Izin</code>, <code>Sakit</code>, atau <code>Alpa</code> per sesi pertemuan.</li>
+                                    <li class="mb-1.5">Menu <strong>Rekap Absensi Bulanan Matrix</strong> menyajikan rekap kehadiran siswa dari tanggal 1 hingga 31 hari dalam satu bulan per rombel lengkap dengan persentase kehadiran.</li>
+                                </ul>
+                            </div>
                         </div>
 
-                        <p class="small text-muted mb-0" style="font-size:0.8rem;">
-                            <i class="bi bi-check2-circle text-success me-1"></i><strong>Batch Save:</strong> Cukup klik <strong>Simpan Seluruh E-Rapor Kelas Ini</strong> untuk menyimpan satu rombel sekaligus dalam hitungan detik.
-                        </p>
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-warning text-dark"><i class="bi bi-clock-history me-1"></i>4. Jadwal Mengajar Saya (`guru/jadwal`)</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5">Daftar jadwal mengajar mingguan (Senin s/d Sabtu) yang diplot oleh bagian Kurikulum.</li>
+                                    <li class="mb-1.5">Hari berjalan otomatis diberi tanda khusus <span class="badge bg-success">Hari Ini ✔</span> untuk memudahkan pengecekan kelas berikutnya.</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- =========================================================================
-             MODUL 8: PERAN WALI KELAS & WHATSAPP ORANG TUA
+             MODUL 8: KURIKULUM MERDEKA (CP-TP), ASESMEN & LEGER E-RAPOR BATCH
         ========================================================================= -->
-        <div class="card border-0 rounded-4 shadow-sm mb-2.5 overflow-hidden panduan-card-guru" data-category="walikelas">
-            <div class="card-header bg-white border-0 p-0">
-                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul8">
-                    <div class="d-flex align-items-center gap-2.5 text-start w-100">
-                        <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="bi bi-person-workspace fs-5"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-dark d-block text-truncate">Modul 8: Peran Khusus Wali Kelas & Kontak WhatsApp Ortu</span>
-                            <small class="text-muted fw-normal d-block" style="font-size: 0.75rem;">Kelas Binaan, Kontak Ortu WA, dan Cetak Rapor Massal</small>
-                        </div>
-                    </div>
+        <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card-guru" data-category="rapor">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold fs-6 py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul8">
+                    <i class="bi bi-pencil-fill text-info me-2 fs-5"></i> Modul 8: Kurikulum Merdeka (CP-TP), Asesmen KKTP & Leger E-Rapor Batch (`guru/cptp`, `guru/asesmen`, `guru/inputNilai`)
                 </button>
-            </div>
+            </h2>
             <div id="collapseGuruModul8" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
-                <div class="card-body p-3 p-md-4 pt-1">
-                    <p class="small text-muted mb-2.5">Fitur ini otomatis aktif jika Anda ditugaskan sebagai <strong>Wali Kelas</strong> oleh Admin:</p>
-
-                    <div class="row g-2 g-md-3">
+                <div class="accordion-body bg-white p-3 p-md-4">
+                    <div class="row g-2 g-md-3 mb-3">
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-primary small mb-1"><i class="bi bi-easel me-1"></i>Monitoring Rombel Binaan (`guru/waliKelas`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Pantau total siswa, rata-rata nilai kelas, dan persentase kehadiran. Tersedia tombol <strong>Cetak E-Rapor Sekaligus</strong> untuk mencetak buku rapor satu kelas dalam 1 berkas PDF.</p>
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-diagram-3-fill me-1"></i>1. Penyusunan CP & TP (`guru/cptp`)</h6>
+                                <p class="small text-muted mb-0">Penyusunan Capaian Pembelajaran (CP) dan rincian Tujuan Pembelajaran (TP) per semester sesuai standar Kurikulum Merdeka Fase E (Kelas X) dan Fase F (Kelas XI & XII SMK).</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-danger mb-2"><i class="bi bi-bullseye me-1"></i>2. Asesmen & KKTP Siswa (`guru/asesmen`)</h6>
+                                <p class="small text-muted mb-0">Penentuan Kriteria Ketercapaian Tujuan Pembelajaran (KKTP) dan pengkategorian asesmen diagnostik, formatif, dan sumatif kompetensi kejuruan.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Leger E-Rapor Batch -->
+                    <div class="p-3 p-md-3.5 border rounded-4 bg-light">
+                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                            <h6 class="fw-bold text-success mb-0"><i class="bi bi-file-earmark-spreadsheet-fill me-1"></i>3. Input Nilai Leger E-Rapor Batch 1-Klik (`guru/inputNilai`)</h6>
+                            <span class="badge bg-success-subtle text-success border border-success">Sangat Efisien</span>
+                        </div>
+                        <p class="small text-muted mb-2">Sistem telah dilengkapi tabel pengisian nilai massal tanpa perlu mengklik simpan satu-persatu per-siswa:</p>
+                        
+                        <div class="row g-2 mb-2">
+                            <div class="col-6 col-md-3">
+                                <div class="bg-white p-2 rounded-2 border text-center">
+                                    <strong class="text-primary small d-block">Tugas Mandiri</strong>
+                                    <span class="badge bg-primary-subtle text-primary">Bobot 20%</span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="bg-white p-2 rounded-2 border text-center">
+                                    <strong class="text-success small d-block">Formatif / Kuis</strong>
+                                    <span class="badge bg-success-subtle text-success">Bobot 20%</span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="bg-white p-2 rounded-2 border text-center">
+                                    <strong class="text-warning text-dark small d-block">Sumatif Tengah (STS)</strong>
+                                    <span class="badge bg-warning-subtle text-dark">Bobot 30%</span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="bg-white p-2 rounded-2 border text-center">
+                                    <strong class="text-danger small d-block">Sumatif Akhir (SAS)</strong>
+                                    <span class="badge bg-danger-subtle text-danger">Bobot 30%</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-success small mb-1"><i class="bi bi-whatsapp me-1"></i>Hubungi WhatsApp Orang Tua Siswa</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Tabel kelas binaan memuat Nomor HP Orang Tua/Wali (`no_ortu`). Klik tombol WhatsApp untuk chat langsung dengan orang tua perihal absensi atau perkembangan anak tanpa simpan kontak manual.</p>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-warning text-dark small mb-1"><i class="bi bi-trophy me-1"></i>Leger & Ranking Siswa (`guru/rankingKelas`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Peringkat siswa 1 s/d terakhir berdasarkan kalkulasi nilai akumulasi E-Rapor seluruh mata pelajaran.</p>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-danger small mb-1"><i class="bi bi-activity me-1"></i>Bimbingan Ekskul (`guru/ekstrakurikuler`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Khusus guru pembina ekstrakurikuler untuk mendata kehadiran latihan dan kartu anggota ekskul.</p>
-                            </div>
-                        </div>
+                        <ul class="small text-muted ps-3 mb-0">
+                            <li class="mb-1"><strong>Kalkulasi Nilai Otomatis:</strong> Mengisi angka pada kolom tugas, formatif, STS, dan SAS akan langsung menghitung Nilai Akhir dan Predikat (A, B, C, D) seketika secara otomatis.</li>
+                            <li class="mb-1"><strong>Simpan 1 Rombel Sekaligus:</strong> Tekan tombol hijau <strong>Simpan Seluruh E-Rapor Kelas Ini</strong> di bagian atas tabel untuk menyimpan seluruh baris nilai kelas binaan dalam 1 detik.</li>
+                        </ul>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- =========================================================================
-             MODUL 9: KOMUNIKASI & LIVE CLASS
+             MODUL 9: PERAN WALI KELAS, LEGER RANKING & WHATSAPP ORANG TUA
         ========================================================================= -->
-        <div class="card border-0 rounded-4 shadow-sm mb-2.5 overflow-hidden panduan-card-guru" data-category="key">
-            <div class="card-header bg-white border-0 p-0">
-                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul9">
-                    <div class="d-flex align-items-center gap-2.5 text-start w-100">
-                        <div class="rounded-3 bg-secondary bg-opacity-10 text-secondary p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="bi bi-chat-dots-fill fs-5"></i>
-                        </div>
-                        <div class="overflow-hidden">
-                            <span class="text-dark d-block text-truncate">Modul 9: Live Class, Forum & Chat Interaktif</span>
-                            <small class="text-muted fw-normal d-block" style="font-size: 0.75rem;">Tatap Muka Video Daring, Diskusi Mapel, dan Kartu Guru</small>
-                        </div>
-                    </div>
+        <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card-guru" data-category="walikelas">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold fs-6 py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul9">
+                    <i class="bi bi-person-workspace text-primary me-2 fs-5"></i> Modul 9: Peran Khusus Wali Kelas, Leger Ranking & Kontak WhatsApp Orang Tua (`guru/waliKelas`)
                 </button>
-            </div>
+            </h2>
             <div id="collapseGuruModul9" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
-                <div class="card-body p-3 p-md-4 pt-1">
+                <div class="accordion-body bg-white p-3 p-md-4">
+                    <div class="alert alert-primary border-0 rounded-3 mb-3 small">
+                        <i class="bi bi-info-circle-fill me-1"></i><strong>Menu Khusus Wali Kelas:</strong> Menu ini otomatis aktif di sidebar Anda jika Administrator menugaskan Anda sebagai <strong>Wali Kelas</strong> pada satu atau lebih rombel kelas.
+                    </div>
+
                     <div class="row g-2 g-md-3">
-                        <div class="col-12 col-md-4">
-                            <div class="p-2.5 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-danger small mb-1"><i class="bi bi-camera-reels me-1"></i>Live Virtual Class (`guru/liveClass`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.78rem;">Tatap muka video online langsung di web tanpa perlu aplikasi luar.</p>
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-primary mb-2"><i class="bi bi-easel-fill me-1"></i>1. Monitoring Kelas Binaan (`guru/waliKelas`)</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5">Melihat rekapitulasi jumlah siswa, rata-rata nilai rombel, dan persentase kehadiran seluruh peserta didik di kelas binaan Anda.</li>
+                                    <li class="mb-1.5"><strong>Cetak E-Rapor Digital Rombel Sekaligus:</strong> Tombol 1-klik untuk mencetak seluruh buku E-Rapor siswa dalam 1 file siap cetak untuk dibagikan saat pembagian rapor semester.</li>
+                                </ul>
                             </div>
                         </div>
-                        <div class="col-12 col-md-4">
-                            <div class="p-2.5 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-primary small mb-1"><i class="bi bi-chat-square-quote me-1"></i>Forum & Chat Siswa (`forum`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.78rem;">Ruang diskusi tanya jawab materi dan konsultasi tugas harian.</p>
+
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-success mb-2"><i class="bi bi-whatsapp me-1"></i>2. Komunikasi WhatsApp Orang Tua Siswa</h6>
+                                <ul class="small text-muted ps-3 mb-0">
+                                    <li class="mb-1.5">Tabel kelas binaan memuat Nomor HP Orang Tua/Wali (`no_ortu`).</li>
+                                    <li class="mb-1.5">Wali Kelas dapat langsung mengklik tombol WhatsApp untuk membuka obrolan dengan orang tua perihal keterlambatan, absensi, atau perkembangan sikap siswa tanpa harus menyimpan kontak di HP secara manual.</li>
+                                </ul>
                             </div>
                         </div>
-                        <div class="col-12 col-md-4">
-                            <div class="p-2.5 rounded-3 bg-light border h-100">
-                                <h6 class="fw-bold text-warning text-dark small mb-1"><i class="bi bi-person-badge me-1"></i>Kartu Guru Digital (`guru/kartuGuru`)</h6>
-                                <p class="small text-muted mb-0" style="font-size:0.78rem;">Kartu identitas GTK ber-QR Code resmi untuk presensi GTK.</p>
+
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-warning text-dark mb-2"><i class="bi bi-trophy-fill me-1"></i>3. Leger & Ranking Siswa Rombel (`guru/rankingKelas`)</h6>
+                                <p class="small text-muted mb-0">Menampilkan peringkat 1, 2, 3 hingga peringkat terakhir di kelas binaan berdasarkan akumulasi nilai rata-rata E-Rapor seluruh mata pelajaran. Sangat membantu dalam penentuan siswa berprestasi dan pemberian penghargaan kelas.</p>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <div class="p-3 border rounded-4 bg-light h-100">
+                                <h6 class="fw-bold text-danger mb-2"><i class="bi bi-activity me-1"></i>4. Bimbingan Ekstrakurikuler (`guru/ekstrakurikuler`)</h6>
+                                <p class="small text-muted mb-0">Bagi Guru yang ditugaskan sebagai Pembina Ekskul (Pramuka, Paskibra, PMR, Futsal, IT Club), menu ini digunakan untuk mendata absensi kegiatan latihan rutin dan rekapitulasi anggota siswa.</p>
                             </div>
                         </div>
                     </div>
@@ -556,50 +550,66 @@
         </div>
 
         <!-- =========================================================================
-             MODUL 10: FAQ KENDALA MENGAJAR
+             MODUL 10: KOMUNIKASI, LIVE CLASS, KARTU GURU & FAQ KENDALA
         ========================================================================= -->
-        <div class="card border-0 rounded-4 shadow-sm mb-2.5 overflow-hidden panduan-card-guru" data-category="faq">
-            <div class="card-header bg-white border-0 p-0">
-                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul10">
-                    <div class="d-flex align-items-center gap-2.5 text-start w-100">
-                        <div class="rounded-3 bg-danger bg-opacity-10 text-danger p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="bi bi-question-circle-fill fs-5"></i>
+        <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card-guru" data-category="faq">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed fw-bold fs-6 py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGuruModul10">
+                    <i class="bi bi-question-circle-fill text-danger me-2 fs-5"></i> Modul 10: Komunikasi, Live Class, Kartu Guru & Tanya Jawab Solusi Kendala (FAQ)
+                </button>
+            </h2>
+            <div id="collapseGuruModul10" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
+                <div class="accordion-body bg-white p-3 p-md-4">
+                    <!-- Fitur Tambahan -->
+                    <div class="row g-2 g-md-3 mb-3 mb-md-4">
+                        <div class="col-12 col-md-4">
+                            <div class="p-3 border rounded-3 h-100">
+                                <h6 class="fw-bold text-danger"><i class="bi bi-camera-reels-fill me-1"></i>Live Virtual Meeting (`guru/liveClass`)</h6>
+                                <p class="small text-muted mb-0">Ruang tatap muka video langsung untuk KBM daring atau konsultasi belajar kelompok tanpa perlu akun Zoom/Google Meet luar.</p>
+                            </div>
                         </div>
-                        <div class="overflow-hidden">
-                            <span class="text-dark d-block text-truncate">Modul 10: Tanya Jawab Kendala Mengajar (FAQ)</span>
-                            <small class="text-muted fw-normal d-block" style="font-size: 0.75rem;">Solusi Cepat untuk Masalah GPS, Key Mapel, dan Ujian Terkunci</small>
+                        <div class="col-12 col-md-4">
+                            <div class="p-3 border rounded-3 h-100">
+                                <h6 class="fw-bold text-primary"><i class="bi bi-chat-dots-fill me-1"></i>Forum & Chat Siswa (`forum` & `chat`)</h6>
+                                <p class="small text-muted mb-0">Diskusi materi belajar dan pesan pribadi dengan siswa yang terhubung dengan notifikasi unread badge di navbar atas.</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="p-3 border rounded-3 h-100">
+                                <h6 class="fw-bold text-warning text-dark"><i class="bi bi-person-badge-fill me-1"></i>Kartu Guru Digital (`guru/kartuGuru`)</h6>
+                                <p class="small text-muted mb-0">Kartu tanda pengenal resmi pendidik ber-QR Code untuk identitas GTK dan presensi scanner sekolah.</p>
+                            </div>
                         </div>
                     </div>
-                </button>
-            </div>
-            <div id="collapseGuruModul10" class="accordion-collapse collapse" data-bs-parent="#accordionPanduanGuru">
-                <div class="card-body p-3 p-md-4 pt-1">
+
+                    <!-- FAQ Kendala Guru -->
+                    <h6 class="fw-bold text-dark mb-3"><i class="bi bi-question-diamond-fill text-danger me-1"></i>Tanya Jawab Kendala Mengajar Sering Dihadapi Guru:</h6>
                     <div class="row g-2 g-md-3">
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <strong class="text-danger small d-block mb-1">Presensi Selfie GPS "Di luar radius"?</strong>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Aktifkan mode "Akurasi Tinggi" pada GPS HP. Buka Google Maps sejenak agar sinyal lokasi mengunci, lalu refresh halaman presensi. Jika masih gagal, mintalah Admin menaikkan radius toleransi geofencing.</p>
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <strong class="text-primary small d-block mb-1">Presensi Selfie ditolak keterangan "Di luar radius"?</strong>
+                                <p class="small text-muted mb-0">Pastikan GPS HP Anda dalam mode "Akurasi Tinggi". Buka Google Maps sebentar agar titik koordinat HP terkunci, lalu refresh halaman presensi. Jika posisi gedung sekolah agak jauh dari titik tengah, laporkan ke Admin untuk memperluas radius geofencing sekolah.</p>
                             </div>
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <strong class="text-primary small d-block mb-1">Siswa tidak bisa melihat materi/tugas saya?</strong>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Pastikan siswa telah memasukkan <strong>Kode Akses (Key Mapel)</strong> Anda di menu <i>Gabung Kelas</i> pada akun siswa. Cek daftar siswa terdaftar di Tab 3 pada menu <i>guru/kelasVirtual</i>.</p>
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <strong class="text-primary small d-block mb-1">Siswa tidak bisa membuka materi atau tugas saya?</strong>
+                                <p class="small text-muted mb-0">Pastikan siswa tersebut telah memasukkan <strong>Kode Akses (Key Mapel)</strong> Anda pada menu <i>Gabung Kelas</i> di akun siswa. Cek daftar siswa yang sudah terdaftar pada Tab 3 di <i>guru/kelasVirtual</i>.</p>
                             </div>
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <strong class="text-warning text-dark small d-block mb-1">Siswa terkunci saat ujian CBT?</strong>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Fitur anti-curang mendeteksi siswa membuka tab lain atau berpindah aplikasi. Guru pengawas dapat mereset sesi pengerjaan siswa pada tabel pemantauan kuis ujian.</p>
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <strong class="text-primary small d-block mb-1">Siswa terlempar / terkunci saat ujian CBT?</strong>
+                                <p class="small text-muted mb-0">Hal ini terjadi jika siswa melanggar aturan anti-curang (misalnya beralih ke WhatsApp atau aplikasi lain saat ujian berlangsung). Sebagai Guru pembuat kuis, Anda dapat mereset sesi siswa tersebut pada tabel pemantauan hasil ujian.</p>
                             </div>
                         </div>
 
                         <div class="col-12 col-md-6">
-                            <div class="p-2.5 p-md-3 rounded-3 bg-light border h-100">
-                                <strong class="text-success small d-block mb-1">Nilai tugas belum muncul di E-Rapor?</strong>
-                                <p class="small text-muted mb-0" style="font-size:0.8rem;">Buka menu <i>guru/inputNilai</i>, pilih kelas & mapel, periksa nilai yang ditarik, lalu klik tombol hijau <strong>Simpan Seluruh E-Rapor Kelas Ini</strong>.</p>
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <strong class="text-primary small d-block mb-1">Nilai tugas atau kuis tidak masuk ke E-Rapor?</strong>
+                                <p class="small text-muted mb-0">Buka menu <strong>Input Nilai E-Rapor (`guru/inputNilai`)</strong>, pilih kelas dan mapel yang bersangkutan, periksa angka nilai yang ditarik, lalu tekan tombol hijau <strong>Simpan Seluruh E-Rapor Kelas Ini</strong>.</p>
                             </div>
                         </div>
                     </div>
@@ -609,21 +619,23 @@
 
     </div>
 
-    <!-- Quick Help & Support Footer Banner (Mobile Compact) -->
-    <div class="card border-0 rounded-4 shadow-sm bg-success bg-opacity-10 text-success-emphasis p-3 p-md-4 mt-3">
-        <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
+    <!-- Quick Help & Support Footer Banner -->
+    <div class="card-custom p-3 p-md-4 mt-3 mt-md-4 shadow-sm border-0 bg-success-subtle text-success-emphasis rounded-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
             <div class="d-flex align-items-center gap-3">
-                <div class="bg-success text-white rounded-3 p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
-                    <i class="bi bi-headset fs-4"></i>
+                <div class="bg-success text-white rounded-3 p-2.5 p-md-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 46px; height: 46px;">
+                    <i class="bi bi-mortarboard-fill fs-3"></i>
                 </div>
                 <div>
-                    <h6 class="fw-bold mb-0.5 text-dark" style="font-size: 0.95rem;">Bantuan Mengajar & Kendala Sistem</h6>
-                    <p class="small text-muted mb-0" style="font-size: 0.78rem;">Hubungi Tim IT Administrator sekolah jika membutuhkan penyesuaian jadwal mengajar atau akun siswa.</p>
+                    <h6 class="fw-bold mb-1">Semangat Mengajar Dewan Guru SMK Muthia Harapan</h6>
+                    <p class="small text-muted mb-0">Portal E-Learning dirancang untuk menyederhanakan tugas administrasi guru sehingga Anda dapat berfokus mendidik dan menginspirasi siswa.</p>
                 </div>
             </div>
-            <a href="<?= BASE_URL ?>index.php?url=guru/dashboard" class="btn btn-sm btn-success rounded-pill px-3 py-1.5 fw-semibold align-self-start align-self-sm-center text-nowrap">
-                <i class="bi bi-speedometer2 me-1"></i>Ke Dashboard
-            </a>
+            <div>
+                <a href="<?= BASE_URL ?>index.php?url=guru/dashboard" class="btn btn-success fw-bold px-3 py-2">
+                    <i class="bi bi-speedometer2 me-1"></i>Kembali ke Dashboard Mengajar
+                </a>
+            </div>
         </div>
     </div>
 
@@ -631,23 +643,31 @@
 </main>
 
 <style>
-/* Desain Mobile-First, Bersih, Ergonomis, & Ringan */
-.max-w-1200 {
-    max-width: 1200px;
-    margin: 0 auto;
+/* Styling Konsisten & Responsif Elearning */
+.card-custom {
+    background: #ffffff;
+    border-radius: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.06);
 }
-.search-input-group .form-control:focus {
+.accordion-button:not(.collapsed) {
+    background-color: rgba(25, 135, 84, 0.08);
+    color: #198754;
     box-shadow: none;
-    background-color: #ffffff;
-    border-color: #198754;
 }
-.search-input-group {
-    border-radius: 50rem;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+.accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0, 0, 0, 0.125);
+}
+.cat-btn-guru {
+    transition: all 0.2s ease-in-out;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.75rem;
+}
+.cat-btn-guru.active {
+    box-shadow: 0 2px 6px rgba(25, 135, 84, 0.3);
 }
 
-/* Horizontal Chip Navigation on Mobile */
+/* Sembunyikan scrollbar bawaan pada swipe chips */
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }
@@ -655,43 +675,37 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
-.cat-btn-guru {
-    font-size: 0.78rem;
-    padding: 0.35rem 0.85rem;
-    transition: all 0.15s ease-in-out;
-}
-.cat-btn-guru.active {
-    background-color: #198754 !important;
-    color: #ffffff !important;
-    border-color: #198754 !important;
-    box-shadow: 0 2px 6px rgba(25, 135, 84, 0.25);
+
+/* Penyesuaian Responsif Khusus Mobile */
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 1.15rem;
+    }
+    .page-subtitle {
+        font-size: 0.78rem;
+    }
+    .hero-icon-box {
+        width: 48px !important;
+        height: 48px !important;
+    }
+    .hero-icon-box i {
+        font-size: 1.5rem !important;
+    }
+    .accordion-button {
+        font-size: 0.92rem !important;
+        padding-top: 0.75rem !important;
+        padding-bottom: 0.75rem !important;
+    }
+    .action-btn-group {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 0.5rem;
+    }
 }
 
-/* Step Chip */
-.step-chip {
-    font-size: 0.78rem;
-}
-
-/* Accordion Touch Ergonomics */
-.accordion-button {
-    background-color: #ffffff;
-    border: none !important;
-    box-shadow: none !important;
-}
-.accordion-button:not(.collapsed) {
-    background-color: rgba(25, 135, 84, 0.05);
-    color: #198754;
-}
-.accordion-button:focus {
-    box-shadow: none;
-}
-.accordion-button::after {
-    background-size: 0.9rem;
-}
-
-/* Print Friendly */
+/* Print styling khusus agar jika di-print hasilnya rapi layaknya buku manual */
 @media print {
-    .app-sidebar, .app-header, .btn, #categoryFilterContainerGuru, .search-input-group, .dropdown {
+    .app-sidebar, .app-header, .btn, #categoryFilterContainerGuru, #searchPanduanGuru, .input-group, .action-btn-group {
         display: none !important;
     }
     .main-content {
@@ -705,10 +719,13 @@
     .accordion-button::after {
         display: none !important;
     }
-    .card {
-        border: 1px solid #ddd !important;
+    .card-custom {
+        border: 1px solid #ccc !important;
         page-break-inside: avoid;
-        margin-bottom: 1rem !important;
+    }
+    .panduan-card-guru {
+        page-break-inside: avoid;
+        margin-bottom: 1.5rem !important;
     }
 }
 </style>
@@ -739,17 +756,32 @@ function resetSearchGuru() {
     filterPanduanGuru();
 }
 
-// Filter Berdasarkan Kategori untuk Guru (Minimalis)
+// Filter Berdasarkan Kategori untuk Guru
 function filterByCategoryGuru(category, btnElement) {
-    // Reset all buttons to inactive style
+    // Reset active button
     document.querySelectorAll('.cat-btn-guru').forEach(btn => {
-        btn.classList.remove('active', 'btn-success');
-        btn.classList.add('btn-light', 'text-secondary', 'border');
+        btn.classList.remove('active', 'btn-success', 'btn-primary', 'btn-danger');
+        if (btn.getAttribute('onclick').includes('walikelas')) {
+            btn.classList.add('btn-outline-primary');
+        } else if (btn.getAttribute('onclick').includes('faq')) {
+            btn.classList.add('btn-outline-danger');
+        } else {
+            btn.classList.add('btn-outline-success');
+        }
     });
 
-    // Set active button
-    btnElement.classList.remove('btn-light', 'text-secondary', 'border');
-    btnElement.classList.add('active', 'btn-success');
+    // Set active class on clicked button
+    btnElement.classList.add('active');
+    if (category === 'walikelas') {
+        btnElement.classList.remove('btn-outline-primary');
+        btnElement.classList.add('btn-primary');
+    } else if (category === 'faq') {
+        btnElement.classList.remove('btn-outline-danger');
+        btnElement.classList.add('btn-danger');
+    } else {
+        btnElement.classList.remove('btn-outline-success');
+        btnElement.classList.add('btn-success');
+    }
 
     const cards = document.querySelectorAll('.panduan-card-guru');
     cards.forEach(card => {
