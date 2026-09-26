@@ -2,6 +2,39 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+// Helper resolusi avatar guru yang aman & fleksibel
+if (!function_exists('resolveGuruAvatarUrl')) {
+    function resolveGuruAvatarUrl($avatarFile, $fullName = 'Guru') {
+        $cleanName = trim($fullName ?: 'Guru');
+        $defaultUi = "https://ui-avatars.com/api/?name=" . urlencode($cleanName) . "&background=0D6EFD&color=fff&bold=true&size=128";
+
+        if (empty($avatarFile) || !is_string($avatarFile) || in_array($avatarFile, ['default_avatar.png', 'default.png', 'avatar.png'])) {
+            return $defaultUi;
+        }
+
+        $candidatePaths = [
+            'assets/uploads/profile/' . $avatarFile,
+            'assets/uploads/avatar/' . $avatarFile,
+            'assets/uploads/guru/' . $avatarFile,
+            'assets/uploads/foto/' . $avatarFile
+        ];
+
+        foreach ($candidatePaths as $relPath) {
+            if (file_exists(ROOT_PATH . $relPath)) {
+                return BASE_URL . $relPath;
+            }
+        }
+
+        if (filter_var($avatarFile, FILTER_VALIDATE_URL)) {
+            return $avatarFile;
+        }
+
+        return $defaultUi;
+    }
+}
+?>
+
 <main class="main-content px-2 px-md-4 py-3">
 <div class="container-fluid px-1 px-md-2">
 
@@ -171,13 +204,15 @@
                                 <td class="ps-3 ps-md-4 text-center text-muted fw-bold"><?= $no++ ?></td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2.5">
-                                        <?php if (!empty($t['avatar'])): ?>
-                                            <img src="<?= BASE_URL ?>uploads/avatars/<?= htmlspecialchars($t['avatar']) ?>" class="rounded-circle border" style="width: 38px; height: 38px; object-fit: cover;" alt="Avatar">
-                                        <?php else: ?>
-                                            <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px; font-size: 0.9rem;">
-                                                <?= strtoupper(substr($t['nama_lengkap'], 0, 1)) ?>
-                                            </div>
-                                        <?php endif; ?>
+                                        <?php 
+                                            $tAvatarUrl = resolveGuruAvatarUrl($t['avatar'] ?? '', $t['nama_lengkap'] ?? 'Guru');
+                                        ?>
+                                        <img src="<?= $tAvatarUrl ?>" 
+                                             class="rounded-circle border shadow-xs flex-shrink-0" 
+                                             style="width: 40px; height: 40px; object-fit: cover;" 
+                                             alt="<?= htmlspecialchars($t['nama_lengkap']) ?>"
+                                             loading="lazy"
+                                             onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=<?= urlencode($t['nama_lengkap'] ?? 'Guru') ?>&background=0D6EFD&color=fff&bold=true';">
                                         <div>
                                             <div class="fw-bold text-dark"><?= htmlspecialchars($t['nama_lengkap']) ?></div>
                                             <div class="text-muted small" style="font-size:0.75rem;">
@@ -244,9 +279,19 @@
     <?php if ($detailGuru): ?>
     <div class="card card-custom border-0 shadow-sm rounded-4 bg-white mb-4" id="detailSection">
         <div class="card-header bg-primary text-white py-3 px-3 px-md-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div>
-                <h5 class="fw-bold mb-0 text-white"><i class="bi bi-folder2-open me-2"></i>Rincian Perangkat Ajar: <?= htmlspecialchars($detailGuru['nama_lengkap']) ?></h5>
-                <small class="text-white-50">NIP: <?= !empty($detailGuru['nip']) ? htmlspecialchars($detailGuru['nip']) : '-' ?> &bull; Email: <?= htmlspecialchars($detailGuru['email'] ?? '-') ?></small>
+            <div class="d-flex align-items-center gap-3">
+                <?php 
+                    $detAvatarUrl = resolveGuruAvatarUrl($detailGuru['avatar'] ?? '', $detailGuru['nama_lengkap'] ?? 'Guru');
+                ?>
+                <img src="<?= $detAvatarUrl ?>" 
+                     class="rounded-circle border border-2 border-white shadow-sm flex-shrink-0" 
+                     style="width: 46px; height: 46px; object-fit: cover;" 
+                     alt="<?= htmlspecialchars($detailGuru['nama_lengkap']) ?>"
+                     onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=<?= urlencode($detailGuru['nama_lengkap'] ?? 'Guru') ?>&background=ffffff&color=0D6EFD&bold=true';">
+                <div>
+                    <h5 class="fw-bold mb-0 text-white"><i class="bi bi-folder2-open me-2"></i>Rincian Perangkat Ajar: <?= htmlspecialchars($detailGuru['nama_lengkap']) ?></h5>
+                    <small class="text-white-50">NIP: <?= !empty($detailGuru['nip']) ? htmlspecialchars($detailGuru['nip']) : '-' ?> &bull; Email: <?= htmlspecialchars($detailGuru['email'] ?? '-') ?></small>
+                </div>
             </div>
             <a href="<?= BASE_URL ?>index.php?url=kepsek/monitoringPerangkatAjar" class="btn btn-sm btn-light rounded-pill px-3 fw-bold">
                 <i class="bi bi-x-lg me-1"></i> Tutup Rincian
