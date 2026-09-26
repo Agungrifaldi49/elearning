@@ -171,8 +171,8 @@
                                 <td class="ps-3 ps-md-4 text-center text-muted fw-bold"><?= $no++ ?></td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2.5">
-                                        <?php if (!empty($t['foto'])): ?>
-                                            <img src="<?= BASE_URL ?>uploads/guru/<?= htmlspecialchars($t['foto']) ?>" class="rounded-circle border" style="width: 38px; height: 38px; object-fit: cover;" alt="Foto">
+                                        <?php if (!empty($t['avatar'])): ?>
+                                            <img src="<?= BASE_URL ?>uploads/avatars/<?= htmlspecialchars($t['avatar']) ?>" class="rounded-circle border" style="width: 38px; height: 38px; object-fit: cover;" alt="Avatar">
                                         <?php else: ?>
                                             <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px; font-size: 0.9rem;">
                                                 <?= strtoupper(substr($t['nama_lengkap'], 0, 1)) ?>

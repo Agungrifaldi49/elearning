@@ -779,7 +779,7 @@ class KepsekController {
 
         // Query daftar guru beserta data perangkat ajarnya
         $sqlGuru = "
-            SELECT g.id, g.nama_lengkap, g.nip, g.foto, u.email, u.username,
+            SELECT g.id, g.nama_lengkap, g.nip, u.avatar, u.email, u.username,
                    (SELECT GROUP_CONCAT(DISTINCT m.nama_mapel SEPARATOR ', ') 
                     FROM jadwal j 
                     JOIN mata_pelajaran m ON j.mapel_id = m.id 
@@ -858,7 +858,7 @@ class KepsekController {
         $detailCpList = [];
         $detailGuruId = !empty($_GET['detail_guru_id']) ? (int)$_GET['detail_guru_id'] : null;
         if ($detailGuruId) {
-            $stmtDet = $db->prepare("SELECT g.*, u.email FROM guru g JOIN users u ON g.user_id = u.id WHERE g.id = ?");
+            $stmtDet = $db->prepare("SELECT g.*, u.email, u.avatar FROM guru g JOIN users u ON g.user_id = u.id WHERE g.id = ?");
             $stmtDet->execute([$detailGuruId]);
             $detailGuru = $stmtDet->fetch(PDO::FETCH_ASSOC);
 
