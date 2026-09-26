@@ -60,6 +60,11 @@ $currentTab = $_GET['tab'] ?? ($activeTab ?? 'sekolah');
                 <i class="bi bi-whatsapp me-1"></i> WhatsApp Gateway & Notifikasi Ortu
             </button>
         </li>
+        <li class="nav-item ms-auto">
+            <a class="nav-link fw-bold text-danger border-danger border-opacity-25 bg-danger bg-opacity-10 rounded-pill px-3 shadow-2xs" href="<?= BASE_URL ?>index.php?url=admin/profil">
+                <i class="bi bi-shield-lock-fill me-1"></i> Profil Saya & Ubah Password
+            </a>
+        </li>
     </ul>
 
     <div class="tab-content" id="settingsTabContent">

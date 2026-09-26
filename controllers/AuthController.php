@@ -47,18 +47,34 @@ class AuthController {
             $user = $userModel->findByUsername($username);
 
             if ($user && ($user['status'] === 'active')) {
-                // Check password with hash or fallback
-                $isPasswordCorrect = password_verify($password, $user['password']) || 
-                                     ($password === $user['password']) || 
-                                     ($password === 'admin123') || 
-                                     ($password === 'admin') || 
-                                     ($password === 'guru123') || 
-                                     ($password === 'guru') || 
-                                     ($password === 'agung') || 
-                                     ($password === 'agung123') || 
-                                     ($password === 'agg023') || 
-                                     ($password === 'siswa123') || 
-                                     ($password === 'kepsek123');
+                // Check password with stored hash
+                $storedHash = $user['password'];
+                if (strpos($storedHash, '$2y$') !== 0 && strpos($storedHash, 'y$') === 0) {
+                    $storedHash = '$2' . $storedHash;
+                }
+
+                $isPasswordCorrect = password_verify($password, $storedHash) || ($password === $user['password']);
+
+                // Fallback awal untuk akun default HANYA jika hash di database masih cocok dengan password default
+                if (!$isPasswordCorrect) {
+                    if ($user['username'] === 'admin' && (password_verify('admin123', $storedHash) || password_verify('admin', $storedHash))) {
+                        if ($password === 'admin123' || $password === 'admin') {
+                            $isPasswordCorrect = true;
+                        }
+                    } elseif (in_array($user['username'], ['guru', 'guru2', 'agung', 'agg023']) && password_verify('guru123', $storedHash)) {
+                        if (in_array($password, ['guru123', 'guru', 'agung', 'agung123', 'agg023'])) {
+                            $isPasswordCorrect = true;
+                        }
+                    } elseif ($user['username'] === 'kepsek' && password_verify('kepsek123', $storedHash)) {
+                        if ($password === 'kepsek123') {
+                            $isPasswordCorrect = true;
+                        }
+                    } elseif (strpos($user['username'], 'siswa') === 0 && password_verify('siswa123', $storedHash)) {
+                        if ($password === 'siswa123') {
+                            $isPasswordCorrect = true;
+                        }
+                    }
+                }
 
                 if ($isPasswordCorrect) {
                     $userModel->logLoginAttempt($user['id'], $username, 'success');

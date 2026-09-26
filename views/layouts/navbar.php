@@ -130,8 +130,10 @@ $unreadBadgeCount = (int)($headerNotifs['unread_total'] ?? 0);
                 }
                 $userRoleName = strtolower($currUser['role_name'] ?? '');
                 $profUrl = 'siswa/profil';
-                if (in_array($userRoleName, ['admin', 'administrator', 'kepala sekolah'])) {
-                    $profUrl = 'admin/pengaturan';
+                if (in_array($userRoleName, ['admin', 'administrator'])) {
+                    $profUrl = 'admin/profil';
+                } elseif (in_array($userRoleName, ['kepala sekolah', 'kepsek'])) {
+                    $profUrl = 'kepsek/profil';
                 } elseif ($userRoleName === 'guru') {
                     $profUrl = 'guru/profil';
                 }

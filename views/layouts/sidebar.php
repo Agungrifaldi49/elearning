@@ -152,6 +152,9 @@ if (!empty($sidebarRawLogo)) {
             </a></li>
 
             <li class="nav-section-title">Laporan & Pengaturan</li>
+            <li><a class="nav-link <?= isActive($currentUrl,'admin/profil') ?>" href="<?= BASE_URL ?>index.php?url=admin/profil">
+                <i class="bi bi-person-lock text-warning"></i> Profil Saya & Ubah Password
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'admin/laporan') ?>" href="<?= BASE_URL ?>index.php?url=admin/laporan">
                 <i class="bi bi-graph-up-arrow"></i> Laporan & Analitik LMS
             </a></li>
