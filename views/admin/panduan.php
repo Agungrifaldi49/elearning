@@ -108,8 +108,22 @@
         ========================================================================= -->
         <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card" data-category="pengaturan dashboard">
             <h2 class="accordion-header">
-                <button class="accordion-button fw-bold fs-6 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul1">
-                    <i class="bi bi-grid-1x2-fill text-primary me-2 fs-5"></i> Modul 1: Dashboard Eksekutif & Ringkasan Sistem (`admin/dashboard`)
+                <button class="accordion-button fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul1">
+                    <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
+                        <div class="modul-icon-box bg-primary-subtle text-primary">
+                            <i class="bi bi-grid-1x2-fill fs-5"></i>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                <span class="badge bg-primary text-white px-2 py-0.5 rounded-pill small">Modul 1</span>
+                                <span class="fw-bold text-dark modul-title-text">Dashboard Eksekutif & Ringkasan Sistem</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <small class="text-muted modul-desc-text">4 Metrik KPI Utama, Tren KBM 7 Hari & Jadwal Sholat Terintegrasi</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">admin/dashboard</code>
+                            </div>
+                        </div>
+                    </div>
                 </button>
             </h2>
             <div id="collapseModul1" class="accordion-collapse collapse show" data-bs-parent="#accordionPanduan">
@@ -161,8 +175,22 @@
         ========================================================================= -->
         <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card" data-category="master whatsapp">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold fs-6 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul2">
-                    <i class="bi bi-people-fill text-success me-2 fs-5"></i> Modul 2: Master Data Pengguna, Kontak Orang Tua & Cetak Kartu
+                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul2">
+                    <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
+                        <div class="modul-icon-box bg-success-subtle text-success">
+                            <i class="bi bi-people-fill fs-5"></i>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                <span class="badge bg-success text-white px-2 py-0.5 rounded-pill small">Modul 2</span>
+                                <span class="fw-bold text-dark modul-title-text">Master Data Pengguna, Kontak Ortu WA & Cetak Kartu</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <small class="text-muted modul-desc-text">Data Guru & Siswa, Nomor HP Ortu, Import Excel & Cetak QR Card</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">admin/siswa</code>
+                            </div>
+                        </div>
+                    </div>
                 </button>
             </h2>
             <div id="collapseModul2" class="accordion-collapse collapse" data-bs-parent="#accordionPanduan">
@@ -260,8 +288,22 @@
         ========================================================================= -->
         <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card" data-category="master">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold fs-6 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul3">
-                    <i class="bi bi-journal-bookmark-fill text-warning me-2 fs-5"></i> Modul 3: Manajemen Akademik, Kurikulum Merdeka & Ekstrakurikuler
+                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul3">
+                    <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
+                        <div class="modul-icon-box bg-warning-subtle text-warning text-dark">
+                            <i class="bi bi-journal-bookmark-fill fs-5"></i>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                <span class="badge bg-warning text-dark px-2 py-0.5 rounded-pill small">Modul 3</span>
+                                <span class="fw-bold text-dark modul-title-text">Manajemen Akademik, Kurikulum Merdeka & Ekskul</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <small class="text-muted modul-desc-text">Tahun Ajaran, Rombel Kelas, Penugasan Wali, Mapel CP-TP & Ekskul</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">admin/akademik</code>
+                            </div>
+                        </div>
+                    </div>
                 </button>
             </h2>
             <div id="collapseModul3" class="accordion-collapse collapse" data-bs-parent="#accordionPanduan">
@@ -307,8 +349,22 @@
         ========================================================================= -->
         <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card" data-category="lms">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold fs-6 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul4">
-                    <i class="bi bi-laptop text-primary me-2 fs-5"></i> Modul 4: Learning Management System (LMS), CBT Ujian & Bank Soal
+                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul4">
+                    <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
+                        <div class="modul-icon-box bg-danger-subtle text-danger">
+                            <i class="bi bi-laptop fs-5"></i>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                <span class="badge bg-danger text-white px-2 py-0.5 rounded-pill small">Modul 4</span>
+                                <span class="fw-bold text-dark modul-title-text">LMS, Evaluasi CBT & Bank Soal</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <small class="text-muted modul-desc-text">Materi PDF/Video, Tugas Berbobot, Ujian Anti-Curang & Sertifikat</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">admin/quiz</code>
+                            </div>
+                        </div>
+                    </div>
                 </button>
             </h2>
             <div id="collapseModul4" class="accordion-collapse collapse" data-bs-parent="#accordionPanduan">
@@ -368,8 +424,22 @@
         ========================================================================= -->
         <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card" data-category="presensi">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold fs-6 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul5">
-                    <i class="bi bi-geo-alt-fill text-danger me-2 fs-5"></i> Modul 5: Sistem Presensi Terpadu, Geofencing GPS & Scan QR
+                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul5">
+                    <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
+                        <div class="modul-icon-box bg-info-subtle text-info">
+                            <i class="bi bi-qr-code-scan fs-5"></i>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                <span class="badge bg-info text-dark px-2 py-0.5 rounded-pill small">Modul 5</span>
+                                <span class="fw-bold text-dark modul-title-text">Presensi Terpadu, GPS & Scan QR Gerbang</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <small class="text-muted modul-desc-text">Selfie GPS Guru, Scanner Kartu Siswa & Rekap Matrix 1-31 Hari</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">admin/scanQr</code>
+                            </div>
+                        </div>
+                    </div>
                 </button>
             </h2>
             <div id="collapseModul5" class="accordion-collapse collapse" data-bs-parent="#accordionPanduan">
@@ -432,8 +502,22 @@
         ========================================================================= -->
         <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card" data-category="presensi">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold fs-6 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul6">
-                    <i class="bi bi-wallet2 text-success me-2 fs-5"></i> Modul 6: Penilaian E-Rapor & Portal Keuangan SPP
+                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul6">
+                    <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
+                        <div class="modul-icon-box bg-success-subtle text-success">
+                            <i class="bi bi-wallet2 fs-5"></i>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                <span class="badge bg-success text-white px-2 py-0.5 rounded-pill small">Modul 6</span>
+                                <span class="fw-bold text-dark modul-title-text">Penilaian E-Rapor & Keuangan SPP</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <small class="text-muted modul-desc-text">Rekapitulasi Nilai Akhir & Pos Iuran Kuitansi Resmi</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">admin/pembayaran</code>
+                            </div>
+                        </div>
+                    </div>
                 </button>
             </h2>
             <div id="collapseModul6" class="accordion-collapse collapse" data-bs-parent="#accordionPanduan">
@@ -473,8 +557,22 @@
         ========================================================================= -->
         <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card" data-category="pengaturan">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold fs-6 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul7">
-                    <i class="bi bi-megaphone-fill text-danger me-2 fs-5"></i> Modul 7: Konten Publik, Komunikasi & Kalender Akademik
+                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul7">
+                    <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
+                        <div class="modul-icon-box bg-primary-subtle text-primary">
+                            <i class="bi bi-broadcast fs-5"></i>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                <span class="badge bg-primary text-white px-2 py-0.5 rounded-pill small">Modul 7</span>
+                                <span class="fw-bold text-dark modul-title-text">Konten Publik, Pengumuman & Kalender</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <small class="text-muted modul-desc-text">Landing Page Sekolah, Siaran Pengumuman, Live Class & Kalender</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">admin/landingPage</code>
+                            </div>
+                        </div>
+                    </div>
                 </button>
             </h2>
             <div id="collapseModul7" class="accordion-collapse collapse" data-bs-parent="#accordionPanduan">
@@ -520,8 +618,22 @@
         ========================================================================= -->
         <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card" data-category="whatsapp">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold fs-6 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul8">
-                    <i class="bi bi-whatsapp text-success me-2 fs-5"></i> Modul 8: WhatsApp Gateway (Fonnte API) & Notifikasi Otomatis Orang Tua
+                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul8">
+                    <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
+                        <div class="modul-icon-box bg-success-subtle text-success">
+                            <i class="bi bi-whatsapp fs-5"></i>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                <span class="badge bg-success text-white px-2 py-0.5 rounded-pill small">Modul 8</span>
+                                <span class="fw-bold text-dark modul-title-text">WhatsApp Gateway & Notifikasi Otomatis</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <small class="text-muted modul-desc-text">Integrasi Token Fonnte API, Status Kuota & Auto-Broadcast Ortu</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">admin/pengaturan?tab=whatsapp</code>
+                            </div>
+                        </div>
+                    </div>
                 </button>
             </h2>
             <div id="collapseModul8" class="accordion-collapse collapse" data-bs-parent="#accordionPanduan">
@@ -603,8 +715,22 @@
         ========================================================================= -->
         <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card" data-category="pengaturan">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold fs-6 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul9">
-                    <i class="bi bi-shield-lock-fill text-danger me-2 fs-5"></i> Modul 9: Pengaturan Sistem, Geofencing GPS & Pemeliharaan Keamanan
+                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul9">
+                    <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
+                        <div class="modul-icon-box bg-dark-subtle text-dark">
+                            <i class="bi bi-shield-lock-fill fs-5"></i>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                <span class="badge bg-dark text-white px-2 py-0.5 rounded-pill small">Modul 9</span>
+                                <span class="fw-bold text-dark modul-title-text">Pengaturan Sistem, GPS & Keamanan Data</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <small class="text-muted modul-desc-text">Profil Sekolah, Titik Geofencing, Log Audit & Backup SQL 1-Klik</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">admin/pengaturan</code>
+                            </div>
+                        </div>
+                    </div>
                 </button>
             </h2>
             <div id="collapseModul9" class="accordion-collapse collapse" data-bs-parent="#accordionPanduan">
@@ -669,8 +795,22 @@
         ========================================================================= -->
         <div class="accordion-item border-0 rounded-4 shadow-sm mb-3 overflow-hidden panduan-card" data-category="faq">
             <h2 class="accordion-header">
-                <button class="accordion-button collapsed fw-bold fs-6 py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul10">
-                    <i class="bi bi-question-circle-fill text-danger me-2 fs-5"></i> Modul 10: Tanya Jawab Sering Diajukan & Solusi Kendala (Troubleshooting)
+                <button class="accordion-button collapsed fw-bold py-3 px-3 px-md-4" type="button" data-bs-toggle="collapse" data-bs-target="#collapseModul10">
+                    <div class="d-flex align-items-center gap-2.5 gap-md-3 w-100 me-2 text-start">
+                        <div class="modul-icon-box bg-danger-subtle text-danger">
+                            <i class="bi bi-question-circle-fill fs-5"></i>
+                        </div>
+                        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
+                                <span class="badge bg-danger text-white px-2 py-0.5 rounded-pill small">Modul 10</span>
+                                <span class="fw-bold text-dark modul-title-text">Pusat Bantuan & Solusi Kendala Admin</span>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <small class="text-muted modul-desc-text">Troubleshooting Akun, GPS Ditolak, Fonnte API & Kenaikan Kelas</small>
+                                <code class="modul-route-tag bg-light border px-2 py-0.5 rounded small text-secondary font-monospace d-none d-md-inline-block">admin/logs</code>
+                            </div>
+                        </div>
+                    </div>
                 </button>
             </h2>
             <div id="collapseModul10" class="accordion-collapse collapse" data-bs-parent="#accordionPanduan">
@@ -789,8 +929,43 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
+/* Styling Modul Icon Box & Title Header */
+.modul-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.modul-title-text {
+    font-size: 0.98rem;
+    line-height: 1.3;
+}
+.modul-desc-text {
+    font-size: 0.78rem;
+    line-height: 1.3;
+}
+.modul-route-tag {
+    font-size: 0.72rem;
+}
+
 /* Penyesuaian Responsif Khusus Mobile */
 @media (max-width: 768px) {
+    .page-title {
+        font-size: 1.15rem;
+    }
+    .page-subtitle {
+        font-size: 0.78rem;
+    }
+    .hero-icon-box {
+        width: 48px !important;
+        height: 48px !important;
+    }
+    .hero-icon-box i {
+        font-size: 1.5rem !important;
+    }
     .roadmap-container {
         padding: 1.25rem 1rem !important;
     }
@@ -805,6 +980,25 @@
     .roadmap-step-card p {
         font-size: 0.82rem !important;
         line-height: 1.5 !important;
+    }
+    .modul-icon-box {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+    }
+    .modul-icon-box i {
+        font-size: 1.15rem !important;
+    }
+    .modul-title-text {
+        font-size: 0.9rem !important;
+    }
+    .modul-desc-text {
+        font-size: 0.74rem !important;
+    }
+    .accordion-button {
+        font-size: 0.92rem !important;
+        padding-top: 0.75rem !important;
+        padding-bottom: 0.75rem !important;
     }
 }
 
