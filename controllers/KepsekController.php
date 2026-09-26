@@ -168,17 +168,6 @@ class KepsekController {
         $db = Database::getConnection();
         $academicModel = new AcademicModel();
 
-        // Bersihkan data guru / non-siswa jika secara tidak sengaja tercatat di tabel siswa
-        try {
-            $db->exec("
-                DELETE s FROM siswa s
-                JOIN users u ON s.user_id = u.id
-                WHERE u.role_id != 3
-                   OR s.user_id IN (SELECT user_id FROM guru WHERE user_id IS NOT NULL)
-                   OR s.nama_lengkap IN (SELECT nama_lengkap FROM guru WHERE nama_lengkap IS NOT NULL)
-            ");
-        } catch (\Throwable $e) {}
-
         $kelasList = $academicModel->getKelas();
         $selectedKelasId = (int)($_GET['kelas_id'] ?? 0);
 
@@ -191,9 +180,7 @@ class KepsekController {
             JOIN users u ON s.user_id = u.id
             LEFT JOIN kelas k ON s.kelas_id = k.id
             LEFT JOIN jurusan j ON s.jurusan_id = j.id
-            WHERE u.role_id = 3
-              AND s.user_id NOT IN (SELECT user_id FROM guru WHERE user_id IS NOT NULL)
-              AND s.nama_lengkap NOT IN (SELECT nama_lengkap FROM guru WHERE nama_lengkap IS NOT NULL)
+            WHERE 1=1
         ";
 
         $params = [];
@@ -602,9 +589,7 @@ class KepsekController {
                 JOIN users u ON s.user_id = u.id
                 LEFT JOIN kelas k ON s.kelas_id = k.id
                 LEFT JOIN jurusan j ON s.jurusan_id = j.id
-                WHERE u.role_id = 3
-                  AND s.user_id NOT IN (SELECT user_id FROM guru WHERE user_id IS NOT NULL)
-                  AND s.nama_lengkap NOT IN (SELECT nama_lengkap FROM guru WHERE nama_lengkap IS NOT NULL)
+                WHERE 1=1
             ";
 
             $params = [];
@@ -965,9 +950,9 @@ class KepsekController {
                 g.no_telepon as kontak_wali,
                 u.email as email_wali,
                 u.avatar as avatar_wali,
-                (SELECT COUNT(*) FROM siswa s JOIN users u ON s.user_id = u.id WHERE s.kelas_id = k.id AND s.status = 'aktif' AND u.role_id = 3 AND s.user_id NOT IN (SELECT user_id FROM guru WHERE user_id IS NOT NULL)) as total_siswa,
-                (SELECT COUNT(*) FROM siswa s JOIN users u ON s.user_id = u.id WHERE s.kelas_id = k.id AND s.jenis_kelamin = 'L' AND s.status = 'aktif' AND u.role_id = 3 AND s.user_id NOT IN (SELECT user_id FROM guru WHERE user_id IS NOT NULL)) as siswa_l,
-                (SELECT COUNT(*) FROM siswa s JOIN users u ON s.user_id = u.id WHERE s.kelas_id = k.id AND s.jenis_kelamin = 'P' AND s.status = 'aktif' AND u.role_id = 3 AND s.user_id NOT IN (SELECT user_id FROM guru WHERE user_id IS NOT NULL)) as siswa_p
+                (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id AND s.status = 'aktif') as total_siswa,
+                (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id AND s.jenis_kelamin = 'L' AND s.status = 'aktif') as siswa_l,
+                (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id AND s.jenis_kelamin = 'P' AND s.status = 'aktif') as siswa_p
             FROM kelas k
             LEFT JOIN jurusan j ON k.jurusan_id = j.id
             LEFT JOIN guru g ON k.wali_kelas_id = g.id
@@ -1135,9 +1120,6 @@ class KepsekController {
                     FROM siswa s
                     JOIN users u ON s.user_id = u.id
                     WHERE s.kelas_id = ?
-                      AND u.role_id = 3
-                      AND s.user_id NOT IN (SELECT user_id FROM guru WHERE user_id IS NOT NULL)
-                      AND s.nama_lengkap NOT IN (SELECT nama_lengkap FROM guru WHERE nama_lengkap IS NOT NULL)
                     ORDER BY s.nama_lengkap ASC
                 ";
                 $stmtSiswa = $db->prepare($sqlSiswa);
