@@ -102,6 +102,63 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
     line-height: 1.75 !important;
 }
 
+.p-2\.5 {
+    padding: 0.75rem !important;
+}
+
+/* Hero Feature Pills (CBT, Absensi, E-Modul, E-Rapor) */
+.hero-feature-pill {
+    background: #ffffff;
+    padding: 12px 16px;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    height: 100%;
+}
+
+.hero-feature-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+.hero-feature-icon {
+    width: 34px;
+    height: 34px;
+    background: rgba(25, 135, 84, 0.12);
+    color: #198754;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+.hero-feature-text {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #0f172a !important;
+    line-height: 1.3;
+}
+
+@media (max-width: 575.98px) {
+    .hero-feature-pill {
+        padding: 10px 12px;
+        gap: 9px;
+    }
+    .hero-feature-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.95rem;
+    }
+    .hero-feature-text {
+        font-size: 0.78rem;
+    }
+}
+
 /* WhatsApp Floating Quick Chat Widget Styling */
 .wa-floating-container {
     position: fixed;
@@ -403,29 +460,37 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
                     <h3 class="fw-bold mb-2 text-white font-heading"><?= Security::safeText($settings['landing_hero_card_title'] ?? 'KBM Digital Terpadu') ?></h3>
                     <p class="small text-white opacity-90 mb-4"><?= Security::safeText($settings['landing_hero_card_desc'] ?? 'Materi, CBT, Quiz, Absensi QR Code, & Laporan Real-time') ?></p>
                     
-                    <div class="row g-2 text-start pt-3 border-top border-white border-opacity-20">
+                    <div class="row g-3 text-start pt-3 border-top border-white border-opacity-20">
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white p-2.5 rounded-3 shadow-xs">
-                                <i class="bi bi-check-circle-fill text-success fs-5 flex-shrink-0"></i>
-                                <span class="small fw-bold text-dark" style="color: #000000 !important;">CBT &amp; Quiz Online</span>
+                            <div class="hero-feature-pill">
+                                <div class="hero-feature-icon">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                                <span class="hero-feature-text">CBT &amp; Quiz Online</span>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white p-2.5 rounded-3 shadow-xs">
-                                <i class="bi bi-check-circle-fill text-success fs-5 flex-shrink-0"></i>
-                                <span class="small fw-bold text-dark" style="color: #000000 !important;">Absensi QR Code</span>
+                            <div class="hero-feature-pill">
+                                <div class="hero-feature-icon">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                                <span class="hero-feature-text">Absensi QR Code</span>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white p-2.5 rounded-3 shadow-xs">
-                                <i class="bi bi-check-circle-fill text-success fs-5 flex-shrink-0"></i>
-                                <span class="small fw-bold text-dark" style="color: #000000 !important;">E-Modul &amp; Video</span>
+                            <div class="hero-feature-pill">
+                                <div class="hero-feature-icon">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                                <span class="hero-feature-text">E-Modul &amp; Video</span>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex align-items-center gap-2 bg-white p-2.5 rounded-3 shadow-xs">
-                                <i class="bi bi-check-circle-fill text-success fs-5 flex-shrink-0"></i>
-                                <span class="small fw-bold text-dark" style="color: #000000 !important;">E-Rapor &amp; Sertifikat</span>
+                            <div class="hero-feature-pill">
+                                <div class="hero-feature-icon">
+                                    <i class="bi bi-check-circle-fill"></i>
+                                </div>
+                                <span class="hero-feature-text">E-Rapor &amp; Sertifikat</span>
                             </div>
                         </div>
                     </div>
