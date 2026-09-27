@@ -130,24 +130,244 @@ class SiswaModel extends BaseModel {
         } catch (\Throwable $e) {}
     }
 
+    public function generateUniqueUsername($nama, $preferredUsername = '', $excludeUserId = null) {
+        $clean = preg_replace('/[^a-zA-Z0-9]/', '', (string)$nama);
+        $base = !empty(trim((string)$preferredUsername)) ? trim((string)$preferredUsername) : ('siswa_' . strtolower($clean));
+        if (empty($base) || $base === 'siswa_') {
+            $base = 'siswa_' . date('Ymd');
+        }
+        $base = substr($base, 0, 40);
+
+        $username = $base;
+        $counter = 1;
+        while (true) {
+            $sql = "SELECT id FROM users WHERE username = ?";
+            $params = [$username];
+            if ($excludeUserId) {
+                $sql .= " AND id != ?";
+                $params[] = (int)$excludeUserId;
+            }
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            if (!$stmt->fetch()) {
+                return $username;
+            }
+            $username = $base . $counter;
+            $counter++;
+        }
+    }
+
+    public function generateUniqueEmail($username, $preferredEmail = '', $excludeUserId = null) {
+        if (!empty(trim((string)$preferredEmail))) {
+            $email = trim((string)$preferredEmail);
+            $sql = "SELECT id FROM users WHERE email = ?";
+            $params = [$email];
+            if ($excludeUserId) {
+                $sql .= " AND id != ?";
+                $params[] = (int)$excludeUserId;
+            }
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            if (!$stmt->fetch()) {
+                return $email;
+            }
+        }
+
+        $baseEmail = $username . '@smkmh-cicalengka.sch.id';
+        $email = $baseEmail;
+        $counter = 1;
+        while (true) {
+            $sql = "SELECT id FROM users WHERE email = ?";
+            $params = [$email];
+            if ($excludeUserId) {
+                $sql .= " AND id != ?";
+                $params[] = (int)$excludeUserId;
+            }
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            if (!$stmt->fetch()) {
+                return $email;
+            }
+            $parts = explode('@', $baseEmail);
+            $email = $parts[0] . $counter . '@' . ($parts[1] ?? 'smkmh-cicalengka.sch.id');
+            $counter++;
+        }
+    }
+
+    public function findExistingSiswa($nis = null, $nisn = null, $username = null) {
+        $nis = !empty(trim((string)$nis)) ? trim((string)$nis) : null;
+        $nisn = !empty(trim((string)$nisn)) ? trim((string)$nisn) : null;
+        $username = !empty(trim((string)$username)) ? trim((string)$username) : null;
+
+        if ($nis !== null) {
+            $stmt = $this->db->prepare("SELECT s.*, u.username, u.email FROM siswa s JOIN users u ON s.user_id = u.id WHERE s.nis = ? LIMIT 1");
+            $stmt->execute([$nis]);
+            $res = $stmt->fetch();
+            if ($res) return $res;
+        }
+
+        if ($nisn !== null) {
+            $stmt = $this->db->prepare("SELECT s.*, u.username, u.email FROM siswa s JOIN users u ON s.user_id = u.id WHERE s.nisn = ? LIMIT 1");
+            $stmt->execute([$nisn]);
+            $res = $stmt->fetch();
+            if ($res) return $res;
+        }
+
+        if ($username !== null) {
+            $stmt = $this->db->prepare("SELECT s.*, u.username, u.email FROM siswa s JOIN users u ON s.user_id = u.id WHERE u.username = ? LIMIT 1");
+            $stmt->execute([$username]);
+            $res = $stmt->fetch();
+            if ($res) return $res;
+        }
+
+        return null;
+    }
+
+    public function saveOrUpdateSiswa($data) {
+        self::ensureNoOrtuColumn($this->db);
+
+        $nis = !empty(trim((string)($data['nis'] ?? ''))) ? trim((string)$data['nis']) : null;
+        $nisn = !empty(trim((string)($data['nisn'] ?? ''))) ? trim((string)$data['nisn']) : null;
+        $nama = trim((string)($data['nama_lengkap'] ?? ''));
+        $username = trim((string)($data['username'] ?? ''));
+
+        if (empty($nama)) {
+            $this->lastError = 'Nama lengkap siswa wajib diisi.';
+            return ['status' => false, 'message' => $this->lastError];
+        }
+
+        // Cari apakah siswa sudah terdaftar berdasarkan NIS, NISN, atau Username
+        $existing = $this->findExistingSiswa($nis, $nisn, $username);
+
+        if ($existing) {
+            // Mode Sinkronisasi / Update data siswa yang sudah ada
+            $updateData = [
+                'nama_lengkap' => $nama,
+                'nis' => $nis ?? $existing['nis'],
+                'nisn' => $nisn ?? $existing['nisn'],
+                'kelas_id' => !empty($data['kelas_id']) ? (int)$data['kelas_id'] : $existing['kelas_id'],
+                'jurusan_id' => !empty($data['jurusan_id']) ? (int)$data['jurusan_id'] : $existing['jurusan_id'],
+                'jenis_kelamin' => !empty($data['jenis_kelamin']) ? $data['jenis_kelamin'] : $existing['jenis_kelamin'],
+                'no_telepon' => !empty($data['no_telepon']) ? $data['no_telepon'] : $existing['no_telepon'],
+                'no_ortu' => !empty($data['no_ortu']) ? $data['no_ortu'] : ($existing['no_ortu'] ?? ''),
+                'alamat' => !empty($data['alamat']) ? $data['alamat'] : $existing['alamat']
+            ];
+
+            // Update akun user jika ada perubahan nama / email / password
+            try {
+                $uSql = "UPDATE users SET full_name = ?";
+                $uParams = [$nama];
+                if (!empty($data['email'])) {
+                    $newEmail = $this->generateUniqueEmail($existing['username'], $data['email'], $existing['user_id']);
+                    $uSql .= ", email = ?";
+                    $uParams[] = $newEmail;
+                }
+                if (!empty($data['password']) && $data['password'] !== '123456') {
+                    $uSql .= ", password = ?";
+                    $uParams[] = password_hash($data['password'], PASSWORD_BCRYPT);
+                }
+                $uSql .= " WHERE id = ?";
+                $uParams[] = (int)$existing['user_id'];
+                $stmtU = $this->db->prepare($uSql);
+                $stmtU->execute($uParams);
+            } catch (\Throwable $eU) {}
+
+            $success = $this->updateSiswa($existing['id'], $updateData);
+            if ($success) {
+                return ['status' => true, 'action' => 'updated', 'id' => $existing['id']];
+            } else {
+                return ['status' => false, 'message' => $this->getLastError() ?: 'Gagal memperbarui siswa.'];
+            }
+        } else {
+            // Siswa Baru: Tambahkan akun dan profil
+            $finalUsername = $this->generateUniqueUsername($nama, $username);
+            $finalEmail = $this->generateUniqueEmail($finalUsername, $data['email'] ?? '');
+
+            $addData = [
+                'username' => $finalUsername,
+                'email' => $finalEmail,
+                'password' => !empty($data['password']) ? $data['password'] : '123456',
+                'nis' => $nis,
+                'nisn' => $nisn,
+                'nama_lengkap' => $nama,
+                'kelas_id' => !empty($data['kelas_id']) ? (int)$data['kelas_id'] : 1,
+                'jurusan_id' => !empty($data['jurusan_id']) ? (int)$data['jurusan_id'] : 1,
+                'jenis_kelamin' => $data['jenis_kelamin'] ?? 'L',
+                'no_telepon' => $data['no_telepon'] ?? '',
+                'no_ortu' => $data['no_ortu'] ?? '',
+                'alamat' => $data['alamat'] ?? ''
+            ];
+
+            $res = $this->addSiswa($addData);
+            if ($res) {
+                return ['status' => true, 'action' => 'inserted'];
+            } else {
+                return ['status' => false, 'message' => $this->getLastError() ?: 'Gagal menambahkan siswa baru.'];
+            }
+        }
+    }
+
     public function addSiswa($data) {
         self::ensureNoOrtuColumn($this->db);
+
+        $nama = trim((string)($data['nama_lengkap'] ?? ''));
+        if (empty($nama)) {
+            $this->lastError = 'Nama lengkap siswa wajib diisi.';
+            return false;
+        }
+
+        // NIS & NISN: jika kosong, simpan sebagai NULL agar tidak bentrok UNIQUE constraint di MySQL
+        $nis = !empty(trim((string)($data['nis'] ?? ''))) ? trim((string)$data['nis']) : null;
+        $nisn = !empty(trim((string)($data['nisn'] ?? ''))) ? trim((string)$data['nisn']) : null;
+
+        // Cek duplikasi NIS
+        if ($nis !== null) {
+            $chkNis = $this->db->prepare("SELECT id FROM siswa WHERE nis = ? LIMIT 1");
+            $chkNis->execute([$nis]);
+            if ($chkNis->fetch()) {
+                $this->lastError = "NIS '{$nis}' sudah terdaftar untuk siswa lain.";
+                return false;
+            }
+        }
+
+        // Cek duplikasi NISN
+        if ($nisn !== null) {
+            $chkNisn = $this->db->prepare("SELECT id FROM siswa WHERE nisn = ? LIMIT 1");
+            $chkNisn->execute([$nisn]);
+            if ($chkNisn->fetch()) {
+                $this->lastError = "NISN '{$nisn}' sudah terdaftar untuk siswa lain.";
+                return false;
+            }
+        }
+
+        // Pastikan username & email unik tanpa error
+        $username = $this->generateUniqueUsername($nama, $data['username'] ?? '');
+        $email = $this->generateUniqueEmail($username, $data['email'] ?? '');
+        $password = !empty($data['password']) ? $data['password'] : '123456';
+        $kelasId = !empty($data['kelas_id']) ? (int)$data['kelas_id'] : 1;
+        $jurusanId = !empty($data['jurusan_id']) ? (int)$data['jurusan_id'] : 1;
+        $jkRaw = strtoupper(trim((string)($data['jenis_kelamin'] ?? 'L')));
+        $jk = in_array($jkRaw, ['L', 'P']) ? $jkRaw : 'L';
+        $noTelp = trim((string)($data['no_telepon'] ?? ''));
+        $noOrtu = trim((string)($data['no_ortu'] ?? $data['no_hp_ortu'] ?? ''));
+        $alamat = trim((string)($data['alamat'] ?? ''));
+
         $this->db->beginTransaction();
         try {
             // Create user account with explicit role_id = 3 (Siswa)
             $stmtUser = $this->db->prepare("INSERT INTO users (role_id, username, email, password, full_name) VALUES (3, ?, ?, ?, ?)");
-            $hash = password_hash($data['password'], PASSWORD_BCRYPT);
-            $stmtUser->execute([$data['username'], $data['email'], $hash, $data['nama_lengkap']]);
+            $hash = password_hash($password, PASSWORD_BCRYPT);
+            $stmtUser->execute([$username, $email, $hash, $nama]);
             $userId = $this->db->lastInsertId();
 
             // Create siswa profile with self-healing fallback
             try {
                 $stmtSiswa = $this->db->prepare("INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, no_telepon, no_ortu, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmtSiswa->execute([$userId, $data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $data['no_ortu'] ?? null, $data['alamat']]);
+                $stmtSiswa->execute([$userId, $nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $noOrtu ?: null, $alamat]);
             } catch (\Throwable $eInsert) {
                 if (strpos($eInsert->getMessage(), 'no_ortu') !== false || $eInsert->getCode() == '42S22') {
                     $stmtSiswa = $this->db->prepare("INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, no_telepon, alamat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                    $stmtSiswa->execute([$userId, $data['nis'], $data['nisn'], $data['nama_lengkap'], $data['kelas_id'], $data['jurusan_id'], $data['jenis_kelamin'], $data['no_telepon'], $data['alamat']]);
+                    $stmtSiswa->execute([$userId, $nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $alamat]);
                 } else {
                     throw $eInsert;
                 }
@@ -155,8 +375,10 @@ class SiswaModel extends BaseModel {
 
             $this->db->commit();
             return true;
-        } catch (Exception $e) {
-            $this->db->rollBack();
+        } catch (\Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             $this->lastError = $e->getMessage();
             return false;
         }

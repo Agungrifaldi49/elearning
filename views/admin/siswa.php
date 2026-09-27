@@ -13,9 +13,15 @@
                 <button type="button" class="btn btn-warning shadow-sm fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalBulkMatrixEdit">
                     <i class="bi bi-pencil-square me-1"></i> Mode Edit Massal (<?= count($siswaList) ?> Siswa)
                 </button>
-                <a href="<?= BASE_URL ?>index.php?url=admin/templateSiswa" class="btn btn-outline-success">
-                    <i class="bi bi-download me-1"></i> Template Excel
-                </a>
+                <div class="dropdown">
+                    <button class="btn btn-outline-success dropdown-toggle shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-download me-1"></i> Template Excel
+                    </button>
+                    <ul class="dropdown-menu shadow border-0 rounded-3">
+                        <li><a class="dropdown-item py-2 fw-semibold d-flex align-items-center" href="<?= BASE_URL ?>index.php?url=admin/templateSiswa&format=xlsx"><i class="bi bi-file-earmark-spreadsheet text-success fs-5 me-2"></i><div><span>Format Excel (.xlsx)</span> <span class="badge bg-success-subtle text-success ms-1">Resmi</span></div></a></li>
+                        <li><a class="dropdown-item py-2 d-flex align-items-center" href="<?= BASE_URL ?>index.php?url=admin/templateSiswa&format=csv"><i class="bi bi-filetype-csv text-primary fs-5 me-2"></i><span>Format CSV (.csv)</span></a></li>
+                    </ul>
+                </div>
                 <button class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalImportSiswa">
                     <i class="bi bi-file-earmark-excel me-1"></i> Import Excel
                 </button>
@@ -736,29 +742,35 @@ document.addEventListener('DOMContentLoaded', function() {
             <form action="<?= BASE_URL ?>index.php?url=admin/importSiswa" method="POST" enctype="multipart/form-data">
                 <div class="modal-body">
                     <?= Security::csrfField() ?>
-                    <p class="small text-muted mb-3">Unduh template Excel terlebih dahulu, isi data siswa sesuai format, lalu unggah file format <code>.csv</code> atau <code>.xlsx</code>.</p>
+                    <p class="small text-muted mb-3">Unduh template Excel terlebih dahulu, isi data siswa sesuai format, lalu unggah berkas format <code>.xlsx</code> atau <code>.csv</code>.</p>
                     <div class="mb-3">
-                        <label class="form-label small fw-semibold">Pilih File Excel / CSV</label>
-                        <input type="file" name="excel_file" class="form-control" accept=".csv, .xls, .xlsx" required>
+                        <label class="form-label small fw-semibold">Pilih Berkas Excel / CSV</label>
+                        <input type="file" name="excel_file" class="form-control" accept=".xlsx, .xls, .csv" required>
                     </div>
                     <div class="p-3 bg-light rounded-3 border mb-2">
                         <small class="fw-bold text-dark d-block mb-1"><i class="bi bi-info-circle-fill text-primary me-1"></i>Panduan Pengisian Template Excel:</small>
                         <ul class="small text-muted mb-0 ps-3">
                             <li><strong>Kolom Wajib:</strong> NIS, NISN, & Nama Lengkap</li>
-                            <li><strong>Kelas & Jurusan:</strong> Isi sesuai data master (contoh: <code>X RPL 1</code> / <code>Rekayasa Perangkat Lunak</code>)</li>
+                            <li><strong>Kelas & Jurusan:</strong> Isi sesuai nama kelas/jurusan terdaftar (contoh: <code>X RPL 1</code> / <code>Rekayasa Perangkat Lunak</code>)</li>
                             <li><strong>Akun & Password:</strong> Jika dikosongkan, sistem otomatis membuat username unik dan password default <code>123456</code></li>
-                            <li><strong>No Ortu (WhatsApp):</strong> Masukkan nomor WA orang tua (contoh: <code>081234567890</code>) agar notifikasi presensi otomatis terkirim via WhatsApp</li>
+                            <li><strong>No Ortu (WhatsApp):</strong> Masukkan nomor WA orang tua (contoh: <code>081234567890</code>) agar notifikasi presensi otomatis terkirim</li>
                             <li><strong>Alamat:</strong> Masukkan alamat domisili siswa (opsional)</li>
+                            <li><strong>Otomatis Sinkron:</strong> Jika data siswa (NIS/NISN/Username) sudah ada di sistem, data akan otomatis diperbarui tanpa duplikasi atau error</li>
                         </ul>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 justify-content-between">
-                    <a href="<?= BASE_URL ?>index.php?url=admin/templateSiswa" class="btn btn-outline-success btn-sm fw-bold">
-                        <i class="bi bi-download me-1"></i> Unduh Template Excel (.csv)
-                    </a>
+                    <div class="btn-group">
+                        <a href="<?= BASE_URL ?>index.php?url=admin/templateSiswa&format=xlsx" class="btn btn-outline-success btn-sm fw-bold">
+                            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Unduh .XLSX
+                        </a>
+                        <a href="<?= BASE_URL ?>index.php?url=admin/templateSiswa&format=csv" class="btn btn-outline-secondary btn-sm" title="Unduh format teks CSV">
+                            .CSV
+                        </a>
+                    </div>
                     <div>
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-success px-4 fw-bold">Upload & Import</button>
+                        <button type="submit" class="btn btn-success px-4 fw-bold"><i class="bi bi-cloud-arrow-up me-1"></i> Upload & Import</button>
                     </div>
                 </div>
             </form>
