@@ -11,6 +11,8 @@ class FlashHelper {
             self::setSuccess($message);
         } elseif ($key === 'error') {
             self::setError($message);
+        } elseif ($key === 'warning') {
+            self::setWarning($message);
         } elseif ($key === 'info') {
             self::setInfo($message);
         } else {
@@ -23,12 +25,14 @@ class FlashHelper {
             return self::hasSuccess();
         } elseif ($key === 'error') {
             return self::hasError();
+        } elseif ($key === 'warning') {
+            return self::hasWarning();
         } elseif ($key === 'info') {
             return self::hasInfo();
         } elseif ($key !== null) {
             return !empty($_SESSION['flash_' . $key]);
         }
-        return self::hasSuccess() || self::hasError() || self::hasInfo();
+        return self::hasSuccess() || self::hasError() || self::hasWarning() || self::hasInfo();
     }
 
     public static function get($key = null) {
@@ -36,6 +40,8 @@ class FlashHelper {
             return self::getSuccess();
         } elseif ($key === 'error') {
             return self::getError();
+        } elseif ($key === 'warning') {
+            return self::getWarning();
         } elseif ($key === 'info') {
             return self::getInfo();
         } elseif ($key !== null) {
@@ -46,7 +52,7 @@ class FlashHelper {
             }
             return null;
         }
-        return self::getSuccess() ?: (self::getError() ?: self::getInfo());
+        return self::getSuccess() ?: (self::getError() ?: (self::getWarning() ?: self::getInfo()));
     }
 
     public static function setSuccess($message) {
@@ -55,6 +61,10 @@ class FlashHelper {
 
     public static function setError($message) {
         $_SESSION['flash_error'] = $message;
+    }
+
+    public static function setWarning($message) {
+        $_SESSION['flash_warning'] = $message;
     }
 
     public static function setInfo($message) {
@@ -67,6 +77,10 @@ class FlashHelper {
 
     public static function hasError() {
         return !empty($_SESSION['flash_error']);
+    }
+
+    public static function hasWarning() {
+        return !empty($_SESSION['flash_warning']);
     }
 
     public static function hasInfo() {
@@ -91,6 +105,15 @@ class FlashHelper {
         return null;
     }
 
+    public static function getWarning() {
+        if (!empty($_SESSION['flash_warning'])) {
+            $msg = $_SESSION['flash_warning'];
+            unset($_SESSION['flash_warning']);
+            return $msg;
+        }
+        return null;
+    }
+
     public static function getInfo() {
         if (!empty($_SESSION['flash_info'])) {
             $msg = $_SESSION['flash_info'];
@@ -104,14 +127,16 @@ class FlashHelper {
         $html = '';
 
         if (!empty($_SESSION['flash_success'])) {
-            $msg = htmlspecialchars($_SESSION['flash_success'], ENT_QUOTES, 'UTF-8');
+            $raw = $_SESSION['flash_success'];
+            $clean = trim(strip_tags(html_entity_decode((string)$raw, ENT_QUOTES, 'UTF-8')));
+            $jsonText = json_encode($clean, JSON_UNESCAPED_UNICODE);
             $html .= "<script>
                 document.addEventListener('DOMContentLoaded', function() {
                     Swal.fire({
                         icon: 'success',
                         title: 'Berhasil!',
-                        text: '{$msg}',
-                        timer: 3000,
+                        text: {$jsonText},
+                        timer: 3500,
                         showConfirmButton: false,
                         customClass: { popup: 'rounded-4 shadow' }
                     });
@@ -121,13 +146,15 @@ class FlashHelper {
         }
 
         if (!empty($_SESSION['flash_error'])) {
-            $msg = htmlspecialchars($_SESSION['flash_error'], ENT_QUOTES, 'UTF-8');
+            $raw = $_SESSION['flash_error'];
+            $clean = trim(strip_tags(html_entity_decode((string)$raw, ENT_QUOTES, 'UTF-8')));
+            $jsonText = json_encode($clean, JSON_UNESCAPED_UNICODE);
             $html .= "<script>
                 document.addEventListener('DOMContentLoaded', function() {
                     Swal.fire({
                         icon: 'error',
                         title: 'Gagal!',
-                        text: '{$msg}',
+                        text: {$jsonText},
                         customClass: { popup: 'rounded-4 shadow' }
                     });
                 });
@@ -135,14 +162,35 @@ class FlashHelper {
             unset($_SESSION['flash_error']);
         }
 
+        if (!empty($_SESSION['flash_warning'])) {
+            $raw = $_SESSION['flash_warning'];
+            $clean = trim(strip_tags(html_entity_decode((string)$raw, ENT_QUOTES, 'UTF-8')));
+            $jsonText = json_encode($clean, JSON_UNESCAPED_UNICODE);
+            $html .= "<script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Peringatan',
+                        text: {$jsonText},
+                        timer: 4500,
+                        showConfirmButton: true,
+                        customClass: { popup: 'rounded-4 shadow' }
+                    });
+                });
+            </script>";
+            unset($_SESSION['flash_warning']);
+        }
+
         if (!empty($_SESSION['flash_info'])) {
-            $msg = htmlspecialchars($_SESSION['flash_info'], ENT_QUOTES, 'UTF-8');
+            $raw = $_SESSION['flash_info'];
+            $clean = trim(strip_tags(html_entity_decode((string)$raw, ENT_QUOTES, 'UTF-8')));
+            $jsonText = json_encode($clean, JSON_UNESCAPED_UNICODE);
             $html .= "<script>
                 document.addEventListener('DOMContentLoaded', function() {
                     Swal.fire({
                         icon: 'info',
                         title: 'Informasi',
-                        text: '{$msg}',
+                        text: {$jsonText},
                         timer: 4000,
                         showConfirmButton: true,
                         customClass: { popup: 'rounded-4 shadow' }

@@ -1467,18 +1467,18 @@ class AdminController {
             $totalProcessed = $insertedCount + $updatedCount;
             if ($totalProcessed > 0) {
                 $detailSuccess = [];
-                if ($insertedCount > 0) $detailSuccess[] = "<strong>{$insertedCount}</strong> siswa baru berhasil ditambahkan";
-                if ($updatedCount > 0) $detailSuccess[] = "<strong>{$updatedCount}</strong> data siswa disinkronkan/diperbarui";
+                if ($insertedCount > 0) $detailSuccess[] = "{$insertedCount} siswa baru berhasil ditambahkan";
+                if ($updatedCount > 0) $detailSuccess[] = "{$updatedCount} data siswa disinkronkan/diperbarui";
 
                 $msg = "Import Berhasil! " . implode(' dan ', $detailSuccess) . ".";
                 if ($skippedCount > 0) {
-                    $msg .= "<br><small class='text-muted'>Catatan ({$skippedCount} baris dilewati): " . htmlspecialchars(implode('; ', array_slice($skippedReasons, 0, 3))) . (count($skippedReasons) > 3 ? '...' : '') . "</small>";
+                    $msg .= " Catatan ({$skippedCount} baris dilewati): " . implode('; ', array_slice($skippedReasons, 0, 3)) . (count($skippedReasons) > 3 ? '...' : '');
                     FlashHelper::setWarning($msg);
                 } else {
                     FlashHelper::setSuccess($msg);
                 }
             } else {
-                $reasonText = !empty($skippedReasons) ? ': ' . htmlspecialchars(implode('; ', array_slice($skippedReasons, 0, 3))) : '.';
+                $reasonText = !empty($skippedReasons) ? ': ' . implode('; ', array_slice($skippedReasons, 0, 3)) : '.';
                 FlashHelper::setError("Tidak ada data siswa yang berhasil diimpor{$reasonText}");
             }
         } else {
