@@ -78,128 +78,35 @@ $dashboardUrl = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/dashboard' :
 
         <!-- Presensi Log Today -->
         <div class="col-12 col-md-7 col-lg-8">
-            <div class="card border-0 rounded-4 shadow-sm p-3 p-md-4 bg-white">
-                <?php
-                $namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-                $namaBulan = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-                $tglIndo = $namaHari[(int)date('w')] . ', ' . (int)date('j') . ' ' . $namaBulan[(int)date('n')] . ' ' . date('Y');
-
-                $totalSiswa = 0;
-                $totalGuru = 0;
-                $totalPulang = 0;
-                foreach (($presensiHariIni ?? []) as $p) {
-                    $isG = ($p['role_label'] ?? '') === 'Guru' || ($p['nama_kelas'] ?? '') === 'GTK / Pendidik';
-                    if ($isG) {
-                        $totalGuru++;
-                    } else {
-                        $totalSiswa++;
-                    }
-                    if (!empty($p['waktu_pulang'])) {
-                        $totalPulang++;
-                    }
-                }
-                $totalAll = count($presensiHariIni ?? []);
-                ?>
-
-                <!-- Header Title & Date -->
-                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2 pb-2 border-bottom">
-                    <div>
-                        <h5 class="fw-bold mb-1 text-dark d-flex align-items-center">
-                            <span class="rounded-circle bg-primary-subtle text-primary p-2 me-2 d-inline-flex align-items-center justify-content-center" style="width:36px; height:36px;">
-                                <i class="bi bi-calendar2-check-fill fs-6"></i>
-                            </span>
-                            Log Presensi Hari Ini
-                        </h5>
-                        <small class="text-muted"><i class="bi bi-clock-history me-1 text-primary"></i> <?= $tglIndo ?> — Update real-time otomatis</small>
-                    </div>
-                    <div>
-                        <span class="badge bg-light text-dark border px-3 py-2 rounded-pill fs-7 fw-semibold shadow-xs">
-                            <i class="bi bi-calendar-event text-primary me-1.5"></i> <?= $tglIndo ?>
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Summary Stat Pills -->
-                <div class="row g-2 mb-3">
-                    <div class="col-6 col-sm-3">
-                        <div class="p-2.5 rounded-3 bg-primary-subtle border border-primary-subtle text-center">
-                            <small class="text-primary fw-semibold d-block" style="font-size:0.75rem;"><i class="bi bi-people-fill me-1"></i>Total Hadir</small>
-                            <span class="fs-5 fw-bold text-primary" id="statTotal"><?= $totalAll ?></span>
-                        </div>
-                    </div>
-                    <div class="col-6 col-sm-3">
-                        <div class="p-2.5 rounded-3 bg-info-subtle border border-info-subtle text-center">
-                            <small class="text-info-emphasis fw-semibold d-block" style="font-size:0.75rem;"><i class="bi bi-backpack-fill me-1"></i>Siswa</small>
-                            <span class="fs-5 fw-bold text-info-emphasis" id="statSiswa"><?= $totalSiswa ?></span>
-                        </div>
-                    </div>
-                    <div class="col-6 col-sm-3">
-                        <div class="p-2.5 rounded-3 bg-warning-subtle border border-warning-subtle text-center">
-                            <small class="text-warning-emphasis fw-semibold d-block" style="font-size:0.75rem;"><i class="bi bi-person-workspace me-1"></i>Guru / GTK</small>
-                            <span class="fs-5 fw-bold text-warning-emphasis" id="statGuru"><?= $totalGuru ?></span>
-                        </div>
-                    </div>
-                    <div class="col-6 col-sm-3">
-                        <div class="p-2.5 rounded-3 bg-success-subtle border border-success-subtle text-center">
-                            <small class="text-success fw-semibold d-block" style="font-size:0.75rem;"><i class="bi bi-box-arrow-right me-1"></i>Pulang</small>
-                            <span class="fs-5 fw-bold text-success" id="statPulang"><?= $totalPulang ?></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Filter & Search Toolbar -->
+            <div class="card border-0 rounded-4 shadow-sm p-4 bg-white">
                 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                    <div class="btn-group btn-group-sm flex-wrap" role="group">
-                        <button type="button" class="btn btn-outline-primary active log-tab-btn px-2.5 py-1 fw-semibold" data-filter="all" onclick="setLogFilterTab('all', this)">
-                            Semua (<span id="tabCountAll"><?= $totalAll ?></span>)
-                        </button>
-                        <button type="button" class="btn btn-outline-info log-tab-btn px-2.5 py-1 fw-semibold" data-filter="siswa" onclick="setLogFilterTab('siswa', this)">
-                            Siswa (<span id="tabCountSiswa"><?= $totalSiswa ?></span>)
-                        </button>
-                        <button type="button" class="btn btn-outline-warning text-dark log-tab-btn px-2.5 py-1 fw-semibold" data-filter="guru" onclick="setLogFilterTab('guru', this)">
-                            Guru/GTK (<span id="tabCountGuru"><?= $totalGuru ?></span>)
-                        </button>
-                        <button type="button" class="btn btn-outline-success log-tab-btn px-2.5 py-1 fw-semibold" data-filter="pulang" onclick="setLogFilterTab('pulang', this)">
-                            Sudah Pulang (<span id="tabCountPulang"><?= $totalPulang ?></span>)
-                        </button>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-1">
-                        <div class="input-group input-group-sm" style="max-width: 220px;">
-                            <span class="input-group-text bg-light border-end-0 rounded-start-pill"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" id="logSearchInput" class="form-control bg-light border-start-0 rounded-end-pill" placeholder="Cari nama, NIS, NIP..." oninput="filterLogRows()">
-                        </div>
-                        <button type="button" onclick="window.location.reload()" class="btn btn-sm btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center" title="Segarkan Data Log" style="width:31px; height:31px;">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                    </div>
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-list-check text-primary me-2"></i> Log Presensi Hari Ini — <?= date('d F Y') ?>
+                    </h6>
+                    <span class="badge bg-success rounded-pill px-3 py-2 fs-6">
+                        Total Hadir: <span id="totalHadir" class="fw-bold"><?= count($presensiHariIni ?? []) ?></span> Siswa
+                    </span>
                 </div>
 
-                <!-- Table Container with Scroll & Sticky Header -->
-                <div class="table-responsive rounded-3 border" style="max-height: 520px; overflow-y: auto;">
-                    <table class="table table-hover align-middle small mb-0" id="tablePresensiToday">
-                        <thead class="table-light sticky-top shadow-xs" style="z-index: 5;">
-                            <tr class="text-secondary fw-semibold text-uppercase" style="font-size: 0.74rem; letter-spacing: 0.4px;">
-                                <th style="width: 45px;" class="text-center">#</th>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>No</th>
                                 <th>Nama Lengkap</th>
-                                <th style="width: 135px;">NIP / NIS</th>
-                                <th style="width: 145px;">Rombel / Peran</th>
-                                <th style="width: 125px;" class="text-center">Jam Masuk</th>
-                                <th style="width: 125px;" class="text-center">Jam Pulang</th>
-                                <th style="width: 135px;" class="text-center">Status</th>
+                                <th>NIP / NIS</th>
+                                <th>Rombel / Peran</th>
+                                <th>Jam Masuk</th>
+                                <th>Jam Pulang</th>
+                                <th>Status Presensi</th>
                             </tr>
                         </thead>
                         <tbody id="presensiTbody">
                             <?php if (empty($presensiHariIni)): ?>
                                 <tr id="emptyRow">
                                     <td colspan="7" class="text-center py-5 text-muted">
-                                        <div class="py-3">
-                                            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
-                                                <i class="bi bi-qr-code-scan fs-2 text-primary opacity-75"></i>
-                                            </div>
-                                            <h6 class="fw-bold text-dark mb-1">Belum Ada Presensi Hari Ini</h6>
-                                            <p class="text-muted small mb-0">Arahkan kartu QR code siswa atau NIP guru ke scanner kamera.</p>
-                                        </div>
+                                        <i class="bi bi-qr-code fs-1 d-block mb-2 text-secondary"></i>
+                                        <small class="fw-semibold">Belum ada presensi hari ini. Silakan mulai scan QR Code.</small>
                                     </td>
                                 </tr>
                             <?php else: ?>
@@ -208,73 +115,31 @@ $dashboardUrl = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/dashboard' :
                                     $jamPulangStr = !empty($p['waktu_pulang']) ? date('H:i', strtotime($p['waktu_pulang'])) : '-';
                                     $isPulang = !empty($p['waktu_pulang']);
                                     $isGuru = ($p['role_label'] ?? '') === 'Guru' || ($p['nama_kelas'] ?? '') === 'GTK / Pendidik';
-                                    $nisVal = $p['nis'] ?: ($p['nisn'] ?: '-');
-                                    $rowId = 'row-' . ($isGuru ? 'g-' . $nisVal : 's-' . $nisVal);
-                                    $namaClean = Security::safeText($p['nama_lengkap']);
-                                    $initial = strtoupper(substr($namaClean, 0, 1));
-                                    $isLate = (stripos($p['keterangan'] ?? '', 'terlambat') !== false || stripos($p['status'] ?? '', 'terlambat') !== false);
                                 ?>
-                                    <tr id="<?= htmlspecialchars($rowId) ?>" class="border-bottom log-presensi-row" 
-                                        data-role="<?= $isGuru ? 'guru' : 'siswa' ?>" 
-                                        data-status="<?= $isPulang ? 'pulang' : 'masuk' ?>" 
-                                        data-search="<?= strtolower(htmlspecialchars($namaClean . ' ' . $nisVal . ' ' . ($p['nama_kelas'] ?? ''))) ?>">
-                                        <td class="text-center text-muted fw-semibold"><?= $i + 1 ?></td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <div class="rounded-circle <?= $isGuru ? 'bg-warning-subtle text-warning-emphasis' : 'bg-primary-subtle text-primary' ?> fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px; height:32px; font-size:0.8rem;">
-                                                    <?= $isGuru ? '<i class="bi bi-person-fill"></i>' : $initial ?>
-                                                </div>
-                                                <div>
-                                                    <div class="fw-bold text-dark lh-sm"><?= htmlspecialchars($namaClean) ?></div>
-                                                    <small class="text-muted d-md-none font-monospace"><?= htmlspecialchars($nisVal) ?></small>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-light text-dark border font-monospace px-2 py-1">
-                                                <i class="bi bi-person-badge text-secondary me-1"></i><?= htmlspecialchars($nisVal) ?>
-                                            </span>
-                                        </td>
+                                    <tr class="border-bottom">
+                                        <td><span class="badge bg-secondary rounded-circle py-1 px-2"><?= $i + 1 ?></span></td>
+                                        <td class="fw-bold text-dark"><?= Security::safeText($p['nama_lengkap']) ?></td>
+                                        <td><code><?= htmlspecialchars($p['nis'] ?: ($p['nisn'] ?: '-')) ?></code></td>
                                         <td>
                                             <?php if ($isGuru): ?>
-                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1">
-                                                    <i class="bi bi-briefcase-fill me-1 text-warning"></i>Guru / GTK
-                                                </span>
+                                                <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1"><i class="bi bi-person-workspace me-1 text-warning"></i>Guru / GTK</span>
                                             <?php else: ?>
-                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2.5 py-1">
-                                                    <i class="bi bi-mortarboard-fill me-1 text-info"></i><?= htmlspecialchars($p['nama_kelas'] ?: 'Tanpa Kelas') ?>
-                                                </span>
+                                                <span class="badge bg-light text-dark border"><?= htmlspecialchars($p['nama_kelas'] ?: 'Tanpa Kelas') ?></span>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold">
-                                                <i class="bi bi-box-arrow-in-right me-1"></i><?= $jamMasukStr ?> WIB
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
+                                        <td class="fw-bold text-success"><i class="bi bi-box-arrow-in-right me-1"></i><?= $jamMasukStr ?> WIB</td>
+                                        <td class="fw-bold text-primary">
                                             <?php if ($isPulang): ?>
-                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-bold">
-                                                    <i class="bi bi-box-arrow-right me-1"></i><?= $jamPulangStr ?> WIB
-                                                </span>
+                                                <i class="bi bi-box-arrow-right me-1"></i><?= $jamPulangStr ?> WIB
                                             <?php else: ?>
-                                                <span class="badge bg-light text-muted border border-dashed rounded-pill px-2 py-1 fw-normal" style="font-size:0.75rem;">
-                                                    <i class="bi bi-dash-circle me-1"></i>Belum Pulang
-                                                </span>
+                                                <span class="text-muted fw-normal small">Belum Scan Pulang</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td class="text-center">
+                                        <td>
                                             <?php if ($isPulang): ?>
-                                                <span class="badge bg-primary text-white rounded-pill px-2.5 py-1 shadow-xs">
-                                                    <i class="bi bi-check-all me-1"></i>Lengkap
-                                                </span>
-                                            <?php elseif ($isLate): ?>
-                                                <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 shadow-xs">
-                                                    <i class="bi bi-clock-history me-1"></i>Terlambat
-                                                </span>
+                                                <span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1"><i class="bi bi-check-all me-1"></i>Lengkap (Masuk & Pulang)</span>
                                             <?php else: ?>
-                                                <span class="badge bg-success text-white rounded-pill px-2.5 py-1 shadow-xs">
-                                                    <i class="bi bi-check-circle-fill me-1"></i>Hadir
-                                                </span>
+                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Hadir</span>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
@@ -299,11 +164,7 @@ if (typeof Html5Qrcode === 'undefined') {
 </script>
 <script>
 let html5QrCode = null;
-let statTotal = <?= (int)($totalAll ?? 0) ?>;
-let statSiswa = <?= (int)($totalSiswa ?? 0) ?>;
-let statGuru = <?= (int)($totalGuru ?? 0) ?>;
-let statPulang = <?= (int)($totalPulang ?? 0) ?>;
-let currentLogFilter = 'all';
+let scanCount = <?= count($presensiHariIni ?? []) ?>;
 let isProcessing = false;
 let lastScannedText = '';
 let lastScannedTime = 0;
@@ -438,24 +299,11 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
             resultEl.className = isPulang ? 'alert alert-primary border-0 rounded-3 shadow-sm mb-3' : 'alert alert-success border-0 rounded-3 shadow-sm mb-3';
             resultEl.innerHTML = '<i class="bi bi-check-circle-fill me-1 fs-5 align-middle"></i> <strong>' + d.nama + '</strong> (' + d.kelas + ') — ' + (isPulang ? 'Pulang: ' + d.jam : 'Masuk: ' + d.jam) + (!isPulang ? statusBadge : '');
 
-            const isGuru = (d.role === 'Guru');
-            const cleanNis = escapeHtml(d.nis || '-');
-            const rowId = 'row-' + (isGuru ? 'g-' + cleanNis : 's-' + cleanNis);
-            const existingRow = document.getElementById(rowId);
-            const wasExistingPulang = existingRow && existingRow.getAttribute('data-status') === 'pulang';
-
-            if (!existingRow) {
-                statTotal++;
-                if (isGuru) {
-                    statGuru++;
-                } else {
-                    statSiswa++;
-                }
+            if (!isPulang) {
+                scanCount++;
+                const countEl = document.getElementById('totalHadir');
+                if (countEl) countEl.textContent = scanCount;
             }
-            if (isPulang && !wasExistingPulang) {
-                statPulang++;
-            }
-            updateStatBadges();
 
             // Dynamic Real-time Table Prepend (No Page Reload)
             const tbody = document.getElementById('presensiTbody');
@@ -466,67 +314,29 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
             const existingRow = document.getElementById(rowId);
             if (existingRow) existingRow.remove();
 
-            const cleanName = escapeHtml(d.nama || 'Pengguna');
-            const cleanKelas = escapeHtml(d.kelas || (isGuru ? 'GTK / Pendidik' : 'Tanpa Kelas'));
-            const initial = cleanName.charAt(0).toUpperCase() || 'U';
-
             const tr = document.createElement('tr');
+            tr.className = 'border-bottom bg-success-subtle';
             tr.id = rowId;
-            tr.className = 'border-bottom log-presensi-row bg-success-subtle';
-            tr.setAttribute('data-role', isGuru ? 'guru' : 'siswa');
-            tr.setAttribute('data-status', isPulang ? 'pulang' : 'masuk');
-            tr.setAttribute('data-search', ((d.nama || '') + ' ' + (d.nis || '') + ' ' + (d.kelas || '')).toLowerCase());
 
-            const roleBadge = isGuru ? 
-                '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-1"><i class="bi bi-briefcase-fill me-1 text-warning"></i>Guru / GTK</span>' : 
-                '<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2.5 py-1"><i class="bi bi-mortarboard-fill me-1 text-info"></i>' + cleanKelas + '</span>';
+            const roleBadge = (d.role === 'Guru') ? 
+                '<span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1"><i class="bi bi-person-workspace me-1 text-warning"></i>Guru / GTK</span>' : 
+                `<span class="badge bg-light text-dark border">${d.kelas}</span>`;
 
-            const jamMasukDisp = d.jam_masuk || d.jam || '-';
-            const jamPulangDisp = isPulang ? (d.jam_pulang || d.jam || '-') : '';
-
-            const pulangBadge = isPulang ?
-                '<span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-bold"><i class="bi bi-box-arrow-right me-1"></i>' + jamPulangDisp + '</span>' :
-                '<span class="badge bg-light text-muted border border-dashed rounded-pill px-2 py-1 fw-normal" style="font-size:0.75rem;"><i class="bi bi-dash-circle me-1"></i>Belum Pulang</span>';
-
-            let tableStatusBadge = '';
-            if (isPulang) {
-                tableStatusBadge = '<span class="badge bg-primary text-white rounded-pill px-2.5 py-1 shadow-xs"><i class="bi bi-check-all me-1"></i>Lengkap</span>';
-            } else if (d.is_late) {
-                tableStatusBadge = '<span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 shadow-xs"><i class="bi bi-clock-history me-1"></i>Terlambat</span>';
-            } else {
-                tableStatusBadge = '<span class="badge bg-success text-white rounded-pill px-2.5 py-1 shadow-xs"><i class="bi bi-check-circle-fill me-1"></i>Hadir</span>';
-            }
+            const tableStatusBadge = isPulang ?
+                '<span class="badge bg-primary-subtle text-primary border border-primary px-2 py-1"><i class="bi bi-check-all me-1"></i>Lengkap (Masuk & Pulang)</span>' :
+                '<span class="badge bg-success-subtle text-success border border-success px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Hadir</span>';
 
             tr.innerHTML = `
-                <td class="text-center"><span class="badge bg-success text-white rounded-circle px-1.5 py-1" style="font-size:0.65rem;" title="Presensi Baru">Baru</span></td>
-                <td>
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="rounded-circle ${isGuru ? 'bg-warning-subtle text-warning-emphasis' : 'bg-primary-subtle text-primary'} fw-bold d-flex align-items-center justify-content-center flex-shrink-0" style="width:32px; height:32px; font-size:0.8rem;">
-                            ${isGuru ? '<i class="bi bi-person-fill"></i>' : initial}
-                        </div>
-                        <div>
-                            <div class="fw-bold text-dark lh-sm">${cleanName}</div>
-                            <small class="text-muted d-md-none font-monospace">${cleanNis}</small>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <span class="badge bg-light text-dark border font-monospace px-2 py-1">
-                        <i class="bi bi-person-badge text-secondary me-1"></i>${cleanNis}
-                    </span>
-                </td>
+                <td><span class="badge bg-success rounded-circle py-1 px-2">Baru</span></td>
+                <td class="fw-bold text-dark">${d.nama}</td>
+                <td><code>${d.nis}</code></td>
                 <td>${roleBadge}</td>
-                <td class="text-center">
-                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold">
-                        <i class="bi bi-box-arrow-in-right me-1"></i>${jamMasukDisp}
-                    </span>
-                </td>
-                <td class="text-center">${pulangBadge}</td>
-                <td class="text-center">${tableStatusBadge}</td>
+                <td class="fw-bold text-success"><i class="bi bi-box-arrow-in-right me-1"></i>${d.jam_masuk || d.jam}</td>
+                <td class="fw-bold text-primary">${isPulang ? '<i class="bi bi-box-arrow-right me-1"></i>' + d.jam_pulang : '<span class="text-muted fw-normal small">Belum Scan Pulang</span>'}</td>
+                <td>${tableStatusBadge}</td>
             `;
 
             tbody.insertBefore(tr, tbody.firstChild);
-            filterLogRows();
             setTimeout(() => { tr.classList.remove('bg-success-subtle'); }, 2000);
 
             document.getElementById('manualNis').value = '';
@@ -626,14 +436,10 @@ async function getCleanScannerInstance() {
 }
 
 function initCameraScanner() {
-    startCameraScanner(currentFacingMode);
+    startCameraWithFacingMode(currentFacingMode);
 }
 
-function startCameraWithFacingMode(facingMode) {
-    return startCameraScanner(facingMode);
-}
-
-async function startCameraScanner(facingMode) {
+async function startCameraWithFacingMode(facingMode) {
     if (isStartingCamera) return;
     isStartingCamera = true;
 
@@ -647,7 +453,7 @@ async function startCameraScanner(facingMode) {
         return;
     }
 
-    // Responsive dynamic qrbox calculation based on viewfinder (prevents qrbox larger than viewfinder crash)
+    // Dynamic responsive qrbox calculation (never crashes due to fixed size exceeding viewfinder)
     const qrboxCalc = function(viewfinderWidth, viewfinderHeight) {
         const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
         const size = Math.max(160, Math.min(Math.floor(minEdge * 0.72), 240));
@@ -662,19 +468,18 @@ async function startCameraScanner(facingMode) {
 
     try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showCameraPermissionPromptUI("Browser Anda tidak mendukung akses kamera langsung.");
+            showCameraPermissionPromptUI();
             isStartingCamera = false;
             return;
         }
 
-        // 1. Request permission with ideal constraint so it works on both PC webcams and Mobile phones without OverconstrainedError
+        // Request initial permission using ideal facingMode (never throws OverconstrainedError on PC)
         let stream = null;
         try {
             stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: { ideal: currentFacingMode } }
             });
         } catch (e1) {
-            // Fallback for simple video request if ideal constraint failed
             stream = await navigator.mediaDevices.getUserMedia({ video: true });
         }
 
@@ -682,7 +487,7 @@ async function startCameraScanner(facingMode) {
             stream.getTracks().forEach(track => track.stop());
         }
 
-        // 2. Discover available devices
+        // Discover available cameras
         const devices = await Html5Qrcode.getCameras().catch(() => []);
         populateCameraList(devices);
 
@@ -704,7 +509,7 @@ async function startCameraScanner(facingMode) {
             targetIdOrConfig = { facingMode: currentFacingMode };
         }
 
-        // 3. Start scanning with clean scanner instance
+        // Start scanning cleanly
         const scanner = await getCleanScannerInstance();
         await scanner.start(targetIdOrConfig, config, onScanSuccess, (err) => {});
         ensureVideoPlaysInline();
@@ -745,7 +550,7 @@ function ensureVideoPlaysInline() {
 
 function toggleCameraFacing() {
     currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
-    startCameraScanner(currentFacingMode);
+    startCameraWithFacingMode(currentFacingMode);
 }
 
 function populateCameraList(devicesList) {
@@ -785,11 +590,11 @@ async function switchCamera(cameraId) {
         await scanner.start(cameraId, config, onScanSuccess, (err) => {});
         ensureVideoPlaysInline();
     } catch(e) {
-        console.error("Failed to switch camera:", e);
+        console.error("switchCamera error:", e);
     }
 }
 
-function showCameraPermissionPromptUI(customNotice = '') {
+function showCameraPermissionPromptUI() {
     const isHttps = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     let httpsNotice = '';
     if (!isHttps) {
@@ -799,17 +604,9 @@ function showCameraPermissionPromptUI(customNotice = '') {
             </div>
         `;
     }
-    if (customNotice) {
-        httpsNotice = `
-            <div class="alert alert-warning border-0 rounded-3 mt-3 p-2 text-start small">
-                <i class="bi bi-exclamation-triangle-fill me-1 fw-bold"></i> ${escapeHtml(customNotice)}
-            </div>
-        ` + httpsNotice;
-    }
 
     const qrContainer = document.getElementById('qr-reader');
     if (!qrContainer) return;
-
     qrContainer.innerHTML = `
         <div class="card border-0 bg-light rounded-4 p-4 text-center my-2 shadow-xs">
             <div class="mb-3">
@@ -818,82 +615,15 @@ function showCameraPermissionPromptUI(customNotice = '') {
                 </span>
             </div>
             <h6 class="fw-bold text-dark mb-1">Kamera Belum Aktif</h6>
-            <p class="text-muted small mb-3">Pastikan izin kamera telah diberikan pada browser atau klik tombol di bawah untuk membuka kembali.</p>
+            <p class="text-muted small mb-3">Klik tombol di bawah untuk mencoba membuka kamera HP Anda kembali.</p>
             <div>
-                <button type="button" onclick="startCameraScanner(currentFacingMode)" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm">
-                    <i class="bi bi-camera-video-fill me-2"></i> Buka Kamera
+                <button type="button" onclick="startCameraWithFacingMode(currentFacingMode)" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm">
+                    <i class="bi bi-camera-video-fill me-2"></i> Coba Buka Kamera HP
                 </button>
             </div>
             ${httpsNotice}
         </div>
     `;
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-function updateStatBadges() {
-    const elTotal = document.getElementById('statTotal');
-    const elTabAll = document.getElementById('tabCountAll');
-    if (elTotal) elTotal.textContent = statTotal;
-    if (elTabAll) elTabAll.textContent = statTotal;
-
-    const elSiswa = document.getElementById('statSiswa');
-    const elTabSiswa = document.getElementById('tabCountSiswa');
-    if (elSiswa) elSiswa.textContent = statSiswa;
-    if (elTabSiswa) elTabSiswa.textContent = statSiswa;
-
-    const elGuru = document.getElementById('statGuru');
-    const elTabGuru = document.getElementById('tabCountGuru');
-    if (elGuru) elGuru.textContent = statGuru;
-    if (elTabGuru) elTabGuru.textContent = statGuru;
-
-    const elPulang = document.getElementById('statPulang');
-    const elTabPulang = document.getElementById('tabCountPulang');
-    if (elPulang) elPulang.textContent = statPulang;
-    if (elTabPulang) elTabPulang.textContent = statPulang;
-}
-
-function setLogFilterTab(filterType, btnEl) {
-    currentLogFilter = filterType;
-    document.querySelectorAll('.log-tab-btn').forEach(btn => btn.classList.remove('active'));
-    if (btnEl) btnEl.classList.add('active');
-    filterLogRows();
-}
-
-function filterLogRows() {
-    const query = (document.getElementById('logSearchInput')?.value || '').trim().toLowerCase();
-    const rows = document.querySelectorAll('.log-presensi-row');
-    
-    rows.forEach(row => {
-        const role = row.getAttribute('data-role');
-        const status = row.getAttribute('data-status');
-        const searchText = row.getAttribute('data-search') || '';
-
-        let matchTab = true;
-        if (currentLogFilter === 'siswa') {
-            matchTab = (role === 'siswa');
-        } else if (currentLogFilter === 'guru') {
-            matchTab = (role === 'guru');
-        } else if (currentLogFilter === 'pulang') {
-            matchTab = (status === 'pulang');
-        }
-
-        const matchSearch = !query || searchText.includes(query);
-
-        if (matchTab && matchSearch) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
 }
 
 // Start camera scanner on page load
