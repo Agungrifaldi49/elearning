@@ -180,8 +180,8 @@
                                     <input type="checkbox" class="form-check-input siswa-checkbox" value="<?= $s['id'] ?>">
                                 </td>
                                 <td><?= $i + 1 ?></td>
-                                <td><code><?= htmlspecialchars($s['nis']) ?></code> / <small><?= htmlspecialchars($s['nisn']) ?></small></td>
-                                <td class="fw-bold"><?= htmlspecialchars($s['nama_lengkap']) ?></td>
+                                <td><code><?= htmlspecialchars(Security::safeText($s['nis'] ?? '')) ?></code> / <small><?= htmlspecialchars(Security::safeText($s['nisn'] ?? '')) ?></small></td>
+                                <td class="fw-bold"><?= htmlspecialchars(Security::safeText($s['nama_lengkap'])) ?></td>
                                 <td><span class="badge bg-info text-dark"><?= htmlspecialchars($s['nama_kelas']) ?></span></td>
                                 <td><span class="badge bg-secondary"><?= htmlspecialchars($s['nama_jurusan']) ?></span></td>
                                 <td><?= $s['jenis_kelamin'] ?></td>
@@ -470,13 +470,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <tr>
                                         <td class="text-center fw-bold"><?= $idx + 1 ?></td>
                                         <td>
-                                            <input type="text" name="matrix_siswa[<?= $sw['id'] ?>][nis]" value="<?= htmlspecialchars($sw['nis']) ?>" class="form-control form-control-sm font-monospace" required>
+                                            <input type="text" name="matrix_siswa[<?= $sw['id'] ?>][nis]" value="<?= htmlspecialchars(Security::safeText($sw['nis'] ?? '')) ?>" class="form-control form-control-sm font-monospace" required>
                                         </td>
                                         <td>
-                                            <input type="text" name="matrix_siswa[<?= $sw['id'] ?>][nisn]" value="<?= htmlspecialchars($sw['nisn']) ?>" class="form-control form-control-sm font-monospace" required>
+                                            <input type="text" name="matrix_siswa[<?= $sw['id'] ?>][nisn]" value="<?= htmlspecialchars(Security::safeText($sw['nisn'] ?? '')) ?>" class="form-control form-control-sm font-monospace" required>
                                         </td>
                                         <td>
-                                            <input type="text" name="matrix_siswa[<?= $sw['id'] ?>][nama_lengkap]" value="<?= htmlspecialchars($sw['nama_lengkap']) ?>" class="form-control form-control-sm fw-semibold" required>
+                                            <input type="text" name="matrix_siswa[<?= $sw['id'] ?>][nama_lengkap]" value="<?= htmlspecialchars(Security::safeText($sw['nama_lengkap'] ?? '')) ?>" class="form-control form-control-sm fw-semibold" required>
                                         </td>
                                         <td>
                                             <select name="matrix_siswa[<?= $sw['id'] ?>][kelas_id]" class="form-select form-select-sm" required>
@@ -535,32 +535,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="modal-body">
                     <?= Security::csrfField() ?>
                     <input type="hidden" name="action" value="create">
-                    <input type="hidden" name="redirect_query" value="<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
 
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">NIS</label>
-                            <input type="text" name="nis" class="form-control" required>
+                            <input type="text" name="nis" class="form-control" placeholder="Nomor Induk Siswa" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">NISN</label>
-                            <input type="text" name="nisn" class="form-control" required>
+                            <input type="text" name="nisn" class="form-control" placeholder="Nomor Induk Siswa Nasional" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Nama Lengkap Siswa</label>
-                            <input type="text" name="nama_lengkap" class="form-control" required>
+                            <input type="text" name="nama_lengkap" class="form-control" placeholder="Nama Lengkap Siswa" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Kelas</label>
-                            <select name="kelas_id" class="form-select" required>
+                            <select name="kelas_id" id="addSiswaKelasSelect" class="form-select" required>
                                 <?php foreach ($kelasList as $k): ?>
-                                    <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
+                                    <option value="<?= $k['id'] ?>" data-jurusan-id="<?= $k['jurusan_id'] ?? '' ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Jurusan</label>
-                            <select name="jurusan_id" class="form-select" required>
+                            <select name="jurusan_id" id="addSiswaJurusanSelect" class="form-select" required>
                                 <?php foreach ($jurusanList as $j): ?>
                                     <option value="<?= $j['id'] ?>"><?= htmlspecialchars($j['nama_jurusan']) ?></option>
                                 <?php endforeach; ?>
@@ -574,16 +573,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Username Login</label>
-                            <input type="text" name="username" class="form-control" required>
+                            <label class="form-label small fw-semibold">Username Login <small class="text-muted fw-normal">(Opsional)</small></label>
+                            <input type="text" name="username" class="form-control" placeholder="Otomatis dibuat jika dikosongkan">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Email</label>
-                            <input type="email" name="email" class="form-control" required>
+                            <label class="form-label small fw-semibold">Email <small class="text-muted fw-normal">(Opsional)</small></label>
+                            <input type="email" name="email" class="form-control" placeholder="Otomatis dibuat jika dikosongkan">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Password Login</label>
-                            <input type="password" name="password" class="form-control" required>
+                            <label class="form-label small fw-semibold">Password Login <small class="text-muted fw-normal">(Default: 123456)</small></label>
+                            <input type="password" name="password" class="form-control" placeholder="Default: 123456">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">No Telepon / WA Siswa</label>
@@ -598,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary px-4">Simpan Data Siswa</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold"><i class="bi bi-plus-circle me-1"></i> Simpan Data Siswa</button>
                 </div>
             </form>
         </div>
@@ -618,10 +617,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="modal-body">
                     <div class="text-center mb-3">
                         <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center fw-bold fs-3 mb-2" style="width:70px; height:70px;">
-                            <?= strtoupper(substr($s['nama_lengkap'], 0, 1)) ?>
+                            <?= strtoupper(substr(Security::safeText($s['nama_lengkap']), 0, 1)) ?>
                         </div>
-                        <h6 class="fw-bold mb-0"><?= htmlspecialchars($s['nama_lengkap']) ?></h6>
-                        <small class="text-muted">NIS: <?= htmlspecialchars($s['nis']) ?> | NISN: <?= htmlspecialchars($s['nisn']) ?></small>
+                        <h6 class="fw-bold mb-0"><?= htmlspecialchars(Security::safeText($s['nama_lengkap'])) ?></h6>
+                        <small class="text-muted">NIS: <?= htmlspecialchars(Security::safeText($s['nis'] ?? '-')) ?> | NISN: <?= htmlspecialchars(Security::safeText($s['nisn'] ?? '-')) ?></small>
                     </div>
                     <table class="table table-sm border-0 small">
                         <tr><td class="text-muted" style="width:35%;">Kelas</td><td class="fw-semibold">: <?= htmlspecialchars($s['nama_kelas']) ?></td></tr>
@@ -669,27 +668,27 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">NIS</label>
-                                <input type="text" name="nis" class="form-control" value="<?= htmlspecialchars($s['nis']) ?>" required>
+                                <input type="text" name="nis" class="form-control" value="<?= htmlspecialchars(Security::safeText($s['nis'] ?? '')) ?>" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">NISN</label>
-                                <input type="text" name="nisn" class="form-control" value="<?= htmlspecialchars($s['nisn']) ?>" required>
+                                <input type="text" name="nisn" class="form-control" value="<?= htmlspecialchars(Security::safeText($s['nisn'] ?? '')) ?>" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Nama Lengkap Siswa</label>
-                                <input type="text" name="nama_lengkap" class="form-control" value="<?= htmlspecialchars($s['nama_lengkap']) ?>" required>
+                                <input type="text" name="nama_lengkap" class="form-control" value="<?= htmlspecialchars(Security::safeText($s['nama_lengkap'])) ?>" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Kelas</label>
-                                <select name="kelas_id" class="form-select" required>
+                                <select name="kelas_id" class="form-select edit-siswa-kelas-select" data-target-jurusan="editJurusanSelect<?= $s['id'] ?>" required>
                                     <?php foreach ($kelasList as $k): ?>
-                                        <option value="<?= $k['id'] ?>" <?= $k['id'] == $s['kelas_id'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kelas']) ?></option>
+                                        <option value="<?= $k['id'] ?>" data-jurusan-id="<?= $k['jurusan_id'] ?? '' ?>" <?= $k['id'] == $s['kelas_id'] ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kelas']) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Jurusan</label>
-                                <select name="jurusan_id" class="form-select" required>
+                                <select name="jurusan_id" id="editJurusanSelect<?= $s['id'] ?>" class="form-select" required>
                                     <?php foreach ($jurusanList as $j): ?>
                                         <option value="<?= $j['id'] ?>" <?= $j['id'] == $s['jurusan_id'] ? 'selected' : '' ?>><?= htmlspecialchars($j['nama_jurusan']) ?></option>
                                     <?php endforeach; ?>
@@ -777,5 +776,36 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function bindKelasJurusanSync(kelasSelect, jurusanSelect) {
+        if (!kelasSelect || !jurusanSelect) return;
+        kelasSelect.addEventListener('change', function() {
+            const selectedOpt = this.options[this.selectedIndex];
+            const jurId = selectedOpt ? selectedOpt.getAttribute('data-jurusan-id') : null;
+            if (jurId && jurId !== '') {
+                jurusanSelect.value = jurId;
+            }
+        });
+        // Initial sync if not yet set
+        if (!jurusanSelect.value && kelasSelect.options.length > 0) {
+            const opt = kelasSelect.options[kelasSelect.selectedIndex];
+            const jId = opt ? opt.getAttribute('data-jurusan-id') : null;
+            if (jId) jurusanSelect.value = jId;
+        }
+    }
+
+    const addKelas = document.getElementById('addSiswaKelasSelect');
+    const addJurusan = document.getElementById('addSiswaJurusanSelect');
+    bindKelasJurusanSync(addKelas, addJurusan);
+
+    document.querySelectorAll('.edit-siswa-kelas-select').forEach(function(el) {
+        const targetId = el.getAttribute('data-target-jurusan');
+        const jurSelect = document.getElementById(targetId);
+        bindKelasJurusanSync(el, jurSelect);
+    });
+});
+</script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>

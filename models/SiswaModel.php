@@ -8,12 +8,17 @@ class SiswaModel extends BaseModel {
 
     public function getAll($kelasId = null, $jurusanId = null, $keyword = null, $jenisKelamin = null) {
         $sql = "
-            SELECT s.*, k.nama_kelas, j.nama_jurusan, u.username, u.email, u.avatar 
+            SELECT s.*, 
+                   COALESCE(k.nama_kelas, 'Belum Diatur') as nama_kelas, 
+                   COALESCE(j.nama_jurusan, 'Belum Diatur') as nama_jurusan, 
+                   COALESCE(u.username, '-') as username, 
+                   COALESCE(u.email, '-') as email, 
+                   u.avatar 
             FROM siswa s 
-            JOIN users u ON s.user_id = u.id 
-            JOIN kelas k ON s.kelas_id = k.id 
-            JOIN jurusan j ON s.jurusan_id = j.id 
-            WHERE u.role_id = 3
+            LEFT JOIN users u ON s.user_id = u.id 
+            LEFT JOIN kelas k ON s.kelas_id = k.id 
+            LEFT JOIN jurusan j ON s.jurusan_id = j.id 
+            WHERE (u.role_id = 3 OR u.role_id IS NULL)
         ";
         $params = [];
 
@@ -42,7 +47,7 @@ class SiswaModel extends BaseModel {
             $params[] = $term;
         }
 
-        $sql .= " ORDER BY s.nama_lengkap ASC";
+        $sql .= " ORDER BY s.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
@@ -127,6 +132,9 @@ class SiswaModel extends BaseModel {
                     $db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL");
                 }
             }
+            // Auto self-heal any corrupted entities in names
+            $db->exec("UPDATE `siswa` SET `nama_lengkap` = REPLACE(`nama_lengkap`, '&#039;', '\'') WHERE `nama_lengkap` LIKE '%&#039;%'");
+            $db->exec("UPDATE `users` SET `full_name` = REPLACE(`full_name`, '&#039;', '\'') WHERE `full_name` LIKE '%&#039;%'");
         } catch (\Throwable $e) {}
     }
 
@@ -195,9 +203,14 @@ class SiswaModel extends BaseModel {
     }
 
     public function findExistingSiswa($nis = null, $nisn = null, $username = null) {
-        $nis = !empty(trim((string)$nis)) ? trim((string)$nis) : null;
-        $nisn = !empty(trim((string)$nisn)) ? trim((string)$nisn) : null;
-        $username = !empty(trim((string)$username)) ? trim((string)$username) : null;
+        $cleanNis = trim((string)$nis);
+        $nis = (!empty($cleanNis) && !in_array(strtolower($cleanNis), ['-', '0', 'none', 'belum ada'])) ? $cleanNis : null;
+
+        $cleanNisn = trim((string)$nisn);
+        $nisn = (!empty($cleanNisn) && !in_array(strtolower($cleanNisn), ['-', '0', 'none', 'belum ada'])) ? $cleanNisn : null;
+
+        $cleanUser = trim((string)$username);
+        $username = (!empty($cleanUser) && !in_array(strtolower($cleanUser), ['-', '0'])) ? $cleanUser : null;
 
         if ($nis !== null) {
             $stmt = $this->db->prepare("SELECT s.*, u.username, u.email FROM siswa s JOIN users u ON s.user_id = u.id WHERE s.nis = ? LIMIT 1");
@@ -310,42 +323,91 @@ class SiswaModel extends BaseModel {
     public function addSiswa($data) {
         self::ensureNoOrtuColumn($this->db);
 
+        // Sanitize and decode name so apostrophes like Sa'roni are kept clean without HTML entities
         $nama = trim((string)($data['nama_lengkap'] ?? ''));
+        while (strpos($nama, '&amp;') !== false || strpos($nama, '&#039;') !== false || strpos($nama, '&#39;') !== false || strpos($nama, '&quot;') !== false) {
+            $decoded = html_entity_decode($nama, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if ($decoded === $nama) break;
+            $nama = $decoded;
+        }
+        $nama = strip_tags(trim($nama));
+
         if (empty($nama)) {
             $this->lastError = 'Nama lengkap siswa wajib diisi.';
             return false;
         }
 
-        // NIS & NISN: jika kosong, simpan sebagai NULL agar tidak bentrok UNIQUE constraint di MySQL
-        $nis = !empty(trim((string)($data['nis'] ?? ''))) ? trim((string)$data['nis']) : null;
-        $nisn = !empty(trim((string)($data['nisn'] ?? ''))) ? trim((string)$data['nisn']) : null;
+        // NIS & NISN: jika kosong atau tanda hubung '-', simpan sebagai NULL agar tidak bentrok UNIQUE constraint di MySQL
+        $cleanNis = trim((string)($data['nis'] ?? ''));
+        $nis = (!empty($cleanNis) && !in_array(strtolower($cleanNis), ['-', '0', 'none', 'belum ada'])) ? $cleanNis : null;
+
+        $cleanNisn = trim((string)($data['nisn'] ?? ''));
+        $nisn = (!empty($cleanNisn) && !in_array(strtolower($cleanNisn), ['-', '0', 'none', 'belum ada'])) ? $cleanNisn : null;
 
         // Cek duplikasi NIS
         if ($nis !== null) {
-            $chkNis = $this->db->prepare("SELECT id FROM siswa WHERE nis = ? LIMIT 1");
+            $chkNis = $this->db->prepare("SELECT id, nama_lengkap FROM siswa WHERE nis = ? LIMIT 1");
             $chkNis->execute([$nis]);
-            if ($chkNis->fetch()) {
-                $this->lastError = "NIS '{$nis}' sudah terdaftar untuk siswa lain.";
+            $existNis = $chkNis->fetch();
+            if ($existNis) {
+                $this->lastError = "NIS '{$nis}' sudah terdaftar untuk siswa '{$existNis['nama_lengkap']}'. Gunakan NIS lain.";
                 return false;
             }
         }
 
         // Cek duplikasi NISN
         if ($nisn !== null) {
-            $chkNisn = $this->db->prepare("SELECT id FROM siswa WHERE nisn = ? LIMIT 1");
+            $chkNisn = $this->db->prepare("SELECT id, nama_lengkap FROM siswa WHERE nisn = ? LIMIT 1");
             $chkNisn->execute([$nisn]);
-            if ($chkNisn->fetch()) {
-                $this->lastError = "NISN '{$nisn}' sudah terdaftar untuk siswa lain.";
+            $existNisn = $chkNisn->fetch();
+            if ($existNisn) {
+                $this->lastError = "NISN '{$nisn}' sudah terdaftar untuk siswa '{$existNisn['nama_lengkap']}'. Gunakan NISN lain.";
                 return false;
             }
         }
 
+        // Auto-match & validate Kelas & Jurusan
+        $kelasId = !empty($data['kelas_id']) ? (int)$data['kelas_id'] : 0;
+        $jurusanId = !empty($data['jurusan_id']) ? (int)$data['jurusan_id'] : 0;
+
+        if ($kelasId > 0) {
+            $stmtK = $this->db->prepare("SELECT id, jurusan_id FROM kelas WHERE id = ?");
+            $stmtK->execute([$kelasId]);
+            $kRow = $stmtK->fetch();
+            if ($kRow) {
+                if ($jurusanId <= 0 || !empty($kRow['jurusan_id'])) {
+                    $jurusanId = (int)$kRow['jurusan_id'];
+                }
+            } else {
+                $kelasId = 0;
+            }
+        }
+
+        if ($kelasId <= 0) {
+            $firstKelas = $this->db->query("SELECT id, jurusan_id FROM kelas ORDER BY id ASC LIMIT 1")->fetch();
+            if ($firstKelas) {
+                $kelasId = (int)$firstKelas['id'];
+                if ($jurusanId <= 0) {
+                    $jurusanId = (int)$firstKelas['jurusan_id'];
+                }
+            }
+        }
+
+        if ($jurusanId <= 0) {
+            $firstJur = $this->db->query("SELECT id FROM jurusan ORDER BY id ASC LIMIT 1")->fetch();
+            if ($firstJur) {
+                $jurusanId = (int)$firstJur['id'];
+            }
+        }
+
         // Pastikan username & email unik tanpa error
-        $username = $this->generateUniqueUsername($nama, $data['username'] ?? '');
-        $email = $this->generateUniqueEmail($username, $data['email'] ?? '');
+        $prefUsername = !empty(trim((string)($data['username'] ?? ''))) ? trim((string)$data['username']) : (!empty($nis) ? $nis : '');
+        $username = $this->generateUniqueUsername($nama, $prefUsername);
+
+        $prefEmail = !empty(trim((string)($data['email'] ?? ''))) ? trim((string)$data['email']) : '';
+        $email = $this->generateUniqueEmail($username, $prefEmail);
+
         $password = !empty($data['password']) ? $data['password'] : '123456';
-        $kelasId = !empty($data['kelas_id']) ? (int)$data['kelas_id'] : 1;
-        $jurusanId = !empty($data['jurusan_id']) ? (int)$data['jurusan_id'] : 1;
         $jkRaw = strtoupper(trim((string)($data['jenis_kelamin'] ?? 'L')));
         $jk = in_array($jkRaw, ['L', 'P']) ? $jkRaw : 'L';
         $noTelp = trim((string)($data['no_telepon'] ?? ''));
@@ -358,7 +420,11 @@ class SiswaModel extends BaseModel {
             $stmtUser = $this->db->prepare("INSERT INTO users (role_id, username, email, password, full_name) VALUES (3, ?, ?, ?, ?)");
             $hash = password_hash($password, PASSWORD_BCRYPT);
             $stmtUser->execute([$username, $email, $hash, $nama]);
-            $userId = $this->db->lastInsertId();
+            $userId = (int)$this->db->lastInsertId();
+
+            if ($userId <= 0) {
+                throw new Exception('Gagal membuat akun user untuk siswa.');
+            }
 
             // Create siswa profile with self-healing fallback
             try {
@@ -406,14 +472,33 @@ class SiswaModel extends BaseModel {
             return false;
         }
 
-        // Ambil data baru atau fallback ke data lama jika kosong / hanya menambahkan no_ortu
-        $nis = !empty(trim($data['nis'] ?? '')) ? trim($data['nis']) : ($siswa['nis'] ?? '');
-        $nisn = !empty(trim($data['nisn'] ?? '')) ? trim($data['nisn']) : ($siswa['nisn'] ?? '');
-        $nama = !empty(trim($data['nama_lengkap'] ?? '')) ? trim($data['nama_lengkap']) : ($siswa['nama_lengkap'] ?? 'Siswa');
+        // Sanitize and decode name so apostrophes are preserved
+        $rawNama = !empty(trim((string)($data['nama_lengkap'] ?? ''))) ? trim((string)$data['nama_lengkap']) : ($siswa['nama_lengkap'] ?? 'Siswa');
+        while (strpos($rawNama, '&amp;') !== false || strpos($rawNama, '&#039;') !== false || strpos($rawNama, '&#39;') !== false || strpos($rawNama, '&quot;') !== false) {
+            $decoded = html_entity_decode($rawNama, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if ($decoded === $rawNama) break;
+            $rawNama = $decoded;
+        }
+        $nama = strip_tags(trim($rawNama));
+
+        // Ambil data baru atau fallback ke data lama jika kosong
+        $cleanNis = trim((string)($data['nis'] ?? ''));
+        $nis = (!empty($cleanNis) && !in_array(strtolower($cleanNis), ['-', '0', 'none', 'belum ada'])) ? $cleanNis : ($siswa['nis'] ?? null);
+
+        $cleanNisn = trim((string)($data['nisn'] ?? ''));
+        $nisn = (!empty($cleanNisn) && !in_array(strtolower($cleanNisn), ['-', '0', 'none', 'belum ada'])) ? $cleanNisn : ($siswa['nisn'] ?? null);
+
         $kelasId = (int)($data['kelas_id'] ?? 0);
         if ($kelasId <= 0) $kelasId = (int)($siswa['kelas_id'] ?? 1);
         $jurusanId = (int)($data['jurusan_id'] ?? 0);
-        if ($jurusanId <= 0) $jurusanId = (int)($siswa['jurusan_id'] ?? 1);
+        if ($jurusanId <= 0) {
+            // Auto match from kelas
+            $stmtK = $this->db->prepare("SELECT jurusan_id FROM kelas WHERE id = ?");
+            $stmtK->execute([$kelasId]);
+            $kRow = $stmtK->fetch();
+            $jurusanId = !empty($kRow['jurusan_id']) ? (int)$kRow['jurusan_id'] : (int)($siswa['jurusan_id'] ?? 1);
+        }
+
         $jkRaw = strtoupper($data['jenis_kelamin'] ?? ($siswa['jenis_kelamin'] ?? 'L'));
         $jk = in_array($jkRaw, ['L', 'P']) ? $jkRaw : 'L';
         $noTelp = isset($data['no_telepon']) ? trim($data['no_telepon']) : ($siswa['no_telepon'] ?? '');
@@ -422,20 +507,22 @@ class SiswaModel extends BaseModel {
 
         // Validasi keunikan NIS terhadap siswa lain jika diubah
         if (!empty($nis)) {
-            $chkNis = $this->db->prepare("SELECT id FROM siswa WHERE nis = ? AND id != ? LIMIT 1");
+            $chkNis = $this->db->prepare("SELECT id, nama_lengkap FROM siswa WHERE nis = ? AND id != ? LIMIT 1");
             $chkNis->execute([$nis, $id]);
-            if ($chkNis->fetch()) {
-                $this->lastError = "NIS '{$nis}' sudah terdaftar untuk siswa lain.";
+            $existNis = $chkNis->fetch();
+            if ($existNis) {
+                $this->lastError = "NIS '{$nis}' sudah terdaftar untuk siswa '{$existNis['nama_lengkap']}'.";
                 return false;
             }
         }
 
         // Validasi keunikan NISN terhadap siswa lain jika diubah
         if (!empty($nisn)) {
-            $chkNisn = $this->db->prepare("SELECT id FROM siswa WHERE nisn = ? AND id != ? LIMIT 1");
+            $chkNisn = $this->db->prepare("SELECT id, nama_lengkap FROM siswa WHERE nisn = ? AND id != ? LIMIT 1");
             $chkNisn->execute([$nisn, $id]);
-            if ($chkNisn->fetch()) {
-                $this->lastError = "NISN '{$nisn}' sudah terdaftar untuk siswa lain.";
+            $existNisn = $chkNisn->fetch();
+            if ($existNisn) {
+                $this->lastError = "NISN '{$nisn}' sudah terdaftar untuk siswa '{$existNisn['nama_lengkap']}'.";
                 return false;
             }
         }

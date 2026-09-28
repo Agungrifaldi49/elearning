@@ -240,7 +240,8 @@ class AdminController {
                 if ($res) {
                     FlashHelper::setSuccess('Data Siswa berhasil ditambahkan.');
                 } else {
-                    FlashHelper::setError('Gagal menambahkan data siswa.');
+                    $err = $siswaModel->getLastError() ?: 'Periksa kembali kelengkapan data yang diinput.';
+                    FlashHelper::setError('Gagal menambahkan data siswa: ' . $err);
                 }
             } elseif ($action === 'update') {
                 $noOrtu = Security::sanitize($_POST['no_ortu'] ?? $_POST['no_hp_ortu'] ?? $_POST['no_hp'] ?? $_POST['telepon_ortu'] ?? '');
@@ -306,9 +307,9 @@ class AdminController {
                 }
             }
             
-            // Build redirect URL keeping active filters
+            // Build redirect URL keeping active filters (except on create so the newly added student is not hidden by old filters)
             $redirectUrl = BASE_URL . 'index.php?url=admin/siswa';
-            if (!empty($_POST['redirect_query'])) {
+            if ($action !== 'create' && !empty($_POST['redirect_query'])) {
                 parse_str($_POST['redirect_query'], $parsedQuery);
                 unset($parsedQuery['url']);
                 if (!empty($parsedQuery)) {

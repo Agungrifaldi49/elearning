@@ -49,7 +49,9 @@ class Security {
     }
 
     /**
-     * Sanitize String for XSS Protection
+     * Sanitize String for Database Storage & General Inputs
+     * Strips dangerous HTML tags while preserving real apostrophes, quotes, and symbols
+     * Also recursively decodes any legacy HTML entities like &#039; into real characters
      */
     public static function sanitize($data) {
         if (is_array($data)) {
@@ -58,11 +60,18 @@ class Security {
             }
             return $data;
         }
-        return htmlspecialchars(trim((string)$data), ENT_QUOTES, 'UTF-8');
+        $str = trim((string)$data);
+        // Decode HTML entities in case of prior double/triple encoding (e.g. &#039; to ')
+        while (strpos($str, '&amp;') !== false || strpos($str, '&#039;') !== false || strpos($str, '&#39;') !== false || strpos($str, '&quot;') !== false || strpos($str, '&lt;') !== false || strpos($str, '&gt;') !== false) {
+            $decoded = html_entity_decode($str, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if ($decoded === $str) break;
+            $str = $decoded;
+        }
+        return strip_tags(trim($str));
     }
 
     /**
-     * Decode double/triple encoded HTML entities and return safe single-encoded string
+     * Decode double/triple encoded HTML entities and return safe single-encoded string for HTML display
      */
     public static function safeText($data) {
         if (is_array($data)) {
@@ -72,10 +81,12 @@ class Security {
             return $data;
         }
         $str = (string)$data;
-        while (strpos($str, '&amp;') !== false) {
-            $str = html_entity_decode($str, ENT_QUOTES, 'UTF-8');
+        while (strpos($str, '&amp;') !== false || strpos($str, '&#039;') !== false || strpos($str, '&#39;') !== false || strpos($str, '&quot;') !== false) {
+            $decoded = html_entity_decode($str, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            if ($decoded === $str) break;
+            $str = $decoded;
         }
-        return htmlspecialchars(trim($str), ENT_QUOTES, 'UTF-8');
+        return trim($str);
     }
 
     /**
