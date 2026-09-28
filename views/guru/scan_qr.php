@@ -290,10 +290,15 @@ $dashboardUrl = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/dashboard' :
 </div>
 </main>
 
-<!-- QR Scanner JS Library via CDN -->
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<!-- QR Scanner JS Library (Local Offline-first + CDN Fallback) -->
+<script src="<?= BASE_URL ?>assets/js/html5-qrcode.min.js"></script>
 <script>
-let html5QrCode = new Html5Qrcode("qr-reader");
+if (typeof Html5Qrcode === 'undefined') {
+    document.write('<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"><\/script>');
+}
+</script>
+<script>
+let html5QrCode = null;
 let statTotal = <?= (int)($totalAll ?? 0) ?>;
 let statSiswa = <?= (int)($totalSiswa ?? 0) ?>;
 let statGuru = <?= (int)($totalGuru ?? 0) ?>;
@@ -598,56 +603,129 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
 }
 
 let currentFacingMode = "environment";
+let isStartingCamera = false;
+
+async function getCleanScannerInstance() {
+    if (html5QrCode) {
+        try {
+            if (html5QrCode.isScanning) {
+                await html5QrCode.stop();
+            }
+        } catch(e) {}
+        try {
+            await html5QrCode.clear();
+        } catch(e) {}
+        html5QrCode = null;
+    }
+    const qrContainer = document.getElementById('qr-reader');
+    if (qrContainer) {
+        qrContainer.innerHTML = '';
+    }
+    html5QrCode = new Html5Qrcode("qr-reader");
+    return html5QrCode;
+}
 
 function initCameraScanner() {
-    startCameraWithFacingMode(currentFacingMode);
+    startCameraScanner(currentFacingMode);
 }
 
 function startCameraWithFacingMode(facingMode) {
-    const qrContainer = document.getElementById('qr-reader');
-    if (!qrContainer) return;
+    return startCameraScanner(facingMode);
+}
 
-    // Mobile-optimized config without forced aspectRatio (fixes portrait camera black screen)
+async function startCameraScanner(facingMode) {
+    if (isStartingCamera) return;
+    isStartingCamera = true;
+
+    if (facingMode) {
+        currentFacingMode = facingMode;
+    }
+
+    const qrContainer = document.getElementById('qr-reader');
+    if (!qrContainer) {
+        isStartingCamera = false;
+        return;
+    }
+
+    // Responsive dynamic qrbox calculation based on viewfinder (prevents qrbox larger than viewfinder crash)
+    const qrboxCalc = function(viewfinderWidth, viewfinderHeight) {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        const size = Math.max(160, Math.min(Math.floor(minEdge * 0.72), 240));
+        return { width: size, height: size };
+    };
+
     const config = { 
         fps: 10, 
-        qrbox: { width: 230, height: 230 },
-        disableFlip: facingMode === "environment"
+        qrbox: qrboxCalc,
+        disableFlip: (currentFacingMode === "environment")
     };
 
-    const runStart = () => {
-        return html5QrCode.start(
-            { facingMode: facingMode }, 
-            config, 
-            onScanSuccess, 
-            (err) => {}
-        ).then(() => {
-            ensureVideoPlaysInline();
-            populateCameraList();
-        });
-    };
+    try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showCameraPermissionPromptUI("Browser Anda tidak mendukung akses kamera langsung.");
+            isStartingCamera = false;
+            return;
+        }
 
-    if (html5QrCode.isScanning) {
-        html5QrCode.stop().then(runStart).catch(runStart);
-    } else {
-        runStart().catch(err1 => {
-            console.warn("FacingMode constraint failed, trying getCameras...", err1);
-            Html5Qrcode.getCameras().then(devices => {
-                if (devices && devices.length) {
-                    populateCameraList(devices);
-                    let targetCam = devices.find(d => /back|rear|belakang|environment/i.test(d.label)) || devices[0];
-                    return html5QrCode.start(targetCam.id, config, onScanSuccess, (err) => {});
-                } else {
-                    return html5QrCode.start({ facingMode: "user" }, config, onScanSuccess, (err) => {});
-                }
-            })
-            .then(() => {
-                ensureVideoPlaysInline();
-            })
-            .catch(err2 => {
-                console.error("Camera start failed entirely:", err2);
-                showCameraPermissionPromptUI();
+        // 1. Request permission with ideal constraint so it works on both PC webcams and Mobile phones without OverconstrainedError
+        let stream = null;
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: currentFacingMode } }
             });
-        });
+        } catch (e1) {
+            // Fallback for simple video request if ideal constraint failed
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+
+        // 2. Discover available devices
+        const devices = await Html5Qrcode.getCameras().catch(() => []);
+        populateCameraList(devices);
+
+        let targetIdOrConfig = null;
+        if (devices && devices.length > 0) {
+            if (currentFacingMode === "environment") {
+                const backCam = devices.find(d => /back|rear|belakang|environment/i.test(d.label || ''));
+                targetIdOrConfig = backCam ? backCam.id : devices[devices.length - 1].id;
+            } else {
+                const frontCam = devices.find(d => /front|user|depan|face/i.test(d.label || ''));
+                targetIdOrConfig = frontCam ? frontCam.id : devices[0].id;
+            }
+
+            const camSelect = document.getElementById('cameraSelect');
+            if (camSelect && typeof targetIdOrConfig === 'string') {
+                camSelect.value = targetIdOrConfig;
+            }
+        } else {
+            targetIdOrConfig = { facingMode: currentFacingMode };
+        }
+
+        // 3. Start scanning with clean scanner instance
+        const scanner = await getCleanScannerInstance();
+        await scanner.start(targetIdOrConfig, config, onScanSuccess, (err) => {});
+        ensureVideoPlaysInline();
+    } catch (err) {
+        console.warn("Primary camera start failed, attempting fallback:", err);
+        try {
+            const devices = await Html5Qrcode.getCameras().catch(() => []);
+            if (devices && devices.length > 0) {
+                const scanner = await getCleanScannerInstance();
+                await scanner.start(devices[0].id, config, onScanSuccess, (err) => {});
+                ensureVideoPlaysInline();
+                isStartingCamera = false;
+                return;
+            }
+        } catch (fallbackErr) {
+            console.error("Camera start failed completely:", fallbackErr);
+        }
+
+        showCameraPermissionPromptUI();
+    } finally {
+        isStartingCamera = false;
     }
 }
 
@@ -667,7 +745,7 @@ function ensureVideoPlaysInline() {
 
 function toggleCameraFacing() {
     currentFacingMode = (currentFacingMode === "environment") ? "user" : "environment";
-    startCameraWithFacingMode(currentFacingMode);
+    startCameraScanner(currentFacingMode);
 }
 
 function populateCameraList(devicesList) {
@@ -693,21 +771,25 @@ function populateCameraList(devicesList) {
     }
 }
 
-function switchCamera(cameraId) {
+async function switchCamera(cameraId) {
     if (!cameraId) return;
-    const config = { fps: 10, qrbox: { width: 220, height: 220 } };
-    if (html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => {
-            html5QrCode.start(cameraId, config, onScanSuccess, (err) => {}).then(() => ensureVideoPlaysInline());
-        }).catch(() => {
-            html5QrCode.start(cameraId, config, onScanSuccess, (err) => {}).then(() => ensureVideoPlaysInline());
-        });
-    } else {
-        html5QrCode.start(cameraId, config, onScanSuccess, (err) => {}).then(() => ensureVideoPlaysInline());
+    const qrboxCalc = function(viewfinderWidth, viewfinderHeight) {
+        const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+        const size = Math.max(160, Math.min(Math.floor(minEdge * 0.72), 240));
+        return { width: size, height: size };
+    };
+    const config = { fps: 10, qrbox: qrboxCalc };
+
+    try {
+        const scanner = await getCleanScannerInstance();
+        await scanner.start(cameraId, config, onScanSuccess, (err) => {});
+        ensureVideoPlaysInline();
+    } catch(e) {
+        console.error("Failed to switch camera:", e);
     }
 }
 
-function showCameraPermissionPromptUI() {
+function showCameraPermissionPromptUI(customNotice = '') {
     const isHttps = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     let httpsNotice = '';
     if (!isHttps) {
@@ -717,8 +799,17 @@ function showCameraPermissionPromptUI() {
             </div>
         `;
     }
+    if (customNotice) {
+        httpsNotice = `
+            <div class="alert alert-warning border-0 rounded-3 mt-3 p-2 text-start small">
+                <i class="bi bi-exclamation-triangle-fill me-1 fw-bold"></i> ${escapeHtml(customNotice)}
+            </div>
+        ` + httpsNotice;
+    }
 
     const qrContainer = document.getElementById('qr-reader');
+    if (!qrContainer) return;
+
     qrContainer.innerHTML = `
         <div class="card border-0 bg-light rounded-4 p-4 text-center my-2 shadow-xs">
             <div class="mb-3">
@@ -727,10 +818,10 @@ function showCameraPermissionPromptUI() {
                 </span>
             </div>
             <h6 class="fw-bold text-dark mb-1">Kamera Belum Aktif</h6>
-            <p class="text-muted small mb-3">Klik tombol di bawah untuk mencoba membuka kamera HP Anda kembali.</p>
+            <p class="text-muted small mb-3">Pastikan izin kamera telah diberikan pada browser atau klik tombol di bawah untuk membuka kembali.</p>
             <div>
-                <button type="button" onclick="startCameraWithFacingMode(currentFacingMode)" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm">
-                    <i class="bi bi-camera-video-fill me-2"></i> Coba Buka Kamera HP
+                <button type="button" onclick="startCameraScanner(currentFacingMode)" class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm">
+                    <i class="bi bi-camera-video-fill me-2"></i> Buka Kamera
                 </button>
             </div>
             ${httpsNotice}
