@@ -360,11 +360,11 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
                   ),
                   const SizedBox(height: 20),
 
-                  // Section 2: Ringkasan Nilai Akademik
+                  // Section 2: Mata Pelajaran yang Diikuti
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Perkembangan Nilai Mata Pelajaran', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                      Text('Mata Pelajaran yang Diikuti (${mapels.length})', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(color: Colors.indigo.shade50, borderRadius: BorderRadius.circular(12)),
@@ -378,7 +378,13 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12)),
-                      child: const Center(child: Text('Belum ada data nilai rapor untuk siswa ini.', style: TextStyle(color: Colors.grey, fontSize: 12))),
+                      child: const Center(
+                        child: Text(
+                          'Siswa belum terdaftar pada mata pelajaran (Belum mendaftar mapel via Kode Key Mapel).',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ),
                     )
                   else
                     ...mapels.map((m) {
@@ -397,21 +403,31 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(m['nama_mapel'] ?? 'Mapel', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
+                                  Text(m['nama_mapel'] ?? 'Mapel', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                                   const SizedBox(height: 2),
+                                  Text('Guru: ${m['nama_guru'] ?? 'Guru Pengampu'}', style: TextStyle(fontSize: 11, color: Colors.indigo.shade700, fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 3),
                                   Text('Tugas: ${m['nilai_tugas']} • Quiz: ${m['nilai_quiz']} • UTS: ${m['nilai_uts']} • UAS: ${m['nilai_uas']}', style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
                                 ],
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
                                 color: nAkhir >= 75 ? Colors.green.shade50 : Colors.red.shade50,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Text(
-                                nAkhir.toStringAsFixed(1),
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: nAkhir >= 75 ? Colors.green.shade700 : Colors.red.shade700),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    nAkhir.toStringAsFixed(1),
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: nAkhir >= 75 ? Colors.green.shade700 : Colors.red.shade700),
+                                  ),
+                                  Text(
+                                    'Nilai Akhir',
+                                    style: TextStyle(fontSize: 9, color: nAkhir >= 75 ? Colors.green.shade700 : Colors.red.shade700),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -823,6 +839,18 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
                             style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade700),
                           ),
                         ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.shade50,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${nilai['total_mapel'] ?? 0} Mapel',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.purple.shade700),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -1058,7 +1086,7 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
                       children: [
                         Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
                         const SizedBox(height: 2),
-                        Text('NIS: $nis', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                        Text('NIS: $nis  •  ${nilai['total_mapel'] ?? 0} Mapel Diikuti', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
                         const SizedBox(height: 4),
                         Row(
                           children: [

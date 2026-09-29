@@ -3255,12 +3255,21 @@ class ApiController {
                     $stmtTodayAbs->execute([$sId, date('Y-m-d')]);
                     $statusToday = $stmtTodayAbs->fetchColumn() ?: 'Belum Absen';
 
-                    // Grades per mapel for this siswa
+                    // Grades per mapel for this siswa strictly from enrolled mapels (siswa_mapel_enrollment)
                     $stmtGrades = $this->db->prepare("
-                        SELECT nr.*, mp.nama_mapel, mp.kode_mapel
-                        FROM nilai_rapor nr
-                        JOIN mata_pelajaran mp ON nr.mapel_id = mp.id
-                        WHERE nr.siswa_id = ?
+                        SELECT sme.mapel_id, mp.nama_mapel, mp.kode_mapel,
+                               COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru,
+                               COALESCE(nr.nilai_tugas, 0) as nilai_tugas,
+                               COALESCE(nr.nilai_quiz, 0) as nilai_quiz,
+                               COALESCE(nr.nilai_uts, 0) as nilai_uts,
+                               COALESCE(nr.nilai_uas, 0) as nilai_uas,
+                               COALESCE(nr.nilai_akhir, 0) as nilai_akhir
+                        FROM siswa_mapel_enrollment sme
+                        JOIN mata_pelajaran mp ON sme.mapel_id = mp.id
+                        LEFT JOIN guru g ON sme.guru_id = g.id
+                        LEFT JOIN nilai_rapor nr ON (sme.siswa_id = nr.siswa_id AND sme.mapel_id = nr.mapel_id)
+                        WHERE sme.siswa_id = ?
+                        GROUP BY sme.mapel_id, mp.nama_mapel
                         ORDER BY mp.nama_mapel ASC
                     ");
                     $stmtGrades->execute([$sId]);
@@ -3275,6 +3284,7 @@ class ApiController {
                             'mapel_id' => intval($gr['mapel_id']),
                             'nama_mapel' => $gr['nama_mapel'],
                             'kode_mapel' => $gr['kode_mapel'] ?? '',
+                            'nama_guru' => $gr['nama_guru'] ?? 'Guru Pengampu',
                             'nilai_tugas' => floatval($gr['nilai_tugas'] ?? 0),
                             'nilai_quiz' => floatval($gr['nilai_quiz'] ?? 0),
                             'nilai_uts' => floatval($gr['nilai_uts'] ?? 0),
