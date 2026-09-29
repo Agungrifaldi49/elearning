@@ -61,6 +61,8 @@ class ChatContactModel {
   final String? lastTime;
   final int unreadCount;
   final bool isOnline;
+  final int? lastSenderId;
+  final String? subRole;
 
   ChatContactModel({
     required this.id,
@@ -72,6 +74,8 @@ class ChatContactModel {
     this.lastTime,
     this.unreadCount = 0,
     this.isOnline = false,
+    this.lastSenderId,
+    this.subRole,
   });
 
   /// Robust getter for unread status
@@ -121,6 +125,8 @@ class ChatContactModel {
     }
 
     final parsedUnread = int.tryParse((json['unread_count'] ?? json['unread'] ?? json['unreadCount'] ?? 0).toString()) ?? 0;
+    final rawSubRole = (json['nama_kelas'] ?? json['jabatan'] ?? json['sub_role'])?.toString();
+    final parsedLastSender = json['last_sender_id'] != null ? _parseInt(json['last_sender_id']) : null;
 
     return ChatContactModel(
       id: _parseInt(json['id'] ?? json['user_id']),
@@ -132,6 +138,8 @@ class ChatContactModel {
       lastTime: (json['last_time'] ?? json['updated_at'] ?? json['last_message_time'])?.toString(),
       unreadCount: parsedUnread,
       isOnline: isOnlineBool,
+      lastSenderId: parsedLastSender,
+      subRole: (rawSubRole != null && rawSubRole.trim().isNotEmpty) ? rawSubRole.trim() : null,
     );
   }
 
@@ -145,6 +153,8 @@ class ChatContactModel {
     String? lastTime,
     int? unreadCount,
     bool? isOnline,
+    int? lastSenderId,
+    String? subRole,
   }) {
     return ChatContactModel(
       id: id ?? this.id,
@@ -156,6 +166,8 @@ class ChatContactModel {
       lastTime: lastTime ?? this.lastTime,
       unreadCount: unreadCount ?? this.unreadCount,
       isOnline: isOnline ?? this.isOnline,
+      lastSenderId: lastSenderId ?? this.lastSenderId,
+      subRole: subRole ?? this.subRole,
     );
   }
 }

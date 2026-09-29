@@ -3933,26 +3933,48 @@ class ApiController {
                 $this->jsonResponse(false, 'Contact ID & User ID required', null, 400);
             }
         } else {
-            // contacts list with unread_count calculation
+            // contacts list with unread_count, last_message, and last_sender_id calculation
             try {
                 $stmt = $this->db->prepare("
                     SELECT u.id, 
                            COALESCE(s.nama_lengkap, g.nama_lengkap, u.full_name) as full_name,
-                           COALESCE(s.foto_profil, g.foto, u.avatar, '') as avatar_file,
+                           COALESCE(u.avatar, '') as avatar_file,
                            COALESCE(r.name, 'Pengguna') as role_name,
-                           (SELECT message FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid1) OR (sender_id = :uid2 AND receiver_id = u.id)) ORDER BY id DESC LIMIT 1) as last_message,
-                           (SELECT created_at FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid3) OR (sender_id = :uid4 AND receiver_id = u.id)) ORDER BY id DESC LIMIT 1) as last_time,
-                           (SELECT COUNT(*) FROM chat WHERE sender_id = u.id AND receiver_id = :uid_unr AND (is_read = 0 OR is_read IS NULL OR is_read = '0')) as unread_count
+                           g.jabatan,
+                           k.nama_kelas,
+                           (SELECT message FROM chat 
+                            WHERE ((sender_id = u.id AND receiver_id = :uid1 AND deleted_by_receiver = 0) 
+                                OR (sender_id = :uid2 AND receiver_id = u.id AND deleted_by_sender = 0)) 
+                              AND (is_deleted_everyone = 0 OR is_deleted_everyone IS NULL) 
+                            ORDER BY id DESC LIMIT 1) as last_message,
+                           (SELECT sender_id FROM chat 
+                            WHERE ((sender_id = u.id AND receiver_id = :uid_s1 AND deleted_by_receiver = 0) 
+                                OR (sender_id = :uid_s2 AND receiver_id = u.id AND deleted_by_sender = 0)) 
+                              AND (is_deleted_everyone = 0 OR is_deleted_everyone IS NULL) 
+                            ORDER BY id DESC LIMIT 1) as last_sender_id,
+                           (SELECT created_at FROM chat 
+                            WHERE ((sender_id = u.id AND receiver_id = :uid3 AND deleted_by_receiver = 0) 
+                                OR (sender_id = :uid4 AND receiver_id = u.id AND deleted_by_sender = 0)) 
+                              AND (is_deleted_everyone = 0 OR is_deleted_everyone IS NULL) 
+                            ORDER BY id DESC LIMIT 1) as last_time,
+                           (SELECT COUNT(*) FROM chat 
+                            WHERE sender_id = u.id AND receiver_id = :uid_unr 
+                              AND (is_read = 0 OR is_read IS NULL OR is_read = '0') 
+                              AND deleted_by_receiver = 0 
+                              AND (is_deleted_everyone = 0 OR is_deleted_everyone IS NULL)) as unread_count
                     FROM users u
                     LEFT JOIN roles r ON u.role_id = r.id
                     LEFT JOIN siswa s ON s.user_id = u.id
+                    LEFT JOIN kelas k ON s.kelas_id = k.id
                     LEFT JOIN guru g ON g.user_id = u.id
                     WHERE u.id != :uid5
-                    ORDER BY unread_count DESC, last_time DESC, full_name ASC
+                    ORDER BY unread_count DESC, (last_time IS NOT NULL AND last_time != '') DESC, last_time DESC, full_name ASC
                 ");
                 $stmt->execute([
                     'uid1' => $userId,
                     'uid2' => $userId,
+                    'uid_s1' => $userId,
+                    'uid_s2' => $userId,
                     'uid3' => $userId,
                     'uid4' => $userId,
                     'uid_unr' => $userId,
@@ -3962,13 +3984,26 @@ class ApiController {
             } catch (\Throwable $eCt) {
                 try {
                     $stmtFB = $this->db->prepare("
-                        SELECT u.id, u.full_name, COALESCE(u.avatar, '') as avatar_file, COALESCE(r.name, 'Pengguna') as role_name 
+                        SELECT u.id, u.full_name, COALESCE(u.avatar, '') as avatar_file, COALESCE(r.name, 'Pengguna') as role_name,
+                               (SELECT message FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid1) OR (sender_id = :uid2 AND receiver_id = u.id)) ORDER BY id DESC LIMIT 1) as last_message,
+                               (SELECT sender_id FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid_s1) OR (sender_id = :uid_s2 AND receiver_id = u.id)) ORDER BY id DESC LIMIT 1) as last_sender_id,
+                               (SELECT created_at FROM chat WHERE ((sender_id = u.id AND receiver_id = :uid3) OR (sender_id = :uid4 AND receiver_id = u.id)) ORDER BY id DESC LIMIT 1) as last_time,
+                               (SELECT COUNT(*) FROM chat WHERE sender_id = u.id AND receiver_id = :uid_unr AND (is_read = 0 OR is_read IS NULL OR is_read = '0')) as unread_count
                         FROM users u 
                         LEFT JOIN roles r ON u.role_id = r.id 
-                        WHERE u.id != :uid 
-                        ORDER BY u.full_name ASC
+                        WHERE u.id != :uid5 
+                        ORDER BY unread_count DESC, last_time DESC, u.full_name ASC
                     ");
-                    $stmtFB->execute(['uid' => $userId]);
+                    $stmtFB->execute([
+                        'uid1' => $userId,
+                        'uid2' => $userId,
+                        'uid_s1' => $userId,
+                        'uid_s2' => $userId,
+                        'uid3' => $userId,
+                        'uid4' => $userId,
+                        'uid_unr' => $userId,
+                        'uid5' => $userId
+                    ]);
                     $contacts = $stmtFB->fetchAll(PDO::FETCH_ASSOC);
                 } catch (\Throwable $eFB) {
                     $contacts = [];
@@ -3980,6 +4015,7 @@ class ApiController {
                 $c['unread_count'] = (int)($c['unread_count'] ?? 0);
                 $c['nama'] = $c['full_name'] ?? '';
                 $c['updated_at'] = $c['last_time'] ?? '';
+                $c['last_sender_id'] = isset($c['last_sender_id']) ? (int)$c['last_sender_id'] : null;
 
                 $avFile = $c['avatar_file'] ?? '';
                 if (!empty($avFile) && $avFile !== 'default_avatar.png' && $avFile !== 'default.png') {

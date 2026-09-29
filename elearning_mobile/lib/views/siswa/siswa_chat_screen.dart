@@ -133,6 +133,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
       final siswaProvider = Provider.of<SiswaProvider>(context);
       chatStream = siswaProvider.chatContactsStream;
       initialContacts = siswaProvider.chatContacts;
+      totalUnreadCount = siswaProvider.unreadChatCount;
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -142,12 +143,15 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Text(
-              'Pesan & Direct Chat',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: isDark ? Colors.white : const Color(0xFF0F172A),
+            Flexible(
+              child: Text(
+                'Pesan & Direct Chat',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: isDark ? Colors.white : const Color(0xFF0F172A),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (totalUnreadCount > 0) ...[
@@ -285,28 +289,59 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                               itemCount: displayList.length,
                               itemBuilder: (context, index) {
                                 final c = displayList[index];
-                                final bool isGuru = c.roleName.toLowerCase().contains('guru');
                                 final timeStr = _formatChatTime(c.lastTime);
+                                final bool hasHistory = c.lastMessage != null && c.lastMessage!.trim().isNotEmpty;
+                                final bool isSentByMe = (c.lastSenderId != null && user != null && c.lastSenderId == user.id);
 
-                                // Explicit Print Debug Logging requested by user
-                                // ignore: avoid_print
-                                print("DEBUG UNREAD: ${c.fullName} -> ${c.unreadCount} (hasUnread: ${c.hasUnread})");
+                                final String roleLower = c.roleName.toLowerCase();
+                                final bool isGuru = roleLower.contains('guru');
+                                final bool isSiswa = roleLower.contains('siswa');
+                                final bool isAdmin = roleLower.contains('admin');
+                                final bool isKepsek = roleLower.contains('kepala') || roleLower.contains('kepsek');
+
+                                Color roleBgColor;
+                                Color roleTextColor;
+                                String roleLabel;
+
+                                if (isGuru) {
+                                  roleBgColor = isDark ? const Color(0xFF78350F) : const Color(0xFFFEF3C7);
+                                  roleTextColor = isDark ? const Color(0xFFFDE68A) : const Color(0xFFB45309);
+                                  roleLabel = (c.subRole != null && c.subRole!.isNotEmpty) ? 'Guru • ${c.subRole}' : 'Guru';
+                                } else if (isSiswa) {
+                                  roleBgColor = isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF);
+                                  roleTextColor = isDark ? const Color(0xFF93C5FD) : const Color(0xFF1D4ED8);
+                                  roleLabel = (c.subRole != null && c.subRole!.isNotEmpty) ? 'Siswa • ${c.subRole}' : 'Siswa';
+                                } else if (isAdmin) {
+                                  roleBgColor = isDark ? const Color(0xFF581C87) : const Color(0xFFF3E8FF);
+                                  roleTextColor = isDark ? const Color(0xFFD8B4FE) : const Color(0xFF7E22CE);
+                                  roleLabel = 'Admin';
+                                } else if (isKepsek) {
+                                  roleBgColor = isDark ? const Color(0xFF064E3B) : const Color(0xFFD1FAE5);
+                                  roleTextColor = isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857);
+                                  roleLabel = 'Kepala Sekolah';
+                                } else {
+                                  roleBgColor = isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9);
+                                  roleTextColor = isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569);
+                                  roleLabel = c.roleName;
+                                }
 
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 8),
                                   decoration: BoxDecoration(
-                                    color: Colors.white,
+                                    color: isDark ? const Color(0xFF1E293B) : Colors.white,
                                     borderRadius: BorderRadius.circular(16),
                                     border: Border.all(
-                                      color: c.hasUnread ? Colors.redAccent : const Color(0xFFE2E8F0),
+                                      color: c.hasUnread
+                                          ? Colors.redAccent
+                                          : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
                                       width: c.hasUnread ? 1.5 : 1.0,
                                     ),
                                     boxShadow: [
                                       BoxShadow(
                                         color: c.hasUnread
-                                            ? Colors.redAccent.withValues(alpha: 0.08)
-                                            : Colors.black.withValues(alpha: 0.02),
-                                        blurRadius: 8,
+                                            ? Colors.redAccent.withValues(alpha: 0.12)
+                                            : Colors.black.withValues(alpha: 0.03),
+                                        blurRadius: c.hasUnread ? 10 : 6,
                                         offset: const Offset(0, 3),
                                       ),
                                     ],
@@ -321,14 +356,17 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                         padding: const EdgeInsets.all(12.0),
                                         child: Row(
                                           children: [
-                                            // Avatar Container with Online & Unread Indicator
+                                            // Avatar Container with Online Dot & Unread Indicator
                                             Stack(
+                                              clipBehavior: Clip.none,
                                               children: [
                                                 CircleAvatar(
                                                   radius: 24,
                                                   backgroundColor: isGuru
-                                                      ? const Color(0xFFFEF3C7)
-                                                      : const Color(0xFFEFF6FF),
+                                                      ? (isDark ? const Color(0xFF78350F) : const Color(0xFFFEF3C7))
+                                                      : isSiswa
+                                                          ? (isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF))
+                                                          : (isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9)),
                                                   backgroundImage: (c.avatarUrl != null && c.avatarUrl!.isNotEmpty)
                                                       ? NetworkImage(c.avatarUrl!)
                                                       : null,
@@ -336,7 +374,9 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                                       ? Text(
                                                           c.fullName.isNotEmpty ? c.fullName[0].toUpperCase() : 'U',
                                                           style: TextStyle(
-                                                            color: isGuru ? const Color(0xFFD97706) : const Color(0xFF2563EB),
+                                                            color: isGuru
+                                                                ? (isDark ? const Color(0xFFFDE68A) : const Color(0xFFD97706))
+                                                                : (isDark ? const Color(0xFF93C5FD) : const Color(0xFF2563EB)),
                                                             fontWeight: FontWeight.bold,
                                                             fontSize: 18,
                                                           ),
@@ -353,7 +393,34 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                                       decoration: BoxDecoration(
                                                         color: const Color(0xFF10B981),
                                                         shape: BoxShape.circle,
-                                                        border: Border.all(color: Colors.white, width: 2),
+                                                        border: Border.all(
+                                                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                                          width: 2,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                if (c.hasUnread)
+                                                  Positioned(
+                                                    top: -2,
+                                                    right: -2,
+                                                    child: Container(
+                                                      width: 12,
+                                                      height: 12,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.redAccent,
+                                                        shape: BoxShape.circle,
+                                                        border: Border.all(
+                                                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                                                          width: 2,
+                                                        ),
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: Colors.redAccent.withValues(alpha: 0.5),
+                                                            blurRadius: 4,
+                                                            spreadRadius: 1,
+                                                          ),
+                                                        ],
                                                       ),
                                                     ),
                                                   ),
@@ -362,7 +429,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
 
                                             const SizedBox(width: 12),
 
-                                            // Name & Message Body
+                                            // Name & Role & Message Body
                                             Expanded(
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,7 +444,7 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                                           style: TextStyle(
                                                             fontSize: 14,
                                                             fontWeight: c.hasUnread ? FontWeight.w800 : FontWeight.bold,
-                                                            color: const Color(0xFF0F172A),
+                                                            color: isDark ? Colors.white : const Color(0xFF0F172A),
                                                           ),
                                                         ),
                                                       ),
@@ -385,13 +452,13 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                                       Container(
                                                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                                         decoration: BoxDecoration(
-                                                          color: isGuru ? const Color(0xFFFEF3C7) : const Color(0xFFF1F5F9),
+                                                          color: roleBgColor,
                                                           borderRadius: BorderRadius.circular(6),
                                                         ),
                                                         child: Text(
-                                                          c.roleName,
+                                                          roleLabel,
                                                           style: TextStyle(
-                                                            color: isGuru ? const Color(0xFFB45309) : const Color(0xFF475569),
+                                                            color: roleTextColor,
                                                             fontSize: 10,
                                                             fontWeight: FontWeight.bold,
                                                           ),
@@ -399,61 +466,121 @@ class _SiswaChatScreenState extends State<SiswaChatScreen> {
                                                       ),
                                                     ],
                                                   ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    c.lastMessage != null && c.lastMessage!.isNotEmpty
-                                                        ? ProfanityService.filter(c.lastMessage)
-                                                        : 'Ketuk untuk membaca...',
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      fontWeight: c.hasUnread ? FontWeight.bold : FontWeight.normal,
-                                                      color: c.hasUnread ? const Color(0xFF1E293B) : const Color(0xFF64748B),
+                                                  const SizedBox(height: 5),
+                                                  if (hasHistory)
+                                                    Row(
+                                                      children: [
+                                                        if (isSentByMe) ...[
+                                                          Icon(
+                                                            Icons.done_all_rounded,
+                                                            size: 14,
+                                                            color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                                          ),
+                                                          const SizedBox(width: 3),
+                                                          Text(
+                                                            'Anda: ',
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              fontWeight: FontWeight.w600,
+                                                              color: isDark ? Colors.white70 : const Color(0xFF475569),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                        Expanded(
+                                                          child: Text(
+                                                            ProfanityService.filter(c.lastMessage!),
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              fontWeight: c.hasUnread ? FontWeight.bold : FontWeight.normal,
+                                                              color: c.hasUnread
+                                                                  ? (isDark ? Colors.white : const Color(0xFF0F172A))
+                                                                  : (isDark ? Colors.white60 : const Color(0xFF64748B)),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    )
+                                                  else
+                                                    Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.chat_bubble_outline_rounded,
+                                                          size: 13,
+                                                          color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                                                        ),
+                                                        const SizedBox(width: 4),
+                                                        Expanded(
+                                                          child: Text(
+                                                            'Belum ada pesan. Ketuk untuk mulai...',
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis,
+                                                            style: TextStyle(
+                                                              fontSize: 12,
+                                                              fontStyle: FontStyle.italic,
+                                                              color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
-                                                  ),
                                                 ],
                                               ),
                                             ),
 
                                             const SizedBox(width: 8),
 
-                                            // Trailing Unread Badge Widget
-                                            c.hasUnread
-                                                ? Container(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            // Trailing Column with Timestamp and Unread Pill Badge
+                                            Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                if (timeStr.isNotEmpty)
+                                                  Text(
+                                                    timeStr,
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: c.hasUnread ? FontWeight.bold : FontWeight.normal,
+                                                      color: c.hasUnread
+                                                          ? Colors.redAccent
+                                                          : (isDark ? Colors.white54 : const Color(0xFF94A3B8)),
+                                                    ),
+                                                  ),
+                                                const SizedBox(height: 5),
+                                                if (c.hasUnread)
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                                    constraints: const BoxConstraints(minWidth: 20),
                                                     decoration: BoxDecoration(
                                                       color: Colors.redAccent,
                                                       borderRadius: BorderRadius.circular(12),
                                                       boxShadow: [
                                                         BoxShadow(
-                                                          color: Colors.redAccent.withValues(alpha: 0.3),
+                                                          color: Colors.redAccent.withValues(alpha: 0.35),
                                                           blurRadius: 4,
                                                           offset: const Offset(0, 2),
                                                         ),
                                                       ],
                                                     ),
                                                     child: Text(
-                                                      '${c.unreadCount}',
+                                                      c.unreadCount > 99 ? '99+' : '${c.unreadCount}',
+                                                      textAlign: TextAlign.center,
                                                       style: const TextStyle(
                                                         color: Colors.white,
-                                                        fontSize: 12,
+                                                        fontSize: 11,
                                                         fontWeight: FontWeight.bold,
                                                       ),
                                                     ),
                                                   )
-                                                : Column(
-                                                    mainAxisAlignment: MainAxisAlignment.center,
-                                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                                    children: [
-                                                      if (timeStr.isNotEmpty)
-                                                        Text(
-                                                          timeStr,
-                                                          style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
-                                                        ),
-                                                      const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFFCBD5E1)),
-                                                    ],
+                                                else
+                                                  Icon(
+                                                    Icons.chevron_right_rounded,
+                                                    size: 18,
+                                                    color: isDark ? Colors.white38 : const Color(0xFFCBD5E1),
                                                   ),
+                                              ],
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -594,25 +721,42 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
       appBar: AppBar(
         titleSpacing: 0,
+        backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
+        elevation: 1,
+        shadowColor: Colors.black.withValues(alpha: 0.05),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 20,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Row(
           children: [
             Stack(
               children: [
                 CircleAvatar(
                   radius: 19,
-                  backgroundColor: Colors.white24,
+                  backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFEEF2FF),
                   backgroundImage: (widget.contact.avatarUrl != null && widget.contact.avatarUrl!.isNotEmpty)
                       ? NetworkImage(widget.contact.avatarUrl!)
                       : null,
                   child: (widget.contact.avatarUrl == null || widget.contact.avatarUrl!.isEmpty)
                       ? Text(
                           widget.contact.fullName.isNotEmpty ? widget.contact.fullName[0].toUpperCase() : 'U',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                          style: TextStyle(
+                            color: isDark ? Colors.white : const Color(0xFF4F46E5),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         )
                       : null,
                 ),
@@ -626,7 +770,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF10B981),
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF0F172A), width: 1.5),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          width: 1.5,
+                        ),
                       ),
                     ),
                   ),
@@ -636,27 +783,72 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     widget.contact.fullName,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    widget.contact.isOnline ? '🟢 Online Sekarang' : widget.contact.roleName,
+                    maxLines: 1,
                     style: TextStyle(
-                      fontSize: 11,
-                      color: widget.contact.isOnline ? const Color(0xFF6EE7B7) : Colors.white70,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF0F172A),
                     ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      if (widget.contact.isOnline) ...[
+                        Container(
+                          width: 7,
+                          height: 7,
+                          margin: const EdgeInsets.only(right: 5),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const Text(
+                          'Online Sekarang',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF10B981),
+                          ),
+                        ),
+                      ] else ...[
+                        Flexible(
+                          child: Text(
+                            widget.contact.roleName,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
           ],
         ),
-        backgroundColor: const Color(0xFF0F172A),
-        foregroundColor: Colors.white,
-        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.refresh_rounded,
+              size: 22,
+              color: isDark ? Colors.white70 : const Color(0xFF475569),
+            ),
+            tooltip: 'Segarkan Pesan',
+            onPressed: () => _loadMessages(showLoading: false),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(
         children: [
@@ -670,14 +862,20 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                           children: [
                             Icon(Icons.mark_chat_unread_outlined, size: 48, color: Colors.grey.shade400),
                             const SizedBox(height: 10),
-                            const Text(
+                            Text(
                               'Belum Ada Pesan',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF1E293B),
+                              ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
+                            Text(
                               'Ketik pesan di bawah untuk memulai obrolan direct.',
-                              style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                              ),
                             ),
                           ],
                         ),
@@ -697,7 +895,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                               constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
                               decoration: BoxDecoration(
-                                color: isMe ? const Color(0xFF1E3A8A) : Colors.white,
+                                color: isMe
+                                    ? const Color(0xFF4F46E5)
+                                    : (isDark ? const Color(0xFF1E293B) : Colors.white),
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(16),
                                   topRight: const Radius.circular(16),
@@ -718,7 +918,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                   Text(
                                     ProfanityService.filter(m.pesan),
                                     style: TextStyle(
-                                      color: isMe ? Colors.white : const Color(0xFF0F172A),
+                                      color: isMe
+                                          ? Colors.white
+                                          : (isDark ? Colors.white : const Color(0xFF0F172A)),
                                       fontSize: 14,
                                       height: 1.3,
                                     ),
@@ -730,7 +932,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                       Text(
                                         m.createdAt,
                                         style: TextStyle(
-                                          color: isMe ? Colors.white60 : const Color(0xFF94A3B8),
+                                          color: isMe
+                                              ? Colors.white70
+                                              : (isDark ? Colors.white60 : const Color(0xFF94A3B8)),
                                           fontSize: 10,
                                         ),
                                       ),
@@ -739,7 +943,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                                         Icon(
                                           m.isRead ? Icons.done_all_rounded : Icons.done_rounded,
                                           size: 14,
-                                          color: m.isRead ? const Color(0xFF6EE7B7) : Colors.white60,
+                                          color: m.isRead ? const Color(0xFF6EE7B7) : Colors.white70,
                                         ),
                                       ],
                                     ],
@@ -754,7 +958,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF1E293B) : Colors.white,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.05),
@@ -769,17 +973,23 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: TextField(
                         controller: _messageController,
-                        style: const TextStyle(fontSize: 14),
-                        decoration: const InputDecoration(
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                        decoration: InputDecoration(
                           hintText: 'Tulis pesan direct...',
-                          hintStyle: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                          hintStyle: TextStyle(
+                            color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                            fontSize: 13,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                         ),
                       ),
                     ),
@@ -791,7 +1001,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: const BoxDecoration(
-                        color: Color(0xFF1E3A8A),
+                        color: Color(0xFF4F46E5),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
