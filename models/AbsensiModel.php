@@ -1120,7 +1120,9 @@ class AbsensiModel extends BaseModel {
                 'kbm_list' => $kbmList,
                 'first_sesi' => $firstSesi,
                 'last_sesi' => $lastSesi,
-                'keterangan_jadwal' => "Mengikuti Jadwal KBM: {$firstSesi['nama_mapel']} ({$firstSesi['nama_kelas']}) s/d {$lastSesi['nama_mapel']} ({$lastSesi['nama_kelas']})"
+                'keterangan_jadwal' => count($kbmList) === 1
+                    ? "Mengikuti Jadwal KBM: {$firstSesi['nama_mapel']} ({$firstSesi['nama_kelas']})"
+                    : "Mengikuti Jadwal KBM: {$firstSesi['nama_mapel']} ({$firstSesi['nama_kelas']}) s/d {$lastSesi['nama_mapel']} ({$lastSesi['nama_kelas']})"
             ];
         }
 

@@ -254,57 +254,96 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
 
     <!-- Banner Info Skema Jadwal Presensi Aktif -->
     <div class="card selfie-card p-3 p-md-4 mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
-        <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
-            <div class="d-flex align-items-start gap-3">
-                <div class="p-3 rounded-4 flex-shrink-0 <?= $modePresensi === 'jadwal' ? 'bg-primary bg-opacity-10 text-primary' : ($modePresensi === 'serentak' ? 'bg-warning bg-opacity-15 text-warning' : ($modePresensi === 'full_day_staff' ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-10 text-secondary')) ?>">
-                    <i class="bi <?= $modePresensi === 'jadwal' ? 'bi-calendar-week-fill fs-3' : ($modePresensi === 'serentak' ? 'bi-megaphone-fill fs-3' : ($modePresensi === 'full_day_staff' ? 'bi-briefcase-fill fs-3' : 'bi-info-circle-fill fs-3')) ?>"></i>
+        <div class="d-flex align-items-start gap-2.5 gap-sm-3 mb-2">
+            <div class="p-2.5 p-sm-3 rounded-4 flex-shrink-0 <?= $modePresensi === 'jadwal' ? 'bg-primary bg-opacity-10 text-primary' : ($modePresensi === 'serentak' ? 'bg-warning bg-opacity-15 text-warning' : ($modePresensi === 'full_day_staff' ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-10 text-secondary')) ?>">
+                <i class="bi <?= $modePresensi === 'jadwal' ? 'bi-calendar-week-fill fs-4 fs-sm-3' : ($modePresensi === 'serentak' ? 'bi-megaphone-fill fs-4 fs-sm-3' : ($modePresensi === 'full_day_staff' ? 'bi-briefcase-fill fs-4 fs-sm-3' : 'bi-info-circle-fill fs-4 fs-sm-3')) ?>"></i>
+            </div>
+            <div class="flex-grow-1 min-w-0">
+                <div class="d-flex align-items-center gap-1.5 flex-wrap mb-1">
+                    <span class="badge <?= $modePresensi === 'jadwal' ? 'badge-soft-primary' : ($modePresensi === 'serentak' ? 'badge-soft-warning' : ($modePresensi === 'full_day_staff' ? 'badge-soft-success' : 'bg-light text-secondary border')) ?> rounded-pill px-2.5 py-1 fw-bold" style="font-size: 0.76rem;">
+                        <i class="bi bi-clock me-1"></i> <?= htmlspecialchars($effectiveJadwal['title'] ?? 'Skema Presensi') ?>
+                    </span>
+                    <span class="badge bg-white text-secondary border rounded-pill px-2.5 py-1 fw-medium" style="font-size: 0.76rem;">
+                        Hari: <b class="text-dark"><?= htmlspecialchars($effectiveJadwal['hari'] ?? date('l')) ?></b>
+                    </span>
                 </div>
-                <div>
-                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-                        <span class="badge <?= $modePresensi === 'jadwal' ? 'badge-soft-primary' : ($modePresensi === 'serentak' ? 'badge-soft-warning' : ($modePresensi === 'full_day_staff' ? 'badge-soft-success' : 'bg-light text-secondary border')) ?> rounded-pill px-3 py-1 fw-bold">
-                            <i class="bi bi-clock me-1"></i> <?= htmlspecialchars($effectiveJadwal['title'] ?? 'Skema Presensi') ?>
-                        </span>
-                        <span class="text-muted small">Hari: <b><?= htmlspecialchars($effectiveJadwal['hari'] ?? date('l')) ?></b></span>
-                    </div>
-                    <h5 class="fw-bold text-dark mb-1">
-                        <?php if ($modePresensi === 'serentak'): ?>
-                            <?= htmlspecialchars(!empty($kegiatanNama) ? $kegiatanNama : 'Presensi Serentak Seluruh Guru') ?>
-                        <?php elseif ($modePresensi === 'full_day_staff'): ?>
-                            <?= htmlspecialchars(!empty($kegiatanNama) ? $kegiatanNama : 'Jam Kerja Kantor / Penuh (Full Day)') ?>
-                        <?php elseif ($modePresensi === 'jadwal' && $isKbm): ?>
-                            Jadwal KBM: <?= count($kbmList) ?> Sesi Kelas Hari Ini
-                        <?php else: ?>
-                            Jam Standar Operasional Sekolah (Non-KBM)
-                        <?php endif; ?>
-                    </h5>
-                    <p class="text-muted small mb-0">
+                <h5 class="fw-bold text-dark mb-1 fs-6 fs-sm-5">
+                    <?php if ($modePresensi === 'serentak'): ?>
+                        <?= htmlspecialchars(!empty($kegiatanNama) ? $kegiatanNama : 'Presensi Serentak Seluruh Guru') ?>
+                    <?php elseif ($modePresensi === 'full_day_staff'): ?>
+                        <?= htmlspecialchars(!empty($kegiatanNama) ? $kegiatanNama : 'Jam Kerja Kantor / Penuh (Full Day)') ?>
+                    <?php elseif ($modePresensi === 'jadwal' && $isKbm): ?>
+                        Jadwal KBM: <?= count($kbmList) ?> Sesi Kelas Hari Ini
+                    <?php else: ?>
+                        Jam Standar Operasional Sekolah (Non-KBM)
+                    <?php endif; ?>
+                </h5>
+                <?php if ($modePresensi === 'jadwal' && $isKbm): ?>
+                    <p class="text-muted small mb-0" style="font-size: 0.8rem;">
+                        <i class="bi bi-info-circle text-primary me-1"></i>Jam kehadiran guru disesuaikan otomatis dengan rentang sesi KBM aktif Anda.
+                    </p>
+                <?php elseif (!empty($keteranganJadwal)): ?>
+                    <p class="text-muted small mb-0" style="font-size: 0.8rem;">
                         <?= htmlspecialchars($keteranganJadwal) ?>
                     </p>
+                <?php endif; ?>
+            </div>
+        </div>
 
-                    <?php if ($isKbm && !empty($kbmList)): ?>
-                        <div class="d-flex flex-wrap gap-2 mt-2">
-                            <?php foreach ($kbmList as $kbm): ?>
-                                <span class="badge bg-white text-dark border px-2.5 py-1.5 rounded-3 fw-medium shadow-2xs">
-                                    <i class="bi bi-book me-1 text-primary"></i><?= htmlspecialchars($kbm['nama_mapel']) ?> (<?= htmlspecialchars($kbm['nama_kelas']) ?>) 
-                                    <span class="text-primary fw-bold ms-1"><?= substr($kbm['jam_mulai'], 0, 5) ?> - <?= substr($kbm['jam_selesai'], 0, 5) ?></span>
-                                    <?php if (!empty($kbm['ruangan'])): ?>
-                                        <small class="text-muted ms-1">&bull; <?= htmlspecialchars($kbm['ruangan']) ?></small>
-                                    <?php endif; ?>
+        <?php if ($isKbm && !empty($kbmList)): ?>
+            <!-- Responsive KBM Class Agenda Cards -->
+            <div class="d-flex flex-column gap-2 mt-2">
+                <?php foreach ($kbmList as $kbm): ?>
+                    <div class="bg-white p-2.5 p-sm-3 rounded-3 border shadow-2xs">
+                        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap flex-sm-nowrap">
+                            <div class="d-flex align-items-start gap-2.5 flex-grow-1 min-w-0">
+                                <div class="rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center flex-shrink-0 mt-0.5" style="width: 34px; height: 34px;">
+                                    <i class="bi bi-book-half fs-6"></i>
+                                </div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-bold text-dark" style="font-size: 0.9rem; line-height: 1.35; word-break: break-word;">
+                                        <?= htmlspecialchars($kbm['nama_mapel']) ?>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1.5 flex-wrap mt-1">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5" style="font-size: 0.72rem; font-weight: 600;">
+                                            <i class="bi bi-people-fill me-1"></i><?= htmlspecialchars($kbm['nama_kelas']) ?>
+                                        </span>
+                                        <?php if (!empty($kbm['ruangan'])): ?>
+                                            <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-0.5" style="font-size: 0.72rem;">
+                                                <i class="bi bi-geo-alt-fill text-danger me-1"></i><?= htmlspecialchars($kbm['ruangan']) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 ms-auto ms-sm-0 mt-1 mt-sm-0">
+                                <span class="badge bg-light text-dark border px-3 py-1.5 rounded-pill fw-bold d-inline-flex align-items-center gap-1.5 shadow-2xs" style="font-size: 0.8rem;">
+                                    <i class="bi bi-clock-fill text-primary"></i>
+                                    <span><?= substr($kbm['jam_mulai'], 0, 5) ?> - <?= substr($kbm['jam_selesai'], 0, 5) ?> WIB</span>
                                 </span>
-                            <?php endforeach; ?>
+                            </div>
                         </div>
-                    <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Check-in & Check-out Window Cards -->
+        <div class="row g-2 mt-2 pt-2 border-top border-secondary border-opacity-10">
+            <div class="col-6">
+                <div class="bg-white p-2.5 p-sm-3 rounded-3 border shadow-2xs h-100 text-center text-sm-start">
+                    <div class="text-muted small d-flex align-items-center justify-content-center justify-content-sm-start gap-1" style="font-size: 0.74rem;">
+                        <i class="bi bi-box-arrow-in-right text-success"></i> Batas Tepat Waktu
+                    </div>
+                    <div class="fw-bold text-dark fs-6 mt-0.5"><span class="text-success"><?= $jamMasukBatas ?></span> WIB</div>
                 </div>
             </div>
-
-            <div class="d-flex flex-row flex-md-column gap-2 w-100 w-md-auto text-md-end mt-2 mt-md-0">
-                <div class="bg-white px-3 py-2 rounded-3 border shadow-2xs flex-fill text-center text-md-end">
-                    <div class="small text-muted">Batas Tepat Waktu:</div>
-                    <div class="fw-bold text-dark fs-6"><i class="bi bi-box-arrow-in-right text-success me-1"></i><?= $jamMasukBatas ?> WIB</div>
-                </div>
-                <div class="bg-white px-3 py-2 rounded-3 border shadow-2xs flex-fill text-center text-md-end">
-                    <div class="small text-muted">Buka Kepulangan:</div>
-                    <div class="fw-bold text-dark fs-6"><i class="bi bi-door-open text-primary me-1"></i><?= $jamPulangMulai ?> WIB</div>
+            <div class="col-6">
+                <div class="bg-white p-2.5 p-sm-3 rounded-3 border shadow-2xs h-100 text-center text-sm-start">
+                    <div class="text-muted small d-flex align-items-center justify-content-center justify-content-sm-start gap-1" style="font-size: 0.74rem;">
+                        <i class="bi bi-door-open text-primary"></i> Buka Kepulangan
+                    </div>
+                    <div class="fw-bold text-dark fs-6 mt-0.5"><span class="text-primary"><?= $jamPulangMulai ?></span> WIB</div>
                 </div>
             </div>
         </div>
