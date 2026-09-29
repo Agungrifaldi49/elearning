@@ -760,10 +760,9 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
                                     </div>
                                 <?php endif; ?>
                             </div>
-                            <div class="card-body pt-1">
+                            <div class="card-body pt-1 pb-3">
                                 <h6 class="fw-bold text-dark mb-1 fs-6 font-heading"><?= Security::safeText($g['nama_lengkap']) ?></h6>
-                                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill small mb-2">Guru Pengajar</span>
-                                <small class="text-muted d-block font-monospace">NIP: <?= Security::safeText($g['nip'] ?? '-') ?></small>
+                                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill small"><?= Security::safeText($g['jabatan'] ?? 'Guru Pengajar') ?></span>
                             </div>
                         </div>
                     </div>
