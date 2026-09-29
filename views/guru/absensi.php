@@ -213,6 +213,9 @@ $activeTabParam = $_GET['tab'] ?? 'siswa';
                                                 <td><code><?= htmlspecialchars($g['nip'] ?: '-') ?></code></td>
                                                 <td class="fw-bold text-dark">
                                                     <i class="bi bi-person-circle me-1 text-primary"></i><?= htmlspecialchars($g['nama_lengkap']) ?>
+                                                    <?php if (!empty($g['jabatan']) && $g['jabatan'] !== 'Guru Pengajar'): ?>
+                                                        <span class="badge bg-secondary-subtle text-secondary border ms-1" style="font-size: 0.68rem;"><?= htmlspecialchars($g['jabatan']) ?></span>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td>
                                                     <div class="d-flex gap-1 align-items-center">

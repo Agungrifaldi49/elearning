@@ -302,6 +302,45 @@ class AbsensiModel extends BaseModel {
         $dayNum = date('N', strtotime($todayDate));
         $todayDayName = $daysMap[$dayNum] ?? 'Senin';
 
+        if ($todayDayName === 'Minggu') {
+            return [
+                'allowed' => false,
+                'reason' => 'holiday',
+                'message' => "Hari Minggu ($todayDate) adalah hari libur sekolah. Pemindaian presensi tidak dapat dilakukan."
+            ];
+        }
+
+        // Check Guru Jabatan & Role
+        $stmtG = $this->db->prepare("SELECT id, nama_lengkap, nip, jabatan FROM guru WHERE id = ? LIMIT 1");
+        $stmtG->execute([(int)$guruId]);
+        $guruData = $stmtG->fetch(PDO::FETCH_ASSOC);
+        $jabatan = trim($guruData['jabatan'] ?? 'Guru Pengajar');
+        $isNonKbmStaff = ($jabatan !== 'Guru Pengajar' && !empty($jabatan));
+
+        // Settings (Jam Standar Operasional Sekolah)
+        require_once ROOT_PATH . 'models/SettingsModel.php';
+        $settingsModel = new SettingsModel();
+        $settings = $settingsModel->getAll();
+        $mode = $settings['presensi_mode_jadwal'] ?? 'jadwal';
+        $standarMasukMulai = ($settings['presensi_jam_masuk_mulai'] ?? '06:00') . ':00';
+        $standarMasukBatas = ($settings['presensi_jam_masuk_batas'] ?? '07:30') . ':00';
+        $standarPulangMulai = ($settings['presensi_jam_pulang_mulai'] ?? '15:00') . ':00';
+
+        // Non-KBM Staff (Tenaga Ahli, Bendahara, Kasubag TU, Satpam, Pustakawan, dll) OR Mode Serentak
+        if ($isNonKbmStaff || $mode === 'serentak') {
+            return [
+                'allowed' => true,
+                'is_non_kbm' => true,
+                'jabatan' => $jabatan,
+                'day_name' => $todayDayName,
+                'total_jadwal' => 0,
+                'min_start' => $standarMasukBatas,
+                'max_end' => $standarPulangMulai,
+                'allow_entry_start' => $standarMasukMulai,
+                'allow_exit_start' => $standarPulangMulai
+            ];
+        }
+
         // 3. Query teacher's teaching schedule for today from `jadwal`
         $stmtJ = $this->db->prepare("
             SELECT COUNT(*) as total_jadwal, MIN(jam_mulai) as min_start, MAX(jam_selesai) as max_end 
@@ -318,7 +357,7 @@ class AbsensiModel extends BaseModel {
         $hasSchoolScheduleToday = ((int)($schoolDayStat['cnt'] ?? 0) > 0);
 
         if ((int)($gStat['total_jadwal'] ?? 0) === 0) {
-            if ($todayDayName === 'Minggu' || !$hasSchoolScheduleToday) {
+            if (!$hasSchoolScheduleToday) {
                 return [
                     'allowed' => false,
                     'reason' => 'no_schedule_today',
@@ -346,6 +385,8 @@ class AbsensiModel extends BaseModel {
 
         return [
             'allowed' => true,
+            'is_non_kbm' => false,
+            'jabatan' => $jabatan,
             'day_name' => $todayDayName,
             'total_jadwal' => (int)($gStat['total_jadwal'] ?? 0),
             'min_start' => $minStart,
@@ -493,14 +534,17 @@ class AbsensiModel extends BaseModel {
                     } else {
                         // Check if teacher is allowed to exit (must reach allow_exit_start / max_end)
                         if ($currentTime < $gSched['allow_exit_start']) {
-                            $formatMaxEnd = date('H:i', strtotime($gSched['max_end']));
+                            $formatMaxEnd = date('H:i', strtotime($gSched['allow_exit_start']));
+                            $roleDesc = !empty($gSched['is_non_kbm']) 
+                                ? "Tenaga Kependidikan ({$gSched['jabatan']})" 
+                                : "Jadwal KBM mengajar Bpk/Ibu {$guru['nama_lengkap']}";
                             return [
                                 'success' => false,
                                 'already_attended' => false,
                                 'is_not_scheduled' => true,
                                 'role' => 'Guru',
                                 'nama' => $guru['nama_lengkap'],
-                                'message' => "Presensi Pulang Belum Diizinkan! Jadwal KBM mengajar Bpk/Ibu {$guru['nama_lengkap']} pada hari ini ({$gSched['day_name']}) berakhir pukul {$formatMaxEnd} WIB."
+                                'message' => "Presensi Pulang Belum Diizinkan! Jam kepulangan untuk {$roleDesc} pada hari ini ({$gSched['day_name']}) dibuka pukul {$formatMaxEnd} WIB."
                             ];
                         }
 
@@ -848,7 +892,7 @@ class AbsensiModel extends BaseModel {
         if (!$tanggal) $tanggal = date('Y-m-d');
         try {
             $stmt = $this->db->prepare("
-                SELECT g.id as guru_id, g.nip, g.nama_lengkap, g.status as status_guru,
+                SELECT g.id as guru_id, g.nip, g.nama_lengkap, g.jabatan, g.status as status_guru,
                        ag.id as absensi_id, ag.tanggal, ag.waktu_masuk, ag.waktu_pulang, ag.waktu_hadir, ag.status, ag.qr_code, ag.keterangan,
                        ag.foto_masuk, ag.foto_pulang, ag.latitude_masuk, ag.longitude_masuk, ag.latitude_pulang, ag.longitude_pulang,
                        ag.jarak_masuk_meter, ag.jarak_pulang_meter, ag.tipe_presensi
@@ -975,7 +1019,33 @@ class AbsensiModel extends BaseModel {
         $dayNum = (int)date('N', strtotime($tanggal));
         $hariName = $daysMap[$dayNum] ?? 'Senin';
 
-        // 1. Jika Mode Serentak aktif (Rapat, Upacara, Kegiatan Khusus dewan guru)
+        // 1. Cek Jabatan Guru / Tenaga Kependidikan
+        $stmtG = $this->db->prepare("SELECT id, nama_lengkap, nip, jabatan FROM guru WHERE id = ? LIMIT 1");
+        $stmtG->execute([(int)$guruId]);
+        $guruData = $stmtG->fetch(PDO::FETCH_ASSOC);
+        $jabatan = trim($guruData['jabatan'] ?? 'Guru Pengajar');
+        $isNonKbmStaff = ($jabatan !== 'Guru Pengajar' && !empty($jabatan));
+
+        // Jika staf non-KBM (Tenaga Ahli, Bendahara, Kasubag TU, Satpam, Pustakawan, dll), gunakan jam kerja penuh
+        if ($isNonKbmStaff) {
+            return [
+                'mode' => 'full_day_staff',
+                'title' => 'Jam Kerja Penuh (Non-KBM)',
+                'kegiatan_nama' => "Tenaga Kependidikan ({$jabatan})",
+                'hari' => $hariName,
+                'tanggal' => $tanggal,
+                'jam_masuk_mulai' => $standarMasukMulai,
+                'jam_masuk_batas' => $standarMasukBatas,
+                'jam_pulang_mulai' => $standarPulangMulai,
+                'is_kbm' => false,
+                'total_sesi' => 0,
+                'kbm_list' => [],
+                'jabatan' => $jabatan,
+                'keterangan_jadwal' => "Jam Kerja Kantor ({$jabatan}): Masuk s/d {$standarMasukBatas} WIB & Pulang mulai {$standarPulangMulai} WIB (Terhitung Hadir Lengkap)"
+            ];
+        }
+
+        // 2. Jika Mode Serentak aktif (Rapat, Upacara, Kegiatan Khusus dewan guru)
         if ($mode === 'serentak') {
             return [
                 'mode' => 'serentak',
@@ -989,13 +1059,14 @@ class AbsensiModel extends BaseModel {
                 'is_kbm' => false,
                 'total_sesi' => 0,
                 'kbm_list' => [],
+                'jabatan' => $jabatan,
                 'keterangan_jadwal' => !empty($kegiatanSerentak) 
                     ? "Agenda Hari Ini: {$kegiatanSerentak} (Presensi Serentak Seluruh Guru)" 
                     : "Presensi Serentak Seluruh Guru"
             ];
         }
 
-        // 2. Mode Jadwal Pelajaran Sekolah (Dinamis mengikuti jadwal KBM mengajar guru)
+        // 3. Mode Jadwal Pelajaran Sekolah (Dinamis mengikuti jadwal KBM mengajar guru)
         $kbmList = [];
         try {
             $stmt = $this->db->prepare("

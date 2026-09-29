@@ -146,22 +146,24 @@ class AdminController {
                     'password' => $_POST['password'],
                     'nip' => Security::sanitize($_POST['nip']),
                     'nama_lengkap' => Security::sanitize($_POST['nama_lengkap']),
+                    'jabatan' => Security::sanitize($_POST['jabatan'] ?? 'Guru Pengajar'),
                     'jenis_kelamin' => $_POST['jenis_kelamin'],
                     'no_telepon' => Security::sanitize($_POST['no_telepon']),
                     'alamat' => Security::sanitize($_POST['alamat'])
                 ]);
-                FlashHelper::setSuccess('Data Guru berhasil ditambahkan.');
+                FlashHelper::setSuccess('Data Guru / GTK berhasil ditambahkan.');
             } elseif ($action === 'update') {
                 $guruModel->updateGuru((int)$_POST['id'], [
                     'email' => Security::sanitize($_POST['email']),
                     'password' => $_POST['password'] ?? '',
                     'nip' => Security::sanitize($_POST['nip']),
                     'nama_lengkap' => Security::sanitize($_POST['nama_lengkap']),
+                    'jabatan' => Security::sanitize($_POST['jabatan'] ?? 'Guru Pengajar'),
                     'jenis_kelamin' => $_POST['jenis_kelamin'],
                     'no_telepon' => Security::sanitize($_POST['no_telepon']),
                     'alamat' => Security::sanitize($_POST['alamat'])
                 ]);
-                FlashHelper::setSuccess('Data Guru berhasil diperbarui.');
+                FlashHelper::setSuccess('Data Guru / GTK berhasil diperbarui.');
             } elseif ($action === 'delete') {
                 $guruModel->deleteGuru((int)$_POST['id']);
                 FlashHelper::setSuccess('Data Guru berhasil dihapus.');
@@ -204,8 +206,9 @@ class AdminController {
         $searchKeyword = isset($_GET['q']) ? Security::sanitize($_GET['q']) : null;
         $selectedJenisKelamin = isset($_GET['jk']) && in_array(strtoupper($_GET['jk']), ['L', 'P']) ? strtoupper($_GET['jk']) : null;
         $selectedStatus = isset($_GET['status']) ? Security::sanitize($_GET['status']) : null;
+        $selectedJabatan = isset($_GET['jabatan']) ? Security::sanitize($_GET['jabatan']) : null;
 
-        $guruList = $guruModel->getAll($searchKeyword, $selectedJenisKelamin, $selectedStatus);
+        $guruList = $guruModel->getAll($searchKeyword, $selectedJenisKelamin, $selectedStatus, $selectedJabatan);
         require_once ROOT_PATH . 'views/admin/guru.php';
     }
 
@@ -1158,10 +1161,11 @@ class AdminController {
 
     public function templateGuru() {
         $format = strtolower($_GET['format'] ?? 'xlsx');
-        $headers = ['NIP', 'Nama Lengkap', 'Username', 'Email', 'Password', 'Jenis Kelamin (L/P)', 'No Telepon', 'Alamat'];
+        $headers = ['NIP', 'Nama Lengkap', 'Jabatan', 'Username', 'Email', 'Password', 'Jenis Kelamin (L/P)', 'No Telepon', 'Alamat'];
         $dataRows = [
-            ['199003202015021005', 'Dedi Kurniawan, S.Pd.', 'guru_dedi', 'dedi.guru@smkmh-cicalengka.sch.id', '123456', 'L', '082198765433', 'Jl. Raya Cicalengka No 10'],
-            ['199205122018012004', 'Siti Rahmawati, M.Pd.', 'guru_siti', 'siti.guru@smkmh-cicalengka.sch.id', '123456', 'P', '081234567899', 'Jl. Alun-Alun Cicalengka No 5']
+            ['199003202015021005', 'Dedi Kurniawan, S.Pd.', 'Guru Pengajar', 'guru_dedi', 'dedi.guru@smkmh-cicalengka.sch.id', '123456', 'L', '082198765433', 'Jl. Raya Cicalengka No 10'],
+            ['199205122018012004', 'Siti Rahmawati, M.Pd.', 'Guru Pengajar', 'guru_siti', 'siti.guru@smkmh-cicalengka.sch.id', '123456', 'P', '081234567899', 'Jl. Alun-Alun Cicalengka No 5'],
+            ['SEC2026001', 'Ahmad Supriadi', 'Satpam', 'sec_ahmad', 'ahmad.satpam@smkmh-cicalengka.sch.id', '123456', 'L', '081234567800', 'Kp. Warung Lahang Cicalengka']
         ];
 
         if ($format === 'csv') {
@@ -1195,14 +1199,15 @@ class AdminController {
                     return $defaultIndex;
                 };
 
-                $idxNip   = $findCol(['nip', 'nomorindukpegawai'], 0);
-                $idxNama  = $findCol(['namalengkap', 'nama', 'namaguru'], 1);
-                $idxUser  = $findCol(['username', 'user'], 2);
-                $idxEmail = $findCol(['email', 'surel'], 3);
-                $idxPass  = $findCol(['password', 'pass'], 4);
-                $idxJk    = $findCol(['jeniskelaminlp', 'jeniskelamin', 'jk', 'gender'], 5);
-                $idxTelp  = $findCol(['notelepon', 'telepon', 'nohp'], 6);
-                $idxAlamat= $findCol(['alamat', 'domisili'], 7);
+                $idxNip     = $findCol(['nip', 'nomorindukpegawai'], 0);
+                $idxNama    = $findCol(['namalengkap', 'nama', 'namaguru'], 1);
+                $idxJabatan = $findCol(['jabatan', 'tugas', 'role', 'posisi'], 2);
+                $idxUser    = $findCol(['username', 'user'], 3);
+                $idxEmail   = $findCol(['email', 'surel'], 4);
+                $idxPass    = $findCol(['password', 'pass'], 5);
+                $idxJk      = $findCol(['jeniskelaminlp', 'jeniskelamin', 'jk', 'gender'], 6);
+                $idxTelp    = $findCol(['notelepon', 'telepon', 'nohp'], 7);
+                $idxAlamat  = $findCol(['alamat', 'domisili'], 8);
 
                 $dataRows = array_slice($rows, 1);
                 foreach ($dataRows as $data) {
@@ -1211,13 +1216,15 @@ class AdminController {
 
                     $nip = Security::sanitize(trim((string)($data[$idxNip] ?? ($data[0] ?? ''))));
                     $nama = Security::sanitize($namaVal);
-                    $username = Security::sanitize(trim((string)($data[$idxUser] ?? ($data[2] ?? ''))));
-                    $email = Security::sanitize(trim((string)($data[$idxEmail] ?? ($data[3] ?? ''))));
-                    $password = trim((string)($data[$idxPass] ?? ($data[4] ?? '123456')));
-                    $jkRaw = strtoupper(trim((string)($data[$idxJk] ?? ($data[5] ?? 'L'))));
+                    $jabatanVal = trim((string)($data[$idxJabatan] ?? 'Guru Pengajar'));
+                    $jabatan = !empty($jabatanVal) ? Security::sanitize($jabatanVal) : 'Guru Pengajar';
+                    $username = Security::sanitize(trim((string)($data[$idxUser] ?? ($data[3] ?? ''))));
+                    $email = Security::sanitize(trim((string)($data[$idxEmail] ?? ($data[4] ?? ''))));
+                    $password = trim((string)($data[$idxPass] ?? ($data[5] ?? '123456')));
+                    $jkRaw = strtoupper(trim((string)($data[$idxJk] ?? ($data[6] ?? 'L'))));
                     $jk = ($jkRaw === 'P' || stripos($jkRaw, 'perempuan') !== false) ? 'P' : 'L';
-                    $telp = Security::sanitize(trim((string)($data[$idxTelp] ?? ($data[6] ?? ''))));
-                    $alamat = Security::sanitize(trim((string)($data[$idxAlamat] ?? ($data[7] ?? ''))));
+                    $telp = Security::sanitize(trim((string)($data[$idxTelp] ?? ($data[7] ?? ''))));
+                    $alamat = Security::sanitize(trim((string)($data[$idxAlamat] ?? ($data[8] ?? ''))));
 
                     if (empty($username)) {
                         $username = 'guru_' . strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $nama)) . rand(10, 99);
@@ -1229,6 +1236,7 @@ class AdminController {
                     $success = $guruModel->addGuru([
                         'nip' => $nip,
                         'nama_lengkap' => $nama,
+                        'jabatan' => $jabatan,
                         'username' => $username,
                         'email' => $email,
                         'password' => $password,

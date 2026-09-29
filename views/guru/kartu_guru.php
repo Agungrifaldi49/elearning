@@ -282,12 +282,12 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                                 <small class="text-white-50 d-block text-truncate" style="font-size: 0.6rem;"><?= htmlspecialchars($schoolAddress) ?></small>
                             </div>
                         </div>
-                        <span class="gold-badge flex-shrink-0">GTK / PENDIDIK</span>
+                        <span class="gold-badge flex-shrink-0"><?= strtoupper(htmlspecialchars(!empty($guru['jabatan']) ? $guru['jabatan'] : 'GTK / PENDIDIK')) ?></span>
                     </div>
 
                     <!-- Judul Kartu Banner (Posisi Diturunkan Agak Kebawah & Lebih Seimbang) -->
                     <div class="card-title-banner text-center py-1 mt-1 mb-2.5 fw-bold text-uppercase">
-                        <i class="bi bi-person-badge me-1"></i>KARTU TENAGA PENDIDIK DIGITAL
+                        <i class="bi bi-person-badge me-1"></i>KARTU IDENTITAS GTK DIGITAL
                     </div>
 
                     <!-- Body Content: Photo & Info -->
@@ -304,7 +304,7 @@ $qrCodeApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=250x250&data="
                         <div class="col ps-2">
                             <h6 class="fw-extrabold text-white mb-0" style="font-size: 0.96rem; line-height: 1.25; letter-spacing: -0.2px;"><?= htmlspecialchars($guru['nama_lengkap'] ?? $user['full_name']) ?></h6>
                             <p class="text-emerald mb-1.5 fw-semibold" style="font-size: 0.72rem; color: #34d399;">
-                                <i class="bi bi-check-circle-fill me-1"></i>Tenaga Pendidik / Guru Pengajar
+                                <i class="bi bi-check-circle-fill me-1"></i><?= htmlspecialchars($guru['jabatan'] ?? 'Tenaga Pendidik / Guru Pengajar') ?>
                             </p>
                             
                             <table class="text-white-50 small w-100" style="font-size: 0.68rem; line-height: 1.45;">

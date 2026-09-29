@@ -6,7 +6,7 @@ require_once ROOT_PATH . 'models/BaseModel.php';
 
 class GuruModel extends BaseModel {
 
-    public function getAll($keyword = null, $jenisKelamin = null, $status = null) {
+    public function getAll($keyword = null, $jenisKelamin = null, $status = null, $jabatan = null) {
         $sql = "
             SELECT g.*, u.username, u.email, u.avatar 
             FROM guru g 
@@ -25,9 +25,15 @@ class GuruModel extends BaseModel {
             $params[] = trim($status);
         }
 
+        if ($jabatan && trim($jabatan) !== '') {
+            $sql .= " AND g.jabatan = ?";
+            $params[] = trim($jabatan);
+        }
+
         if ($keyword && trim($keyword) !== '') {
-            $sql .= " AND (g.nip LIKE ? OR g.nama_lengkap LIKE ? OR u.username LIKE ? OR u.email LIKE ? OR g.no_telepon LIKE ?)";
+            $sql .= " AND (g.nip LIKE ? OR g.nama_lengkap LIKE ? OR g.jabatan LIKE ? OR u.username LIKE ? OR u.email LIKE ? OR g.no_telepon LIKE ?)";
             $term = '%' . trim($keyword) . '%';
+            $params[] = $term;
             $params[] = $term;
             $params[] = $term;
             $params[] = $term;
@@ -56,7 +62,7 @@ class GuruModel extends BaseModel {
         return $stmt->fetch();
     }
 
-    public function ensureGuruProfile($userId, $fullName) {
+    public function ensureGuruProfile($userId, $fullName, $jabatan = 'Guru Pengajar') {
         if (!$userId) {
             return null;
         }
@@ -71,6 +77,7 @@ class GuruModel extends BaseModel {
         }
 
         $fullName = !empty($fullName) ? $fullName : ($user['full_name'] ?? 'Guru');
+        $jabatan = !empty($jabatan) ? $jabatan : 'Guru Pengajar';
         $guru = $this->getByUserId($userId);
         if ($guru) return $guru;
 
@@ -78,8 +85,8 @@ class GuruModel extends BaseModel {
             for ($attempt = 0; $attempt < 5; $attempt++) {
                 try {
                     $nip = 'G' . date('Ym') . str_pad(rand(100, 9999), 4, '0', STR_PAD_LEFT);
-                    $stmt = $this->db->prepare("INSERT INTO guru (user_id, nip, nama_lengkap, jenis_kelamin, status) VALUES (?, ?, ?, 'L', 'aktif')");
-                    $stmt->execute([$userId, $nip, $fullName]);
+                    $stmt = $this->db->prepare("INSERT INTO guru (user_id, nip, nama_lengkap, jabatan, jenis_kelamin, status) VALUES (?, ?, ?, ?, 'L', 'aktif')");
+                    $stmt->execute([$userId, $nip, $fullName, $jabatan]);
                     $created = $this->getByUserId($userId);
                     if ($created) return $created;
                 } catch (\Throwable $exAttempt) {
@@ -100,9 +107,11 @@ class GuruModel extends BaseModel {
             $stmtUser->execute([$data['username'], $data['email'], $hash, $data['nama_lengkap']]);
             $userId = $this->db->lastInsertId();
 
+            $jabatan = !empty($data['jabatan']) ? trim($data['jabatan']) : 'Guru Pengajar';
+
             // Create guru profile
-            $stmtGuru = $this->db->prepare("INSERT INTO guru (user_id, nip, nama_lengkap, jenis_kelamin, no_telepon, alamat) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmtGuru->execute([$userId, $data['nip'], $data['nama_lengkap'], $data['jenis_kelamin'], $data['no_telepon'], $data['alamat']]);
+            $stmtGuru = $this->db->prepare("INSERT INTO guru (user_id, nip, nama_lengkap, jabatan, jenis_kelamin, no_telepon, alamat) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmtGuru->execute([$userId, $data['nip'], $data['nama_lengkap'], $jabatan, $data['jenis_kelamin'], $data['no_telepon'], $data['alamat']]);
 
             $this->db->commit();
             return true;
@@ -119,10 +128,12 @@ class GuruModel extends BaseModel {
 
         if (!$guru) return false;
 
+        $jabatan = !empty($data['jabatan']) ? trim($data['jabatan']) : 'Guru Pengajar';
+
         $this->db->beginTransaction();
         try {
-            $stmtGuru = $this->db->prepare("UPDATE guru SET nip = ?, nama_lengkap = ?, jenis_kelamin = ?, no_telepon = ?, alamat = ? WHERE id = ?");
-            $stmtGuru->execute([$data['nip'], $data['nama_lengkap'], $data['jenis_kelamin'], $data['no_telepon'], $data['alamat'], $id]);
+            $stmtGuru = $this->db->prepare("UPDATE guru SET nip = ?, nama_lengkap = ?, jabatan = ?, jenis_kelamin = ?, no_telepon = ?, alamat = ? WHERE id = ?");
+            $stmtGuru->execute([$data['nip'], $data['nama_lengkap'], $jabatan, $data['jenis_kelamin'], $data['no_telepon'], $data['alamat'], $id]);
 
             $stmtUser = $this->db->prepare("UPDATE users SET full_name = ?, email = ? WHERE id = ?");
             $stmtUser->execute([$data['nama_lengkap'], $data['email'], $guru['user_id']]);
@@ -208,7 +219,7 @@ class GuruModel extends BaseModel {
         $count = 0;
         $this->db->beginTransaction();
         try {
-            $stmtGuru = $this->db->prepare("UPDATE guru SET nip = ?, nama_lengkap = ?, jenis_kelamin = ?, no_telepon = ?, status = ? WHERE id = ?");
+            $stmtGuru = $this->db->prepare("UPDATE guru SET nip = ?, nama_lengkap = ?, jabatan = ?, jenis_kelamin = ?, no_telepon = ?, status = ? WHERE id = ?");
             $stmtUser = $this->db->prepare("UPDATE users u JOIN guru g ON u.id = g.user_id SET u.full_name = ?, u.email = ? WHERE g.id = ?");
 
             foreach ($matrixData as $id => $row) {
@@ -216,13 +227,14 @@ class GuruModel extends BaseModel {
                 if ($gId <= 0) continue;
                 $nip = Security::sanitize($row['nip'] ?? '');
                 $nama = Security::sanitize($row['nama_lengkap'] ?? '');
+                $jabatan = !empty($row['jabatan']) ? Security::sanitize($row['jabatan']) : 'Guru Pengajar';
                 $email = Security::sanitize($row['email'] ?? '');
                 $telepon = Security::sanitize($row['no_telepon'] ?? '');
                 $jk = in_array(strtoupper($row['jenis_kelamin'] ?? 'L'), ['L', 'P']) ? strtoupper($row['jenis_kelamin']) : 'L';
                 $status = in_array(strtolower($row['status'] ?? 'aktif'), ['aktif', 'nonaktif']) ? strtolower($row['status']) : 'aktif';
 
                 if (!empty($nama) && !empty($nip)) {
-                    $stmtGuru->execute([$nip, $nama, $jk, $telepon, $status, $gId]);
+                    $stmtGuru->execute([$nip, $nama, $jabatan, $jk, $telepon, $status, $gId]);
                     if (!empty($email)) {
                         $stmtUser->execute([$nama, $email, $gId]);
                     } else {

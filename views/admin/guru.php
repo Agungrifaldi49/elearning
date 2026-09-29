@@ -30,16 +30,32 @@
             <form action="<?= BASE_URL ?>index.php" method="GET" id="autoFilterForm" class="row g-3 align-items-end">
                 <input type="hidden" name="url" value="admin/guru">
 
-                <div class="col-md-5 col-12">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search text-primary me-1"></i> Cari NIP / Nama / Username / Email</label>
+                <div class="col-md-4 col-12">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search text-primary me-1"></i> Cari NIP / Nama / Username</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" name="q" id="autoSearchInput" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Ketik NIP, Nama, atau Username..." autocomplete="off">
+                        <input type="text" name="q" id="autoSearchInput" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Ketik NIP, Nama, atau Jabatan..." autocomplete="off">
                     </div>
                 </div>
 
                 <div class="col-md-3 col-6">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-gender-ambiguous text-info me-1"></i> Jenis Kelamin</label>
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-briefcase-fill text-warning me-1"></i> Jabatan / Tugas</label>
+                    <select name="jabatan" class="form-select rounded-3" onchange="this.form.submit()">
+                        <option value="">-- Semua Jabatan --</option>
+                        <option value="Guru Pengajar" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Guru Pengajar') ? 'selected' : '' ?>>Guru Pengajar (KBM)</option>
+                        <option value="Tenaga Ahli" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Tenaga Ahli') ? 'selected' : '' ?>>Tenaga Ahli</option>
+                        <option value="Bendahara" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Bendahara') ? 'selected' : '' ?>>Bendahara</option>
+                        <option value="Kasubag Tata Usaha" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Kasubag Tata Usaha') ? 'selected' : '' ?>>Kasubag Tata Usaha</option>
+                        <option value="Staf Tata Usaha" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Staf Tata Usaha') ? 'selected' : '' ?>>Staf Tata Usaha</option>
+                        <option value="Satpam" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Satpam') ? 'selected' : '' ?>>Satpam / Keamanan</option>
+                        <option value="Pustakawan" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Pustakawan') ? 'selected' : '' ?>>Pustakawan</option>
+                        <option value="Laboran" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Laboran') ? 'selected' : '' ?>>Laboran</option>
+                        <option value="Lainnya" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Lainnya') ? 'selected' : '' ?>>Lainnya</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 col-6">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-gender-ambiguous text-info me-1"></i> Gender</label>
                     <select name="jk" class="form-select rounded-3" onchange="this.form.submit()">
                         <option value="">-- Semua --</option>
                         <option value="L" <?= (isset($_GET['jk']) && $_GET['jk'] === 'L') ? 'selected' : '' ?>>Laki-Laki (L)</option>
@@ -47,17 +63,17 @@
                     </select>
                 </div>
 
-                <div class="col-md-3 col-6">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Status Kepegawaian</label>
+                <div class="col-md-2 col-6">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-check-circle-fill text-success me-1"></i> Status</label>
                     <select name="status" class="form-select rounded-3" onchange="this.form.submit()">
-                        <option value="">-- Semua Status --</option>
+                        <option value="">-- Semua --</option>
                         <option value="aktif" <?= (isset($_GET['status']) && $_GET['status'] === 'aktif') ? 'selected' : '' ?>>Aktif</option>
                         <option value="nonaktif" <?= (isset($_GET['status']) && $_GET['status'] === 'nonaktif') ? 'selected' : '' ?>>Nonaktif</option>
                     </select>
                 </div>
 
-                <div class="col-md-1 col-12">
-                    <?php if (!empty($_GET['q']) || !empty($_GET['jk']) || !empty($_GET['status'])): ?>
+                <div class="col-md-1 col-6">
+                    <?php if (!empty($_GET['q']) || !empty($_GET['jk']) || !empty($_GET['status']) || !empty($_GET['jabatan'])): ?>
                         <a href="<?= BASE_URL ?>index.php?url=admin/guru" class="btn btn-outline-secondary w-100 rounded-3" title="Reset Filter">
                             <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                         </a>
@@ -95,17 +111,20 @@
         });
         </script>
 
-        <?php if (!empty($_GET['q']) || !empty($_GET['jk']) || !empty($_GET['status'])): ?>
+        <?php if (!empty($_GET['q']) || !empty($_GET['jk']) || !empty($_GET['status']) || !empty($_GET['jabatan'])): ?>
             <div class="alert alert-primary border-0 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:38px; height:38px;">
                         <i class="bi bi-funnel-fill fs-5"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold mb-0 text-dark">Hasil Penyaringan Data Guru: <strong><?= count($guruList) ?> Guru Ditemukan</strong></h6>
+                        <h6 class="fw-bold mb-0 text-dark">Hasil Penyaringan Data Guru / GTK: <strong><?= count($guruList) ?> Data Ditemukan</strong></h6>
                         <small class="text-muted">
                             <?php if (!empty($_GET['q'])): ?>
                                 Kata Kunci: <strong>"<?= htmlspecialchars($_GET['q']) ?>"</strong> |
+                            <?php endif; ?>
+                            <?php if (!empty($_GET['jabatan'])): ?>
+                                Jabatan: <strong><?= htmlspecialchars($_GET['jabatan']) ?></strong> |
                             <?php endif; ?>
                             <?php if (!empty($_GET['jk'])): ?>
                                 Gender: <strong><?= $_GET['jk'] === 'L' ? 'Laki-Laki' : 'Perempuan' ?></strong> |
@@ -139,6 +158,7 @@
                             <th style="width: 50px;">No</th>
                             <th>NIP</th>
                             <th>Nama Lengkap</th>
+                            <th>Jabatan / Tugas</th>
                             <th>JK</th>
                             <th>No Telepon</th>
                             <th>Email</th>
@@ -147,7 +167,27 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($guruList as $i => $g): ?>
+                        <?php foreach ($guruList as $i => $g): 
+                            $jab = $g['jabatan'] ?? 'Guru Pengajar';
+                            $badgeClass = 'bg-primary-subtle text-primary border-primary';
+                            $icon = 'bi-mortarboard-fill';
+                            if (stripos($jab, 'satpam') !== false || stripos($jab, 'keamanan') !== false) {
+                                $badgeClass = 'bg-dark-subtle text-dark border-dark';
+                                $icon = 'bi-shield-lock-fill';
+                            } elseif (stripos($jab, 'bendahara') !== false) {
+                                $badgeClass = 'bg-success-subtle text-success border-success';
+                                $icon = 'bi-cash-coin';
+                            } elseif (stripos($jab, 'ahli') !== false) {
+                                $badgeClass = 'bg-warning-subtle text-warning border-warning';
+                                $icon = 'bi-star-fill';
+                            } elseif (stripos($jab, 'tu') !== false || stripos($jab, 'tata usaha') !== false || stripos($jab, 'kasubag') !== false) {
+                                $badgeClass = 'bg-info-subtle text-info border-info';
+                                $icon = 'bi-briefcase-fill';
+                            } elseif (stripos($jab, 'pustaka') !== false) {
+                                $badgeClass = 'bg-secondary-subtle text-secondary border-secondary';
+                                $icon = 'bi-book-fill';
+                            }
+                        ?>
                             <tr>
                                 <td class="text-center">
                                     <input type="checkbox" class="form-check-input guru-checkbox" value="<?= $g['id'] ?>">
@@ -155,6 +195,11 @@
                                 <td><?= $i + 1 ?></td>
                                 <td><code><?= htmlspecialchars($g['nip']) ?></code></td>
                                 <td class="fw-bold"><?= htmlspecialchars($g['nama_lengkap']) ?></td>
+                                <td>
+                                    <span class="badge <?= $badgeClass ?> border px-2.5 py-1">
+                                        <i class="bi <?= $icon ?> me-1"></i><?= htmlspecialchars($jab) ?>
+                                    </span>
+                                </td>
                                 <td><span class="badge bg-secondary"><?= $g['jenis_kelamin'] ?></span></td>
                                 <td><?= htmlspecialchars($g['no_telepon']) ?></td>
                                 <td><?= htmlspecialchars($g['email']) ?></td>
@@ -343,16 +388,19 @@ document.addEventListener('DOMContentLoaded', function() {
                             <thead class="table-primary sticky-top">
                                 <tr>
                                     <th style="width: 40px;">No</th>
-                                    <th style="width: 160px;">NIP</th>
-                                    <th>Nama Lengkap Guru</th>
-                                    <th style="width: 200px;">Email</th>
-                                    <th style="width: 150px;">No Telepon / WA</th>
-                                    <th style="width: 90px;">JK</th>
-                                    <th style="width: 110px;">Status</th>
+                                    <th style="width: 150px;">NIP</th>
+                                    <th>Nama Lengkap Guru / GTK</th>
+                                    <th style="width: 160px;">Jabatan / Tugas</th>
+                                    <th style="width: 190px;">Email</th>
+                                    <th style="width: 140px;">No Telepon / WA</th>
+                                    <th style="width: 80px;">JK</th>
+                                    <th style="width: 100px;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($guruList as $idx => $gw): ?>
+                                <?php foreach ($guruList as $idx => $gw): 
+                                    $currJab = $gw['jabatan'] ?? 'Guru Pengajar';
+                                ?>
                                     <tr>
                                         <td class="text-center fw-bold"><?= $idx + 1 ?></td>
                                         <td>
@@ -360,6 +408,19 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </td>
                                         <td>
                                             <input type="text" name="matrix_guru[<?= $gw['id'] ?>][nama_lengkap]" value="<?= htmlspecialchars($gw['nama_lengkap']) ?>" class="form-control form-control-sm fw-semibold" required>
+                                        </td>
+                                        <td>
+                                            <select name="matrix_guru[<?= $gw['id'] ?>][jabatan]" class="form-select form-select-sm">
+                                                <option value="Guru Pengajar" <?= $currJab === 'Guru Pengajar' ? 'selected' : '' ?>>Guru Pengajar</option>
+                                                <option value="Tenaga Ahli" <?= $currJab === 'Tenaga Ahli' ? 'selected' : '' ?>>Tenaga Ahli</option>
+                                                <option value="Bendahara" <?= $currJab === 'Bendahara' ? 'selected' : '' ?>>Bendahara</option>
+                                                <option value="Kasubag Tata Usaha" <?= $currJab === 'Kasubag Tata Usaha' ? 'selected' : '' ?>>Kasubag TU</option>
+                                                <option value="Staf Tata Usaha" <?= $currJab === 'Staf Tata Usaha' ? 'selected' : '' ?>>Staf TU</option>
+                                                <option value="Satpam" <?= $currJab === 'Satpam' ? 'selected' : '' ?>>Satpam</option>
+                                                <option value="Pustakawan" <?= $currJab === 'Pustakawan' ? 'selected' : '' ?>>Pustakawan</option>
+                                                <option value="Laboran" <?= $currJab === 'Laboran' ? 'selected' : '' ?>>Laboran</option>
+                                                <option value="Lainnya" <?= $currJab === 'Lainnya' ? 'selected' : '' ?>>Lainnya</option>
+                                            </select>
                                         </td>
                                         <td>
                                             <input type="email" name="matrix_guru[<?= $gw['id'] ?>][email]" value="<?= htmlspecialchars($gw['email']) ?>" class="form-control form-control-sm">
@@ -402,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 rounded-4">
             <div class="modal-header border-0 pb-0">
-                <h5 class="fw-bold modal-title"><i class="bi bi-plus-circle text-primary me-2"></i>Tambah Guru Baru</h5>
+                <h5 class="fw-bold modal-title"><i class="bi bi-plus-circle text-primary me-2"></i>Tambah Guru / GTK Baru</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="<?= BASE_URL ?>index.php?url=admin/guru" method="POST">
@@ -413,23 +474,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">NIP</label>
-                            <input type="text" name="nip" class="form-control" required>
+                            <label class="form-label small fw-semibold">NIP / NIK / No. Pegawai <span class="text-danger">*</span></label>
+                            <input type="text" name="nip" class="form-control" placeholder="Contoh: 1985... atau PEG-001" required>
+                            <small class="text-muted" style="font-size:0.75rem;">Staf tanpa NIP PNS bisa diisi NIK KTP / Kode Pegawai Sekolah.</small>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Nama Lengkap</label>
+                            <label class="form-label small fw-semibold">Nama Lengkap <span class="text-danger">*</span></label>
                             <input type="text" name="nama_lengkap" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Username Login</label>
+                            <label class="form-label small fw-semibold">Jabatan / Tugas GTK <span class="text-danger">*</span></label>
+                            <select name="jabatan" class="form-select" required>
+                                <option value="Guru Pengajar" selected>Guru Pengajar (Ikuti Jadwal KBM)</option>
+                                <option value="Tenaga Ahli">Tenaga Ahli (Jam Kantor Penuh)</option>
+                                <option value="Bendahara">Bendahara (Jam Kantor Penuh)</option>
+                                <option value="Kasubag Tata Usaha">Kasubag Tata Usaha (Jam Kantor Penuh)</option>
+                                <option value="Staf Tata Usaha">Staf Tata Usaha (Jam Kantor Penuh)</option>
+                                <option value="Satpam">Satpam / Keamanan (Jam Kantor Penuh)</option>
+                                <option value="Pustakawan">Pustakawan (Jam Kantor Penuh)</option>
+                                <option value="Laboran">Laboran (Jam Kantor Penuh)</option>
+                                <option value="Lainnya">Lainnya / Staf Khusus (Jam Kantor Penuh)</option>
+                            </select>
+                            <small class="text-muted" style="font-size:0.75rem;">Staf non-mengajar otomatis menerapkan aturan jam kerja penuh (masuk awal - pulang akhir).</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Username Login <span class="text-danger">*</span></label>
                             <input type="text" name="username" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Email</label>
+                            <label class="form-label small fw-semibold">Email <span class="text-danger">*</span></label>
                             <input type="email" name="email" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Password Login</label>
+                            <label class="form-label small fw-semibold">Password Login <span class="text-danger">*</span></label>
                             <input type="password" name="password" class="form-control" required>
                         </div>
                         <div class="col-md-6">
@@ -443,7 +520,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <label class="form-label small fw-semibold">No Telepon / WA</label>
                             <input type="text" name="no_telepon" class="form-control">
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <label class="form-label small fw-semibold">Alamat</label>
                             <input type="text" name="alamat" class="form-control">
                         </div>
@@ -451,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary px-4">Simpan Data Guru</button>
+                    <button type="submit" class="btn btn-primary px-4">Simpan Data Guru / GTK</button>
                 </div>
             </form>
         </div>
@@ -465,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content rounded-4 border-0 shadow">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="fw-bold modal-title"><i class="bi bi-info-circle text-info me-2"></i>Detail Guru</h5>
+                    <h5 class="fw-bold modal-title"><i class="bi bi-info-circle text-info me-2"></i>Detail Guru / GTK</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -477,7 +554,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         <small class="text-muted">NIP: <?= htmlspecialchars($g['nip']) ?></small>
                     </div>
                     <table class="table table-sm border-0 small">
-                        <tr><td class="text-muted" style="width:35%;">Username</td><td class="fw-semibold">: <?= htmlspecialchars($g['username'] ?? '-') ?></td></tr>
+                        <tr><td class="text-muted" style="width:35%;">Jabatan / Tugas</td><td class="fw-semibold">: <span class="badge bg-primary-subtle text-primary border border-primary"><?= htmlspecialchars($g['jabatan'] ?? 'Guru Pengajar') ?></span></td></tr>
+                        <tr><td class="text-muted">Username</td><td class="fw-semibold">: <?= htmlspecialchars($g['username'] ?? '-') ?></td></tr>
                         <tr><td class="text-muted">Email</td><td class="fw-semibold">: <?= htmlspecialchars($g['email']) ?></td></tr>
                         <tr><td class="text-muted">Jenis Kelamin</td><td class="fw-semibold">: <?= $g['jenis_kelamin'] === 'L' ? 'Laki-Laki' : 'Perempuan' ?></td></tr>
                         <tr><td class="text-muted">No Telepon / WA</td><td class="fw-semibold">: <?= htmlspecialchars($g['no_telepon']) ?></td></tr>
@@ -497,7 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content rounded-4 border-0 shadow">
                 <div class="modal-header border-0 pb-0">
-                    <h5 class="fw-bold modal-title"><i class="bi bi-pencil-square text-warning me-2"></i>Edit Data Guru</h5>
+                    <h5 class="fw-bold modal-title"><i class="bi bi-pencil-square text-warning me-2"></i>Edit Data Guru / GTK</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form action="<?= BASE_URL ?>index.php?url=admin/guru" method="POST">
@@ -509,15 +587,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label small fw-semibold">NIP</label>
+                                <label class="form-label small fw-semibold">NIP / NIK / No. Pegawai <span class="text-danger">*</span></label>
                                 <input type="text" name="nip" class="form-control" value="<?= htmlspecialchars($g['nip']) ?>" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-semibold">Nama Lengkap</label>
+                                <label class="form-label small fw-semibold">Nama Lengkap <span class="text-danger">*</span></label>
                                 <input type="text" name="nama_lengkap" class="form-control" value="<?= htmlspecialchars($g['nama_lengkap']) ?>" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-semibold">Email</label>
+                                <label class="form-label small fw-semibold">Jabatan / Tugas GTK <span class="text-danger">*</span></label>
+                                <?php $gJab = $g['jabatan'] ?? 'Guru Pengajar'; ?>
+                                <select name="jabatan" class="form-select" required>
+                                    <option value="Guru Pengajar" <?= $gJab === 'Guru Pengajar' ? 'selected' : '' ?>>Guru Pengajar (Ikuti Jadwal KBM)</option>
+                                    <option value="Tenaga Ahli" <?= $gJab === 'Tenaga Ahli' ? 'selected' : '' ?>>Tenaga Ahli (Jam Kantor Penuh)</option>
+                                    <option value="Bendahara" <?= $gJab === 'Bendahara' ? 'selected' : '' ?>>Bendahara (Jam Kantor Penuh)</option>
+                                    <option value="Kasubag Tata Usaha" <?= $gJab === 'Kasubag Tata Usaha' ? 'selected' : '' ?>>Kasubag Tata Usaha (Jam Kantor Penuh)</option>
+                                    <option value="Staf Tata Usaha" <?= $gJab === 'Staf Tata Usaha' ? 'selected' : '' ?>>Staf Tata Usaha (Jam Kantor Penuh)</option>
+                                    <option value="Satpam" <?= $gJab === 'Satpam' ? 'selected' : '' ?>>Satpam / Keamanan (Jam Kantor Penuh)</option>
+                                    <option value="Pustakawan" <?= $gJab === 'Pustakawan' ? 'selected' : '' ?>>Pustakawan (Jam Kantor Penuh)</option>
+                                    <option value="Laboran" <?= $gJab === 'Laboran' ? 'selected' : '' ?>>Laboran (Jam Kantor Penuh)</option>
+                                    <option value="Lainnya" <?= $gJab === 'Lainnya' ? 'selected' : '' ?>>Lainnya / Staf Khusus (Jam Kantor Penuh)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Email <span class="text-danger">*</span></label>
                                 <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($g['email']) ?>" required>
                             </div>
                             <div class="col-md-6">

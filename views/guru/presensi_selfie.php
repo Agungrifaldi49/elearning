@@ -210,12 +210,12 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
     <div class="card selfie-card p-3 p-md-4 mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
         <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
             <div class="d-flex align-items-start gap-3">
-                <div class="p-3 rounded-4 <?= $modePresensi === 'jadwal' ? 'bg-primary bg-opacity-10 text-primary' : ($modePresensi === 'serentak' ? 'bg-warning bg-opacity-15 text-warning' : 'bg-secondary bg-opacity-10 text-secondary') ?>">
-                    <i class="bi <?= $modePresensi === 'jadwal' ? 'bi-calendar-week-fill fs-3' : ($modePresensi === 'serentak' ? 'bi-megaphone-fill fs-3' : 'bi-info-circle-fill fs-3') ?>"></i>
+                <div class="p-3 rounded-4 <?= $modePresensi === 'jadwal' ? 'bg-primary bg-opacity-10 text-primary' : ($modePresensi === 'serentak' ? 'bg-warning bg-opacity-15 text-warning' : ($modePresensi === 'full_day_staff' ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-10 text-secondary')) ?>">
+                    <i class="bi <?= $modePresensi === 'jadwal' ? 'bi-calendar-week-fill fs-3' : ($modePresensi === 'serentak' ? 'bi-megaphone-fill fs-3' : ($modePresensi === 'full_day_staff' ? 'bi-briefcase-fill fs-3' : 'bi-info-circle-fill fs-3')) ?>"></i>
                 </div>
                 <div>
                     <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-                        <span class="badge <?= $modePresensi === 'jadwal' ? 'badge-soft-primary' : ($modePresensi === 'serentak' ? 'badge-soft-warning' : 'bg-light text-secondary border') ?> rounded-pill px-3 py-1 fw-bold">
+                        <span class="badge <?= $modePresensi === 'jadwal' ? 'badge-soft-primary' : ($modePresensi === 'serentak' ? 'badge-soft-warning' : ($modePresensi === 'full_day_staff' ? 'badge-soft-success' : 'bg-light text-secondary border')) ?> rounded-pill px-3 py-1 fw-bold">
                             <i class="bi bi-clock me-1"></i> <?= htmlspecialchars($effectiveJadwal['title'] ?? 'Skema Presensi') ?>
                         </span>
                         <span class="text-muted small">Hari: <b><?= htmlspecialchars($effectiveJadwal['hari'] ?? date('l')) ?></b></span>
@@ -223,6 +223,8 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
                     <h5 class="fw-bold text-dark mb-1">
                         <?php if ($modePresensi === 'serentak'): ?>
                             <?= htmlspecialchars(!empty($kegiatanNama) ? $kegiatanNama : 'Presensi Serentak Seluruh Guru') ?>
+                        <?php elseif ($modePresensi === 'full_day_staff'): ?>
+                            <?= htmlspecialchars(!empty($kegiatanNama) ? $kegiatanNama : 'Jam Kerja Kantor / Penuh (Full Day)') ?>
                         <?php elseif ($modePresensi === 'jadwal' && $isKbm): ?>
                             Jadwal KBM: <?= count($kbmList) ?> Sesi Kelas Hari Ini
                         <?php else: ?>
