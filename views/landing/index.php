@@ -115,16 +115,34 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
 
 /* Touch & Click Reliability for Hero & Navbar CTA */
 .hero-cta-btn,
-#mainNavbar .btn-warning {
+#mainNavbar .btn-warning,
+#btnHeroMulaiBelajar {
     touch-action: manipulation !important;
     cursor: pointer !important;
     -webkit-tap-highlight-color: rgba(255, 193, 7, 0.3) !important;
     position: relative !important;
     z-index: 10 !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    transition: transform 0.15s ease, opacity 0.15s ease !important;
+}
+
+.hero-cta-btn:active,
+#mainNavbar .btn-warning:active,
+#btnHeroMulaiBelajar:active {
+    transform: scale(0.97) !important;
+    opacity: 0.9 !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .hero-cta-btn:hover {
+        transform: translateY(-2px);
+    }
 }
 
 .hero-cta-btn *,
-#mainNavbar .btn-warning * {
+#mainNavbar .btn-warning *,
+#btnHeroMulaiBelajar * {
     pointer-events: none !important;
 }
 
@@ -479,7 +497,7 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
                     <?= Security::safeText($settings['landing_hero_desc'] ?? 'Sistem Manajemen Pembelajaran Digital Interaktif, Transparan, dan Modern untuk Membentuk Generasi Unggul Siap Kerja.') ?>
                 </p>
                 <div class="d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap position-relative" style="z-index: 10;">
-                    <a href="<?= BASE_URL ?>login.php" class="btn btn-warning btn-lg text-dark fw-bold px-4 py-3 rounded-pill shadow hero-cta-btn">
+                    <a href="<?= BASE_URL ?>login.php" id="btnHeroMulaiBelajar" class="btn btn-warning btn-lg text-dark fw-bold px-4 py-3 rounded-pill shadow hero-cta-btn">
                         <i class="bi bi-rocket-takeoff-fill me-2"></i> Mulai Belajar Sekarang
                     </a>
                     <a href="#jurusan" class="btn btn-outline-light btn-lg px-4 py-3 rounded-pill hero-cta-btn">
@@ -1040,23 +1058,67 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <?php endif; ?>
 
-<!-- Auto close navbar collapse on mobile when in-page anchor links are tapped -->
+<!-- Mobile Touch Reliability & Navbar Auto-Close Script -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const navCollapse = document.getElementById('navPublic');
+    const mainNavbar = document.getElementById('mainNavbar');
+
+    // 1. Auto-close navbar collapse on mobile when tapping outside or clicking in-page anchor links
     if (navCollapse) {
+        // Auto-close on in-page link navigation
         const inPageLinks = navCollapse.querySelectorAll('a[href^="#"]');
         inPageLinks.forEach(function(link) {
             link.addEventListener('click', function() {
                 if (window.innerWidth < 992 && typeof bootstrap !== 'undefined') {
                     const bsCollapse = bootstrap.Collapse.getInstance(navCollapse) || new bootstrap.Collapse(navCollapse, { toggle: false });
-                    if (bsCollapse) {
-                        bsCollapse.hide();
-                    }
+                    if (bsCollapse) bsCollapse.hide();
                 }
             });
         });
+
+        // Auto-close when tapping anywhere outside the navbar on mobile
+        document.addEventListener('touchstart', function(e) {
+            if (navCollapse.classList.contains('show') && mainNavbar && !mainNavbar.contains(e.target)) {
+                if (typeof bootstrap !== 'undefined') {
+                    const bsCollapse = bootstrap.Collapse.getInstance(navCollapse) || new bootstrap.Collapse(navCollapse, { toggle: false });
+                    if (bsCollapse) bsCollapse.hide();
+                }
+            }
+        }, { passive: true });
     }
+
+    // 2. High-reliability touch & click for "Mulai Belajar Sekarang" and Navbar CTA on Mobile
+    const ctaButtons = document.querySelectorAll('#btnHeroMulaiBelajar, .hero-cta-btn[href*="login.php"], #mainNavbar .btn-warning');
+    
+    ctaButtons.forEach(function(btn) {
+        let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+
+        btn.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                touchStartTime = Date.now();
+            }
+        }, { passive: true });
+
+        btn.addEventListener('touchend', function(e) {
+            if (e.changedTouches.length === 1) {
+                const endX = e.changedTouches[0].clientX;
+                const endY = e.changedTouches[0].clientY;
+                const dist = Math.hypot(endX - touchStartX, endY - touchStartY);
+                const duration = Date.now() - touchStartTime;
+
+                // If thumb tap (wobble < 30px and tap duration < 500ms), navigate immediately
+                if (dist < 30 && duration < 500) {
+                    const target = this.getAttribute('href');
+                    if (target && target !== '#') {
+                        window.location.href = target;
+                    }
+                }
+            }
+        }, { passive: true });
+    });
 });
 </script>
 
