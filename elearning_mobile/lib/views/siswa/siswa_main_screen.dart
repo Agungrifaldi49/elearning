@@ -487,6 +487,7 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
     required bool isDark,
   }) {
     final bool isSelected = _currentIndex == index;
+    final int effectiveBadge = isSelected ? 0 : badgeCount;
     const activeColor = Color(0xFF10B981);
     final Color inactiveColor = isDark ? Colors.white54 : Colors.grey.shade500;
 
@@ -495,6 +496,11 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
         setState(() {
           _currentIndex = index;
         });
+        if (index == 0) {
+          Provider.of<SiswaProvider>(context, listen: false).markAllJadwalAsSeen();
+        } else if (index == 1) {
+          Provider.of<SiswaProvider>(context, listen: false).markAllMateriAsSeen();
+        }
       },
       borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
@@ -509,10 +515,10 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            badgeCount > 0
+            effectiveBadge > 0
                 ? Badge(
                     label: Text(
-                      '$badgeCount',
+                      '$effectiveBadge',
                       style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                     backgroundColor: Colors.redAccent,

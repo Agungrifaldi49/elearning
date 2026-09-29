@@ -17,6 +17,7 @@ import 'guru_key_mapel_screen.dart';
 import 'guru_recap_absensi_screen.dart';
 import 'guru_scan_qr_screen.dart';
 import 'guru_presensi_selfie_screen.dart';
+import 'guru_wali_kelas_screen.dart';
 
 class GuruDashboardTab extends StatefulWidget {
   const GuruDashboardTab({super.key});
@@ -65,6 +66,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
 
     // Complete Features List for Guru
     final allFeatures = [
+      _buildFeatureGridItem(
+        icon: Icons.supervised_user_circle_rounded,
+        label: 'Wali Kelas',
+        color: const Color(0xFFF59E0B),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruWaliKelasScreen())),
+      ),
       _buildFeatureGridItem(
         icon: Icons.camera_front_rounded,
         label: 'Presensi Selfie',
@@ -385,6 +392,92 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                 ),
               ),
             ],
+
+            // Wali Kelas Special Banner (If Guru is a Wali Kelas)
+            Builder(
+              builder: (context) {
+                final isWali = guruProvider.dashboardData?['is_wali_kelas'] == true ||
+                    ((guruProvider.dashboardData?['wali_kelas_list'] as List?)?.isNotEmpty == true);
+                final waliList = (guruProvider.dashboardData?['wali_kelas_list'] as List?) ?? [];
+                final firstWali = waliList.isNotEmpty ? waliList.first : null;
+                final namaKelasBinaan = firstWali?['nama_kelas'] ?? 'Kelas Binaan';
+                final totalSiswaBinaan = firstWali?['total_siswa'] ?? 0;
+
+                if (!isWali) return const SizedBox.shrink();
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: InkWell(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruWaliKelasScreen())),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFD97706), Color(0xFFB45309), Color(0xFF78350F)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFD97706).withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(Icons.workspace_premium_rounded, color: Colors.white, size: 28),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.25),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Text(
+                                        'WALI KELAS BINAAN',
+                                        style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Kelola $namaKelasBinaan ($totalSiswaBinaan Siswa)',
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Kontrol absensi harian, nilai mapel & catatan rapor',
+                                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
 
             const SizedBox(height: 20),
 

@@ -119,16 +119,17 @@ class SiswaProvider with ChangeNotifier {
   Future<void> loadSeenState() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _seenMateriIds = (prefs.getStringList('seen_materi_ids') ?? []).map((e) => int.tryParse(e) ?? 0).toSet();
-      _seenTugasIds = (prefs.getStringList('seen_tugas_ids') ?? []).map((e) => int.tryParse(e) ?? 0).toSet();
-      _seenQuizIds = (prefs.getStringList('seen_quiz_ids') ?? []).map((e) => int.tryParse(e) ?? 0).toSet();
-      _seenJadwalIds = (prefs.getStringList('seen_jadwal_ids') ?? []).map((e) => int.tryParse(e) ?? 0).toSet();
-      _seenForumIds = (prefs.getStringList('seen_forum_ids') ?? []).map((e) => int.tryParse(e) ?? 0).toSet();
+      _seenMateriIds = (prefs.getStringList('seen_materi_ids') ?? []).map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
+      _seenTugasIds = (prefs.getStringList('seen_tugas_ids') ?? []).map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
+      _seenQuizIds = (prefs.getStringList('seen_quiz_ids') ?? []).map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
+      _seenJadwalIds = (prefs.getStringList('seen_jadwal_ids') ?? []).map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
+      _seenForumIds = (prefs.getStringList('seen_forum_ids') ?? []).map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
       notifyListeners();
     } catch (_) {}
   }
 
   void markJadwalAsSeen(int id) async {
+    if (id <= 0) return;
     if (!_seenJadwalIds.contains(id)) {
       _seenJadwalIds.add(id);
       notifyListeners();
@@ -139,13 +140,18 @@ class SiswaProvider with ChangeNotifier {
     }
   }
 
-  void markAllJadwalAsSeen() async {
-    _seenJadwalIds.addAll(_jadwalList.map((j) => j.id));
-    notifyListeners();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('seen_jadwal_ids', _seenJadwalIds.map((e) => e.toString()).toList());
-    } catch (_) {}
+  void markAllJadwalAsSeen({List<JadwalModel>? jadwal}) async {
+    final list = (jadwal != null && jadwal.isNotEmpty) ? jadwal : _jadwalList;
+    if (list.isNotEmpty) {
+      final newIds = list.map((j) => j.id).where((id) => id > 0).toSet();
+      if (_seenJadwalIds.containsAll(newIds)) return;
+      _seenJadwalIds.addAll(newIds);
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('seen_jadwal_ids', _seenJadwalIds.map((e) => e.toString()).toList());
+      } catch (_) {}
+    }
   }
 
   void markForumAsSeen(int id) async {

@@ -50,10 +50,14 @@ class _SiswaJadwalTabState extends State<SiswaJadwalTab> {
     super.dispose();
   }
 
-  void _loadJadwal() {
+  void _loadJadwal() async {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user != null) {
-      Provider.of<SiswaProvider>(context, listen: false).fetchJadwal(user.id);
+      final sp = Provider.of<SiswaProvider>(context, listen: false);
+      await sp.fetchJadwal(user.id);
+      if (mounted) {
+        sp.markAllJadwalAsSeen();
+      }
     }
   }
 
@@ -75,6 +79,14 @@ class _SiswaJadwalTabState extends State<SiswaJadwalTab> {
     final siswaProvider = Provider.of<SiswaProvider>(context);
     final allJadwal = siswaProvider.jadwalList;
     final todayName = _getTodayName();
+
+    if (allJadwal.isNotEmpty && siswaProvider.unreadJadwalCount > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          siswaProvider.markAllJadwalAsSeen(jadwal: allJadwal);
+        }
+      });
+    }
 
     final filteredJadwal = allJadwal.where((j) {
       final matchesHari = _selectedHari == 'Semua' || j.hari.toLowerCase() == _selectedHari.toLowerCase();

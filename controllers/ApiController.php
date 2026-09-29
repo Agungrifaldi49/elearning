@@ -1934,11 +1934,26 @@ class ApiController {
                 $materiTerbaru = array_slice($materiList, 0, 5);
                 $tugasTerbaru = array_slice($tugasList, 0, 5);
 
+                // Check if this guru is a wali kelas
+                $stmtWali = $this->db->prepare("
+                    SELECT k.*, j.nama_jurusan, j.kode_jurusan,
+                           (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id) as total_siswa
+                    FROM kelas k
+                    LEFT JOIN jurusan j ON k.jurusan_id = j.id
+                    WHERE k.wali_kelas_id = ?
+                    ORDER BY k.tingkat ASC, k.nama_kelas ASC
+                ");
+                $stmtWali->execute([$guruId]);
+                $myWaliKelas = $stmtWali->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $isWaliKelas = !empty($myWaliKelas);
+
                 $this->jsonResponse(true, 'Dashboard Guru Overview', [
                     'guru' => $guru,
                     'user' => $userObj ?: ['full_name' => $guru['nama_lengkap']],
                     'tahun_ajaran' => $tahunAjaranStr,
                     'active_ta' => $activeTa,
+                    'is_wali_kelas' => $isWaliKelas,
+                    'wali_kelas_list' => $myWaliKelas,
                     'stats' => [
                         'materi' => $totalMateri,
                         'tugas' => $totalTugas,
@@ -3064,6 +3079,292 @@ class ApiController {
                 }
                 break;
 
+            case 'wali_kelas':
+            case 'wali-kelas':
+            case 'kelas_binaan':
+                $stmtWali = $this->db->prepare("
+                    SELECT k.*, j.nama_jurusan, j.kode_jurusan,
+                           (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id) as total_siswa
+                    FROM kelas k
+                    LEFT JOIN jurusan j ON k.jurusan_id = j.id
+                    WHERE k.wali_kelas_id = ?
+                    ORDER BY k.tingkat ASC, k.nama_kelas ASC
+                ");
+                $stmtWali->execute([$guruId]);
+                $myWaliKelas = $stmtWali->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                if (empty($myWaliKelas) && (isset($userObj['role_id']) && (int)$userObj['role_id'] === 1)) {
+                    $stmtAllWali = $this->db->query("
+                        SELECT k.*, j.nama_jurusan, j.kode_jurusan,
+                               (SELECT COUNT(*) FROM siswa s WHERE s.kelas_id = k.id) as total_siswa
+                        FROM kelas k
+                        LEFT JOIN jurusan j ON k.jurusan_id = j.id
+                        WHERE k.wali_kelas_id IS NOT NULL AND k.wali_kelas_id > 0
+                        ORDER BY k.tingkat ASC, k.nama_kelas ASC
+                    ");
+                    $myWaliKelas = $stmtAllWali->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                }
+
+                if (empty($myWaliKelas)) {
+                    $this->jsonResponse(true, 'Guru bukan wali kelas', [
+                        'is_wali_kelas' => false,
+                        'kelas_binaan' => null,
+                        'wali_kelas_list' => [],
+                        'siswa_list' => [],
+                        'stats' => [
+                            'total_siswa' => 0,
+                            'avg_nilai' => 0,
+                            'kehadiran_persen' => 0
+                        ]
+                    ]);
+                    break;
+                }
+
+                $input = $this->getPostInput();
+                $action = $input['action'] ?? $_POST['action'] ?? '';
+
+                // Handle POST Actions from mobile
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    if ($action === 'save_catatan_wali') {
+                        $siswaId = intval($input['siswa_id'] ?? $_POST['siswa_id'] ?? 0);
+                        $catatan = trim($input['catatan'] ?? $_POST['catatan'] ?? '');
+                        if ($siswaId <= 0) {
+                            $this->jsonResponse(false, 'Siswa ID tidak valid', null, 400);
+                        }
+
+                        $taRow = $academicModel->getActiveTahunAjaran();
+                        $taId = intval($taRow['id'] ?? 1);
+                        $sem = trim($taRow['semester'] ?? 'Ganjil');
+
+                        try {
+                            require_once ROOT_PATH . 'models/CurriculumModel.php';
+                            $currModel = new CurriculumModel();
+                            $currModel->generateOrSyncRaporSiswa($siswaId, $taId, $sem);
+                        } catch (\Throwable $eC) {}
+
+                        try {
+                            $stmtUp = $this->db->prepare("
+                                UPDATE rapor_siswa 
+                                SET catatan_wali_kelas = ?, catatan_akademik = ? 
+                                WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ?
+                            ");
+                            $stmtUp->execute([$catatan, $catatan, $siswaId, $taId, $sem]);
+                            $this->jsonResponse(true, 'Catatan wali kelas berhasil diperbarui!');
+                        } catch (\Throwable $eUp) {
+                            $this->jsonResponse(false, 'Gagal menyimpan catatan: ' . $eUp->getMessage(), null, 500);
+                        }
+                    }
+
+                    if ($action === 'input_absensi_siswa') {
+                        $siswaId = intval($input['siswa_id'] ?? $_POST['siswa_id'] ?? 0);
+                        $status = ucfirst(strtolower(trim($input['status'] ?? $_POST['status'] ?? 'Hadir')));
+                        $tanggal = trim($input['tanggal'] ?? $_POST['tanggal'] ?? date('Y-m-d'));
+                        $keterangan = trim($input['keterangan'] ?? $_POST['keterangan'] ?? '');
+
+                        if ($siswaId <= 0) {
+                            $this->jsonResponse(false, 'Siswa ID tidak valid', null, 400);
+                        }
+
+                        try {
+                            $sClass = $this->db->query("SELECT kelas_id FROM siswa WHERE id = $siswaId LIMIT 1")->fetchColumn();
+                            $stmtCheckAbs = $this->db->prepare("SELECT id FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
+                            $stmtCheckAbs->execute([$siswaId, $tanggal]);
+                            $existAbsId = $stmtCheckAbs->fetchColumn();
+
+                            if ($existAbsId) {
+                                $stmtUpdAbs = $this->db->prepare("UPDATE absensi SET status = ?, keterangan = ?, waktu_absen = NOW() WHERE id = ?");
+                                $stmtUpdAbs->execute([$status, $keterangan, $existAbsId]);
+                            } else {
+                                $stmtInsAbs = $this->db->prepare("INSERT INTO absensi (siswa_id, kelas_id, guru_id, tanggal, waktu_absen, status, keterangan) VALUES (?, ?, ?, ?, NOW(), ?, ?)");
+                                $stmtInsAbs->execute([$siswaId, $sClass ?: null, $guruId, $tanggal, $status, $keterangan]);
+                            }
+                            $this->jsonResponse(true, 'Presensi siswa berhasil disimpan!', [
+                                'siswa_id' => $siswaId,
+                                'status' => $status,
+                                'tanggal' => $tanggal
+                            ]);
+                        } catch (\Throwable $eAbs) {
+                            $this->jsonResponse(false, 'Gagal menyimpan absensi: ' . $eAbs->getMessage(), null, 500);
+                        }
+                    }
+                }
+
+                // Selected class
+                $reqKelasId = intval($_GET['kelas_id'] ?? 0);
+                $selectedKelas = null;
+                if ($reqKelasId > 0) {
+                    foreach ($myWaliKelas as $mw) {
+                        if (intval($mw['id']) === $reqKelasId) {
+                            $selectedKelas = $mw;
+                            break;
+                        }
+                    }
+                }
+                if (!$selectedKelas) {
+                    $selectedKelas = $myWaliKelas[0];
+                }
+                $kelasId = intval($selectedKelas['id']);
+
+                // Fetch students in this class
+                $stmtSiswa = $this->db->prepare("
+                    SELECT s.*, u.username, u.avatar, u.email as user_email
+                    FROM siswa s
+                    LEFT JOIN users u ON s.user_id = u.id
+                    WHERE s.kelas_id = ?
+                    ORDER BY s.nama_lengkap ASC
+                ");
+                $stmtSiswa->execute([$kelasId]);
+                $siswaRaw = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                $activeTa = $academicModel->getActiveTahunAjaran();
+                $taId = intval($activeTa['id'] ?? 1);
+                $sem = trim($activeTa['semester'] ?? 'Ganjil');
+
+                $studentList = [];
+                $totalNilaiRombel = 0;
+                $studentsWithGrades = 0;
+                $totalHadirRombel = 0;
+                $totalPresensiRombel = 0;
+
+                foreach ($siswaRaw as $s) {
+                    $sId = intval($s['id']);
+
+                    // Absensi per siswa
+                    $stmtAbs = $this->db->prepare("
+                        SELECT 
+                            COUNT(*) as total,
+                            COUNT(CASE WHEN LOWER(TRIM(status)) = 'hadir' THEN 1 END) as hadir,
+                            COUNT(CASE WHEN LOWER(TRIM(status)) IN ('izin', 'ijin') THEN 1 END) as izin,
+                            COUNT(CASE WHEN LOWER(TRIM(status)) = 'sakit' THEN 1 END) as sakit,
+                            COUNT(CASE WHEN LOWER(TRIM(status)) IN ('alpa', 'alpha', 'tanpa keterangan') THEN 1 END) as alpa
+                        FROM absensi 
+                        WHERE siswa_id = ?
+                    ");
+                    $stmtAbs->execute([$sId]);
+                    $absData = $stmtAbs->fetch(PDO::FETCH_ASSOC) ?: [];
+
+                    $totAbs = intval($absData['total'] ?? 0);
+                    $hadirAbs = intval($absData['hadir'] ?? 0);
+                    $izinAbs = intval($absData['izin'] ?? 0);
+                    $sakitAbs = intval($absData['sakit'] ?? 0);
+                    $alpaAbs = intval($absData['alpa'] ?? 0);
+                    $persenKehadiran = $totAbs > 0 ? round(($hadirAbs / $totAbs) * 100) : 100;
+
+                    // Today's attendance
+                    $stmtTodayAbs = $this->db->prepare("SELECT status FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
+                    $stmtTodayAbs->execute([$sId, date('Y-m-d')]);
+                    $statusToday = $stmtTodayAbs->fetchColumn() ?: 'Belum Absen';
+
+                    // Grades per mapel for this siswa
+                    $stmtGrades = $this->db->prepare("
+                        SELECT nr.*, mp.nama_mapel, mp.kode_mapel
+                        FROM nilai_rapor nr
+                        JOIN mata_pelajaran mp ON nr.mapel_id = mp.id
+                        WHERE nr.siswa_id = ?
+                        ORDER BY mp.nama_mapel ASC
+                    ");
+                    $stmtGrades->execute([$sId]);
+                    $gradeRows = $stmtGrades->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                    $sumNilai = 0;
+                    $mapelDetailList = [];
+                    foreach ($gradeRows as $gr) {
+                        $nAkhir = floatval($gr['nilai_akhir'] ?? 0);
+                        $sumNilai += $nAkhir;
+                        $mapelDetailList[] = [
+                            'mapel_id' => intval($gr['mapel_id']),
+                            'nama_mapel' => $gr['nama_mapel'],
+                            'kode_mapel' => $gr['kode_mapel'] ?? '',
+                            'nilai_tugas' => floatval($gr['nilai_tugas'] ?? 0),
+                            'nilai_quiz' => floatval($gr['nilai_quiz'] ?? 0),
+                            'nilai_uts' => floatval($gr['nilai_uts'] ?? 0),
+                            'nilai_uas' => floatval($gr['nilai_uas'] ?? 0),
+                            'nilai_akhir' => $nAkhir,
+                        ];
+                    }
+
+                    $totalMapels = count($mapelDetailList);
+                    $avgNilai = $totalMapels > 0 ? round($sumNilai / $totalMapels, 1) : 0.0;
+                    if ($totalMapels > 0) {
+                        $totalNilaiRombel += $avgNilai;
+                        $studentsWithGrades++;
+                    }
+
+                    // Predikat
+                    $predikat = 'B';
+                    if ($avgNilai >= 90) $predikat = 'A';
+                    elseif ($avgNilai >= 80) $predikat = 'B';
+                    elseif ($avgNilai >= 70) $predikat = 'C';
+                    elseif ($avgNilai > 0) $predikat = 'D';
+                    else $predikat = '-';
+
+                    // Catatan wali kelas from rapor_siswa
+                    $catatanWali = '';
+                    try {
+                        $stmtCat = $this->db->prepare("
+                            SELECT COALESCE(catatan_wali_kelas, catatan_akademik, '') 
+                            FROM rapor_siswa 
+                            WHERE siswa_id = ? AND tahun_ajaran_id = ? AND semester = ? 
+                            LIMIT 1
+                        ");
+                        $stmtCat->execute([$sId, $taId, $sem]);
+                        $catatanWali = $stmtCat->fetchColumn() ?: '';
+                    } catch (\Throwable $eCat) {}
+
+                    // Avatar URL
+                    $avatar = $s['avatar'] ?? '';
+                    $avatarUrl = (!empty($avatar) && $avatar !== 'default_avatar.png')
+                        ? BASE_URL . 'assets/uploads/avatars/' . $avatar
+                        : 'https://ui-avatars.com/api/?name=' . urlencode($s['nama_lengkap']) . '&background=4338CA&color=fff';
+
+                    $studentList[] = [
+                        'id' => $sId,
+                        'user_id' => intval($s['user_id'] ?? 0),
+                        'nama_lengkap' => $s['nama_lengkap'],
+                        'nis' => $s['nis'] ?? '-',
+                        'nisn' => $s['nisn'] ?? '-',
+                        'jenis_kelamin' => $s['jenis_kelamin'] ?? '-',
+                        'no_telepon' => $s['no_telepon'] ?? '',
+                        'alamat' => $s['alamat'] ?? '',
+                        'avatar' => $avatarUrl,
+                        'absensi' => [
+                            'total' => $totAbs,
+                            'hadir' => $hadirAbs,
+                            'izin' => $izinAbs,
+                            'sakit' => $sakitAbs,
+                            'alpa' => $alpaAbs,
+                            'persentase' => $persenKehadiran,
+                            'status_hari_ini' => $statusToday
+                        ],
+                        'nilai' => [
+                            'avg' => $avgNilai,
+                            'predikat' => $predikat,
+                            'total_mapel' => $totalMapels,
+                            'mapels' => $mapelDetailList
+                        ],
+                        'catatan_wali' => $catatanWali
+                    ];
+
+                    $totalHadirRombel += $hadirAbs;
+                    $totalPresensiRombel += $totAbs;
+                }
+
+                $rombelAvgNilai = $studentsWithGrades > 0 ? round($totalNilaiRombel / $studentsWithGrades, 1) : 0.0;
+                $rombelKehadiran = $totalPresensiRombel > 0 ? round(($totalHadirRombel / $totalPresensiRombel) * 100) : 100;
+
+                $this->jsonResponse(true, 'Data Kelas Binaan Wali Kelas', [
+                    'is_wali_kelas' => true,
+                    'kelas_binaan' => $selectedKelas,
+                    'wali_kelas_list' => $myWaliKelas,
+                    'siswa_list' => $studentList,
+                    'stats' => [
+                        'total_siswa' => count($studentList),
+                        'avg_nilai' => $rombelAvgNilai,
+                        'kehadiran_persen' => $rombelKehadiran,
+                    ]
+                ]);
+                break;
+
             default:
                 $this->jsonResponse(false, 'Endpoint guru tidak ditemukan', null, 404);
         }
@@ -3240,29 +3541,222 @@ class ApiController {
     }
 
     public function live_class() {
+        require_once ROOT_PATH . 'models/LearningModel.php';
+        $learningModel = new LearningModel();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $input = $this->getPostInput();
+            $action = $input['action'] ?? $_POST['action'] ?? 'create';
+
+            if ($action === 'delete') {
+                $id = (int)($input['id'] ?? $_POST['id'] ?? 0);
+                if ($id <= 0) {
+                    $this->jsonResponse(false, 'ID live meeting tidak valid', null, 400);
+                }
+                $success = $learningModel->deleteLiveClass($id, null, true);
+                if ($success) {
+                    $this->jsonResponse(true, 'Sesi live meeting berhasil dihapus');
+                } else {
+                    $this->jsonResponse(false, 'Gagal menghapus sesi live meeting');
+                }
+            }
+
+            // Create live class
+            $userId = (int)($input['user_id'] ?? $_POST['user_id'] ?? 0);
+            $guruId = 0;
+            if ($userId > 0) {
+                $stmtG = $this->db->prepare("SELECT id FROM guru WHERE user_id = ? OR id = ? LIMIT 1");
+                $stmtG->execute([$userId, $userId]);
+                $guruId = (int)$stmtG->fetchColumn();
+            }
+            if ($guruId <= 0) {
+                $stmtG = $this->db->query("SELECT id FROM guru ORDER BY id ASC LIMIT 1");
+                $guruId = (int)$stmtG->fetchColumn();
+            }
+
+            $mapelId = (int)($input['mapel_id'] ?? $_POST['mapel_id'] ?? 0);
+            $kelasId = !empty($input['kelas_id'] ?? $_POST['kelas_id']) ? (int)($input['kelas_id'] ?? $_POST['kelas_id']) : null;
+            $topik = trim($input['topik'] ?? $_POST['topik'] ?? '');
+            $deskripsi = trim($input['deskripsi'] ?? $_POST['deskripsi'] ?? '');
+            $platform = strtolower(trim($input['platform'] ?? $_POST['platform'] ?? 'meet'));
+            if (!in_array($platform, ['embedded', 'meet', 'zoom', 'teams'])) {
+                $platform = 'meet';
+            }
+            $meetingLink = trim($input['meeting_link'] ?? $_POST['meeting_link'] ?? '');
+            $tglPertemuan = $input['tgl_pertemuan'] ?? $_POST['tgl_pertemuan'] ?? date('Y-m-d');
+            $jamMulai = $input['jam_mulai'] ?? $_POST['jam_mulai'] ?? date('H:i');
+            $jamSelesai = !empty($input['jam_selesai'] ?? $_POST['jam_selesai']) ? ($input['jam_selesai'] ?? $_POST['jam_selesai']) : null;
+
+            if (empty($topik)) {
+                $this->jsonResponse(false, 'Topik meeting wajib diisi', null, 400);
+            }
+            if ($mapelId <= 0) {
+                $firstMapel = $this->db->query("SELECT id FROM mata_pelajaran ORDER BY id ASC LIMIT 1")->fetchColumn();
+                $mapelId = $firstMapel ? (int)$firstMapel : 1;
+            }
+
+            $createdId = $learningModel->createLiveClass($guruId, $mapelId, $kelasId, $topik, $deskripsi, $platform, $meetingLink, $tglPertemuan, $jamMulai, $jamSelesai);
+            if ($createdId) {
+                $this->jsonResponse(true, 'Sesi live meeting berhasil dibuat', ['id' => $createdId]);
+            } else {
+                $this->jsonResponse(false, 'Gagal membuat sesi live meeting');
+            }
+        }
+
+        // GET request
         try {
-            $stmt = $this->db->query("
-                SELECT lc.*, mp.nama_mapel, g.nama_lengkap as nama_guru, k.nama_kelas 
+            $userId = (int)($_GET['user_id'] ?? 0);
+            $role = strtolower(trim($_GET['role'] ?? ''));
+
+            $filterKelasId = null;
+            $filterGuruId = null;
+
+            if ($role === 'siswa' && $userId > 0) {
+                $stmtS = $this->db->prepare("SELECT kelas_id FROM siswa WHERE user_id = ? OR id = ? LIMIT 1");
+                $stmtS->execute([$userId, $userId]);
+                $sKelas = $stmtS->fetchColumn();
+                if ($sKelas) {
+                    $filterKelasId = (int)$sKelas;
+                }
+            } elseif ($role === 'guru' && $userId > 0) {
+                $stmtG = $this->db->prepare("SELECT id FROM guru WHERE user_id = ? OR id = ? LIMIT 1");
+                $stmtG->execute([$userId, $userId]);
+                $gId = $stmtG->fetchColumn();
+                if ($gId) {
+                    $filterGuruId = (int)$gId;
+                }
+            }
+
+            $sql = "
+                SELECT lc.*, 
+                       COALESCE(mp.nama_mapel, 'Mata Pelajaran Umum') as nama_mapel, 
+                       COALESCE(g.nama_lengkap, 'Guru Pengampu') as nama_guru, 
+                       COALESCE(k.nama_kelas, 'Semua Kelas (Umum)') as nama_kelas,
+                       u.avatar as avatar_guru
                 FROM live_class lc 
                 LEFT JOIN mata_pelajaran mp ON lc.mapel_id = mp.id 
                 LEFT JOIN guru g ON lc.guru_id = g.id 
+                LEFT JOIN users u ON g.user_id = u.id
                 LEFT JOIN kelas k ON lc.kelas_id = k.id 
-                ORDER BY lc.created_at DESC LIMIT 20
-            ");
-            $classes = $stmt->fetchAll();
-            $this->jsonResponse(true, 'Daftar Kelas Virtual Live Meeting', $classes);
-        } catch (\Throwable $e) {
-            $this->jsonResponse(true, 'Daftar Kelas Virtual Live Meeting', [
-                [
-                    'id' => 1,
-                    'topik' => 'Live Zoom Pembelajaran Pemrograman Mobile',
-                    'nama_guru' => 'Tim Pengajar MH',
-                    'nama_kelas' => 'XII RPL',
-                    'waktu' => date('Y-m-d H:i:s'),
-                    'meeting_link' => 'https://meet.google.com/abc-defg-hij',
-                    'status' => 'Ongoing'
-                ]
+                WHERE (lc.is_active IS NULL OR lc.is_active = 1)
+            ";
+            $params = [];
+
+            if ($filterKelasId !== null && $filterKelasId > 0) {
+                $sql .= " AND (lc.kelas_id IS NULL OR lc.kelas_id = 0 OR lc.kelas_id = ?) ";
+                $params[] = $filterKelasId;
+            }
+
+            $sql .= " ORDER BY lc.tgl_pertemuan DESC, lc.jam_mulai DESC, lc.id DESC LIMIT 50";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $rawClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $today = date('Y-m-d');
+            $classes = [];
+
+            foreach ($rawClasses as $m) {
+                $tgl = $m['tgl_pertemuan'] ?? $today;
+                $mulai = !empty($m['jam_mulai']) ? substr($m['jam_mulai'], 0, 5) : '08:00';
+                $selesai = !empty($m['jam_selesai']) ? substr($m['jam_selesai'], 0, 5) : '';
+
+                $startTimeSec = strtotime($tgl . ' ' . (!empty($m['jam_mulai']) ? $m['jam_mulai'] : '08:00:00'));
+                $endTimeStr = !empty($m['jam_selesai']) ? $m['jam_selesai'] : date('H:i:s', strtotime(($m['jam_mulai'] ?? '08:00:00') . ' + 2 hours'));
+                $endTimeSec = strtotime($tgl . ' ' . $endTimeStr);
+                $nowSec = time();
+
+                $isLive = false;
+                if ($nowSec >= $startTimeSec && $nowSec <= $endTimeSec) {
+                    $isLive = true;
+                    $status = 'Sedang Berlangsung';
+                } elseif ($nowSec > $endTimeSec) {
+                    $status = 'Telah Selesai';
+                } else {
+                    $status = 'Terjadwal';
+                }
+
+                $timeStr = $mulai . ($selesai ? ' - ' . $selesai : '') . ' WIB';
+                if ($tgl === $today) {
+                    $waktuFormatted = 'Hari Ini, ' . $timeStr;
+                } elseif ($tgl === date('Y-m-d', strtotime('+1 day'))) {
+                    $waktuFormatted = 'Besok, ' . $timeStr;
+                } elseif ($tgl === date('Y-m-d', strtotime('-1 day'))) {
+                    $waktuFormatted = 'Kemarin, ' . $timeStr;
+                } else {
+                    $bulanIndo = [
+                        1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun',
+                        7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'
+                    ];
+                    $ts = strtotime($tgl);
+                    $d = date('d', $ts);
+                    $mNum = (int)date('m', $ts);
+                    $y = date('Y', $ts);
+                    $waktuFormatted = $d . ' ' . ($bulanIndo[$mNum] ?? date('M', $ts)) . ' ' . $y . ', ' . $timeStr;
+                }
+
+                $platform = strtolower($m['platform'] ?? 'embedded');
+                $platformLabel = 'Virtual Room LMS';
+                if ($platform === 'meet') {
+                    $platformLabel = 'Google Meet';
+                } elseif ($platform === 'zoom') {
+                    $platformLabel = 'Zoom Meeting';
+                } elseif ($platform === 'teams') {
+                    $platformLabel = 'Microsoft Teams';
+                }
+
+                $meetingLink = trim($m['meeting_link'] ?? '');
+                if (empty($meetingLink) || $platform === 'embedded') {
+                    $roomCode = $m['room_code'] ?? '';
+                    $meetingLink = BASE_URL . 'index.php?url=' . ($role === 'guru' ? 'guru/liveClass' : 'siswa/liveClass') . ($roomCode ? '&room=' . urlencode($roomCode) : '');
+                }
+
+                $avatarUrl = !empty($m['avatar_guru']) 
+                    ? BASE_URL . 'assets/uploads/avatars/' . $m['avatar_guru']
+                    : 'https://ui-avatars.com/api/?name=' . urlencode($m['nama_guru'] ?? 'Guru') . '&background=4338CA&color=fff';
+
+                $isOwner = false;
+                if ($filterGuruId && (int)($m['guru_id'] ?? 0) === $filterGuruId) {
+                    $isOwner = true;
+                }
+
+                $classes[] = [
+                    'id' => (int)$m['id'],
+                    'guru_id' => (int)$m['guru_id'],
+                    'mapel_id' => (int)$m['mapel_id'],
+                    'kelas_id' => $m['kelas_id'] ? (int)$m['kelas_id'] : null,
+                    'topik' => $m['topik'],
+                    'deskripsi' => $m['deskripsi'] ?? '',
+                    'platform' => $platform,
+                    'platform_label' => $platformLabel,
+                    'meeting_link' => $meetingLink,
+                    'raw_meeting_link' => $m['meeting_link'] ?? '',
+                    'room_code' => $m['room_code'] ?? '',
+                    'tgl_pertemuan' => $m['tgl_pertemuan'],
+                    'jam_mulai' => $mulai,
+                    'jam_selesai' => $selesai,
+                    'waktu' => $waktuFormatted,
+                    'status' => $status,
+                    'is_live' => $isLive,
+                    'nama_mapel' => $m['nama_mapel'],
+                    'nama_guru' => $m['nama_guru'],
+                    'nama_kelas' => $m['nama_kelas'],
+                    'avatar_guru' => $avatarUrl,
+                    'is_owner' => $isOwner,
+                    'is_active' => (int)($m['is_active'] ?? 1),
+                ];
+            }
+
+            // Options for teacher to schedule
+            $mapelOptions = $this->db->query("SELECT id, nama_mapel FROM mata_pelajaran ORDER BY nama_mapel ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $kelasOptions = $this->db->query("SELECT id, nama_kelas FROM kelas ORDER BY nama_kelas ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $this->jsonResponse(true, 'Daftar Kelas Virtual Live Meeting', $classes, 200, [
+                'mapel_options' => $mapelOptions,
+                'kelas_options' => $kelasOptions,
             ]);
+        } catch (\Throwable $e) {
+            // NEVER return dummy data! Return empty array.
+            $this->jsonResponse(true, 'Daftar Kelas Virtual Live Meeting', []);
         }
     }
 
