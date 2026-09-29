@@ -3228,6 +3228,12 @@ class ApiController {
                 $totalHadirRombel = 0;
                 $totalPresensiRombel = 0;
 
+                $countHadirToday = 0;
+                $countIzinToday = 0;
+                $countSakitToday = 0;
+                $countAlpaToday = 0;
+                $countBelumAbsenToday = 0;
+
                 foreach ($siswaRaw as $s) {
                     $sId = intval($s['id']);
 
@@ -3252,10 +3258,38 @@ class ApiController {
                     $alpaAbs = intval($absData['alpa'] ?? 0);
                     $persenKehadiran = $totAbs > 0 ? round(($hadirAbs / $totAbs) * 100) : 100;
 
-                    // Attendance for selected date
-                    $stmtTodayAbs = $this->db->prepare("SELECT status FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
+                    // Attendance details for selected date
+                    $stmtTodayAbs = $this->db->prepare("
+                        SELECT id, status, waktu_masuk, waktu_pulang, waktu_hadir, keterangan 
+                        FROM absensi 
+                        WHERE siswa_id = ? AND tanggal = ? 
+                        ORDER BY id DESC LIMIT 1
+                    ");
                     $stmtTodayAbs->execute([$sId, $filterTanggal]);
-                    $statusToday = $stmtTodayAbs->fetchColumn() ?: 'Belum Absen';
+                    $absRowToday = $stmtTodayAbs->fetch(PDO::FETCH_ASSOC);
+
+                    $hasAttended = !empty($absRowToday);
+                    $statusToday = $hasAttended ? ($absRowToday['status'] ?? 'Hadir') : 'Belum Absen';
+                    $waktuMasukStr = '';
+                    if (!empty($absRowToday['waktu_masuk'])) {
+                        $waktuMasukStr = date('H:i', strtotime($absRowToday['waktu_masuk'])) . ' WIB';
+                    } elseif (!empty($absRowToday['waktu_hadir'])) {
+                        $waktuMasukStr = date('H:i', strtotime($absRowToday['waktu_hadir'])) . ' WIB';
+                    }
+                    $keteranganToday = $absRowToday['keterangan'] ?? '';
+
+                    $statLower = strtolower(trim($statusToday));
+                    if ($statLower === 'hadir') {
+                        $countHadirToday++;
+                    } elseif (in_array($statLower, ['izin', 'ijin'])) {
+                        $countIzinToday++;
+                    } elseif ($statLower === 'sakit') {
+                        $countSakitToday++;
+                    } elseif (in_array($statLower, ['alpa', 'alpha', 'tanpa keterangan'])) {
+                        $countAlpaToday++;
+                    } else {
+                        $countBelumAbsenToday++;
+                    }
 
                     // Grades per mapel for this siswa strictly from enrolled mapels (siswa_mapel_enrollment)
                     $stmtGrades = $this->db->prepare("
@@ -3346,7 +3380,11 @@ class ApiController {
                             'sakit' => $sakitAbs,
                             'alpa' => $alpaAbs,
                             'persentase' => $persenKehadiran,
-                            'status_hari_ini' => $statusToday
+                            'status_hari_ini' => $statusToday,
+                            'sudah_absen' => $hasAttended && !in_array($statLower, ['belum absen', '']),
+                            'waktu_masuk' => $waktuMasukStr,
+                            'keterangan' => $keteranganToday,
+                            'tanggal' => $filterTanggal,
                         ],
                         'nilai' => [
                             'avg' => $avgNilai,
@@ -3373,6 +3411,12 @@ class ApiController {
                         'total_siswa' => count($studentList),
                         'avg_nilai' => $rombelAvgNilai,
                         'kehadiran_persen' => $rombelKehadiran,
+                        'tanggal_terpilih' => $filterTanggal,
+                        'hadir_hari_ini' => $countHadirToday,
+                        'izin_hari_ini' => $countIzinToday,
+                        'sakit_hari_ini' => $countSakitToday,
+                        'alpa_hari_ini' => $countAlpaToday,
+                        'belum_absen_hari_ini' => $countBelumAbsenToday,
                     ]
                 ]);
                 break;

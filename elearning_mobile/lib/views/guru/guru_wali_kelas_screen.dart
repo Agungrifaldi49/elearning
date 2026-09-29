@@ -29,6 +29,8 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
   String _searchQuery = '';
   String _filterTag = 'all'; // 'all', 'alpa', 'prestasi'
   DateTime _presensiDate = DateTime.now();
+  String _presensiSearchQuery = '';
+  String _presensiStatusFilter = 'all'; // 'all', 'perlu_tinjauan', 'belum_absen', 'alpa', 'izin_sakit', 'hadir'
 
   @override
   void initState() {
@@ -91,7 +93,34 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
     }
   }
 
-  Future<void> _updateAbsensi(int siswaId, String status) async {
+  void _recalculateStats() {
+    int hadir = 0;
+    int izin = 0;
+    int sakit = 0;
+    int alpa = 0;
+    int belum = 0;
+    for (var s in _siswaList) {
+      final st = (s['absensi']?['status_hari_ini'] ?? 'Belum Absen').toString().toLowerCase();
+      if (st == 'hadir') {
+        hadir++;
+      } else if (st == 'izin' || st == 'ijin') {
+        izin++;
+      } else if (st == 'sakit') {
+        sakit++;
+      } else if (st == 'alpa' || st == 'alpha' || st == 'tanpa keterangan') {
+        alpa++;
+      } else {
+        belum++;
+      }
+    }
+    _stats['hadir_hari_ini'] = hadir;
+    _stats['izin_hari_ini'] = izin;
+    _stats['sakit_hari_ini'] = sakit;
+    _stats['alpa_hari_ini'] = alpa;
+    _stats['belum_absen_hari_ini'] = belum;
+  }
+
+  Future<void> _updateAbsensi(int siswaId, String status, [String? keterangan]) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final uid = auth.currentUser?.id ?? 0;
     final dateStr = '${_presensiDate.year}-${_presensiDate.month.toString().padLeft(2, '0')}-${_presensiDate.day.toString().padLeft(2, '0')}';
@@ -100,25 +129,48 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
     setState(() {
       for (var s in _siswaList) {
         if (int.tryParse(s['id'].toString()) == siswaId) {
+          if (s['absensi'] == null) {
+            s['absensi'] = <String, dynamic>{};
+          }
           s['absensi']['status_hari_ini'] = status;
+          s['absensi']['sudah_absen'] = status.toLowerCase() != 'belum absen';
+          if (keterangan != null) {
+            s['absensi']['keterangan'] = keterangan;
+          }
+          if (status == 'Hadir' && (s['absensi']['waktu_masuk'] == null || s['absensi']['waktu_masuk'].toString().isEmpty)) {
+            final now = DateTime.now();
+            s['absensi']['waktu_masuk'] = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')} WIB';
+          }
+          _recalculateStats();
           break;
         }
       }
     });
 
-    final res = await ApiService.post('guru/wali_kelas', {
+    final payload = <String, dynamic>{
       'action': 'input_absensi_siswa',
       'user_id': uid,
       'siswa_id': siswaId,
       'status': status,
       'tanggal': dateStr,
-    });
+    };
+    if (keterangan != null) {
+      payload['keterangan'] = keterangan;
+    }
+
+    final res = await ApiService.post('guru/wali_kelas', payload);
 
     if (mounted) {
       if (res['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Presensi berhasil diperbarui menjadi "$status"'),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text('Presensi berhasil diperbarui menjadi "$status"${keterangan != null && keterangan.isNotEmpty ? ' ($keterangan)' : ''}')),
+              ],
+            ),
             backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
@@ -134,6 +186,196 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
           ),
         );
         _fetchWaliKelasData(_selectedKelasId);
+      }
+    }
+  }
+
+  void _showEditAbsensiDialog(Map<String, dynamic> s) {
+    final sId = int.tryParse(s['id'].toString()) ?? 0;
+    final name = (s['nama_lengkap'] ?? 'Siswa').toString();
+    final nis = (s['nis'] ?? '-').toString();
+    final absensi = s['absensi'] as Map? ?? {};
+    final currentStatus = (absensi['status_hari_ini'] ?? 'Belum Absen').toString();
+    final initialKeterangan = (absensi['keterangan'] ?? '').toString();
+
+    String selectedStatus = ['Hadir', 'Izin', 'Sakit', 'Alpa'].contains(currentStatus) ? currentStatus : 'Izin';
+    final ketController = TextEditingController(text: initialKeterangan);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: const Color(0xFF4338CA).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.edit_calendar_rounded, color: Color(0xFF4338CA), size: 22),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text('Koreksi Presensi Siswa', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
+                        const SizedBox(height: 2),
+                        Text('NIS: $nis  •  Status Saat Ini: $currentStatus', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Pilih Status Sebenarnya:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildDialogStatusOption('Hadir', const Color(0xFF10B981), selectedStatus == 'Hadir', () => setDialogState(() => selectedStatus = 'Hadir')),
+                      _buildDialogStatusOption('Izin', const Color(0xFF3B82F6), selectedStatus == 'Izin', () => setDialogState(() => selectedStatus = 'Izin')),
+                      _buildDialogStatusOption('Sakit', const Color(0xFFF59E0B), selectedStatus == 'Sakit', () => setDialogState(() => selectedStatus = 'Sakit')),
+                      _buildDialogStatusOption('Alpa', const Color(0xFFEF4444), selectedStatus == 'Alpa', () => setDialogState(() => selectedStatus = 'Alpa')),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Keterangan / Alasan:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155))),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: ketController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: selectedStatus == 'Izin'
+                          ? 'Cth: Surat izin orang tua / Acara keluarga'
+                          : selectedStatus == 'Sakit'
+                              ? 'Cth: Sakit demam / Surat dokter terlampir'
+                              : 'Keterangan tambahan (opsional)',
+                      hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '💡 Wali kelas dapat mengoreksi siswa yang semula Alpa menjadi Izin atau Sakit berdasarkan keterangan dari orang tua.',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontStyle: FontStyle.italic, height: 1.3),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4338CA),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _updateAbsensi(sId, selectedStatus, ketController.text.trim());
+                },
+                icon: const Icon(Icons.check_rounded, size: 16),
+                label: const Text('Simpan Koreksi'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDialogStatusOption(String label, Color color, bool isSelected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? color : color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isSelected ? color : color.withValues(alpha: 0.3), width: isSelected ? 1.5 : 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+              size: 14,
+              color: isSelected ? Colors.white : color,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : color),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openWhatsAppPresensi(String phone, String name, String currentStatus) async {
+    if (phone.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nomor telepon / WhatsApp siswa atau orang tua belum tercatat.'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    var clean = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (clean.startsWith('0')) {
+      clean = '62${clean.substring(1)}';
+    } else if (!clean.startsWith('62')) {
+      clean = '62$clean';
+    }
+
+    final dateFormatted = '${_presensiDate.day.toString().padLeft(2, '0')}/${_presensiDate.month.toString().padLeft(2, '0')}/${_presensiDate.year}';
+    final message = Uri.encodeComponent(
+      'Halo, Selamat pagi/siang. Kami dari Wali Kelas SMK ingin konfirmasi mengenai presensi ananda $name pada tanggal $dateFormatted. '
+      'Pada sistem presensi saat ini tercatat "$currentStatus". '
+      'Apakah ananda sedang berhalangan hadir (ada surat izin/sakit)? Mohon konfirmasinya ya. Terima kasih.'
+    );
+    final uri = Uri.parse('https://wa.me/$clean?text=$message');
+
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak dapat membuka aplikasi WhatsApp.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
@@ -882,117 +1124,636 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
   }
 
   // ================= TAB 2: KONTROL PRESENSI =================
+  List<dynamic> get _filteredPresensiStudents {
+    return _siswaList.where((s) {
+      final name = (s['nama_lengkap'] ?? '').toString().toLowerCase();
+      final nis = (s['nis'] ?? '').toString().toLowerCase();
+      final query = _presensiSearchQuery.toLowerCase().trim();
+
+      if (query.isNotEmpty && !name.contains(query) && !nis.contains(query)) {
+        return false;
+      }
+
+      final st = (s['absensi']?['status_hari_ini'] ?? 'Belum Absen').toString().toLowerCase();
+      if (_presensiStatusFilter == 'belum_absen') {
+        return st == 'belum absen' || st.isEmpty;
+      } else if (_presensiStatusFilter == 'alpa') {
+        return st == 'alpa' || st == 'alpha' || st == 'tanpa keterangan';
+      } else if (_presensiStatusFilter == 'izin_sakit') {
+        return st == 'izin' || st == 'ijin' || st == 'sakit';
+      } else if (_presensiStatusFilter == 'hadir') {
+        return st == 'hadir';
+      } else if (_presensiStatusFilter == 'perlu_tinjauan') {
+        return st == 'alpa' || st == 'alpha' || st == 'tanpa keterangan' || st == 'belum absen' || st.isEmpty;
+      }
+      return true;
+    }).toList();
+  }
+
   Widget _buildTabPresensi() {
-    final dateFormatted = '${_presensiDate.day.toString().padLeft(2, '0')}/${_presensiDate.month.toString().padLeft(2, '0')}/${_presensiDate.year}';
+    final now = DateTime.now();
+    final isToday = _presensiDate.year == now.year && _presensiDate.month == now.month && _presensiDate.day == now.day;
+
+    final dayNames = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+    final monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    final dayStr = dayNames[_presensiDate.weekday - 1];
+    final monthStr = monthNames[_presensiDate.month - 1];
+    final dateFormatted = '$dayStr, ${_presensiDate.day} $monthStr ${_presensiDate.year}';
+
+    final hadirCount = int.tryParse(_stats['hadir_hari_ini']?.toString() ?? '0') ?? 0;
+    final izinCount = int.tryParse(_stats['izin_hari_ini']?.toString() ?? '0') ?? 0;
+    final sakitCount = int.tryParse(_stats['sakit_hari_ini']?.toString() ?? '0') ?? 0;
+    final alpaCount = int.tryParse(_stats['alpa_hari_ini']?.toString() ?? '0') ?? 0;
+    final belumCount = int.tryParse(_stats['belum_absen_hari_ini']?.toString() ?? '0') ?? 0;
+    final totalSiswa = _siswaList.length;
+
+    final filteredList = _filteredPresensiStudents;
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       children: [
-        // Date Selector Bar
+        // 1. Date Selector Bar
         Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Column(
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(Icons.event_available_rounded, color: Color(0xFF4338CA), size: 22),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4338CA).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.event_available_rounded, color: Color(0xFF4338CA), size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Tanggal Presensi Rombel', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 2),
+                              Text(
+                                dateFormatted,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Tanggal Presensi Rombel', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                      Text(dateFormatted, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B))),
+                      if (!isToday)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              foregroundColor: const Color(0xFF4338CA),
+                            ),
+                            onPressed: () {
+                              setState(() => _presensiDate = DateTime.now());
+                              _fetchWaliKelasData(_selectedKelasId);
+                            },
+                            child: const Text('Hari Ini', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _presensiDate,
+                            firstDate: DateTime(2025),
+                            lastDate: DateTime.now().add(const Duration(days: 7)),
+                          );
+                          if (picked != null) {
+                            setState(() => _presensiDate = picked);
+                            _fetchWaliKelasData(_selectedKelasId);
+                          }
+                        },
+                        icon: const Icon(Icons.calendar_month_rounded, size: 15),
+                        label: const Text('Pilih', style: TextStyle(fontSize: 12)),
+                      ),
                     ],
                   ),
                 ],
               ),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // 2. Monitoring & Discrepancy Guidance Card
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF2FF),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFC7D2FE)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.verified_user_rounded, color: Color(0xFF4338CA), size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pengawasan & Verifikasi Presensi Wali Kelas',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF312E81)),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Tinjau kehadiran siswa rombel Anda. Jika ada siswa yang seharusnya Izin/Sakit namun tercatat Alpa atau Belum Absen, gunakan tombol koreksi untuk menyesuaikan status dan menambahkan keterangan resmi.',
+                      style: TextStyle(fontSize: 11, color: Colors.indigo.shade800, height: 1.35),
+                    ),
+                  ],
                 ),
-                onPressed: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _presensiDate,
-                    firstDate: DateTime(2025),
-                    lastDate: DateTime.now().add(const Duration(days: 7)),
-                  );
-                  if (picked != null) {
-                    setState(() => _presensiDate = picked);
-                    _fetchWaliKelasData(_selectedKelasId);
-                  }
-                },
-                icon: const Icon(Icons.calendar_month_rounded, size: 16),
-                label: const Text('Ubah Tanggal', style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
         ),
         const SizedBox(height: 14),
 
-        const Text('Kontrol Cepat Status Absensi Siswa:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B))),
+        // 3. Status Summary Metrics Cards (Grid)
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildPresensiCounterCard('Hadir', hadirCount, totalSiswa, const Color(0xFF10B981), Icons.check_circle_rounded, 'hadir'),
+              const SizedBox(width: 8),
+              _buildPresensiCounterCard('Izin', izinCount, totalSiswa, const Color(0xFF3B82F6), Icons.mail_rounded, 'izin_sakit'),
+              const SizedBox(width: 8),
+              _buildPresensiCounterCard('Sakit', sakitCount, totalSiswa, const Color(0xFFF59E0B), Icons.medical_services_rounded, 'izin_sakit'),
+              const SizedBox(width: 8),
+              _buildPresensiCounterCard('Alpa', alpaCount, totalSiswa, const Color(0xFFEF4444), Icons.warning_rounded, 'alpa'),
+              const SizedBox(width: 8),
+              _buildPresensiCounterCard('Belum Absen', belumCount, totalSiswa, const Color(0xFF64748B), Icons.hourglass_empty_rounded, 'belum_absen'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // 4. Search and Filter Chips
+        Container(
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: 'Cari siswa untuk cek/koreksi kehadiran...',
+              hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
+              prefixIcon: const Icon(Icons.search, size: 20, color: Colors.grey),
+              suffixIcon: _presensiSearchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                      onPressed: () => setState(() => _presensiSearchQuery = ''),
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            onChanged: (val) => setState(() => _presensiSearchQuery = val),
+          ),
+        ),
         const SizedBox(height: 10),
 
-        ..._siswaList.map((s) {
-          final sId = int.tryParse(s['id'].toString()) ?? 0;
-          final name = (s['nama_lengkap'] ?? 'Siswa').toString();
-          final currentStatus = (s['absensi']?['status_hari_ini'] ?? 'Belum Absen').toString();
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildPresensiFilterChip('Semua ($totalSiswa)', 'all'),
+              const SizedBox(width: 8),
+              _buildPresensiFilterChip(
+                '⚠️ Perlu Ditinjau (${alpaCount + belumCount})',
+                'perlu_tinjauan',
+                isWarning: (alpaCount + belumCount) > 0,
+              ),
+              const SizedBox(width: 8),
+              _buildPresensiFilterChip('Belum Absen ($belumCount)', 'belum_absen'),
+              const SizedBox(width: 8),
+              _buildPresensiFilterChip('Alpa ($alpaCount)', 'alpa'),
+              const SizedBox(width: 8),
+              _buildPresensiFilterChip('Izin/Sakit (${izinCount + sakitCount})', 'izin_sakit'),
+              const SizedBox(width: 8),
+              _buildPresensiFilterChip('Hadir ($hadirCount)', 'hadir'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
 
-          return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Row(
+        // 5. Students Attendance List
+        if (filteredList.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-                      const SizedBox(height: 2),
-                      Text('Status: $currentStatus', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-                    ],
+                Icon(Icons.person_search_rounded, size: 48, color: Colors.grey.shade400),
+                const SizedBox(height: 12),
+                const Text(
+                  'Tidak Ada Siswa yang Sesuai Filter',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1E293B)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _presensiStatusFilter != 'all'
+                      ? 'Coba ganti filter status atau ketuk tombol "Semua" di atas.'
+                      : 'Coba ubah kata kunci pencarian nama atau NIS.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                if (_presensiStatusFilter != 'all') ...[
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4338CA),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => setState(() => _presensiStatusFilter = 'all'),
+                    child: const Text('Tampilkan Semua Siswa', style: TextStyle(fontSize: 12)),
                   ),
-                ),
-                // 4 Status Buttons: H, I, S, A
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildAbsensiButton(sId, 'Hadir', 'H', Colors.green, currentStatus == 'Hadir'),
-                    const SizedBox(width: 4),
-                    _buildAbsensiButton(sId, 'Izin', 'I', Colors.blue, currentStatus == 'Izin'),
-                    const SizedBox(width: 4),
-                    _buildAbsensiButton(sId, 'Sakit', 'S', Colors.amber.shade700, currentStatus == 'Sakit'),
-                    const SizedBox(width: 4),
-                    _buildAbsensiButton(sId, 'Alpa', 'A', Colors.red, currentStatus == 'Alpa'),
-                  ],
-                ),
+                ],
               ],
             ),
-          );
-        }),
+          )
+        else
+          ...filteredList.map((s) {
+            final sId = int.tryParse(s['id'].toString()) ?? 0;
+            final name = (s['nama_lengkap'] ?? 'Siswa').toString();
+            final nis = (s['nis'] ?? '-').toString();
+            final phone = (s['no_telepon'] ?? '').toString();
+            final absensi = s['absensi'] as Map? ?? {};
+            final currentStatus = (absensi['status_hari_ini'] ?? 'Belum Absen').toString();
+            final waktuMasuk = (absensi['waktu_masuk'] ?? '').toString();
+            final keterangan = (absensi['keterangan'] ?? '').toString().trim();
+            final isAlpa = ['alpa', 'alpha', 'tanpa keterangan'].contains(currentStatus.toLowerCase());
+            final isBelum = currentStatus.toLowerCase() == 'belum absen' || currentStatus.isEmpty;
+            final isHadir = currentStatus.toLowerCase() == 'hadir';
+            final isIzin = ['izin', 'ijin'].contains(currentStatus.toLowerCase());
+            final isSakit = currentStatus.toLowerCase() == 'sakit';
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isAlpa
+                      ? Colors.red.shade300
+                      : isBelum
+                          ? Colors.orange.shade200
+                          : Colors.grey.shade200,
+                  width: (isAlpa || isBelum) ? 1.5 : 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isAlpa
+                        ? Colors.red.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Upper Card: Student Info & WA action
+                  Padding(
+                    padding: const EdgeInsets.only(left: 14, right: 14, top: 12, bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: const Color(0xFF4338CA).withValues(alpha: 0.1),
+                          backgroundImage: s['avatar'] != null && s['avatar'].toString().startsWith('http')
+                              ? NetworkImage(s['avatar'])
+                              : null,
+                          child: s['avatar'] == null || !s['avatar'].toString().startsWith('http')
+                              ? Text(name.isNotEmpty ? name[0] : 'S', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4338CA), fontSize: 13))
+                              : null,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
+                              const SizedBox(height: 2),
+                              Text('NIS: $nis', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+                            ],
+                          ),
+                        ),
+                        // Direct WhatsApp Follow-up Button
+                        IconButton(
+                          tooltip: 'Hubungi Siswa / Ortu via WhatsApp',
+                          style: IconButton.styleFrom(
+                            backgroundColor: const Color(0xFF25D366).withValues(alpha: 0.1),
+                            padding: const EdgeInsets.all(8),
+                            minimumSize: const Size(36, 36),
+                          ),
+                          icon: const Icon(Icons.chat_rounded, color: Color(0xFF16A34A), size: 18),
+                          onPressed: () => _openWhatsAppPresensi(phone, name, currentStatus),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Middle: Visual Status Banner
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isHadir
+                            ? const Color(0xFFF0FDF4)
+                            : isIzin
+                                ? const Color(0xFFEFF6FF)
+                                : isSakit
+                                    ? const Color(0xFFFFFBEB)
+                                    : isAlpa
+                                        ? const Color(0xFFFEF2F2)
+                                        : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isHadir
+                              ? const Color(0xFFBBF7D0)
+                              : isIzin
+                                  ? const Color(0xFFBFDBFE)
+                                  : isSakit
+                                      ? const Color(0xFFFDE68A)
+                                      : isAlpa
+                                          ? const Color(0xFFFECACA)
+                                          : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isHadir
+                                ? Icons.check_circle_rounded
+                                : isIzin
+                                    ? Icons.mail_rounded
+                                    : isSakit
+                                        ? Icons.medical_services_rounded
+                                        : isAlpa
+                                            ? Icons.warning_rounded
+                                            : Icons.access_time_rounded,
+                            size: 16,
+                            color: isHadir
+                                ? const Color(0xFF16A34A)
+                                : isIzin
+                                    ? const Color(0xFF2563EB)
+                                    : isSakit
+                                        ? const Color(0xFFD97706)
+                                        : isAlpa
+                                            ? const Color(0xFFDC2626)
+                                            : Colors.grey.shade700,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Status: $currentStatus',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: isHadir
+                                            ? const Color(0xFF15803D)
+                                            : isIzin
+                                                ? const Color(0xFF1D4ED8)
+                                                : isSakit
+                                                    ? const Color(0xFFB45309)
+                                                    : isAlpa
+                                                        ? const Color(0xFFB91C1C)
+                                                        : const Color(0xFF475569),
+                                      ),
+                                    ),
+                                    if (waktuMasuk.isNotEmpty && isHadir) ...[
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '($waktuMasuk)',
+                                        style: TextStyle(fontSize: 11, color: Colors.green.shade800, fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                if (keterangan.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      'Ket: $keterangan',
+                                      style: TextStyle(fontSize: 11, color: Colors.grey.shade700, fontStyle: FontStyle.italic),
+                                    ),
+                                  )
+                                else if (isAlpa)
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      'Tanpa Keterangan • Perlu Verifikasi Ortu',
+                                      style: TextStyle(fontSize: 10, color: Color(0xFFDC2626), fontWeight: FontWeight.w500),
+                                    ),
+                                  )
+                                else if (isBelum)
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      'Siswa belum melakukan presensi masuk',
+                                      style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          // Quick Edit Note Button
+                          InkWell(
+                            onTap: () => _showEditAbsensiDialog(s),
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.edit_note_rounded, size: 14, color: Color(0xFF4338CA)),
+                                  SizedBox(width: 4),
+                                  Text('Koreksi', style: TextStyle(fontSize: 11, color: Color(0xFF4338CA), fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Bottom Action: Quick 1-Tap Status Correction
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        const Text('Set Cepat:', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w600)),
+                        const Spacer(),
+                        _buildQuickStatusChip(sId, 'Hadir', 'H', const Color(0xFF10B981), isHadir),
+                        const SizedBox(width: 6),
+                        _buildQuickStatusChip(sId, 'Izin', 'I', const Color(0xFF3B82F6), isIzin, promptKeterangan: true, studentData: s),
+                        const SizedBox(width: 6),
+                        _buildQuickStatusChip(sId, 'Sakit', 'S', const Color(0xFFF59E0B), isSakit, promptKeterangan: true, studentData: s),
+                        const SizedBox(width: 6),
+                        _buildQuickStatusChip(sId, 'Alpa', 'A', const Color(0xFFEF4444), isAlpa),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
       ],
     );
   }
 
-  Widget _buildAbsensiButton(int sId, String statusVal, String label, Color color, bool isCurrent) {
+  Widget _buildPresensiCounterCard(String label, int count, int total, Color color, IconData icon, String filterTag) {
+    final isSelected = _presensiStatusFilter == filterTag;
+    final pct = total > 0 ? ((count / total) * 100).round() : 0;
+
     return InkWell(
-      onTap: () => _updateAbsensi(sId, statusVal),
+      onTap: () {
+        setState(() {
+          _presensiStatusFilter = (_presensiStatusFilter == filterTag) ? 'all' : filterTag;
+        });
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 105,
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.15) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? color : color.withValues(alpha: 0.25),
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, size: 16, color: color),
+                Text('$pct%', style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '$count',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPresensiFilterChip(String label, String tag, {bool isWarning = false}) {
+    final isSelected = _presensiStatusFilter == tag;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? Colors.white : (isWarning ? const Color(0xFFDC2626) : const Color(0xFF334155)),
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: isWarning ? const Color(0xFFDC2626) : const Color(0xFF4338CA),
+      backgroundColor: isWarning ? const Color(0xFFFEF2F2) : Colors.white,
+      showCheckmark: false,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isSelected
+              ? (isWarning ? const Color(0xFFDC2626) : const Color(0xFF4338CA))
+              : (isWarning ? const Color(0xFFFECACA) : Colors.grey.shade300),
+        ),
+      ),
+      onSelected: (_) => setState(() => _presensiStatusFilter = tag),
+    );
+  }
+
+  Widget _buildQuickStatusChip(int sId, String statusVal, String label, Color color, bool isCurrent, {bool promptKeterangan = false, Map<String, dynamic>? studentData}) {
+    return InkWell(
+      onTap: () {
+        if (promptKeterangan && studentData != null) {
+          // If teacher wants to set Izin or Sakit, open the dialog so they can easily enter the explanation
+          _showEditAbsensiDialog(studentData);
+        } else {
+          _updateAbsensi(sId, statusVal);
+        }
+      },
       borderRadius: BorderRadius.circular(8),
-      child: Container(
-        width: 34,
-        height: 34,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 38,
+        height: 32,
         decoration: BoxDecoration(
           color: isCurrent ? color : color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isCurrent ? color : color.withValues(alpha: 0.4)),
+          border: Border.all(
+            color: isCurrent ? color : color.withValues(alpha: 0.4),
+            width: isCurrent ? 1.5 : 1,
+          ),
         ),
         child: Center(
           child: Text(
