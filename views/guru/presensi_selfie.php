@@ -26,7 +26,7 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
 <style>
-/* Modern Styling for Presensi Selfie & Geofencing */
+/* Modern Responsive Styling for Presensi Selfie & Geofencing */
 .selfie-card {
     background: #ffffff;
     border-radius: 20px;
@@ -35,17 +35,28 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
     overflow: hidden;
 }
 
+/* Mobile-First Spacious Selfie Viewfinder */
 .camera-container {
     position: relative;
     width: 100%;
-    aspect-ratio: 4/3;
-    max-height: 380px;
+    aspect-ratio: 3/4; /* Natural vertical selfie viewfinder on mobile */
+    min-height: 380px;
+    max-height: 520px;
     background: #0f172a;
-    border-radius: 16px;
+    border-radius: 20px;
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+@media (min-width: 992px) {
+    .camera-container {
+        aspect-ratio: 4/3;
+        min-height: 400px;
+        max-height: 460px;
+    }
 }
 
 .camera-video, .camera-preview-img {
@@ -59,17 +70,17 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
     transform: none;
 }
 
-/* Biometric Oval Face Guide */
+/* Responsive Biometric Oval Face Guide */
 .face-guide-overlay {
     position: absolute;
-    top: 50%;
+    top: 48%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 180px;
-    height: 240px;
-    border: 2px dashed rgba(16, 185, 129, 0.85);
+    width: min(210px, 64%);
+    height: min(280px, 68%);
+    border: 2.5px dashed rgba(16, 185, 129, 0.9);
     border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);
+    box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.42);
     pointer-events: none;
     z-index: 10;
     transition: all 0.3s ease;
@@ -81,18 +92,53 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
 
 .face-guide-text {
     position: absolute;
-    bottom: 12px;
+    bottom: 14px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.75);
-    backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.82);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     color: #ffffff;
-    font-size: 0.75rem;
-    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 6px 14px;
     border-radius: 20px;
     white-space: nowrap;
     z-index: 11;
     pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Map Responsive Height */
+#guruMapContainer {
+    height: 300px;
+    width: 100%;
+    border-radius: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    z-index: 1;
+}
+
+@media (min-width: 992px) {
+    #guruMapContainer {
+        height: 380px;
+    }
+}
+
+/* Action Buttons Mobile Sizing */
+.btn-presensi-action {
+    padding-top: 13px !important;
+    padding-bottom: 13px !important;
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.2px;
+}
+@media (max-width: 575.98px) {
+    .btn-presensi-action {
+        font-size: 0.92rem !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
 }
 
 /* Digital Clock */
@@ -179,14 +225,14 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
 }
 </style>
 
-<main class="main-content px-3 px-md-4 py-3">
+<main class="main-content px-2 px-sm-3 px-md-4 py-3">
 <div class="container-fluid">
 
     <!-- Header & Clock -->
     <div class="row align-items-center mb-4 gy-3">
         <div class="col-12 col-md-7">
             <div class="d-flex align-items-center gap-3">
-                <div class="p-3 bg-primary bg-opacity-10 text-primary rounded-4">
+                <div class="p-3 bg-primary bg-opacity-10 text-primary rounded-4 flex-shrink-0">
                     <i class="bi bi-camera-fill fs-2"></i>
                 </div>
                 <div>
@@ -196,7 +242,7 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
             </div>
         </div>
         <div class="col-12 col-md-5 text-md-end">
-            <div class="d-inline-flex flex-column align-items-md-end bg-white px-4 py-2 rounded-4 border shadow-xs">
+            <div class="d-inline-flex flex-column align-items-center align-items-md-end bg-white px-4 py-2.5 rounded-4 border shadow-xs w-100 w-md-auto">
                 <div class="d-flex align-items-baseline gap-2">
                     <span class="clock-display fs-3" id="liveClock">00:00:00</span>
                     <span class="badge bg-dark text-white rounded-pill px-2 py-1 small">WIB</span>
@@ -210,7 +256,7 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
     <div class="card selfie-card p-3 p-md-4 mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
         <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
             <div class="d-flex align-items-start gap-3">
-                <div class="p-3 rounded-4 <?= $modePresensi === 'jadwal' ? 'bg-primary bg-opacity-10 text-primary' : ($modePresensi === 'serentak' ? 'bg-warning bg-opacity-15 text-warning' : ($modePresensi === 'full_day_staff' ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-10 text-secondary')) ?>">
+                <div class="p-3 rounded-4 flex-shrink-0 <?= $modePresensi === 'jadwal' ? 'bg-primary bg-opacity-10 text-primary' : ($modePresensi === 'serentak' ? 'bg-warning bg-opacity-15 text-warning' : ($modePresensi === 'full_day_staff' ? 'bg-success bg-opacity-10 text-success' : 'bg-secondary bg-opacity-10 text-secondary')) ?>">
                     <i class="bi <?= $modePresensi === 'jadwal' ? 'bi-calendar-week-fill fs-3' : ($modePresensi === 'serentak' ? 'bi-megaphone-fill fs-3' : ($modePresensi === 'full_day_staff' ? 'bi-briefcase-fill fs-3' : 'bi-info-circle-fill fs-3')) ?>"></i>
                 </div>
                 <div>
@@ -251,12 +297,12 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
                 </div>
             </div>
 
-            <div class="d-flex flex-column gap-2 text-md-end ms-auto">
-                <div class="bg-white px-3 py-2 rounded-3 border shadow-2xs">
+            <div class="d-flex flex-row flex-md-column gap-2 w-100 w-md-auto text-md-end mt-2 mt-md-0">
+                <div class="bg-white px-3 py-2 rounded-3 border shadow-2xs flex-fill text-center text-md-end">
                     <div class="small text-muted">Batas Tepat Waktu:</div>
                     <div class="fw-bold text-dark fs-6"><i class="bi bi-box-arrow-in-right text-success me-1"></i><?= $jamMasukBatas ?> WIB</div>
                 </div>
-                <div class="bg-white px-3 py-2 rounded-3 border shadow-2xs">
+                <div class="bg-white px-3 py-2 rounded-3 border shadow-2xs flex-fill text-center text-md-end">
                     <div class="small text-muted">Buka Kepulangan:</div>
                     <div class="fw-bold text-dark fs-6"><i class="bi bi-door-open text-primary me-1"></i><?= $jamPulangMulai ?> WIB</div>
                 </div>
@@ -336,21 +382,21 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
     </div>
 
     <!-- Main Working Area: Camera Viewfinder & Geofencing Map -->
-    <div class="row g-4 mb-4">
+    <div class="row g-3 g-md-4 mb-4">
         <!-- Kolom Kiri: Kamera Selfie -->
         <div class="col-12 col-lg-6">
-            <div class="card selfie-card p-4 h-100">
+            <div class="card selfie-card p-3 p-sm-4 h-100">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold mb-0 text-dark">
                         <i class="bi bi-camera me-2 text-primary"></i>Kamera Selfie Wajah
                     </h5>
-                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" id="btnSwitchCamera">
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-2xs" id="btnSwitchCamera">
                         <i class="bi bi-arrow-repeat me-1"></i> Ganti Kamera
                     </button>
                 </div>
 
                 <!-- Camera Container -->
-                <div class="camera-container mb-3 shadow-inner" id="cameraBox">
+                <div class="camera-container mb-3" id="cameraBox">
                     <video id="webcamVideo" class="camera-video" autoplay playsinline muted></video>
                     <img id="capturedPhotoPreview" class="camera-preview-img d-none" alt="Selfie Preview">
                     
@@ -366,10 +412,10 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
 
                 <!-- Camera Action Controls -->
                 <div class="d-flex gap-2 mb-3">
-                    <button type="button" class="btn btn-dark flex-grow-1 py-2.5 rounded-3 fw-bold shadow-sm" id="btnCapturePhoto">
-                        <i class="bi bi-camera-fill me-1 text-warning"></i> Ambil Foto Selfie
+                    <button type="button" class="btn btn-dark flex-grow-1 py-3 rounded-3 fw-bold shadow-sm" id="btnCapturePhoto" style="font-size: 1rem;">
+                        <i class="bi bi-camera-fill me-1 text-warning fs-5 align-middle"></i> Ambil Foto Selfie
                     </button>
-                    <button type="button" class="btn btn-outline-danger py-2.5 px-3 rounded-3 fw-bold d-none" id="btnRetakePhoto">
+                    <button type="button" class="btn btn-outline-danger py-3 px-3 rounded-3 fw-bold d-none" id="btnRetakePhoto" style="font-size: 1rem;">
                         <i class="bi bi-arrow-counterclockwise me-1"></i> Foto Ulang
                     </button>
                 </div>
@@ -381,14 +427,14 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
                 </div>
 
                 <!-- Presensi Action Buttons -->
-                <div class="row g-2 mt-auto">
+                <div class="row g-2 mt-auto pt-2">
                     <div class="col-6">
-                        <button type="button" class="btn btn-success w-100 py-2.5 rounded-3 fw-bold shadow-sm" id="btnSubmitMasuk" <?= $sudahMasuk ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-success w-100 btn-presensi-action rounded-3 shadow-sm" id="btnSubmitMasuk" <?= $sudahMasuk ? 'disabled' : '' ?>>
                             <i class="bi bi-box-arrow-in-right me-1"></i> <?= $sudahMasuk ? 'Sudah Masuk' : 'Presensi Masuk' ?>
                         </button>
                     </div>
                     <div class="col-6">
-                        <button type="button" class="btn btn-primary w-100 py-2.5 rounded-3 fw-bold shadow-sm" id="btnSubmitPulang" <?= (!$sudahMasuk || $sudahPulang) ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-primary w-100 btn-presensi-action rounded-3 shadow-sm" id="btnSubmitPulang" <?= (!$sudahMasuk || $sudahPulang) ? 'disabled' : '' ?>>
                             <i class="bi bi-box-arrow-right me-1"></i> <?= $sudahPulang ? 'Sudah Pulang' : 'Presensi Pulang' ?>
                         </button>
                     </div>
@@ -398,7 +444,7 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
 
         <!-- Kolom Kanan: Status Lokasi & Leaflet Geofence Map -->
         <div class="col-12 col-lg-6">
-            <div class="card selfie-card p-4 h-100">
+            <div class="card selfie-card p-3 p-sm-4 h-100">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div>
                         <h5 class="fw-bold mb-0 text-dark">
@@ -406,7 +452,7 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
                         </h5>
                         <small class="text-muted"><?= htmlspecialchars($lokasiNama) ?></small>
                     </div>
-                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" id="btnRefreshGPS">
+                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 shadow-2xs" id="btnRefreshGPS">
                         <i class="bi bi-arrow-clockwise me-1"></i> Refresh GPS
                     </button>
                 </div>
@@ -435,22 +481,22 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
 
                 <!-- Leaflet Interactive Map -->
                 <div class="mb-3" style="position: relative;">
-                    <div id="guruMapContainer" style="height: 280px; width: 100%; border-radius: 14px; border: 1px solid rgba(0,0,0,0.1); z-index: 1;"></div>
+                    <div id="guruMapContainer" style="border-radius: 16px; border: 1px solid rgba(0,0,0,0.1); z-index: 1;"></div>
                     <button type="button" class="btn btn-light btn-sm rounded-pill shadow-sm position-absolute" id="btnCenterMap" style="bottom: 15px; right: 15px; z-index: 400;">
                         <i class="bi bi-crosshair me-1 text-primary"></i> Pusatkan
                     </button>
                 </div>
 
-                <div class="alert alert-info py-2 px-3 small rounded-3 mb-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-shield-check fs-5 text-primary"></i>
-                    <span>Sistem menggunakan enkripsi lokasi dan rumus Haversine server-side untuk menjamin keaslian data presensi.</span>
+                <div class="alert alert-info py-2.5 px-3 small rounded-3 mb-0 d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-check fs-5 text-primary flex-shrink-0"></i>
+                    <span>Sistem menggunakan enkripsi lokasi dan rumus Haversine server-side untuk validasi radius presensi.</span>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Riwayat Presensi Guru Terbaru -->
-    <div class="card selfie-card p-4">
+    <div class="card selfie-card p-3 p-sm-4">
         <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
             <div>
                 <h5 class="fw-bold mb-1 text-dark"><i class="bi bi-clock-history me-2 text-primary"></i>Riwayat Presensi Mandiri Anda</h5>
@@ -647,11 +693,12 @@ async function startCamera(facing = 'user') {
     }
 
     try {
+        const isPortrait = window.innerHeight > window.innerWidth;
         const constraints = {
             video: {
                 facingMode: facing,
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
+                width: { ideal: isPortrait ? 1080 : 1280 },
+                height: { ideal: isPortrait ? 1440 : 720 }
             },
             audio: false
         };
@@ -701,7 +748,20 @@ function initGuruMap() {
         weight: 2,
         radius: SCHOOL_RADIUS
     }).addTo(guruMap);
+
+    setTimeout(() => {
+        if (guruMap) guruMap.invalidateSize();
+    }, 300);
 }
+
+window.addEventListener('resize', function() {
+    if (guruMap) guruMap.invalidateSize();
+});
+window.addEventListener('orientationchange', function() {
+    setTimeout(function() {
+        if (guruMap) guruMap.invalidateSize();
+    }, 350);
+});
 
 // 3. Geolocation Tracker
 function trackGPS() {
