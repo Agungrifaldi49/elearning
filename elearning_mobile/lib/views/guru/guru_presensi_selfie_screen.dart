@@ -608,9 +608,13 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
 
   // Widget 1: Digital Real-Time Clock & Header Card
   Widget _buildClockHeaderCard(bool isDark) {
+    final guruNama = (_guruProfile?['nama_lengkap'] ?? '').toString();
+    final guruJabatan = (_guruProfile?['jabatan'] ?? 'Guru Pengajar').toString();
+    final isNonKbmStaff = guruJabatan != 'Guru Pengajar';
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: AppTheme.guruGradient,
         borderRadius: BorderRadius.circular(20),
@@ -626,53 +630,96 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _liveDateStr.isNotEmpty ? _liveDateStr : 'Presensi Kehadiran Guru',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Text(
-                        _liveTimeStr,
-                        style: GoogleFonts.outfit(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 1.2,
-                        ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _liveDateStr.isNotEmpty ? _liveDateStr : 'Presensi Kehadiran',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    const SizedBox(height: 4),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _liveTimeStr,
+                            style: GoogleFonts.outfit(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('WIB', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text('WIB', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.camera_enhance_rounded, color: Colors.white, size: 28),
+                child: const Icon(Icons.camera_enhance_rounded, color: Colors.white, size: 26),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+
+          if (guruNama.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  guruNama,
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isNonKbmStaff ? const Color(0xFFF59E0B) : Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    guruJabatan,
+                    style: TextStyle(
+                      color: isNonKbmStaff ? Colors.black87 : Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 10),
+
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(10),
@@ -699,168 +746,210 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
 
   // Widget 2: Today's Status Cards
   Widget _buildTodayStatusCards(bool isDark) {
-    return Row(
-      children: [
-        // Masuk Card
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _sudahMasuk ? const Color(0xFF10B981).withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.2),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isVeryNarrow = constraints.maxWidth < 310;
+
+        final masukCard = Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _sudahMasuk ? const Color(0xFF10B981).withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.2),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: _sudahMasuk ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _sudahMasuk ? 'Masuk' : 'Belum Masuk',
-                        style: TextStyle(
-                          color: _sudahMasuk ? const Color(0xFF065F46) : const Color(0xFF92400E),
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _sudahMasuk ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _sudahMasuk ? 'Masuk' : 'Belum Masuk',
+                          style: TextStyle(
+                            color: _sudahMasuk ? const Color(0xFF065F46) : const Color(0xFF92400E),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
-                    if (_sudahMasuk && _presensiHariIni?['foto_masuk'] != null)
-                      GestureDetector(
-                        onTap: () => _previewPhotoDialog(
+                  ),
+                  if (_sudahMasuk && _presensiHariIni?['foto_masuk'] != null) ...[
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () => _previewPhotoDialog(
+                        ApiService.getFileUrl(_presensiHariIni!['foto_masuk']),
+                        'Selfie Masuk ($_jamMasukDisplay WIB)',
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
                           ApiService.getFileUrl(_presensiHariIni!['foto_masuk']),
-                          'Selfie Masuk ($_jamMasukDisplay WIB)',
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            ApiService.getFileUrl(_presensiHariIni!['foto_masuk']),
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 20),
-                          ),
+                          width: 26,
+                          height: 26,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 20),
                         ),
                       ),
+                    ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Text(
+                ],
+              ),
+              const SizedBox(height: 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
                   _sudahMasuk ? '$_jamMasukDisplay WIB' : '--:--',
                   style: GoogleFonts.outfit(
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: FontWeight.bold,
                     color: _sudahMasuk ? const Color(0xFF10B981) : Colors.grey,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  _sudahMasuk
-                      ? 'Status: ${_presensiHariIni?['status'] ?? 'Hadir'}'
-                      : 'Batas: $_jamMasukBatas WIB',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(width: 12),
-
-        // Pulang Card
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E293B) : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _sudahPulang ? const Color(0xFF3B82F6).withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.2),
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              const SizedBox(height: 2),
+              Text(
+                _sudahMasuk
+                    ? 'Status: ${_presensiHariIni?['status'] ?? 'Hadir'}'
+                    : 'Batas: $_jamMasukBatas WIB',
+                style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        );
+
+        final pulangCard = Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _sudahPulang ? const Color(0xFF3B82F6).withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.2),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: _sudahPulang ? const Color(0xFFDBEAFE) : const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _sudahPulang ? 'Pulang' : 'Belum Pulang',
-                        style: TextStyle(
-                          color: _sudahPulang ? const Color(0xFF1E40AF) : const Color(0xFF92400E),
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _sudahPulang ? const Color(0xFFDBEAFE) : const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _sudahPulang ? 'Pulang' : 'Belum Pulang',
+                          style: TextStyle(
+                            color: _sudahPulang ? const Color(0xFF1E40AF) : const Color(0xFF92400E),
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),
-                    if (_sudahPulang && _presensiHariIni?['foto_pulang'] != null)
-                      GestureDetector(
-                        onTap: () => _previewPhotoDialog(
+                  ),
+                  if (_sudahPulang && _presensiHariIni?['foto_pulang'] != null) ...[
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: () => _previewPhotoDialog(
+                        ApiService.getFileUrl(_presensiHariIni!['foto_pulang']),
+                        'Selfie Pulang ($_jamPulangDisplay WIB)',
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
                           ApiService.getFileUrl(_presensiHariIni!['foto_pulang']),
-                          'Selfie Pulang ($_jamPulangDisplay WIB)',
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            ApiService.getFileUrl(_presensiHariIni!['foto_pulang']),
-                            width: 28,
-                            height: 28,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 20),
-                          ),
+                          width: 26,
+                          height: 26,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 20),
                         ),
                       ),
+                    ),
                   ],
-                ),
-                const SizedBox(height: 8),
-                Text(
+                ],
+              ),
+              const SizedBox(height: 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
                   _sudahPulang ? '$_jamPulangDisplay WIB' : '--:--',
                   style: GoogleFonts.outfit(
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: FontWeight.bold,
                     color: _sudahPulang ? const Color(0xFF3B82F6) : Colors.grey,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  _sudahPulang
-                      ? 'Check-out selesai'
-                      : 'Buka: $_jamPulangMulai WIB',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _sudahPulang
+                    ? 'Check-out selesai'
+                    : 'Buka: $_jamPulangMulai WIB',
+                style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-        ),
-      ],
+        );
+
+        if (isVeryNarrow) {
+          return Column(
+            children: [
+              masukCard,
+              const SizedBox(height: 10),
+              pulangCard,
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: masukCard),
+            const SizedBox(width: 10),
+            Expanded(child: pulangCard),
+          ],
+        );
+      },
     );
   }
 
@@ -889,38 +978,38 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _isInsideRadius ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (_isInsideRadius ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withValues(alpha: 0.5),
-                          blurRadius: 6,
-                          spreadRadius: 2,
-                        ),
-                      ],
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _isInsideRadius ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_isInsideRadius ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withValues(alpha: 0.5),
+                      blurRadius: 6,
+                      spreadRadius: 2,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Status Radius Geofencing',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Radius Geofencing',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
               InkWell(
                 onTap: _isLocating ? null : _initGPSLocation,
                 borderRadius: BorderRadius.circular(20),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       if (_isLocating)
                         const SizedBox(
@@ -952,6 +1041,7 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Icon(Icons.location_off, color: Color(0xFFDC2626), size: 18),
                   const SizedBox(width: 8),
@@ -994,6 +1084,8 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -1002,6 +1094,8 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                             color: _isInsideRadius ? const Color(0xFF047857) : const Color(0xFFB91C1C),
                             fontSize: 11,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -1013,12 +1107,15 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
             const SizedBox(height: 8),
 
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'GPS: ${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}',
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontFamily: 'monospace'),
+                Expanded(
+                  child: Text(
+                    'GPS: ${_currentPosition!.latitude.toStringAsFixed(5)}, ${_currentPosition!.longitude.toStringAsFixed(5)}',
+                    style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontFamily: 'monospace'),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Text(
                   'Akurasi: ±${_currentPosition!.accuracy.round()}m',
                   style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
@@ -1034,7 +1131,13 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                   children: [
                     SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
                     SizedBox(width: 8),
-                    Text('Menghubungkan ke satelit GPS...', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    Flexible(
+                      child: Text(
+                        'Menghubungkan ke satelit GPS...',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1049,7 +1152,7 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
   Widget _buildCameraSelfieCard(bool isDark) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -1065,11 +1168,13 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Foto Selfie Wajah',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+              Expanded(
+                child: Text(
+                  'Foto Selfie Wajah',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               if (_selfieImageFile != null)
                 TextButton.icon(
@@ -1079,6 +1184,7 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFEF4444),
                     padding: const EdgeInsets.symmetric(horizontal: 8),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
             ],
@@ -1090,7 +1196,7 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
           Center(
             child: Container(
               width: double.infinity,
-              height: 240,
+              height: 220,
               decoration: BoxDecoration(
                 color: const Color(0xFF0F172A),
                 borderRadius: BorderRadius.circular(16),
@@ -1124,10 +1230,14 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                                   Text(
                                     _guruProfile?['nama_lengkap'] ?? 'Guru MHC',
                                     style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   Text(
                                     '${_formatWatermarkDateTime(DateTime.now())} WIB | Jarak: ${_distanceInMeters?.round() ?? 0}m',
                                     style: const TextStyle(color: Colors.white70, fontSize: 9),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
@@ -1140,22 +1250,28 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                         children: [
                           // Biometric Oval Guide Shape
                           Container(
-                            width: 100,
-                            height: 130,
+                            width: 90,
+                            height: 120,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(50),
+                              borderRadius: BorderRadius.circular(45),
                               border: Border.all(
                                 color: const Color(0xFF10B981).withValues(alpha: 0.7),
                                 width: 2,
                                 style: BorderStyle.solid,
                               ),
                             ),
-                            child: const Icon(Icons.person_rounded, size: 48, color: Colors.white30),
+                            child: const Icon(Icons.person_rounded, size: 44, color: Colors.white30),
                           ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Posisikan wajah Anda di dalam bingkai',
-                            style: TextStyle(color: Colors.white70, fontSize: 12),
+                          const SizedBox(height: 8),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'Posisikan wajah Anda di dalam bingkai',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -1171,30 +1287,32 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _takeSelfie,
-                icon: const Icon(Icons.camera_alt_rounded),
-                label: const Text('Ambil Foto Selfie Wajah', style: TextStyle(fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                label: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('Ambil Foto Selfie Wajah', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF4F46E5),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
             ),
+            const SizedBox(height: 14),
           ],
-
-          const SizedBox(height: 14),
 
           // Input Keterangan Opsional
           TextField(
             controller: _keteranganController,
             decoration: InputDecoration(
-              hintText: 'Keterangan tambahan (opsional, misal: Tugas Luar)',
+              hintText: 'Keterangan tambahan (opsional)',
               hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500),
               prefixIcon: const Icon(Icons.edit_note, size: 20),
               filled: true,
               fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1207,55 +1325,97 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
             style: const TextStyle(fontSize: 12),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
 
           // Action Buttons: Presensi Masuk & Presensi Pulang
-          Row(
-            children: [
-              // Presensi Masuk
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: (_sudahMasuk || _isSubmitting)
-                      ? null
-                      : () => _submitAttendance('masuk'),
-                  icon: _isSubmitting
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.login_rounded, size: 18),
-                  label: Text(_sudahMasuk ? 'Sudah Masuk' : 'Presensi Masuk', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    disabledForegroundColor: Colors.grey.shade600,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 300;
 
-              const SizedBox(width: 10),
-
-              // Presensi Pulang
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: (!_sudahMasuk || _sudahPulang || _isSubmitting)
-                      ? null
-                      : () => _submitAttendance('pulang'),
-                  icon: _isSubmitting
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.logout_rounded, size: 18),
-                  label: Text(_sudahPulang ? 'Sudah Pulang' : 'Presensi Pulang', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B82F6),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    disabledForegroundColor: Colors.grey.shade600,
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+              final masukBtn = ElevatedButton(
+                onPressed: (_sudahMasuk || _isSubmitting)
+                    ? null
+                    : () => _submitAttendance('masuk'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  disabledForegroundColor: Colors.grey.shade600,
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-              ),
-            ],
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isSubmitting)
+                      const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    else
+                      const Icon(Icons.login_rounded, size: 16),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        _sudahMasuk ? 'Sudah Masuk' : 'Presensi Masuk',
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              final pulangBtn = ElevatedButton(
+                onPressed: (!_sudahMasuk || _sudahPulang || _isSubmitting)
+                    ? null
+                    : () => _submitAttendance('pulang'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  disabledForegroundColor: Colors.grey.shade600,
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isSubmitting)
+                      const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    else
+                      const Icon(Icons.logout_rounded, size: 16),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        _sudahPulang ? 'Sudah Pulang' : 'Presensi Pulang',
+                        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (isNarrow) {
+                return Column(
+                  children: [
+                    SizedBox(width: double.infinity, child: masukBtn),
+                    const SizedBox(height: 8),
+                    SizedBox(width: double.infinity, child: pulangBtn),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: masukBtn),
+                  const SizedBox(width: 8),
+                  Expanded(child: pulangBtn),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -1270,10 +1430,14 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Riwayat Presensi Mandiri',
-              style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+            Expanded(
+              child: Text(
+                'Riwayat Presensi Mandiri',
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            const SizedBox(width: 8),
             Text(
               '${_riwayatPresensi.length} Catatan',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
@@ -1336,7 +1500,7 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
               if (status == 'Alpa' || status == 'Alpha') statusColor = const Color(0xFFEF4444);
 
               return Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF1E293B) : Colors.white,
                   borderRadius: BorderRadius.circular(16),
@@ -1352,8 +1516,8 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                   children: [
                     // Date Badge
                     Container(
-                      width: 44,
-                      height: 44,
+                      width: 42,
+                      height: 42,
                       decoration: BoxDecoration(
                         color: statusColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
@@ -1363,17 +1527,17 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                         children: [
                           Text(
                             tgl.length >= 10 ? tgl.substring(8, 10) : '',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: statusColor, fontSize: 14),
+                            style: TextStyle(fontWeight: FontWeight.bold, color: statusColor, fontSize: 13),
                           ),
                           Text(
                             tgl.length >= 7 ? _getMonthName(tgl.substring(5, 7)) : '',
-                            style: TextStyle(color: statusColor, fontSize: 9),
+                            style: TextStyle(color: statusColor, fontSize: 8.5),
                           ),
                         ],
                       ),
                     ),
 
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
 
                     // Info
                     Expanded(
@@ -1391,25 +1555,45 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                                 child: Text(
                                   status,
                                   style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               if (jarakMasuk != null) ...[
                                 const SizedBox(width: 6),
-                                Text(
-                                  '• ${jarakMasuk}m dari sekolah',
-                                  style: TextStyle(color: Colors.grey.shade500, fontSize: 10),
+                                Expanded(
+                                  child: Text(
+                                    '• ${jarakMasuk}m',
+                                    style: TextStyle(color: Colors.grey.shade500, fontSize: 10),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ],
                             ],
                           ),
                           const SizedBox(height: 4),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              const Icon(Icons.arrow_downward_rounded, size: 12, color: Color(0xFF10B981)),
-                              Text(' Masuk: $jamIn WIB', style: const TextStyle(fontSize: 11)),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.arrow_upward_rounded, size: 12, color: Color(0xFF3B82F6)),
-                              Text(' Pulang: $jamOut WIB', style: const TextStyle(fontSize: 11)),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.arrow_downward_rounded, size: 12, color: Color(0xFF10B981)),
+                                  const SizedBox(width: 2),
+                                  Text('In: $jamIn WIB', style: const TextStyle(fontSize: 10.5)),
+                                ],
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.arrow_upward_rounded, size: 12, color: Color(0xFF3B82F6)),
+                                  const SizedBox(width: 2),
+                                  Text('Out: $jamOut WIB', style: const TextStyle(fontSize: 10.5)),
+                                ],
+                              ),
                             ],
                           ),
                         ],
