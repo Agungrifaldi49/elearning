@@ -424,6 +424,7 @@ CREATE TABLE `guru` (
   `user_id` int(11) NOT NULL,
   `nip` varchar(30) DEFAULT NULL,
   `nama_lengkap` varchar(100) NOT NULL,
+  `jabatan` varchar(50) NOT NULL DEFAULT 'Guru Pengajar',
   `jenis_kelamin` enum('L','P') NOT NULL,
   `no_telepon` varchar(20) DEFAULT NULL,
   `alamat` text DEFAULT NULL,
@@ -431,15 +432,16 @@ CREATE TABLE `guru` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`),
   UNIQUE KEY `nip` (`nip`),
+  KEY `idx_guru_jabatan` (`jabatan`),
   CONSTRAINT `guru_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for `guru` --
-INSERT INTO `guru` VALUES('1', '2', '198501152010011002', 'Drs. Ahmad Hidayat, M.Pd.', 'L', '081234567890', 'Jl. Raya Cicalengka No. 45, Bandung', 'aktif');
-INSERT INTO `guru` VALUES('2', '5', '199003202015021004', 'Budi Santoso, S.T.', 'L', '082198765432', 'Jl. Alun-Alun Cicalengka No. 12', 'aktif');
-INSERT INTO `guru` VALUES('3', '9', '32042523010400001', 'AGUNG RIFALDI, S.Tr. Kom', 'L', '82198765433', 'Kp. Munggang Rt. 01/08 Desa Dampit Kec. Cicalengka Kab. Bandung', 'aktif');
-INSERT INTO `guru` VALUES('11', '1', 'G202608810', 'Administrator Utama', 'L', NULL, NULL, 'aktif');
-INSERT INTO `guru` VALUES('12', '4', 'G202608503', 'H. ASEP SAEPULLOH, S.Ag', 'L', NULL, NULL, 'aktif');
+INSERT INTO `guru` VALUES('1', '2', '198501152010011002', 'Drs. Ahmad Hidayat, M.Pd.', 'Guru Pengajar', 'L', '081234567890', 'Jl. Raya Cicalengka No. 45, Bandung', 'aktif');
+INSERT INTO `guru` VALUES('2', '5', '199003202015021004', 'Budi Santoso, S.T.', 'Guru Pengajar', 'L', '082198765432', 'Jl. Alun-Alun Cicalengka No. 12', 'aktif');
+INSERT INTO `guru` VALUES('3', '9', '32042523010400001', 'AGUNG RIFALDI, S.Tr. Kom', 'Guru Pengajar', 'L', '82198765433', 'Kp. Munggang Rt. 01/08 Desa Dampit Kec. Cicalengka Kab. Bandung', 'aktif');
+INSERT INTO `guru` VALUES('11', '1', 'G202608810', 'Administrator Utama', 'Guru Pengajar', 'L', NULL, NULL, 'aktif');
+INSERT INTO `guru` VALUES('12', '4', 'G202608503', 'H. ASEP SAEPULLOH, S.Ag', 'Guru Pengajar', 'L', NULL, NULL, 'aktif');
 
 -- Table structure for `hasil_quiz` --
 DROP TABLE IF EXISTS `hasil_quiz`;

@@ -6,7 +6,30 @@ require_once ROOT_PATH . 'models/BaseModel.php';
 
 class GuruModel extends BaseModel {
 
+    private function ensureJabatanColumn() {
+        static $checked = false;
+        if ($checked) return;
+        try {
+            $col = $this->db->query("SHOW COLUMNS FROM `guru` LIKE 'jabatan'")->fetch();
+            if (!$col) {
+                try {
+                    $this->db->exec("ALTER TABLE `guru` ADD COLUMN `jabatan` VARCHAR(50) NOT NULL DEFAULT 'Guru Pengajar' AFTER `nama_lengkap`");
+                } catch (\Throwable $e) {
+                    $this->db->exec("ALTER TABLE `guru` ADD COLUMN `jabatan` VARCHAR(50) NOT NULL DEFAULT 'Guru Pengajar'");
+                }
+                try {
+                    $this->db->exec("ALTER TABLE `guru` ADD INDEX `idx_guru_jabatan` (`jabatan`)");
+                } catch (\Throwable $eIdx) {}
+            }
+            $checked = true;
+        } catch (\Throwable $e) {
+            // Ignore restricted permissions
+        }
+    }
+
     public function getAll($keyword = null, $jenisKelamin = null, $status = null, $jabatan = null) {
+        $this->ensureJabatanColumn();
+
         $sql = "
             SELECT g.*, u.username, u.email, u.avatar 
             FROM guru g 
@@ -42,9 +65,56 @@ class GuruModel extends BaseModel {
         }
 
         $sql .= " ORDER BY g.nama_lengkap ASC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll();
+        } catch (\PDOException $e) {
+            if (strpos($e->getMessage(), 'jabatan') !== false || $e->getCode() == '42S22') {
+                try {
+                    $this->db->exec("ALTER TABLE `guru` ADD COLUMN `jabatan` VARCHAR(50) NOT NULL DEFAULT 'Guru Pengajar' AFTER `nama_lengkap`");
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute($params);
+                    return $stmt->fetchAll();
+                } catch (\Throwable $e2) {
+                    // Safe fallback if column cannot be added: query without g.jabatan
+                    $fallbackSql = "
+                        SELECT g.*, u.username, u.email, u.avatar 
+                        FROM guru g 
+                        JOIN users u ON g.user_id = u.id 
+                        WHERE u.role_id = 2
+                    ";
+                    $fallbackParams = [];
+                    if ($jenisKelamin && in_array(strtoupper($jenisKelamin), ['L', 'P'])) {
+                        $fallbackSql .= " AND g.jenis_kelamin = ?";
+                        $fallbackParams[] = strtoupper($jenisKelamin);
+                    }
+                    if ($status && trim($status) !== '') {
+                        $fallbackSql .= " AND g.status = ?";
+                        $fallbackParams[] = trim($status);
+                    }
+                    if ($keyword && trim($keyword) !== '') {
+                        $fallbackSql .= " AND (g.nip LIKE ? OR g.nama_lengkap LIKE ? OR u.username LIKE ? OR u.email LIKE ? OR g.no_telepon LIKE ?)";
+                        $term = '%' . trim($keyword) . '%';
+                        $fallbackParams[] = $term;
+                        $fallbackParams[] = $term;
+                        $fallbackParams[] = $term;
+                        $fallbackParams[] = $term;
+                        $fallbackParams[] = $term;
+                    }
+                    $fallbackSql .= " ORDER BY g.nama_lengkap ASC";
+                    $stmt = $this->db->prepare($fallbackSql);
+                    $stmt->execute($fallbackParams);
+                    $rows = $stmt->fetchAll();
+                    foreach ($rows as &$r) {
+                        if (!isset($r['jabatan'])) $r['jabatan'] = 'Guru Pengajar';
+                    }
+                    return $rows;
+                }
+            }
+            throw $e;
+        }
     }
 
     public function getGuru() {

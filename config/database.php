@@ -607,6 +607,23 @@ class Database {
                 // Abaikan jika tabel siswa belum ada
             }
 
+            // Self-healing: Pastikan kolom jabatan ada di tabel guru
+            try {
+                $colCheckJab = self::$conn->query("SHOW COLUMNS FROM `guru` LIKE 'jabatan'")->fetch();
+                if (!$colCheckJab) {
+                    try {
+                        self::$conn->exec("ALTER TABLE `guru` ADD COLUMN `jabatan` VARCHAR(50) NOT NULL DEFAULT 'Guru Pengajar' AFTER `nama_lengkap`");
+                    } catch (\Throwable $eAlter) {
+                        self::$conn->exec("ALTER TABLE `guru` ADD COLUMN `jabatan` VARCHAR(50) NOT NULL DEFAULT 'Guru Pengajar'");
+                    }
+                    try {
+                        self::$conn->exec("ALTER TABLE `guru` ADD INDEX `idx_guru_jabatan` (`jabatan`)");
+                    } catch (\Throwable $eIdx) {}
+                }
+            } catch (\Throwable $eJab) {
+                // Abaikan jika tabel guru belum ada
+            }
+
             // Self-healing: Pastikan tabel wa_logs tersedia untuk log pengiriman WhatsApp
             try {
                 self::$conn->exec("
