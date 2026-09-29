@@ -223,6 +223,39 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
     transform: scale(1.08);
     box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
 }
+
+/* Schedule Banner & KBM Modern Responsive Component */
+.kbm-schedule-card {
+    background: #ffffff;
+    border-radius: 18px;
+    border: 1px solid #e2e8f0 !important;
+}
+.kbm-session-ticket {
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #2563eb !important;
+    border-radius: 14px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
+}
+@media (min-width: 768px) {
+    .kbm-session-ticket {
+        padding: 15px 18px;
+    }
+}
+.kbm-stat-tile {
+    border-radius: 14px;
+    padding: 12px 14px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+@media (min-width: 992px) {
+    .kbm-stat-tile {
+        padding: 14px 18px;
+    }
+}
 </style>
 
 <main class="main-content px-2 px-sm-3 px-md-4 py-3">
@@ -253,24 +286,24 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
     </div>
 
     <!-- Banner Info Skema Jadwal Presensi Aktif -->
-    <div class="card selfie-card p-3.5 p-md-4 mb-4 border shadow-sm" style="background: #ffffff; border-color: #e2e8f0 !important; border-radius: 20px;">
+    <div class="card selfie-card kbm-schedule-card p-3 p-sm-3.5 p-md-4 mb-4 border shadow-sm">
         <!-- Header Info Skema Presensi -->
-        <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap pb-3.5 mb-3.5 border-bottom" style="border-color: #f1f5f9 !important;">
-            <div class="d-flex align-items-start gap-3 min-w-0 flex-grow-1">
-                <div class="rounded-4 d-flex align-items-center justify-content-center text-white flex-shrink-0 shadow-sm mt-0.5" 
-                     style="width: 48px; height: 48px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); box-shadow: 0 8px 18px -4px rgba(37, 99, 235, 0.35);">
-                    <i class="bi <?= $modePresensi === 'jadwal' ? 'bi-calendar-check-fill fs-4' : ($modePresensi === 'serentak' ? 'bi-megaphone-fill fs-4' : ($modePresensi === 'full_day_staff' ? 'bi-briefcase-fill fs-4' : 'bi-info-circle-fill fs-4')) ?>"></i>
+        <div class="d-flex align-items-start justify-content-between gap-2.5 gap-sm-3 flex-wrap pb-3 mb-3 border-bottom" style="border-color: #f1f5f9 !important;">
+            <div class="d-flex align-items-start gap-2.5 gap-sm-3 min-w-0 flex-grow-1">
+                <div class="rounded-3 d-flex align-items-center justify-content-center text-white flex-shrink-0 shadow-sm mt-0.5" 
+                     style="width: 42px; height: 42px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); box-shadow: 0 6px 14px -3px rgba(37, 99, 235, 0.4);">
+                    <i class="bi <?= $modePresensi === 'jadwal' ? 'bi-calendar-check-fill fs-5' : ($modePresensi === 'serentak' ? 'bi-megaphone-fill fs-5' : ($modePresensi === 'full_day_staff' ? 'bi-briefcase-fill fs-5' : 'bi-info-circle-fill fs-5')) ?>"></i>
                 </div>
                 <div class="min-w-0 flex-grow-1">
-                    <div class="d-flex align-items-center gap-2 flex-wrap mb-1.5">
-                        <span class="badge rounded-pill px-3 py-1 fw-bold" style="font-size: 0.75rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                    <div class="d-flex align-items-center gap-1.5 flex-wrap mb-1">
+                        <span class="badge rounded-pill px-2.5 py-1 fw-bold" style="font-size: 0.72rem; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
                             <i class="bi bi-clock-history me-1"></i> <?= htmlspecialchars($effectiveJadwal['title'] ?? 'Skema Presensi') ?>
                         </span>
-                        <span class="badge rounded-pill px-3 py-1 fw-medium" style="font-size: 0.75rem; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0;">
+                        <span class="badge rounded-pill px-2.5 py-1 fw-medium" style="font-size: 0.72rem; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0;">
                             <i class="bi bi-calendar3 me-1 text-primary"></i> Hari: <b class="text-dark"><?= htmlspecialchars($effectiveJadwal['hari'] ?? date('l')) ?></b>
                         </span>
                     </div>
-                    <h5 class="fw-extrabold text-dark mb-1 font-heading" style="font-size: 1.08rem; letter-spacing: -0.3px;">
+                    <h5 class="fw-extrabold text-dark mb-1 font-heading" style="font-size: 1.05rem; letter-spacing: -0.2px;">
                         <?php if ($modePresensi === 'serentak'): ?>
                             <?= htmlspecialchars(!empty($kegiatanNama) ? $kegiatanNama : 'Presensi Serentak Seluruh Guru') ?>
                         <?php elseif ($modePresensi === 'full_day_staff'): ?>
@@ -281,7 +314,7 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
                             Jam Standar Operasional Sekolah (Non-KBM)
                         <?php endif; ?>
                     </h5>
-                    <div class="text-muted small d-flex align-items-start align-items-sm-center gap-1.5" style="font-size: 0.8rem; line-height: 1.4;">
+                    <div class="text-muted small d-flex align-items-start align-items-sm-center gap-1.5" style="font-size: 0.76rem; line-height: 1.35;">
                         <i class="bi bi-info-circle-fill text-primary flex-shrink-0 mt-0.5 mt-sm-0"></i>
                         <span>Jam kehadiran guru disesuaikan otomatis dengan rentang sesi KBM aktif Anda.</span>
                     </div>
@@ -290,7 +323,7 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
 
             <!-- Status Sinkronisasi Otomatis Badge (Desktop) -->
             <div class="d-none d-lg-flex align-items-center gap-2 flex-shrink-0">
-                <span class="badge rounded-pill px-3 py-2 fw-medium d-inline-flex align-items-center gap-2" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.78rem;">
+                <span class="badge rounded-pill px-3 py-1.5 fw-medium d-inline-flex align-items-center gap-1.5" style="background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.76rem;">
                     <span class="d-inline-block rounded-circle bg-success" style="width: 7px; height: 7px;"></span>
                     Sinkron Sesi Mengajar
                 </span>
@@ -298,16 +331,14 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
         </div>
 
         <!-- Konten Jadwal & Batas Presensi -->
-        <div class="row g-3 g-md-4 align-items-stretch">
+        <div class="row g-2.5 g-md-3 align-items-stretch">
             <!-- Kolom Kiri: Agenda Kelas KBM -->
             <div class="col-12 <?= $isKbm && !empty($kbmList) ? 'col-lg-7 col-xl-8' : 'col-12' ?>">
                 <?php if ($isKbm && !empty($kbmList)): ?>
-                    <div class="d-flex flex-column gap-3 h-100 justify-content-center">
+                    <div class="d-flex flex-column gap-2.5 h-100 justify-content-center">
                         <?php foreach ($kbmList as $idx => $kbm): 
-                            // Rapikan spasi bila ada format tanpa spasi seperti "Gim(DDPK)" -> "Gim (DDPK)"
                             $mapelClean = preg_replace('/([a-zA-Z0-9])\(/', '$1 (', $kbm['nama_mapel']);
                             
-                            // Hitung durasi jam mengajar
                             $startTs = !empty($kbm['jam_mulai']) ? strtotime($kbm['jam_mulai']) : 0;
                             $endTs = !empty($kbm['jam_selesai']) ? strtotime($kbm['jam_selesai']) : 0;
                             $durasiMin = ($endTs > $startTs) ? round(($endTs - $startTs) / 60) : 0;
@@ -322,114 +353,120 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
                                 $durasiText = "{$menitD} Menit";
                             }
                         ?>
-                            <div class="p-3.5 p-sm-4 rounded-4 border position-relative shadow-2xs" 
-                                 style="background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); border-color: #e2e8f0 !important; border-left: 5px solid #2563eb !important;">
-                                <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3 gap-md-4">
-                                    <!-- Info Utama Mapel, Kelas & Ruang -->
-                                    <div class="d-flex align-items-start gap-3 min-w-0 flex-grow-1 w-100 w-sm-auto">
-                                        <div class="rounded-3 text-primary border shadow-2xs d-flex align-items-center justify-content-center flex-shrink-0 mt-0.5" 
-                                             style="width: 44px; height: 44px; background: #eff6ff; border-color: #dbeafe !important;">
-                                            <i class="bi bi-book-half fs-5"></i>
+                            <div class="kbm-session-ticket">
+                                <!-- Top Row: Icon + Title & Badges + Desktop Time Pill -->
+                                <div class="d-flex align-items-start justify-content-between gap-2.5">
+                                    <div class="d-flex align-items-start gap-2.5 min-w-0 flex-grow-1">
+                                        <div class="rounded-3 text-primary d-flex align-items-center justify-content-center flex-shrink-0 mt-0.5" 
+                                             style="width: 36px; height: 36px; background: #eff6ff; border: 1px solid #dbeafe;">
+                                            <i class="bi bi-book-half fs-6"></i>
                                         </div>
                                         <div class="min-w-0 flex-grow-1">
-                                            <div class="d-flex align-items-center gap-2 flex-wrap mb-1.5">
+                                            <div class="d-flex align-items-center gap-1.5 flex-wrap mb-1">
                                                 <?php if (count($kbmList) > 1): ?>
-                                                    <span class="badge bg-primary text-white rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.68rem; letter-spacing: 0.3px;">
+                                                    <span class="badge bg-primary text-white rounded-pill px-2 py-0.5 fw-semibold" style="font-size: 0.65rem;">
                                                         SESI <?= $idx + 1 ?>
                                                     </span>
                                                 <?php endif; ?>
-                                                <span class="fw-bold text-dark lh-sm" title="<?= htmlspecialchars($mapelClean) ?>" style="font-size: 0.96rem; word-break: break-word;">
+                                                <span class="fw-bold text-dark lh-sm" title="<?= htmlspecialchars($mapelClean) ?>" style="font-size: 0.94rem; word-break: break-word;">
                                                     <?= htmlspecialchars($mapelClean) ?>
                                                 </span>
                                             </div>
-                                            <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
-                                                <span class="badge rounded-pill px-3 py-1 fw-bold" style="font-size: 0.74rem; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">
+                                            <div class="d-flex align-items-center gap-1.5 flex-wrap mt-1">
+                                                <span class="badge rounded-pill px-2.5 py-0.5 fw-bold" style="font-size: 0.72rem; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;">
                                                     <i class="bi bi-mortarboard-fill me-1"></i><?= htmlspecialchars($kbm['nama_kelas']) ?>
                                                 </span>
                                                 <?php if (!empty($kbm['ruangan'])): ?>
-                                                    <span class="badge rounded-pill px-3 py-1 fw-medium" style="font-size: 0.74rem; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3;">
+                                                    <span class="badge rounded-pill px-2.5 py-0.5 fw-medium" style="font-size: 0.72rem; background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3;">
                                                         <i class="bi bi-geo-alt-fill me-1"></i><?= htmlspecialchars($kbm['ruangan']) ?>
                                                     </span>
                                                 <?php endif; ?>
                                                 <?php if (!empty($durasiText)): ?>
-                                                    <span class="badge rounded-pill px-3 py-1 fw-normal" style="font-size: 0.72rem; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">
+                                                    <span class="badge rounded-pill px-2.5 py-0.5 fw-normal d-none d-sm-inline-flex" style="font-size: 0.7rem; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">
                                                         <i class="bi bi-hourglass-split me-1 text-muted"></i><?= $durasiText ?>
                                                     </span>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
                                     </div>
-                                    
-                                    <!-- Badge Jam Mengajar KBM (Responsif Mobile & Desktop) -->
-                                    <div class="w-100 w-sm-auto pt-2.5 pt-sm-0 border-top border-sm-0 text-start text-sm-end d-flex align-items-center justify-content-between justify-content-sm-end gap-2.5" style="border-color: #f1f5f9 !important;">
-                                        <span class="d-sm-none text-muted small fw-medium" style="font-size: 0.76rem;">
-                                            <i class="bi bi-clock me-1 text-primary"></i>Jam Sesi KBM:
-                                        </span>
-                                        <div class="px-3.5 py-2 rounded-3 border fw-bold d-inline-flex align-items-center gap-2 shadow-2xs" 
-                                             style="background: #ffffff; border-color: #cbd5e1 !important; font-size: 0.86rem; color: #0f172a;">
-                                            <i class="bi bi-clock-fill text-primary fs-6"></i>
-                                            <span><?= substr($kbm['jam_mulai'], 0, 5) ?> &ndash; <?= substr($kbm['jam_selesai'], 0, 5) ?> <small class="text-muted fw-normal" style="font-size: 0.74rem;">WIB</small></span>
+
+                                    <!-- Time Badge (Desktop: visible >= 576px) -->
+                                    <div class="d-none d-sm-block flex-shrink-0 text-end ps-2">
+                                        <div class="px-3 py-1.5 rounded-3 border fw-bold d-inline-flex align-items-center gap-1.5 shadow-2xs" 
+                                             style="background: #ffffff; border-color: #cbd5e1 !important; font-size: 0.84rem; color: #0f172a;">
+                                            <i class="bi bi-clock-fill text-primary"></i>
+                                            <span><?= substr($kbm['jam_mulai'], 0, 5) ?> &ndash; <?= substr($kbm['jam_selesai'], 0, 5) ?> <small class="text-muted fw-normal" style="font-size: 0.72rem;">WIB</small></span>
                                         </div>
                                     </div>
+                                </div>
+
+                                <!-- Mobile Time Strip (Visible only < 576px) -->
+                                <div class="d-flex d-sm-none align-items-center justify-content-between mt-2 pt-2 border-top" style="border-color: rgba(226, 232, 240, 0.8) !important;">
+                                    <span class="text-muted small fw-medium" style="font-size: 0.72rem;">
+                                        <i class="bi bi-clock-fill text-primary me-1"></i>Jam Mengajar:
+                                    </span>
+                                    <span class="fw-bold text-dark px-2.5 py-0.5 rounded-2 border shadow-2xs" style="font-size: 0.78rem; background: #ffffff; border-color: #cbd5e1 !important;">
+                                        <?= substr($kbm['jam_mulai'], 0, 5) ?> &ndash; <?= substr($kbm['jam_selesai'], 0, 5) ?> WIB
+                                    </span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 <?php else: ?>
-                    <div class="p-3.5 bg-light rounded-4 border text-muted small d-flex align-items-center gap-2">
+                    <div class="p-3 bg-light rounded-3 border text-muted small d-flex align-items-center gap-2">
                         <i class="bi bi-info-circle text-primary fs-5"></i>
                         <span><?= htmlspecialchars($keteranganJadwal ?: 'Tidak ada agenda sesi mengajar tatap muka KBM untuk hari ini.') ?></span>
                     </div>
                 <?php endif; ?>
             </div>
 
-            <!-- Kolom Kanan: 2 Kartu Batas Presensi Masuk & Pulang (Padding Nyaman & Rapi) -->
+            <!-- Kolom Kanan: 2 Kartu Batas Presensi Masuk & Pulang -->
             <div class="col-12 <?= $isKbm && !empty($kbmList) ? 'col-lg-5 col-xl-4' : 'col-12' ?>">
-                <div class="row g-2.5 g-md-3 h-100">
+                <div class="row g-2 h-100">
                     <!-- Batas Tepat Waktu -->
                     <div class="col-6 col-lg-12">
-                        <div class="p-3 p-md-3.5 p-xl-4 rounded-4 border h-100 shadow-2xs d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-2.5 gap-lg-3.5" 
+                        <div class="kbm-stat-tile border shadow-2xs" 
                              style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%); border-color: rgba(16, 185, 129, 0.28) !important;">
-                            <div class="d-flex align-items-center gap-2.5 w-100 w-lg-auto">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-success text-white flex-shrink-0 shadow-2xs" 
-                                     style="width: 38px; height: 38px; font-size: 0.95rem;">
-                                    <i class="bi bi-box-arrow-in-right"></i>
-                                </div>
-                                <div class="text-secondary small fw-semibold text-uppercase text-truncate d-lg-none" style="font-size: 0.7rem; letter-spacing: 0.3px;">
-                                    Batas Masuk
-                                </div>
+                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                <span class="text-success small fw-bold text-uppercase d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.3px;">
+                                    <i class="bi bi-box-arrow-in-right fs-6"></i>
+                                    <span class="d-none d-sm-inline">Batas Tepat Waktu</span>
+                                    <span class="d-sm-none">Batas Masuk</span>
+                                </span>
+                                <span class="badge bg-success-subtle text-success rounded-pill px-2 py-0.5 d-none d-lg-inline-block" style="font-size: 0.65rem;">
+                                    Presensi Masuk
+                                </span>
                             </div>
-                            <div class="min-w-0 flex-grow-1">
-                                <div class="text-secondary small fw-semibold text-uppercase text-truncate d-none d-lg-block mb-1" style="font-size: 0.74rem; letter-spacing: 0.4px;">
-                                    Batas Tepat Waktu
-                                </div>
-                                <div class="fw-extrabold text-success fs-5 fs-md-4 lh-1">
-                                    <?= $jamMasukBatas ?> <small class="fw-normal text-muted" style="font-size: 0.74rem;">WIB</small>
-                                </div>
+                            <div class="d-flex align-items-baseline gap-1 my-0.5">
+                                <span class="fw-extrabold text-success fs-5 fs-sm-4 lh-1"><?= $jamMasukBatas ?></span>
+                                <span class="text-muted small fw-medium" style="font-size: 0.72rem;">WIB</span>
+                            </div>
+                            <div class="text-muted small text-truncate" style="font-size: 0.68rem;">
+                                Toleransi tepat waktu
                             </div>
                         </div>
                     </div>
 
                     <!-- Buka Kepulangan -->
                     <div class="col-6 col-lg-12">
-                        <div class="p-3 p-md-3.5 p-xl-4 rounded-4 border h-100 shadow-2xs d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-2.5 gap-lg-3.5" 
+                        <div class="kbm-stat-tile border shadow-2xs" 
                              style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(79, 70, 229, 0.02) 100%); border-color: rgba(79, 70, 229, 0.28) !important;">
-                            <div class="d-flex align-items-center gap-2.5 w-100 w-lg-auto">
-                                <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary text-white flex-shrink-0 shadow-2xs" 
-                                     style="width: 38px; height: 38px; font-size: 0.95rem;">
-                                    <i class="bi bi-door-open"></i>
-                                </div>
-                                <div class="text-secondary small fw-semibold text-uppercase text-truncate d-lg-none" style="font-size: 0.7rem; letter-spacing: 0.3px;">
-                                    Buka Pulang
-                                </div>
+                            <div class="d-flex align-items-center justify-content-between gap-1 mb-1">
+                                <span class="text-primary small fw-bold text-uppercase d-flex align-items-center gap-1.5" style="font-size: 0.72rem; letter-spacing: 0.3px;">
+                                    <i class="bi bi-door-open fs-6"></i>
+                                    <span class="d-none d-sm-inline">Buka Kepulangan</span>
+                                    <span class="d-sm-none">Buka Pulang</span>
+                                </span>
+                                <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-0.5 d-none d-lg-inline-block" style="font-size: 0.65rem;">
+                                    Presensi Pulang
+                                </span>
                             </div>
-                            <div class="min-w-0 flex-grow-1">
-                                <div class="text-secondary small fw-semibold text-uppercase text-truncate d-none d-lg-block mb-1" style="font-size: 0.74rem; letter-spacing: 0.4px;">
-                                    Buka Kepulangan
-                                </div>
-                                <div class="fw-extrabold text-primary fs-5 fs-md-4 lh-1">
-                                    <?= $jamPulangMulai ?> <small class="fw-normal text-muted" style="font-size: 0.74rem;">WIB</small>
-                                </div>
+                            <div class="d-flex align-items-baseline gap-1 my-0.5">
+                                <span class="fw-extrabold text-primary fs-5 fs-sm-4 lh-1"><?= $jamPulangMulai ?></span>
+                                <span class="text-muted small fw-medium" style="font-size: 0.72rem;">WIB</span>
+                            </div>
+                            <div class="text-muted small text-truncate" style="font-size: 0.68rem;">
+                                Checkout presensi
                             </div>
                         </div>
                     </div>
