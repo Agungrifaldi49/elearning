@@ -2115,7 +2115,8 @@ class ApiController {
 
                 $stmtT = $this->db->prepare("
                     SELECT t.*, mp.nama_mapel, k.nama_kelas,
-                           (SELECT COUNT(*) FROM pengumpulan_tugas pt WHERE pt.tugas_id = t.id) as total_pengumpulan 
+                           (SELECT COUNT(*) FROM pengumpulan_tugas pt WHERE pt.tugas_id = t.id) as total_pengumpulan,
+                           (SELECT COUNT(*) FROM tugas_susulan ts WHERE ts.tugas_id = t.id AND ts.status = 'pending') as pending_susulan_count 
                     FROM tugas t 
                     LEFT JOIN mata_pelajaran mp ON t.mapel_id = mp.id 
                     LEFT JOIN kelas k ON t.kelas_id = k.id 
@@ -2247,49 +2248,6 @@ class ApiController {
                 $quizList = $stmtQ->fetchAll();
 
                 $this->jsonResponse(true, 'Daftar Quiz / Ujian Guru', $quizList);
-                break;
-
-            case 'susulan_requests':
-                require_once ROOT_PATH . 'models/ExamModel.php';
-                $examModel = new ExamModel();
-                $targetGId = !empty($guru['id']) ? (int)$guru['id'] : $userId;
-                $susulanList = $examModel->getSusulanRequestsByGuru($targetGId);
-                $this->jsonResponse(true, 'Daftar Permintaan Izin Susulan / Buka Suspend', $susulanList);
-                break;
-
-            case 'approve_susulan':
-                require_once ROOT_PATH . 'models/ExamModel.php';
-                $examModel = new ExamModel();
-                $input = $this->getPostInput();
-                $requestId = intval($input['request_id'] ?? 0);
-                $quizId = intval($input['quiz_id'] ?? 0);
-                $siswaId = intval($input['siswa_id'] ?? 0);
-                $catatan = trim($input['catatan'] ?? 'Disetujui Guru via Mobile App');
-
-                if ($requestId > 0) {
-                    $examModel->approveSusulanById($requestId, $catatan);
-                } else if ($quizId > 0 && $siswaId > 0) {
-                    $examModel->approveSusulanRequest($quizId, $siswaId, $catatan);
-                } else {
-                    $this->jsonResponse(false, 'Request ID atau Quiz ID & Siswa ID wajib diisi', null, 400);
-                }
-
-                $this->jsonResponse(true, 'Permintaan Ujian Susulan / Buka Suspend berhasil DISETUJUI!');
-                break;
-
-            case 'reject_susulan':
-                require_once ROOT_PATH . 'models/ExamModel.php';
-                $examModel = new ExamModel();
-                $input = $this->getPostInput();
-                $requestId = intval($input['request_id'] ?? 0);
-                $catatan = trim($input['catatan'] ?? 'Ditolak Guru via Mobile App');
-
-                if ($requestId <= 0) {
-                    $this->jsonResponse(false, 'Request ID tidak valid', null, 400);
-                }
-
-                $examModel->rejectSusulanById($requestId, $catatan);
-                $this->jsonResponse(true, 'Permintaan Ujian Susulan / Buka Suspend DITOLAK.');
                 break;
 
             case 'absensi':
@@ -2945,8 +2903,12 @@ class ApiController {
                 try {
                     $tugasSusulan = $learningModel->getTugasSusulanRequestsByGuru($gTarget);
                     foreach ($tugasSusulan as &$ts) {
+                        $ts['id'] = intval($ts['id']);
                         $ts['type'] = 'tugas';
+                        $ts['tugas_id'] = intval($ts['tugas_id'] ?? 0);
+                        $ts['siswa_id'] = intval($ts['siswa_id'] ?? 0);
                         $ts['judul'] = $ts['judul_tugas'] ?? '';
+                        $ts['status'] = $ts['status'] ?? 'pending';
                     }
                     unset($ts);
                 } catch (\Throwable $eTs) {
@@ -2957,8 +2919,12 @@ class ApiController {
                 try {
                     $quizSusulan = $examModel->getSusulanRequestsByGuru($gTarget);
                     foreach ($quizSusulan as &$qs) {
+                        $qs['id'] = intval($qs['id']);
                         $qs['type'] = 'quiz';
+                        $qs['quiz_id'] = intval($qs['quiz_id'] ?? 0);
+                        $qs['siswa_id'] = intval($qs['siswa_id'] ?? 0);
                         $qs['judul'] = $qs['judul_quiz'] ?? '';
+                        $qs['status'] = $qs['status'] ?? 'pending';
                     }
                     unset($qs);
                 } catch (\Throwable $eQs) {
@@ -2973,33 +2939,71 @@ class ApiController {
             case 'acc_susulan':
                 $input = $this->getPostInput();
                 $requestId = intval($_POST['request_id'] ?? $input['request_id'] ?? 0);
-                $type = trim($_POST['type'] ?? $input['type'] ?? '');
-
-                if ($requestId <= 0) {
-                    $this->jsonResponse(false, 'ID Permohonan tidak valid', null, 400);
-                }
+                $quizId = intval($_POST['quiz_id'] ?? $input['quiz_id'] ?? 0);
+                $tugasId = intval($_POST['tugas_id'] ?? $input['tugas_id'] ?? 0);
+                $siswaId = intval($_POST['siswa_id'] ?? $input['siswa_id'] ?? 0);
+                $type = strtolower(trim($_POST['type'] ?? $input['type'] ?? ''));
+                $catatan = trim($_POST['catatan'] ?? $input['catatan'] ?? 'Disetujui Guru via Mobile App');
 
                 require_once ROOT_PATH . 'models/LearningModel.php';
                 require_once ROOT_PATH . 'models/ExamModel.php';
+                require_once ROOT_PATH . 'models/CommunicationModel.php';
                 $learningModel = new LearningModel();
                 $examModel = new ExamModel();
+                $commModel = new CommunicationModel();
 
                 $success = false;
-                if ($type === 'tugas') {
+
+                // Handle by Tugas ID + Siswa ID if provided
+                if ($tugasId > 0 && $siswaId > 0) {
+                    $checkTugas = $this->db->prepare("SELECT ts.*, s.user_id as s_uid, t.judul as judul_tugas FROM tugas_susulan ts JOIN tugas t ON ts.tugas_id = t.id JOIN siswa s ON ts.siswa_id = s.id WHERE ts.tugas_id = ? AND ts.siswa_id = ? ORDER BY ts.id DESC LIMIT 1");
+                    $checkTugas->execute([$tugasId, $siswaId]);
+                    $tRow = $checkTugas->fetch(PDO::FETCH_ASSOC);
+                    if ($tRow) {
+                        $requestId = intval($tRow['id']);
+                        $type = 'tugas';
+                    }
+                }
+
+                // If type not explicitly specified, auto-detect by requestId
+                if (empty($type) && $requestId > 0) {
+                    $chk = $this->db->prepare("SELECT id FROM tugas_susulan WHERE id = ?");
+                    $chk->execute([$requestId]);
+                    if ($chk->fetch()) {
+                        $type = 'tugas';
+                    } else {
+                        $type = 'quiz';
+                    }
+                }
+
+                if ($type === 'tugas' && $requestId > 0) {
+                    $checkTugas = $this->db->prepare("SELECT ts.*, s.user_id as s_uid, t.judul as judul_tugas FROM tugas_susulan ts JOIN tugas t ON ts.tugas_id = t.id JOIN siswa s ON ts.siswa_id = s.id WHERE ts.id = ?");
+                    $checkTugas->execute([$requestId]);
+                    $tRow = $checkTugas->fetch(PDO::FETCH_ASSOC);
+
                     $success = $learningModel->updateTugasSusulanStatus($requestId, 'disetujui');
-                } elseif ($type === 'quiz') {
-                    $success = $examModel->updateSusulanStatus($requestId, 'disetujui');
-                } else {
-                    $success = $learningModel->updateTugasSusulanStatus($requestId, 'disetujui');
-                    if (!$success) {
-                        $success = $examModel->updateSusulanStatus($requestId, 'disetujui');
+                    if ($success && $tRow && !empty($tRow['s_uid'])) {
+                        try {
+                            $commModel->sendNotification(
+                                $tRow['s_uid'],
+                                '🎉 Izin Susulan Tugas Disetujui!',
+                                "Permohonan izin susulan untuk tugas '{$tRow['judul_tugas']}' telah disetujui Guru. Silahkan segera kirim tugas Anda.",
+                                'index.php?url=siswa/tugas'
+                            );
+                        } catch (\Throwable $eN) {}
+                    }
+                } elseif ($type === 'quiz' || ($quizId > 0 && $siswaId > 0) || $requestId > 0) {
+                    if ($requestId > 0) {
+                        $success = $examModel->approveSusulanById($requestId, $catatan);
+                    } else if ($quizId > 0 && $siswaId > 0) {
+                        $success = $examModel->approveSusulanRequest($quizId, $siswaId, $catatan);
                     }
                 }
 
                 if ($success) {
                     $this->jsonResponse(true, 'Permohonan susulan siswa berhasil disetujui (ACC)!');
                 } else {
-                    $this->jsonResponse(false, 'Gagal menyetujui permohonan susulan', null, 500);
+                    $this->jsonResponse(false, 'Gagal menyetujui permohonan susulan atau data tidak ditemukan', null, 400);
                 }
                 break;
 
@@ -3007,7 +3011,8 @@ class ApiController {
             case 'tolak_susulan':
                 $input = $this->getPostInput();
                 $requestId = intval($_POST['request_id'] ?? $input['request_id'] ?? 0);
-                $type = trim($_POST['type'] ?? $input['type'] ?? '');
+                $type = strtolower(trim($_POST['type'] ?? $input['type'] ?? ''));
+                $catatan = trim($_POST['catatan'] ?? $input['catatan'] ?? 'Ditolak Guru via Mobile App');
 
                 if ($requestId <= 0) {
                     $this->jsonResponse(false, 'ID Permohonan tidak valid', null, 400);
@@ -3015,19 +3020,41 @@ class ApiController {
 
                 require_once ROOT_PATH . 'models/LearningModel.php';
                 require_once ROOT_PATH . 'models/ExamModel.php';
+                require_once ROOT_PATH . 'models/CommunicationModel.php';
                 $learningModel = new LearningModel();
                 $examModel = new ExamModel();
+                $commModel = new CommunicationModel();
 
                 $success = false;
-                if ($type === 'tugas') {
-                    $success = $learningModel->updateTugasSusulanStatus($requestId, 'ditolak');
-                } elseif ($type === 'quiz') {
-                    $success = $examModel->updateSusulanStatus($requestId, 'ditolak');
-                } else {
-                    $success = $learningModel->updateTugasSusulanStatus($requestId, 'ditolak');
-                    if (!$success) {
-                        $success = $examModel->updateSusulanStatus($requestId, 'ditolak');
+
+                if (empty($type)) {
+                    $chk = $this->db->prepare("SELECT id FROM tugas_susulan WHERE id = ?");
+                    $chk->execute([$requestId]);
+                    if ($chk->fetch()) {
+                        $type = 'tugas';
+                    } else {
+                        $type = 'quiz';
                     }
+                }
+
+                if ($type === 'tugas') {
+                    $checkTugas = $this->db->prepare("SELECT ts.*, s.user_id as s_uid, t.judul as judul_tugas FROM tugas_susulan ts JOIN tugas t ON ts.tugas_id = t.id JOIN siswa s ON ts.siswa_id = s.id WHERE ts.id = ?");
+                    $checkTugas->execute([$requestId]);
+                    $tRow = $checkTugas->fetch(PDO::FETCH_ASSOC);
+
+                    $success = $learningModel->updateTugasSusulanStatus($requestId, 'ditolak');
+                    if ($success && $tRow && !empty($tRow['s_uid'])) {
+                        try {
+                            $commModel->sendNotification(
+                                $tRow['s_uid'],
+                                '❌ Izin Susulan Tugas Ditolak',
+                                "Permohonan izin susulan untuk tugas '{$tRow['judul_tugas']}' ditolak oleh Guru Pengampu.",
+                                'index.php?url=siswa/tugas'
+                            );
+                        } catch (\Throwable $eN) {}
+                    }
+                } else {
+                    $success = $examModel->rejectSusulanById($requestId, $catatan);
                 }
 
                 if ($success) {

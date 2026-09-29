@@ -345,6 +345,7 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
                 : Icon(Icons.forum_outlined, color: isDark ? Colors.white : const Color(0xFF0F172A)),
             tooltip: 'Forum Diskusi Komunitas',
             onPressed: () {
+              Provider.of<SiswaProvider>(context, listen: false).markAllForumAsSeen();
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaForumScreen()));
             },
           ),

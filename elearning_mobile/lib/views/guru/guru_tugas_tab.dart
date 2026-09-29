@@ -987,8 +987,16 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
         return Consumer<GuruProvider>(
           builder: (context, guruProvider, child) {
             final requests = guruProvider.susulanList;
-            final pendingRequests = requests.where((e) => (e['status'] ?? '').toString().toLowerCase() == 'pending').toList();
-            final historyRequests = requests.where((e) => (e['status'] ?? '').toString().toLowerCase() != 'pending').toList();
+            final pendingRequests = requests.where((e) {
+              final isTugas = (e['type'] ?? 'tugas').toString().toLowerCase() == 'tugas';
+              final isPending = (e['status'] ?? 'pending').toString().toLowerCase() == 'pending';
+              return isTugas && isPending;
+            }).toList();
+            final historyRequests = requests.where((e) {
+              final isTugas = (e['type'] ?? 'tugas').toString().toLowerCase() == 'tugas';
+              final isPending = (e['status'] ?? 'pending').toString().toLowerCase() == 'pending';
+              return isTugas && !isPending;
+            }).toList();
 
             return DefaultTabController(
               length: 2,
@@ -1278,10 +1286,14 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                       const SizedBox(width: 6),
                       ElevatedButton.icon(
                         onPressed: _showSusulanRequestsModal,
-                        icon: const Icon(Icons.mark_email_unread_rounded, size: 16),
-                        label: Text('Izin Susulan (${guruProvider.susulanList.where((e) => (e['status'] ?? '').toString().toLowerCase() == 'pending').length})'),
+                        icon: Icon(
+                          Icons.mark_email_unread_rounded,
+                          size: 16,
+                          color: guruProvider.pendingTugasSusulanCount > 0 ? Colors.white : Colors.white70,
+                        ),
+                        label: Text('Izin Susulan (${guruProvider.pendingTugasSusulanCount})'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange.shade800,
+                          backgroundColor: guruProvider.pendingTugasSusulanCount > 0 ? const Color(0xFFDC2626) : Colors.orange.shade800,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
@@ -1623,6 +1635,79 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                                       ),
                                     ),
                                   ],
+                                ),
+
+                                // 📩 Task Susulan Permission Notice Badge
+                                Builder(
+                                  builder: (context) {
+                                    final taskSusulanCount = t.pendingSusulan > 0
+                                        ? t.pendingSusulan
+                                        : guruProvider.susulanList.where((e) {
+                                            final isTugas = (e['type'] ?? 'tugas').toString().toLowerCase() == 'tugas';
+                                            final isPending = (e['status'] ?? 'pending').toString().toLowerCase() == 'pending';
+                                            final tId = int.tryParse(e['tugas_id']?.toString() ?? '0') ?? 0;
+                                            return isTugas && isPending && (tId == t.id);
+                                          }).length;
+
+                                    if (taskSusulanCount <= 0) return const SizedBox.shrink();
+
+                                    return Container(
+                                      margin: const EdgeInsets.only(top: 10),
+                                      child: InkWell(
+                                        onTap: _showSusulanRequestsModal,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFEF3C7),
+                                            borderRadius: BorderRadius.circular(12),
+                                            border: Border.all(color: const Color(0xFFF59E0B), width: 1.2),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(0xFFF59E0B).withAlpha(30),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.all(4),
+                                                decoration: const BoxDecoration(
+                                                  color: Color(0xFFD97706),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(Icons.mark_email_unread_rounded, size: 14, color: Colors.white),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  '$taskSusulanCount Siswa Meminta Izin Susulan',
+                                                  style: const TextStyle(
+                                                    fontSize: 11.5,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF92400E),
+                                                  ),
+                                                ),
+                                              ),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFD97706),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: const Text(
+                                                  'Tinjau & ACC',
+                                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                                 const SizedBox(height: 14),
 

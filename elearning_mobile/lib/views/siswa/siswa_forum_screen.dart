@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../models/forum_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/siswa_provider.dart';
+import '../../providers/guru_provider.dart';
 import '../../services/api_service.dart';
 import '../../services/profanity_service.dart';
 import '../../theme/app_theme.dart';
@@ -202,6 +204,15 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
         _applyFilter();
         _isLoading = false;
       });
+
+      // Mark all topics as seen when viewing the forum
+      if (user != null && list.isNotEmpty) {
+        if (user.roleName.toLowerCase().contains('guru')) {
+          Provider.of<GuruProvider>(context, listen: false).markAllForumAsSeen(topics: list);
+        } else {
+          Provider.of<SiswaProvider>(context, listen: false).markAllForumAsSeen(topics: list);
+        }
+      }
     }
   }
 
@@ -835,6 +846,15 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
   }
 
   void _showForumDetailBottomSheet(ForumModel forum) {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user != null) {
+      if (user.roleName.toLowerCase().contains('guru')) {
+        Provider.of<GuruProvider>(context, listen: false).markForumAsSeen(forum.id);
+      } else {
+        Provider.of<SiswaProvider>(context, listen: false).markForumAsSeen(forum.id);
+      }
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1001,6 +1021,34 @@ class _SiswaForumScreenState extends State<SiswaForumScreen> {
         backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
         foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
         elevation: 1,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.done_all_rounded),
+            tooltip: 'Tandai Semua Sudah Dibaca',
+            onPressed: () {
+              if (currentUser != null && _topics.isNotEmpty) {
+                if (currentUser.roleName.toLowerCase().contains('guru')) {
+                  Provider.of<GuruProvider>(context, listen: false).markAllForumAsSeen(topics: _topics);
+                } else {
+                  Provider.of<SiswaProvider>(context, listen: false).markAllForumAsSeen(topics: _topics);
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Semua diskusi telah ditandai sudah dibaca.'),
+                    duration: Duration(seconds: 2),
+                    backgroundColor: Color(0xFF10B981),
+                  ),
+                );
+                setState(() {});
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Segarkan',
+            onPressed: _loadForum,
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showNewTopicDialog,

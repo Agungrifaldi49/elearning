@@ -21,6 +21,7 @@ class TugasModel {
   final bool isExpired;
   final String lockStatus;
   final String? susulanStatus;
+  final int? pendingSusulanCount;
 
   TugasModel({
     required this.id,
@@ -45,6 +46,7 @@ class TugasModel {
     this.isExpired = false,
     this.lockStatus = 'terbuka',
     this.susulanStatus,
+    this.pendingSusulanCount,
   });
 
   static int _parseInt(dynamic val, [int defaultVal = 0]) {
@@ -113,6 +115,7 @@ class TugasModel {
       isExpired: parsedExpired,
       lockStatus: lockSt,
       susulanStatus: susulanSt,
+      pendingSusulanCount: json['pending_susulan_count'] != null ? _parseInt(json['pending_susulan_count']) : null,
     );
   }
 
@@ -122,4 +125,5 @@ class TugasModel {
   bool get isSusulanDitolak => susulanStatus == 'ditolak' || lockStatus == 'ditolak';
   bool get isSusulanDisetujui => lockStatus == 'disetujui_susulan' || susulanStatus == 'disetujui';
   bool get isLocked => !canSubmit || (isExpired && !isSubmitted && !isSusulanDisetujui);
+  int get pendingSusulan => pendingSusulanCount ?? 0;
 }

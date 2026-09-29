@@ -358,11 +358,11 @@ class LearningModel extends BaseModel {
             ];
         }
 
-        $stmt = $this->db->prepare("SELECT * FROM tugas_susulan WHERE tugas_id = ? AND siswa_id = ?");
+        $stmt = $this->db->prepare("SELECT * FROM tugas_susulan WHERE tugas_id = ? AND siswa_id = ? ORDER BY id DESC LIMIT 1");
         $stmt->execute([(int)$tugasId, (int)$siswaId]);
         $susulan = $stmt->fetch();
 
-        if ($susulan && $susulan['status'] === 'disetujui') {
+        if ($susulan && ($susulan['status'] === 'disetujui' || $susulan['status'] === 'disetujui_susulan')) {
             return [
                 'access' => true,
                 'is_expired' => true,
@@ -382,12 +382,17 @@ class LearningModel extends BaseModel {
     }
 
     public function requestTugasSusulan($tugasId, $siswaId, $catatan = '') {
-        $stmt = $this->db->prepare("
-            INSERT INTO tugas_susulan (tugas_id, siswa_id, status, catatan)
-            VALUES (?, ?, 'pending', ?)
-            ON DUPLICATE KEY UPDATE status = 'pending', catatan = VALUES(catatan), updated_at = NOW()
-        ");
-        return $stmt->execute([(int)$tugasId, (int)$siswaId, $catatan]);
+        $check = $this->db->prepare("SELECT id FROM tugas_susulan WHERE tugas_id = ? AND siswa_id = ? ORDER BY id DESC LIMIT 1");
+        $check->execute([(int)$tugasId, (int)$siswaId]);
+        $existing = $check->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing) {
+            $stmt = $this->db->prepare("UPDATE tugas_susulan SET status = 'pending', catatan = ?, updated_at = NOW() WHERE id = ?");
+            return $stmt->execute([$catatan, $existing['id']]);
+        } else {
+            $stmt = $this->db->prepare("INSERT INTO tugas_susulan (tugas_id, siswa_id, status, catatan, created_at, updated_at) VALUES (?, ?, 'pending', ?, NOW(), NOW())");
+            return $stmt->execute([(int)$tugasId, (int)$siswaId, $catatan]);
+        }
     }
 
     public function getTugasSusulanRequestsByGuru($guruId = null) {
@@ -426,7 +431,7 @@ class LearningModel extends BaseModel {
     }
 
     public function updateTugasSusulanStatus($requestId, $status) {
-        $stmt = $this->db->prepare("UPDATE tugas_susulan SET status = ? WHERE id = ?");
+        $stmt = $this->db->prepare("UPDATE tugas_susulan SET status = ?, updated_at = NOW() WHERE id = ?");
         return $stmt->execute([$status, (int)$requestId]);
     }
 

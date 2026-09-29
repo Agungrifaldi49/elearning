@@ -56,7 +56,7 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
       builder: (context) {
         return Consumer<GuruProvider>(
           builder: (context, guruProvider, child) {
-            final requests = guruProvider.susulanList;
+            final requests = guruProvider.susulanList.where((e) => (e['type'] ?? 'quiz').toString().toLowerCase() == 'quiz').toList();
             final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
 
             return Container(
@@ -544,8 +544,7 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
   Widget build(BuildContext context) {
     final guruProvider = Provider.of<GuruProvider>(context);
     final quizList = guruProvider.quizList;
-    final susulanList = guruProvider.susulanList;
-    final pendingCount = susulanList.where((e) => (e['status'] ?? '').toString().toLowerCase() == 'pending').length;
+    final pendingCount = guruProvider.pendingQuizSusulanCount;
     final koreksiList = guruProvider.koreksiList;
     final perluKoreksiCount = koreksiList.where((e) => (int.tryParse(e['ungraded_essay_count'].toString()) ?? 0) > 0).length;
 

@@ -235,6 +235,7 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
       final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
       if (user != null) {
         final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+        guruProvider.loadSeenState();
         guruProvider.fetchDashboard(user.id).then((_) {
           if (mounted) {
             AttendanceReminderService.checkAndShowReminder(
@@ -341,6 +342,7 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
                 : const Icon(Icons.forum_outlined),
             tooltip: 'Forum Diskusi Komunitas',
             onPressed: () {
+              Provider.of<GuruProvider>(context, listen: false).markAllForumAsSeen();
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaForumScreen()));
             },
           ),
@@ -438,24 +440,26 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
                   label: 'Beranda',
                   isDark: isDark,
                 ),
-                _buildNavItem(
-                  index: 3,
-                  icon: Icons.assignment_outlined,
-                  activeIcon: Icons.assignment_rounded,
-                  label: 'Tugas',
-                  isDark: isDark,
+                Consumer<GuruProvider>(
+                  builder: (context, guruProvider, child) {
+                    return _buildNavItem(
+                      index: 3,
+                      icon: Icons.assignment_outlined,
+                      activeIcon: Icons.assignment_rounded,
+                      label: 'Tugas',
+                      badgeCount: guruProvider.pendingTugasSusulanCount,
+                      isDark: isDark,
+                    );
+                  },
                 ),
                 Consumer<GuruProvider>(
                   builder: (context, guruProvider, child) {
-                    final pendingCount = guruProvider.susulanList
-                        .where((e) => (e['status'] ?? '') == 'pending')
-                        .length;
                     return _buildNavItem(
                       index: 4,
                       icon: Icons.quiz_outlined,
                       activeIcon: Icons.quiz_rounded,
                       label: 'CBT Quiz',
-                      badgeCount: pendingCount,
+                      badgeCount: guruProvider.pendingQuizSusulanCount,
                       isDark: isDark,
                     );
                   },

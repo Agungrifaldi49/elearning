@@ -159,13 +159,16 @@ class SiswaProvider with ChangeNotifier {
     }
   }
 
-  void markAllForumAsSeen() async {
-    _seenForumIds.addAll(_forumTopicList.map((f) => f.id));
-    notifyListeners();
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList('seen_forum_ids', _seenForumIds.map((e) => e.toString()).toList());
-    } catch (_) {}
+  void markAllForumAsSeen({List<ForumModel>? topics}) async {
+    final list = topics ?? _forumTopicList;
+    if (list.isNotEmpty) {
+      _seenForumIds.addAll(list.map((f) => f.id));
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('seen_forum_ids', _seenForumIds.map((e) => e.toString()).toList());
+      } catch (_) {}
+    }
   }
 
   void markMateriAsSeen(int materiId) async {
@@ -641,10 +644,8 @@ class SiswaProvider with ChangeNotifier {
     final res = await ApiService.get('forum/list', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
       final list = (res['data'] as List).map((e) => ForumModel.fromJson(e)).toList();
-      if (list.length != _forumTopicList.length) {
-        _forumTopicList = list;
-        notifyListeners();
-      }
+      _forumTopicList = list;
+      notifyListeners();
     }
   }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/materi_model.dart';
 import '../models/tugas_model.dart';
 import '../models/quiz_model.dart';
@@ -22,7 +23,8 @@ class GuruProvider with ChangeNotifier {
   List<ChatContactModel> _chatContacts = [];
   final StreamController<List<ChatContactModel>> _chatContactsController = StreamController<List<ChatContactModel>>.broadcast();
 
-  final Set<int> _seenForumIds = {};
+  Set<int> _seenForumIds = {};
+  Set<int> get seenForumIds => _seenForumIds;
   int _unreadChatCount = 0;
 
   bool get isLoading => _isLoading;
@@ -426,6 +428,22 @@ class GuruProvider with ChangeNotifier {
   List<dynamic> _susulanList = [];
   List<dynamic> get susulanList => _susulanList;
 
+  int get pendingTugasSusulanCount => _susulanList.where((e) {
+    final isTugas = (e['type'] ?? 'tugas').toString().toLowerCase() == 'tugas';
+    final isPending = (e['status'] ?? 'pending').toString().toLowerCase() == 'pending';
+    return isTugas && isPending;
+  }).length;
+
+  int get pendingQuizSusulanCount => _susulanList.where((e) {
+    final isQuiz = (e['type'] ?? '').toString().toLowerCase() == 'quiz';
+    final isPending = (e['status'] ?? 'pending').toString().toLowerCase() == 'pending';
+    return isQuiz && isPending;
+  }).length;
+
+  int get totalPendingSusulanCount => _susulanList.where((e) {
+    return (e['status'] ?? 'pending').toString().toLowerCase() == 'pending';
+  }).length;
+
   Future<void> fetchSusulanRequests(int userId) async {
     final res = await ApiService.get('guru/susulan_requests', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
@@ -468,9 +486,10 @@ class GuruProvider with ChangeNotifier {
 
   void startRealtimeSync(int userId) {
     _realtimeTimer?.cancel();
-    _realtimeTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+    _realtimeTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
       await fetchChatContactsSilent(userId);
       await fetchForumSilent(userId);
+      await fetchSusulanRequestsSilent(userId);
     });
   }
 
@@ -494,6 +513,7 @@ class GuruProvider with ChangeNotifier {
     final res = await ApiService.get('guru/susulan_requests', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
       _susulanList = res['data'];
+      notifyListeners();
     }
   }
 
@@ -536,10 +556,8 @@ class GuruProvider with ChangeNotifier {
     final res = await ApiService.get('forum/list', params: {'user_id': userId.toString()});
     if (res['success'] == true && res['data'] is List) {
       final list = (res['data'] as List).map((e) => ForumModel.fromJson(e)).toList();
-      if (list.length != _forumTopicList.length) {
-        _forumTopicList = list;
-        notifyListeners();
-      }
+      _forumTopicList = list;
+      notifyListeners();
     }
   }
 
@@ -610,9 +628,37 @@ class GuruProvider with ChangeNotifier {
     });
   }
 
+  Future<void> loadSeenState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _seenForumIds = (prefs.getStringList('seen_forum_ids_guru') ?? prefs.getStringList('seen_forum_ids') ?? [])
+          .map((e) => int.tryParse(e) ?? 0)
+          .toSet();
+      notifyListeners();
+    } catch (_) {}
+  }
+
   void markForumAsSeen(int forumId) async {
-    _seenForumIds.add(forumId);
-    notifyListeners();
+    if (!_seenForumIds.contains(forumId)) {
+      _seenForumIds.add(forumId);
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('seen_forum_ids_guru', _seenForumIds.map((e) => e.toString()).toList());
+      } catch (_) {}
+    }
+  }
+
+  void markAllForumAsSeen({List<ForumModel>? topics}) async {
+    final list = topics ?? _forumTopicList;
+    if (list.isNotEmpty) {
+      _seenForumIds.addAll(list.map((f) => f.id));
+      notifyListeners();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setStringList('seen_forum_ids_guru', _seenForumIds.map((e) => e.toString()).toList());
+      } catch (_) {}
+    }
   }
 
   Future<Map<String, dynamic>> fetchEnrolledStudents(
