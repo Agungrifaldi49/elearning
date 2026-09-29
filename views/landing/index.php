@@ -62,59 +62,10 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
     vertical-align: middle;
 }
 
-/* Touch & Mobile Optimization for Landing CTA Buttons */
-.landing-hero-btn,
-.landing-nav-login-btn,
-.landing-mobile-login-btn,
-.landing-hero-outline-btn,
-.landing-footer-login-btn {
-    position: relative !important;
-    z-index: 5 !important;
-    touch-action: manipulation !important;
-    -webkit-tap-highlight-color: rgba(255, 193, 7, 0.35) !important;
-    user-select: none !important;
-    -webkit-user-select: none !important;
-    cursor: pointer !important;
-    text-decoration: none !important;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease !important;
-}
-
-/* Ensure inner icons and text do not capture or cancel touch events */
-.landing-hero-btn *,
-.landing-nav-login-btn *,
-.landing-mobile-login-btn *,
-.landing-hero-outline-btn *,
-.landing-footer-login-btn * {
-    pointer-events: none !important;
-}
-
-/* Responsive Active feedback on touch */
-.landing-hero-btn:active,
-.landing-nav-login-btn:active,
-.landing-mobile-login-btn:active,
-.landing-footer-login-btn:active {
-    transform: scale(0.97) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
-    opacity: 0.95 !important;
-}
-
-@media (hover: hover) and (pointer: fine) {
-    .landing-hero-btn:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 10px 25px rgba(255, 193, 7, 0.45) !important;
-    }
-    .landing-nav-login-btn:hover,
-    .landing-mobile-login-btn:hover,
-    .landing-footer-login-btn:hover {
-        transform: translateY(-1px) !important;
-        box-shadow: 0 6px 18px rgba(255, 193, 7, 0.4) !important;
-    }
-}
-
 @media (max-width: 991.98px) {
     .landing-navbar-title {
-        max-width: calc(100vw - 200px);
-        font-size: 1rem !important;
+        max-width: calc(100vw - 120px);
+        font-size: 1.05rem !important;
     }
     #mainNavbar .navbar-collapse {
         background: linear-gradient(135deg, #0a58ca 0%, #073896 100%);
@@ -125,9 +76,6 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
         margin-top: 12px;
         border: 1px solid rgba(255, 255, 255, 0.2);
         box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-        max-height: calc(100dvh - 90px);
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
     }
     #mainNavbar .nav-link {
         padding: 10px 16px !important;
@@ -138,47 +86,46 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
     #mainNavbar .nav-link:focus {
         background: rgba(255, 255, 255, 0.15);
     }
-    .landing-nav-login-btn {
-        width: 100% !important;
+    #mainNavbar .btn-warning {
+        width: 100%;
         margin-top: 10px;
-        padding-top: 13px !important;
-        padding-bottom: 13px !important;
+        padding-top: 12px;
+        padding-bottom: 12px;
         text-align: center;
-        display: flex !important;
+        display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1rem;
-    }
-    .landing-mobile-login-btn {
-        font-size: 0.82rem !important;
-        padding: 6px 14px !important;
-        font-weight: 700 !important;
-        display: inline-flex !important;
-        align-items: center;
-        white-space: nowrap;
     }
 }
 
 @media (max-width: 575.98px) {
     .landing-navbar-title {
-        max-width: calc(100vw - 180px);
-        font-size: 0.92rem !important;
+        max-width: calc(100vw - 110px);
+        font-size: 0.95rem !important;
     }
-    .hero-cta-group {
-        width: 100%;
-        flex-direction: column !important;
-        gap: 12px !important;
-    }
-    .landing-hero-btn,
-    .landing-hero-outline-btn {
+    .hero-cta-btn {
         width: 100% !important;
-        padding: 14px 20px !important;
-        font-size: 1.02rem !important;
-        min-height: 50px !important;
         display: flex !important;
         align-items: center;
         justify-content: center;
+        padding: 14px 20px !important;
+        font-size: 1.05rem !important;
     }
+}
+
+/* Touch & Click Reliability for Hero & Navbar CTA */
+.hero-cta-btn,
+#mainNavbar .btn-warning {
+    touch-action: manipulation !important;
+    cursor: pointer !important;
+    -webkit-tap-highlight-color: rgba(255, 193, 7, 0.3) !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+.hero-cta-btn *,
+#mainNavbar .btn-warning * {
+    pointer-events: none !important;
 }
 
 /* Profil Sekolah, Visi Utama & Misi Presisi Text Justify Alignment */
@@ -498,14 +445,9 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
             <?php endif; ?>
             <span class="fs-5 tracking-tight font-heading text-white landing-navbar-title"><?= $schoolName ?></span>
         </a>
-        <div class="d-flex align-items-center gap-2">
-            <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold btn-sm rounded-pill px-3 py-1.5 shadow-sm d-lg-none landing-mobile-login-btn">
-                <i class="bi bi-box-arrow-in-right me-1"></i> Masuk
-            </a>
-            <button class="navbar-toggler border-0 shadow-none p-2 rounded-3" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic" aria-controls="navPublic" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-        </div>
+        <button class="navbar-toggler border-0 shadow-none p-2 rounded-3" type="button" data-bs-toggle="collapse" data-bs-target="#navPublic" aria-controls="navPublic" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
         <div class="collapse navbar-collapse" id="navPublic">
             <ul class="navbar-nav ms-auto me-lg-3 gap-1 gap-lg-2 py-2 py-lg-0">
                 <li class="nav-item"><a class="nav-link text-white fw-medium" href="#profil"><i class="bi bi-building d-lg-none me-2"></i>Profil</a></li>
@@ -514,7 +456,7 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
                 <li class="nav-item"><a class="nav-link text-white fw-medium" href="#guru"><i class="bi bi-people d-lg-none me-2"></i>Tenaga Pengajar</a></li>
                 <li class="nav-item"><a class="nav-link text-white fw-medium" href="#kontak"><i class="bi bi-envelope d-lg-none me-2"></i>Kontak</a></li>
             </ul>
-            <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 rounded-pill shadow-sm landing-nav-login-btn">
+            <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 rounded-pill shadow-sm">
                 <i class="bi bi-box-arrow-in-right me-1"></i> Masuk E-Learning
             </a>
         </div>
@@ -536,11 +478,11 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
                 <p class="lead text-white opacity-90 mb-4 pe-lg-4 fw-normal fs-5" style="text-shadow: 0 1px 4px rgba(0,0,0,0.2);">
                     <?= Security::safeText($settings['landing_hero_desc'] ?? 'Sistem Manajemen Pembelajaran Digital Interaktif, Transparan, dan Modern untuk Membentuk Generasi Unggul Siap Kerja.') ?>
                 </p>
-                <div class="hero-cta-group d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap position-relative" style="z-index: 10;">
-                    <a href="<?= BASE_URL ?>login.php" class="btn btn-warning btn-lg text-dark fw-bold px-4 py-3 rounded-pill shadow landing-hero-btn">
+                <div class="d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap position-relative" style="z-index: 10;">
+                    <a href="<?= BASE_URL ?>login.php" class="btn btn-warning btn-lg text-dark fw-bold px-4 py-3 rounded-pill shadow hero-cta-btn">
                         <i class="bi bi-rocket-takeoff-fill me-2"></i> Mulai Belajar Sekarang
                     </a>
-                    <a href="#jurusan" class="btn btn-outline-light btn-lg px-4 py-3 rounded-pill landing-hero-outline-btn">
+                    <a href="#jurusan" class="btn btn-outline-light btn-lg px-4 py-3 rounded-pill hero-cta-btn">
                         <i class="bi bi-grid-fill me-2"></i> Program Keahlian
                     </a>
                 </div>
@@ -1099,56 +1041,9 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <?php endif; ?>
 
-<!-- Fast & Reliable Navigation Script for Mobile & Touch Devices -->
+<!-- Auto close navbar collapse on mobile when in-page anchor links are tapped -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const landingActionButtons = document.querySelectorAll('.landing-hero-btn, .landing-nav-login-btn, .landing-mobile-login-btn, .landing-footer-login-btn');
-    
-    landingActionButtons.forEach(function(btn) {
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let isTouchMove = false;
-
-        btn.addEventListener('touchstart', function(e) {
-            if (e.touches.length === 1) {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-                isTouchMove = false;
-            }
-        }, { passive: true });
-
-        btn.addEventListener('touchmove', function(e) {
-            if (e.touches.length === 1) {
-                const deltaX = Math.abs(e.touches[0].clientX - touchStartX);
-                const deltaY = Math.abs(e.touches[0].clientY - touchStartY);
-                if (deltaX > 8 || deltaY > 8) {
-                    isTouchMove = true;
-                }
-            }
-        }, { passive: true });
-
-        btn.addEventListener('touchend', function(e) {
-            if (!isTouchMove) {
-                const targetUrl = this.getAttribute('href');
-                if (targetUrl && targetUrl !== '#' && !this.dataset.navigating) {
-                    this.dataset.navigating = 'true';
-                    window.location.href = targetUrl;
-                }
-            }
-        }, { passive: true });
-
-        btn.addEventListener('click', function(e) {
-            const targetUrl = this.getAttribute('href');
-            if (targetUrl && targetUrl !== '#' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
-                if (!this.dataset.navigating) {
-                    this.dataset.navigating = 'true';
-                    window.location.href = targetUrl;
-                }
-            }
-        });
-    });
-
-    // Auto close navbar collapse on mobile when in-page anchor links are tapped
     const navCollapse = document.getElementById('navPublic');
     if (navCollapse) {
         const inPageLinks = navCollapse.querySelectorAll('a[href^="#"]');
