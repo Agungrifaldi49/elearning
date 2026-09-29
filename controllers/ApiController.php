@@ -3166,17 +3166,16 @@ class ApiController {
                         }
 
                         try {
-                            $sClass = $this->db->query("SELECT kelas_id FROM siswa WHERE id = $siswaId LIMIT 1")->fetchColumn();
                             $stmtCheckAbs = $this->db->prepare("SELECT id FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
                             $stmtCheckAbs->execute([$siswaId, $tanggal]);
                             $existAbsId = $stmtCheckAbs->fetchColumn();
 
                             if ($existAbsId) {
-                                $stmtUpdAbs = $this->db->prepare("UPDATE absensi SET status = ?, keterangan = ?, waktu_absen = NOW() WHERE id = ?");
+                                $stmtUpdAbs = $this->db->prepare("UPDATE absensi SET status = ?, keterangan = ?, waktu_hadir = NOW() WHERE id = ?");
                                 $stmtUpdAbs->execute([$status, $keterangan, $existAbsId]);
                             } else {
-                                $stmtInsAbs = $this->db->prepare("INSERT INTO absensi (siswa_id, kelas_id, guru_id, tanggal, waktu_absen, status, keterangan) VALUES (?, ?, ?, ?, NOW(), ?, ?)");
-                                $stmtInsAbs->execute([$siswaId, $sClass ?: null, $guruId, $tanggal, $status, $keterangan]);
+                                $stmtInsAbs = $this->db->prepare("INSERT INTO absensi (siswa_id, guru_id, tanggal, waktu_masuk, waktu_hadir, status, keterangan) VALUES (?, ?, ?, NOW(), NOW(), ?, ?)");
+                                $stmtInsAbs->execute([$siswaId, $guruId, $tanggal, $status, $keterangan]);
                             }
                             $this->jsonResponse(true, 'Presensi siswa berhasil disimpan!', [
                                 'siswa_id' => $siswaId,
@@ -3188,6 +3187,9 @@ class ApiController {
                         }
                     }
                 }
+
+                // Selected date for attendance filter
+                $filterTanggal = trim($_GET['tanggal'] ?? date('Y-m-d'));
 
                 // Selected class
                 $reqKelasId = intval($_GET['kelas_id'] ?? 0);
@@ -3250,9 +3252,9 @@ class ApiController {
                     $alpaAbs = intval($absData['alpa'] ?? 0);
                     $persenKehadiran = $totAbs > 0 ? round(($hadirAbs / $totAbs) * 100) : 100;
 
-                    // Today's attendance
+                    // Attendance for selected date
                     $stmtTodayAbs = $this->db->prepare("SELECT status FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
-                    $stmtTodayAbs->execute([$sId, date('Y-m-d')]);
+                    $stmtTodayAbs->execute([$sId, $filterTanggal]);
                     $statusToday = $stmtTodayAbs->fetchColumn() ?: 'Belum Absen';
 
                     // Grades per mapel for this siswa strictly from enrolled mapels (siswa_mapel_enrollment)

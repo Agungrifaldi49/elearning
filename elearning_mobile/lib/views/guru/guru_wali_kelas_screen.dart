@@ -50,7 +50,11 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final uid = auth.currentUser?.id ?? 0;
-      final params = <String, String>{'user_id': uid.toString()};
+      final dateStr = '${_presensiDate.year}-${_presensiDate.month.toString().padLeft(2, '0')}-${_presensiDate.day.toString().padLeft(2, '0')}';
+      final params = <String, String>{
+        'user_id': uid.toString(),
+        'tanggal': dateStr,
+      };
       if (kelasId != null && kelasId > 0) {
         params['kelas_id'] = kelasId.toString();
       }
@@ -918,6 +922,7 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
                   );
                   if (picked != null) {
                     setState(() => _presensiDate = picked);
+                    _fetchWaliKelasData(_selectedKelasId);
                   }
                 },
                 icon: const Icon(Icons.calendar_month_rounded, size: 16),
