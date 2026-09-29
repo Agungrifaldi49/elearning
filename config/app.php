@@ -95,8 +95,13 @@ define('APP_VERSION', '1.0.0');
 // Base URL Auto Detection
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$script_name = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
-$base_url = rtrim($protocol . "://" . $host . $script_name, '/') . '/';
+$rawDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+$script_name = str_replace('\\', '/', $rawDir);
+if ($script_name === '.' || $script_name === '/' || $script_name === '\\') {
+    $script_name = '';
+}
+$script_name = trim($script_name, '/');
+$base_url = $protocol . "://" . $host . ($script_name !== '' ? '/' . $script_name : '') . '/';
 
 // Normalize BASE_URL for subfolders or root
 define('BASE_URL', $base_url);
