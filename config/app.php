@@ -93,7 +93,12 @@ define('APP_SHORT_NAME', 'E-Learning SMKMH');
 define('APP_VERSION', '1.0.0');
 
 // Base URL Auto Detection
-$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+$isHttps = (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] === '1'))
+    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https')
+    || (isset($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower($_SERVER['HTTP_X_FORWARDED_SSL']) === 'on')
+    || (isset($_SERVER['HTTP_CF_VISITOR']) && strpos($_SERVER['HTTP_CF_VISITOR'], 'https') !== false)
+    || (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443);
+$protocol = $isHttps ? "https" : "http";
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $rawDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
 $script_name = str_replace('\\', '/', $rawDir);

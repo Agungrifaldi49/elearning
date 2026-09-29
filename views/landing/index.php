@@ -52,16 +52,6 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
     vertical-align: middle;
 }
 
-/* Header Navbar Responsive Custom Styling */
-.landing-navbar-title {
-    max-width: 580px;
-    display: inline-block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    vertical-align: middle;
-}
-
 @media (max-width: 991.98px) {
     .landing-navbar-title {
         max-width: calc(100vw - 120px);
@@ -122,28 +112,20 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
     -webkit-tap-highlight-color: rgba(255, 193, 7, 0.3) !important;
     position: relative !important;
     z-index: 10 !important;
-    user-select: none !important;
-    -webkit-user-select: none !important;
-    transition: transform 0.15s ease, opacity 0.15s ease !important;
+    text-decoration: none !important;
+    transition: opacity 0.15s ease, background-color 0.15s ease !important;
 }
 
 .hero-cta-btn:active,
 #mainNavbar .btn-warning:active,
 #btnHeroMulaiBelajar:active {
-    transform: scale(0.97) !important;
-    opacity: 0.9 !important;
+    opacity: 0.82 !important;
 }
 
 @media (hover: hover) and (pointer: fine) {
     .hero-cta-btn:hover {
         transform: translateY(-2px);
     }
-}
-
-.hero-cta-btn *,
-#mainNavbar .btn-warning *,
-#btnHeroMulaiBelajar * {
-    pointer-events: none !important;
 }
 
 /* Profil Sekolah, Visi Utama & Misi Presisi Text Justify Alignment */
@@ -474,7 +456,7 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
                 <li class="nav-item"><a class="nav-link text-white fw-medium" href="#guru"><i class="bi bi-people d-lg-none me-2"></i>Tenaga Pengajar</a></li>
                 <li class="nav-item"><a class="nav-link text-white fw-medium" href="#kontak"><i class="bi bi-envelope d-lg-none me-2"></i>Kontak</a></li>
             </ul>
-            <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 rounded-pill shadow-sm">
+            <a href="login.php" class="btn btn-warning text-dark fw-bold px-4 rounded-pill shadow-sm landing-login-btn">
                 <i class="bi bi-box-arrow-in-right me-1"></i> Masuk E-Learning
             </a>
         </div>
@@ -497,7 +479,7 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
                     <?= Security::safeText($settings['landing_hero_desc'] ?? 'Sistem Manajemen Pembelajaran Digital Interaktif, Transparan, dan Modern untuk Membentuk Generasi Unggul Siap Kerja.') ?>
                 </p>
                 <div class="d-flex gap-3 justify-content-center justify-content-lg-start flex-wrap position-relative" style="z-index: 10;">
-                    <a href="<?= BASE_URL ?>login.php" id="btnHeroMulaiBelajar" class="btn btn-warning btn-lg text-dark fw-bold px-4 py-3 rounded-pill shadow hero-cta-btn">
+                    <a href="login.php" id="btnHeroMulaiBelajar" class="btn btn-warning btn-lg text-dark fw-bold px-4 py-3 rounded-pill shadow hero-cta-btn landing-login-btn">
                         <i class="bi bi-rocket-takeoff-fill me-2"></i> Mulai Belajar Sekarang
                     </a>
                     <a href="#jurusan" class="btn btn-outline-light btn-lg px-4 py-3 rounded-pill hero-cta-btn">
@@ -961,7 +943,7 @@ $waChatUrl = 'https://wa.me/' . $cleanWaPhone . '?text=' . rawurlencode($waChatM
             </div>
             <div class="col-6 col-lg-4 text-lg-end">
                 <h6 class="fw-bold text-white mb-3 font-heading">Akses Portal</h6>
-                <a href="<?= BASE_URL ?>login.php" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill shadow-sm mb-3 landing-footer-login-btn">
+                <a href="login.php" class="btn btn-warning text-dark fw-bold px-4 py-2 rounded-pill shadow-sm mb-3 landing-footer-login-btn landing-login-btn">
                     <i class="bi bi-box-arrow-in-right me-1"></i> Login E-Learning
                 </a>
                 <p class="small text-white-50 mb-0">&copy; <?= date('Y') ?> <?= $schoolName ?>. All Rights Reserved.</p>
@@ -1057,5 +1039,36 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <?php endif; ?>
+
+<!-- High-Reliability Mobile Navigation Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Smoothly auto-close mobile navbar ONLY when in-page anchor links (#) are clicked
+    const inPageNavLinks = document.querySelectorAll('#navPublic a[href^="#"]');
+    const navCollapse = document.getElementById('navPublic');
+    
+    inPageNavLinks.forEach(function(link) {
+        link.addEventListener('click', function() {
+            if (window.innerWidth < 992 && navCollapse && typeof bootstrap !== 'undefined') {
+                const bsCollapse = bootstrap.Collapse.getInstance(navCollapse);
+                if (bsCollapse) {
+                    bsCollapse.hide();
+                }
+            }
+        });
+    });
+
+    // 2. Direct click handler for login buttons to guarantee 100% immediate navigation on mobile devices
+    const loginCtaButtons = document.querySelectorAll('.landing-login-btn, #btnHeroMulaiBelajar, a[href="login.php"], a[href*="login.php"]');
+    loginCtaButtons.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            const target = this.getAttribute('href') || 'login.php';
+            if (target && target !== '#') {
+                window.location.href = target;
+            }
+        });
+    });
+});
+</script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
