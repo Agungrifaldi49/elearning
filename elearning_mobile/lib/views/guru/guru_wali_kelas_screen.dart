@@ -461,6 +461,70 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
     }
   }
 
+  Widget _buildStudentAvatar(Map<String, dynamic> s, {double radius = 20, double fontSize = 13}) {
+    final name = (s['nama_lengkap'] ?? 'Siswa').toString();
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'S';
+    final rawAvatar = (s['avatar'] ?? '').toString().trim();
+    final avatarUrl = ApiService.getFileUrl(rawAvatar);
+
+    final bool hasValidImage = avatarUrl.isNotEmpty &&
+        !avatarUrl.endsWith('default_avatar.png') &&
+        !avatarUrl.endsWith('default.png');
+
+    if (!hasValidImage) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: const Color(0xFF4338CA).withValues(alpha: 0.12),
+        child: Text(
+          initial,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF4338CA),
+            fontSize: fontSize,
+          ),
+        ),
+      );
+    }
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: const Color(0xFF4338CA).withValues(alpha: 0.12),
+      child: ClipOval(
+        child: Image.network(
+          avatarUrl,
+          width: radius * 2,
+          height: radius * 2,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Center(
+              child: Text(
+                initial,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF4338CA),
+                  fontSize: fontSize,
+                ),
+              ),
+            );
+          },
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: SizedBox(
+                width: radius,
+                height: radius,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: const Color(0xFF4338CA).withValues(alpha: 0.6),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   void _showStudentDetailModal(Map<String, dynamic> s) {
     final sId = int.tryParse(s['id'].toString()) ?? 0;
     final name = (s['nama_lengkap'] ?? 'Siswa').toString();
@@ -516,16 +580,7 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
                   // Header Siswa Info
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: const Color(0xFF4338CA).withValues(alpha: 0.1),
-                        backgroundImage: s['avatar'] != null && s['avatar'].toString().startsWith('http')
-                            ? NetworkImage(s['avatar'])
-                            : null,
-                        child: s['avatar'] == null || !s['avatar'].toString().startsWith('http')
-                            ? Text(name.isNotEmpty ? name[0] : 'S', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Color(0xFF4338CA)))
-                            : null,
-                      ),
+                      _buildStudentAvatar(s, radius: 28, fontSize: 20),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
@@ -1043,16 +1098,7 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                leading: CircleAvatar(
-                  radius: 24,
-                  backgroundColor: const Color(0xFF4338CA).withValues(alpha: 0.1),
-                  backgroundImage: s['avatar'] != null && s['avatar'].toString().startsWith('http')
-                      ? NetworkImage(s['avatar'])
-                      : null,
-                  child: s['avatar'] == null || !s['avatar'].toString().startsWith('http')
-                      ? Text(name.isNotEmpty ? name[0] : 'S', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4338CA)))
-                      : null,
-                ),
+                leading: _buildStudentAvatar(s, radius: 24, fontSize: 14),
                 title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A))),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1453,16 +1499,7 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: const Color(0xFF4338CA).withValues(alpha: 0.1),
-                          backgroundImage: s['avatar'] != null && s['avatar'].toString().startsWith('http')
-                              ? NetworkImage(s['avatar'])
-                              : null,
-                          child: s['avatar'] == null || !s['avatar'].toString().startsWith('http')
-                              ? Text(name.isNotEmpty ? name[0] : 'S', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4338CA), fontSize: 13))
-                              : null,
-                        ),
+                        _buildStudentAvatar(s, radius: 20, fontSize: 13),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -1845,7 +1882,9 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
+                  _buildStudentAvatar(s, radius: 18, fontSize: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

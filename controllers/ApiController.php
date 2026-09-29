@@ -3358,10 +3358,22 @@ class ApiController {
                     } catch (\Throwable $eCat) {}
 
                     // Avatar URL
-                    $avatar = $s['avatar'] ?? '';
-                    $avatarUrl = (!empty($avatar) && $avatar !== 'default_avatar.png')
-                        ? BASE_URL . 'assets/uploads/avatars/' . $avatar
-                        : 'https://ui-avatars.com/api/?name=' . urlencode($s['nama_lengkap']) . '&background=4338CA&color=fff';
+                    $avatarFile = trim($s['avatar'] ?? '');
+                    $avatarUrl = '';
+                    if (!empty($avatarFile) && $avatarFile !== 'default_avatar.png' && $avatarFile !== 'default.png') {
+                        if (strpos($avatarFile, 'http://') === 0 || strpos($avatarFile, 'https://') === 0) {
+                            $avatarUrl = $avatarFile;
+                        } elseif (file_exists(ROOT_PATH . 'assets/uploads/profile/' . $avatarFile)) {
+                            $avatarUrl = BASE_URL . 'assets/uploads/profile/' . $avatarFile;
+                        } elseif (file_exists(ROOT_PATH . 'assets/uploads/avatar/' . $avatarFile)) {
+                            $avatarUrl = BASE_URL . 'assets/uploads/avatar/' . $avatarFile;
+                        } else {
+                            $avatarUrl = BASE_URL . 'assets/uploads/profile/' . $avatarFile;
+                        }
+                    }
+                    if (empty($avatarUrl)) {
+                        $avatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($s['nama_lengkap']) . '&background=4338CA&color=fff';
+                    }
 
                     $studentList[] = [
                         'id' => $sId,

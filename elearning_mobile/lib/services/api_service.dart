@@ -50,9 +50,32 @@ class ApiService {
   static String getFileUrl(String? path) {
     if (path == null || path.trim().isEmpty) return '';
     final trimmed = path.trim();
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+
+    // 1. External avatar generators or external image links
+    if (trimmed.contains('ui-avatars.com') || trimmed.contains('googleusercontent.com')) {
       return trimmed;
     }
+
+    // 2. Normalize any upload path containing 'assets/uploads/' to use active serverRootUrl
+    int assetsIdx = trimmed.indexOf('assets/uploads/');
+    if (assetsIdx != -1) {
+      final relPath = trimmed.substring(assetsIdx);
+      return '$serverRootUrl$relPath';
+    }
+
+    // 3. If already absolute http/https URL and not localhost
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      if ((trimmed.contains('localhost') || trimmed.contains('127.0.0.1')) &&
+          !serverRootUrl.contains('localhost') && !serverRootUrl.contains('127.0.0.1')) {
+        final uri = Uri.tryParse(trimmed);
+        if (uri != null) {
+          final clean = uri.path.startsWith('/') ? uri.path.substring(1) : uri.path;
+          return '$serverRootUrl$clean';
+        }
+      }
+      return trimmed;
+    }
+
     final cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
     return '$serverRootUrl$cleanPath';
   }
