@@ -258,14 +258,49 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
 
     try {
       final List<Map<String, dynamic>> soalPayloadList = [];
+      int uploadIdx = 0;
 
       for (var item in _draftList) {
-        String? base64Img;
+        uploadIdx++;
+        String? finalImgVal;
+
         if (item.gambarFile != null && await item.gambarFile!.exists()) {
-          final bytes = await item.gambarFile!.readAsBytes();
-          final ext = item.gambarFile!.path.split('.').last.toLowerCase();
-          final mime = (ext == 'png') ? 'png' : ((ext == 'webp') ? 'webp' : 'jpeg');
-          base64Img = 'data:image/$mime;base64,${base64Encode(bytes)}';
+          if (mounted) {
+            setState(() {
+              _submitProgressText = 'Mengunggah gambar soal #$uploadIdx...';
+            });
+          }
+
+          // 1. Unggah via Multipart (identik dengan cara web, menghindari limit base64 JSON)
+          try {
+            final uploadRes = await ApiService.postMultipart(
+              'guru/upload_soal_gambar',
+              files: {'gambar_soal': item.gambarFile!},
+            );
+
+            if (uploadRes['success'] == true && uploadRes['data'] is Map) {
+              final returnedFilename = uploadRes['data']['filename'] ??
+                  uploadRes['data']['gambar'] ??
+                  uploadRes['data']['file_gambar'];
+              if (returnedFilename != null && returnedFilename.toString().trim().isNotEmpty) {
+                finalImgVal = returnedFilename.toString().trim();
+              }
+            }
+          } catch (e) {
+            debugPrint('Multipart upload failed for soal #$uploadIdx: $e');
+          }
+
+          // 2. Fallback ke base64 jika multipart terkendala
+          if (finalImgVal == null || finalImgVal.isEmpty) {
+            try {
+              final bytes = await item.gambarFile!.readAsBytes();
+              final ext = item.gambarFile!.path.split('.').last.toLowerCase();
+              final mime = (ext == 'png') ? 'png' : ((ext == 'webp') ? 'webp' : 'jpeg');
+              finalImgVal = 'data:image/$mime;base64,${base64Encode(bytes)}';
+            } catch (e) {
+              debugPrint('Base64 encoding fallback error: $e');
+            }
+          }
         }
 
         final bobot = int.tryParse(item.bobotController.text.trim()) ?? 10;
@@ -298,10 +333,10 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
           'pertanyaan': pertText,
           'soal': pertText,
           'bobot': bobot,
-          'gambar_base64': base64Img,
-          'file_gambar': base64Img,
-          'image_base64': base64Img,
-          'gambar': base64Img,
+          'gambar_base64': finalImgVal,
+          'file_gambar': finalImgVal,
+          'image_base64': finalImgVal,
+          'gambar': finalImgVal,
           'pilihan': pilihanList,
         });
       }
@@ -326,8 +361,10 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
         mainBatchBody['jenis_soal'] = soalPayloadList.first['jenis_soal'];
         mainBatchBody['bobot'] = soalPayloadList.first['bobot'];
         mainBatchBody['pilihan'] = soalPayloadList.first['pilihan'];
+        mainBatchBody['gambar'] = soalPayloadList.first['gambar'];
         mainBatchBody['gambar_base64'] = soalPayloadList.first['gambar_base64'];
         mainBatchBody['file_gambar'] = soalPayloadList.first['file_gambar'];
+        mainBatchBody['image_base64'] = soalPayloadList.first['image_base64'];
       }
 
       // First attempt: try sending the entire batch in a single request

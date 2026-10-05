@@ -134,6 +134,60 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> postMultipart(
+    String endpoint, {
+    Map<String, String>? fields,
+    Map<String, File>? files,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl$endpoint');
+      final request = http.MultipartRequest('POST', uri);
+      request.headers['Accept'] = 'application/json';
+
+      if (fields != null) {
+        request.fields.addAll(fields);
+      }
+
+      if (files != null) {
+        for (var entry in files.entries) {
+          final file = entry.value;
+          if (await file.exists()) {
+            final filename = file.path.split(Platform.pathSeparator).last;
+            request.files.add(await http.MultipartFile.fromPath(
+              entry.key,
+              file.path,
+              filename: filename,
+            ));
+          }
+        }
+      }
+
+      debugPrint('=== API REQUEST (MULTIPART) ===');
+      debugPrint('URL: $uri');
+      debugPrint('Fields: $fields');
+      debugPrint('Files: ${files?.keys.toList()}');
+
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 60));
+      final response = await http.Response.fromStream(streamedResponse);
+      return _handleResponse(response, uri.toString());
+    } on TimeoutException {
+      debugPrint('=== API TIMEOUT ERROR (MULTIPART) ===');
+      return {
+        'success': false,
+        'message': 'Upload berkas timeout (60 detik). Periksa koneksi internet Anda.'
+      };
+    } on SocketException catch (e) {
+      debugPrint('=== API SOCKET ERROR (MULTIPART) ===\n$e');
+      return {
+        'success': false,
+        'message': 'Koneksi jaringan terputus saat mengunggah berkas.'
+      };
+    } catch (e) {
+      debugPrint('=== API MULTIPART ERROR ===\n$e');
+      return {'success': false, 'message': 'Gagal mengunggah berkas: $e'};
+    }
+  }
+
   static Future<Map<String, dynamic>> get(String endpoint, {Map<String, String>? params}) async {
     try {
       var uri = Uri.parse('$baseUrl$endpoint');

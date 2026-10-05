@@ -903,15 +903,43 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                                   };
 
                                   if (newPickedImage != null && await newPickedImage!.exists()) {
-                                    final bytes = await newPickedImage!.readAsBytes();
-                                    final b64 = base64Encode(bytes);
-                                    final ext = newPickedImage!.path.split('.').last.toLowerCase();
-                                    final mime = (ext == 'png') ? 'png' : ((ext == 'webp') ? 'webp' : 'jpeg');
-                                    final formattedB64 = 'data:image/$mime;base64,$b64';
-                                    payload['gambar_base64'] = formattedB64;
-                                    payload['file_gambar'] = formattedB64;
-                                    payload['image_base64'] = formattedB64;
-                                    payload['gambar'] = formattedB64;
+                                    String? finalEditImage;
+
+                                    // 1. Unggah via Multipart (identik dengan cara web)
+                                    try {
+                                      final uploadRes = await ApiService.postMultipart(
+                                        'guru/upload_soal_gambar',
+                                        files: {'gambar_soal': newPickedImage!},
+                                      );
+                                      if (uploadRes['success'] == true && uploadRes['data'] is Map) {
+                                        final returnedFilename = uploadRes['data']['filename'] ??
+                                            uploadRes['data']['gambar'] ??
+                                            uploadRes['data']['file_gambar'];
+                                        if (returnedFilename != null && returnedFilename.toString().trim().isNotEmpty) {
+                                          finalEditImage = returnedFilename.toString().trim();
+                                        }
+                                      }
+                                    } catch (e) {
+                                      debugPrint('Edit modal multipart upload failed: $e');
+                                    }
+
+                                    // 2. Fallback ke base64 jika multipart gagal
+                                    if (finalEditImage == null || finalEditImage.isEmpty) {
+                                      try {
+                                        final bytes = await newPickedImage!.readAsBytes();
+                                        final b64 = base64Encode(bytes);
+                                        final ext = newPickedImage!.path.split('.').last.toLowerCase();
+                                        final mime = (ext == 'png') ? 'png' : ((ext == 'webp') ? 'webp' : 'jpeg');
+                                        finalEditImage = 'data:image/$mime;base64,$b64';
+                                      } catch (e) {
+                                        debugPrint('Base64 encoding fallback error in edit modal: $e');
+                                      }
+                                    }
+
+                                    payload['gambar'] = finalEditImage;
+                                    payload['file_gambar'] = finalEditImage;
+                                    payload['gambar_base64'] = finalEditImage;
+                                    payload['image_base64'] = finalEditImage;
                                   }
 
                                   if (currentJenis == 'pg' || currentJenis == 'tf') {
