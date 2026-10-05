@@ -210,11 +210,15 @@ class GuruProvider with ChangeNotifier {
     return res['success'] == true;
   }
 
-  Future<void> fetchQuiz(int userId) async {
+  Future<void> fetchQuiz([int? userId]) async {
     _isLoading = true;
     notifyListeners();
 
-    final res = await ApiService.get('guru/quiz', params: {'user_id': userId.toString()});
+    final params = <String, String>{};
+    if (userId != null && userId > 0) {
+      params['user_id'] = userId.toString();
+    }
+    final res = await ApiService.get('guru/quiz', params: params.isNotEmpty ? params : null);
     if (res['success'] == true && res['data'] is List) {
       _quizList = (res['data'] as List).map((e) => QuizModel.fromJson(e)).toList();
     }
@@ -222,15 +226,46 @@ class GuruProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> createQuiz(int userId, String judul, String deskripsi, int mapelId, int kelasId, int durasi) async {
-    final res = await ApiService.post('guru/quiz', {
+  Future<void> fetchQuizList([int? userId]) => fetchQuiz(userId);
+
+  Future<bool> createQuiz(
+    int userId,
+    String judul,
+    String deskripsi,
+    int mapelId,
+    int kelasId,
+    int durasi, {
+    String kategori = 'kuis',
+    String? deadline,
+    String randomSoal = 'Y',
+    String randomJawaban = 'Y',
+    int maxAttempts = 1,
+    String? accessKey,
+    List<int>? kelasIds,
+  }) async {
+    final Map<String, dynamic> body = {
       'user_id': userId,
       'judul': judul,
       'deskripsi': deskripsi,
       'mapel_id': mapelId,
       'kelas_id': kelasId,
       'durasi_menit': durasi,
-    });
+      'kategori': kategori,
+      'random_soal': randomSoal,
+      'random_jawaban': randomJawaban,
+      'max_attempts': maxAttempts,
+    };
+    if (deadline != null && deadline.isNotEmpty) {
+      body['deadline'] = deadline;
+    }
+    if (accessKey != null && accessKey.isNotEmpty) {
+      body['access_key'] = accessKey;
+    }
+    if (kelasIds != null && kelasIds.isNotEmpty) {
+      body['kelas_ids'] = kelasIds;
+    }
+
+    final res = await ApiService.post('guru/quiz', body);
     if (res['success'] == true) {
       await fetchQuiz(userId);
       return true;

@@ -27,6 +27,8 @@ class QuizModel {
   final int attemptCount;
   final String kategori;
   final String? accessKey;
+  final String? deadline;
+  final String randomSoal;
 
   QuizModel({
     required this.id,
@@ -55,6 +57,8 @@ class QuizModel {
     this.attemptCount = 0,
     this.kategori = 'kuis',
     this.accessKey,
+    this.deadline,
+    this.randomSoal = 'Y',
   });
 
   static int _parseInt(dynamic val, [int defaultVal = 0]) {
@@ -105,6 +109,8 @@ class QuizModel {
       attemptCount: _parseInt(json['attempt_count']),
       kategori: json['kategori'] ?? 'kuis',
       accessKey: json['access_key'] ?? json['token'] ?? json['kunci_akses'],
+      deadline: json['deadline']?.toString(),
+      randomSoal: json['random_soal']?.toString() ?? 'Y',
     );
   }
 

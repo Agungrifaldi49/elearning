@@ -1,4 +1,6 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
@@ -290,6 +292,7 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
     final judulController = TextEditingController();
     final deskripsiController = TextEditingController();
     final durasiController = TextEditingController(text: '30');
+    final accessKeyController = TextEditingController();
 
     final List<Map<String, dynamic>> mapels = [];
     final Set<int> mapelIdsSeen = {};
@@ -326,7 +329,21 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
     }
 
     int selectedMapelId = mapels.isNotEmpty ? (mapels.first['id'] is int ? mapels.first['id'] as int : int.parse(mapels.first['id'].toString())) : 1;
-    int selectedKelasId = kelases.isNotEmpty ? (kelases.first['id'] is int ? kelases.first['id'] as int : int.parse(kelases.first['id'].toString())) : 1;
+    List<int> selectedKelasIds = kelases.isNotEmpty ? [(kelases.first['id'] is int ? kelases.first['id'] as int : int.parse(kelases.first['id'].toString()))] : [1];
+
+    String selectedKategori = 'kuis';
+    String selectedRandomSoal = 'Y';
+    int selectedMaxAttempts = 1;
+    DateTime? selectedDeadline;
+    bool isSubmitting = false;
+
+    // Helper to generate clean random token
+    String generateRandomToken({String prefix = ''}) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      final rand = Random();
+      final code = List.generate(4, (_) => chars[rand.nextInt(chars.length)]).join();
+      return prefix.isNotEmpty ? '$prefix-$code' : List.generate(6, (_) => chars[rand.nextInt(chars.length)]).join();
+    }
 
     showModalBottomSheet(
       context: context,
@@ -334,209 +351,614 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
+          final screenHeight = MediaQuery.of(context).size.height;
+          final viewInsetsBottom = MediaQuery.of(context).viewInsets.bottom;
+
           return Container(
+            constraints: BoxConstraints(maxHeight: screenHeight * 0.90),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-              top: 20,
-              left: 20,
-              right: 20,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                  Row(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top drag handle & Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 12, 10),
+                  child: Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(Icons.quiz_rounded, color: Colors.purple.shade800, size: 24),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Buat Ujian CBT / Quiz Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            Text('Atur judul, mapel, kelas rujukan, dan durasi', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                          ],
+                      Center(
+                        child: Container(
+                          width: 44,
+                          height: 5,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.purple.shade100),
+                            ),
+                            child: Icon(Icons.quiz_rounded, color: Colors.purple.shade800, size: 24),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Buat Ujian CBT / Quiz Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: -0.3)),
+                                SizedBox(height: 2),
+                                Text('Atur kategori ujian, token, durasi, dan deadline', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close_rounded),
+                            style: IconButton.styleFrom(backgroundColor: Colors.grey.shade100),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const Divider(height: 24),
+                ),
+                const Divider(height: 1),
 
-                  const Text('Judul Ujian CBT / Quiz *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: judulController,
-                    decoration: InputDecoration(
-                      hintText: 'Contoh: Kuis 1 Dasar-Dasar Kejuruan',
-                      prefixIcon: const Icon(Icons.title_rounded, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
+                // Scrollable Form Body
+                Flexible(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(20, 16, 20, viewInsetsBottom + 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // SECTION 1: INFORMASI UTAMA
+                        _buildSectionHeader(Icons.info_outline_rounded, '1. Informasi Utama Kuis'),
+                        const SizedBox(height: 8),
 
-                  if (mapels.isNotEmpty) ...[
-                    const Text('Mata Pelajaran *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<int>(
-                      initialValue: selectedMapelId,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.book_rounded, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      ),
-                      items: mapels.map((mp) {
-                        final id = mp['id'] is int ? mp['id'] as int : int.parse(mp['id'].toString());
-                        return DropdownMenuItem<int>(
-                          value: id,
-                          child: Text(
-                            mp['nama_mapel']?.toString() ?? 'Mapel #$id',
-                            style: const TextStyle(fontSize: 13),
-                            overflow: TextOverflow.ellipsis,
+                        const Text('Judul Quiz / Ujian *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: judulController,
+                          decoration: InputDecoration(
+                            hintText: 'Contoh: Kuis 1 Pemrograman Dasar CBT',
+                            prefixIcon: const Icon(Icons.title_rounded, size: 20),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setModalState(() {
-                            selectedMapelId = val;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-
-                  if (kelases.isNotEmpty) ...[
-                    const Text('Kelas Target *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<int>(
-                      initialValue: selectedKelasId,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.groups_rounded, size: 20),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      ),
-                      items: kelases.map((kls) {
-                        final id = kls['id'] is int ? kls['id'] as int : int.parse(kls['id'].toString());
-                        return DropdownMenuItem<int>(
-                          value: id,
-                          child: Text(
-                            kls['nama_kelas']?.toString() ?? 'Kelas #$id',
-                            style: const TextStyle(fontSize: 13),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setModalState(() {
-                            selectedKelasId = val;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-
-                  const Text('Durasi Pengerjaan (Menit) *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: durasiController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: '30',
-                      prefixIcon: const Icon(Icons.timer_rounded, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  const Text('Petunjuk Ujian / Keterangan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: deskripsiController,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      hintText: 'Petunjuk pengerjaan quiz CBT...',
-                      prefixIcon: const Icon(Icons.description_rounded, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      if (judulController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Judul ujian wajib diisi!'), backgroundColor: Colors.red),
-                        );
-                        return;
-                      }
-
-                      final nav = Navigator.of(context);
-                      final messenger = ScaffoldMessenger.of(context);
-                      final durasi = int.tryParse(durasiController.text) ?? 30;
-
-                      final ok = await guruProvider.createQuiz(
-                        user.id,
-                        judulController.text.trim(),
-                        deskripsiController.text.trim(),
-                        selectedMapelId,
-                        selectedKelasId,
-                        durasi,
-                      );
-
-                      nav.pop();
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(ok ? 'Quiz CBT berhasil diterbitkan!' : 'Gagal membuat quiz'),
-                          backgroundColor: ok ? AppTheme.primaryColor : Colors.red,
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.publish_rounded, size: 18),
-                    label: const Text('Terbitkan Ujian CBT'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      backgroundColor: Colors.purple.shade800,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        const SizedBox(height: 14),
+
+                        if (mapels.isNotEmpty) ...[
+                          const Text('Mata Pelajaran *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<int>(
+                            initialValue: selectedMapelId,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.book_rounded, size: 20),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            ),
+                            items: mapels.map((mp) {
+                              final id = mp['id'] is int ? mp['id'] as int : int.parse(mp['id'].toString());
+                              return DropdownMenuItem<int>(
+                                value: id,
+                                child: Text(
+                                  mp['nama_mapel']?.toString() ?? 'Mapel #$id',
+                                  style: const TextStyle(fontSize: 13),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setModalState(() {
+                                  selectedMapelId = val;
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                        ],
+
+                        if (kelases.isNotEmpty) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Kelas Target *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                              InkWell(
+                                onTap: () {
+                                  setModalState(() {
+                                    if (selectedKelasIds.length == kelases.length) {
+                                      selectedKelasIds = [(kelases.first['id'] is int ? kelases.first['id'] as int : int.parse(kelases.first['id'].toString()))];
+                                    } else {
+                                      selectedKelasIds = kelases.map((k) => k['id'] is int ? k['id'] as int : int.parse(k['id'].toString())).toList();
+                                    }
+                                  });
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 6),
+                                  child: Text(
+                                    selectedKelasIds.length == kelases.length ? 'Pilih 1 Saja' : 'Pilih Semua Kelas',
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple.shade800),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: kelases.map((kls) {
+                              final id = kls['id'] is int ? kls['id'] as int : int.parse(kls['id'].toString());
+                              final isSelected = selectedKelasIds.contains(id);
+                              return FilterChip(
+                                selected: isSelected,
+                                label: Text(kls['nama_kelas']?.toString() ?? 'Kelas #$id'),
+                                labelStyle: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  color: isSelected ? Colors.purple.shade900 : Colors.black87,
+                                ),
+                                selectedColor: Colors.purple.shade100,
+                                backgroundColor: Colors.grey.shade100,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  side: BorderSide(color: isSelected ? Colors.purple.shade400 : Colors.grey.shade300),
+                                ),
+                                showCheckmark: true,
+                                checkmarkColor: Colors.purple.shade900,
+                                onSelected: (sel) {
+                                  setModalState(() {
+                                    if (sel) {
+                                      selectedKelasIds.add(id);
+                                    } else {
+                                      if (selectedKelasIds.length > 1) {
+                                        selectedKelasIds.remove(id);
+                                      }
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text('Bisa memilih lebih dari 1 kelas sekaligus.', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                          const SizedBox(height: 18),
+                        ],
+
+                        // SECTION 2: KATEGORI & TOKEN
+                        _buildSectionHeader(Icons.military_tech_rounded, '2. Kategori Pelaksanaan & Kunci Akses'),
+                        const SizedBox(height: 8),
+
+                        const Text('Kategori Pelaksanaan Ujian *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<String>(
+                          initialValue: selectedKategori,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.stars_rounded, size: 20, color: Colors.amber),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'kuis',
+                              child: Text('📝 Kuis Harian / Evaluasi CBT (Token Opsional)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                            ),
+                            DropdownMenuItem(
+                              value: 'uts',
+                              child: Text('🏆 UTS (Ujian Tengah Semester) - Auto Token 🔑', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                            ),
+                            DropdownMenuItem(
+                              value: 'uas',
+                              child: Text('🎓 UAS (Ujian Akhir Semester) - Auto Token 🔑', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                            ),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setModalState(() {
+                                selectedKategori = val;
+                                if (val == 'uts') {
+                                  if (accessKeyController.text.trim().isEmpty || !accessKeyController.text.startsWith('UTS-')) {
+                                    accessKeyController.text = generateRandomToken(prefix: 'UTS');
+                                  }
+                                } else if (val == 'uas') {
+                                  if (accessKeyController.text.trim().isEmpty || !accessKeyController.text.startsWith('UAS-')) {
+                                    accessKeyController.text = generateRandomToken(prefix: 'UAS');
+                                  }
+                                }
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 14),
+
+                        const Text('Kunci Akses (Token Ujian)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: accessKeyController,
+                                textCapitalization: TextCapitalization.characters,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', letterSpacing: 1.5, fontSize: 14),
+                                decoration: InputDecoration(
+                                  hintText: selectedKategori == 'kuis' ? 'Opsional untuk Kuis Harian' : 'Wajib (Auto Terisi)',
+                                  prefixIcon: const Icon(Icons.key_rounded, size: 20, color: Colors.redAccent),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  filled: true,
+                                  fillColor: Colors.amber.shade50.withAlpha(80),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                setModalState(() {
+                                  final pfx = selectedKategori != 'kuis' ? selectedKategori.toUpperCase() : '';
+                                  accessKeyController.text = generateRandomToken(prefix: pfx);
+                                });
+                              },
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Acak Token', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.purple.shade800,
+                                side: BorderSide(color: Colors.purple.shade300),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('Otomatis terisi jika memilih UTS / UAS (atau klik tombol Acak Token).', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                        const SizedBox(height: 18),
+
+                        // SECTION 3: WAKTU & PENGATURAN
+                        _buildSectionHeader(Icons.tune_rounded, '3. Durasi, Batas Waktu & Urutan'),
+                        const SizedBox(height: 8),
+
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Durasi (Menit) *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: durasiController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      hintText: '30',
+                                      prefixIcon: const Icon(Icons.timer_rounded, size: 20),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Acak Urutan Soal *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  const SizedBox(height: 6),
+                                  DropdownButtonFormField<String>(
+                                    initialValue: selectedRandomSoal,
+                                    isExpanded: true,
+                                    decoration: InputDecoration(
+                                      prefixIcon: const Icon(Icons.shuffle_rounded, size: 20),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'Y',
+                                        child: Text('Ya (Acak)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'N',
+                                        child: Text('Tidak (Urut)', style: TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis),
+                                      ),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setModalState(() {
+                                          selectedRandomSoal = val;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Interactive Deadline Card
+                        const Text('Batas Waktu / Deadline (Opsional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: selectedDeadline != null ? Colors.red.shade50 : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: selectedDeadline != null ? Colors.red.shade200 : Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: selectedDeadline != null ? Colors.red.shade100 : Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  selectedDeadline != null ? Icons.alarm_on_rounded : Icons.alarm_off_rounded,
+                                  size: 20,
+                                  color: selectedDeadline != null ? Colors.red.shade800 : Colors.grey.shade600,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      selectedDeadline != null
+                                          ? 'Batas: ${DateFormat('dd MMM yyyy, HH:mm').format(selectedDeadline!)} WIB'
+                                          : 'Tanpa Batas Waktu',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: selectedDeadline != null ? Colors.red.shade900 : Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      selectedDeadline != null
+                                          ? 'Kuis otomatis ditutup setelah jadwal ini'
+                                          : 'Kuis dapat dikerjakan kapan saja oleh siswa',
+                                      style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (selectedDeadline != null)
+                                IconButton(
+                                  icon: const Icon(Icons.close_rounded, size: 18, color: Colors.red),
+                                  onPressed: () {
+                                    setModalState(() {
+                                      selectedDeadline = null;
+                                    });
+                                  },
+                                  tooltip: 'Hapus Batas Waktu',
+                                ),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  final now = DateTime.now();
+                                  final initialDate = selectedDeadline ?? now.add(const Duration(days: 1));
+                                  final pickedDate = await showDatePicker(
+                                    context: context,
+                                    initialDate: initialDate,
+                                    firstDate: now,
+                                    lastDate: now.add(const Duration(days: 365)),
+                                    builder: (ctx, child) => Theme(
+                                      data: Theme.of(ctx).copyWith(
+                                        colorScheme: ColorScheme.light(primary: Colors.purple.shade800),
+                                      ),
+                                      child: child!,
+                                    ),
+                                  );
+
+                                  if (pickedDate != null) {
+                                    if (!context.mounted) return;
+                                    final initialTime = selectedDeadline != null
+                                        ? TimeOfDay(hour: selectedDeadline!.hour, minute: selectedDeadline!.minute)
+                                        : const TimeOfDay(hour: 23, minute: 59);
+                                    final pickedTime = await showTimePicker(
+                                      context: context,
+                                      initialTime: initialTime,
+                                      builder: (ctx, child) => Theme(
+                                        data: Theme.of(ctx).copyWith(
+                                          colorScheme: ColorScheme.light(primary: Colors.purple.shade800),
+                                        ),
+                                        child: child!,
+                                      ),
+                                    );
+
+                                    if (pickedTime != null) {
+                                      setModalState(() {
+                                        selectedDeadline = DateTime(
+                                          pickedDate.year,
+                                          pickedDate.month,
+                                          pickedDate.day,
+                                          pickedTime.hour,
+                                          pickedTime.minute,
+                                        );
+                                      });
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: selectedDeadline != null ? Colors.red.shade700 : Colors.purple.shade700,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                child: Text(selectedDeadline != null ? 'Ubah' : 'Atur Waktu'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Kesempatan Mengerjakan
+                        const Text('Kesempatan Mengerjakan (Max Attempts)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        const SizedBox(height: 6),
+                        DropdownButtonFormField<int>(
+                          initialValue: selectedMaxAttempts,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            prefixIcon: const Icon(Icons.replay_rounded, size: 20, color: Colors.blue),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 1, child: Text('1x Percobaan (Standar)', style: TextStyle(fontSize: 12))),
+                            DropdownMenuItem(value: 2, child: Text('2x Percobaan', style: TextStyle(fontSize: 12))),
+                            DropdownMenuItem(value: 3, child: Text('3x Percobaan (Ambil Nilai Tertinggi)', style: TextStyle(fontSize: 12))),
+                            DropdownMenuItem(value: 5, child: Text('5x Percobaan', style: TextStyle(fontSize: 12))),
+                            DropdownMenuItem(value: 0, child: Text('Tanpa Batas (Unlimited Attempts)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) {
+                              setModalState(() {
+                                selectedMaxAttempts = val;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('Siswa dapat mengulang kuis & sistem mengambil Nilai Tertinggi.', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                        const SizedBox(height: 18),
+
+                        // SECTION 4: PETUNJUK
+                        _buildSectionHeader(Icons.description_rounded, '4. Petunjuk Ujian (Opsional)'),
+                        const SizedBox(height: 8),
+
+                        TextField(
+                          controller: deskripsiController,
+                          maxLines: 2,
+                          decoration: InputDecoration(
+                            hintText: 'Petunjuk pengerjaan quiz CBT...',
+                            prefixIcon: const Icon(Icons.notes_rounded, size: 20),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+
+                        // Submit Button
+                        ElevatedButton.icon(
+                          onPressed: isSubmitting
+                              ? null
+                              : () async {
+                                  if (judulController.text.trim().isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Judul ujian wajib diisi!'), backgroundColor: Colors.red),
+                                    );
+                                    return;
+                                  }
+
+                                  if (selectedKelasIds.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Pilih minimal satu kelas target!'), backgroundColor: Colors.red),
+                                    );
+                                    return;
+                                  }
+
+                                  setModalState(() => isSubmitting = true);
+
+                                  final nav = Navigator.of(context);
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  final durasi = int.tryParse(durasiController.text) ?? 30;
+
+                                  String? tokenValue = accessKeyController.text.trim().toUpperCase();
+                                  if (selectedKategori != 'kuis' && tokenValue.isEmpty) {
+                                    tokenValue = generateRandomToken(prefix: selectedKategori.toUpperCase());
+                                  }
+
+                                  final deadlineStr = selectedDeadline != null
+                                      ? DateFormat('yyyy-MM-dd HH:mm:ss').format(selectedDeadline!)
+                                      : null;
+
+                                  final ok = await guruProvider.createQuiz(
+                                    user.id,
+                                    judulController.text.trim(),
+                                    deskripsiController.text.trim(),
+                                    selectedMapelId,
+                                    selectedKelasIds.first,
+                                    durasi,
+                                    kategori: selectedKategori,
+                                    deadline: deadlineStr,
+                                    randomSoal: selectedRandomSoal,
+                                    randomJawaban: 'Y',
+                                    maxAttempts: selectedMaxAttempts,
+                                    accessKey: tokenValue.isNotEmpty ? tokenValue : null,
+                                    kelasIds: selectedKelasIds,
+                                  );
+
+                                  if (context.mounted) {
+                                    nav.pop();
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(ok ? 'Quiz CBT berhasil diterbitkan! ✅' : 'Gagal membuat quiz ❌'),
+                                        backgroundColor: ok ? AppTheme.primaryColor : Colors.red,
+                                      ),
+                                    );
+                                  }
+                                },
+                          icon: isSubmitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                )
+                              : const Icon(Icons.publish_rounded, size: 18),
+                          label: Text(isSubmitting ? 'Menerbitkan Ujian...' : 'Terbitkan Ujian CBT'),
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 52),
+                            backgroundColor: Colors.purple.shade800,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            elevation: 2,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(IconData icon, String title) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.purple.shade800),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            color: Colors.purple.shade900,
+            letterSpacing: 0.2,
+          ),
+        ),
+      ],
     );
   }
 
@@ -949,32 +1371,55 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Mapel & Status Badges
+                                // Mapel, Kategori & Status Badges
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     Flexible(
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.purple.shade50,
-                                          borderRadius: BorderRadius.circular(20),
-                                          border: Border.all(color: Colors.purple.shade200),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.book_rounded, size: 12, color: Colors.purple.shade800),
-                                            const SizedBox(width: 4),
-                                            Flexible(
-                                              child: Text(
-                                                q.namaMapel,
-                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple.shade800),
-                                                overflow: TextOverflow.ellipsis,
+                                      child: Wrap(
+                                        spacing: 6,
+                                        runSpacing: 4,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.purple.shade50,
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(color: Colors.purple.shade200),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.book_rounded, size: 12, color: Colors.purple.shade800),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  q.namaMapel,
+                                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple.shade800),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: q.isUts || q.isUas ? Colors.amber.shade100 : Colors.blue.shade50,
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(
+                                                color: q.isUts || q.isUas ? Colors.amber.shade400 : Colors.blue.shade200,
                                               ),
                                             ),
-                                          ],
-                                        ),
+                                            child: Text(
+                                              q.kategoriBadgeText,
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: q.isUts || q.isUas ? Colors.amber.shade900 : Colors.blue.shade900,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                     const SizedBox(width: 6),
@@ -1033,6 +1478,98 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Meta Tags: Token, Deadline, Acak Soal, Attempts
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: [
+                                    if (q.accessKey != null && q.accessKey!.trim().isNotEmpty)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.shade50,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.amber.shade300),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.key_rounded, size: 11, color: Colors.amber.shade900),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              'Token: ${q.accessKey}',
+                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    if (q.deadline != null && q.deadline!.trim().isNotEmpty)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade50,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.red.shade200),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.timer_outlined, size: 11, color: Colors.red.shade700),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              'Batas: ${q.deadline}',
+                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red.shade700),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.grey.shade300),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            q.randomSoal == 'Y' ? Icons.shuffle_rounded : Icons.format_list_numbered_rounded,
+                                            size: 11,
+                                            color: Colors.grey.shade700,
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            q.randomSoal == 'Y' ? 'Soal Diacak' : 'Soal Urut',
+                                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (q.maxAttempts > 1 || q.isUnlimitedAttempts)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.shade50,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.blue.shade200),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.replay_rounded, size: 11, color: Colors.blue.shade700),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              q.isUnlimitedAttempts ? 'Percobaan Bebas' : '${q.maxAttempts}x Percobaan',
+                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                   ],
                                 ),
                                 const SizedBox(height: 14),
