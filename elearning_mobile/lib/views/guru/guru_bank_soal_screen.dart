@@ -867,7 +867,10 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                         onPressed: isSubmitting
                             ? null
                             : () async {
-                                final textPert = pertController.text.trim();
+                                String textPert = pertController.text.trim();
+                                if (textPert.isEmpty) {
+                                  textPert = (cleanPert.isNotEmpty ? cleanPert : rawPert).trim();
+                                }
                                 if (textPert.isEmpty) {
                                   ScaffoldMessenger.of(ctx).showSnackBar(
                                     const SnackBar(content: Text('Teks pertanyaan wajib diisi'), backgroundColor: Colors.red),
