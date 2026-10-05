@@ -171,11 +171,11 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
   }
 
   String? _getQuestionImageUrl(Map<String, dynamic> s) {
-    final possibleUrl = (s['file_gambar_url'] ?? s['gambar_url'] ?? '').toString().trim();
+    final possibleUrl = (s['file_gambar_url'] ?? s['gambar_url'] ?? s['image_url'] ?? '').toString().trim();
     if (possibleUrl.isNotEmpty && possibleUrl.toLowerCase() != 'null') {
       return ApiService.getFileUrl(possibleUrl);
     }
-    final rawGambar = (s['gambar'] ?? '').toString().trim();
+    final rawGambar = (s['gambar'] ?? s['file_gambar'] ?? s['image'] ?? '').toString().trim();
     if (rawGambar.isEmpty || rawGambar.toLowerCase() == 'null') return null;
 
     if (rawGambar.startsWith('http://') || rawGambar.startsWith('https://')) {
@@ -609,9 +609,9 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                               final picker = ImagePicker();
                               final picked = await picker.pickImage(
                                 source: ImageSource.gallery,
-                                maxWidth: 1200,
-                                maxHeight: 1200,
-                                imageQuality: 80,
+                                maxWidth: 900,
+                                maxHeight: 900,
+                                imageQuality: 70,
                               );
                               if (picked != null) {
                                 setModalState(() {
@@ -907,7 +907,11 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                                     final b64 = base64Encode(bytes);
                                     final ext = newPickedImage!.path.split('.').last.toLowerCase();
                                     final mime = (ext == 'png') ? 'png' : ((ext == 'webp') ? 'webp' : 'jpeg');
-                                    payload['gambar_base64'] = 'data:image/$mime;base64,$b64';
+                                    final formattedB64 = 'data:image/$mime;base64,$b64';
+                                    payload['gambar_base64'] = formattedB64;
+                                    payload['file_gambar'] = formattedB64;
+                                    payload['image_base64'] = formattedB64;
+                                    payload['gambar'] = formattedB64;
                                   }
 
                                   if (currentJenis == 'pg' || currentJenis == 'tf') {
@@ -1452,7 +1456,7 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                                                  imageUrl,
                                                  height: 170,
                                                  width: double.infinity,
-                                                 fit: BoxFit.cover,
+                                                 fit: BoxFit.contain,
                                                  loadingBuilder: (ctx, child, progress) {
                                                    if (progress == null) return child;
                                                    return Container(

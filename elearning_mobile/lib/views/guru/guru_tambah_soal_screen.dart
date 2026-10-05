@@ -190,9 +190,9 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
       try {
         final picked = await _picker.pickImage(
           source: source,
-          maxWidth: 1200,
-          maxHeight: 1200,
-          imageQuality: 80,
+          maxWidth: 900,
+          maxHeight: 900,
+          imageQuality: 70,
         );
         if (picked != null) {
           setState(() {
@@ -299,6 +299,9 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
           'soal': pertText,
           'bobot': bobot,
           'gambar_base64': base64Img,
+          'file_gambar': base64Img,
+          'image_base64': base64Img,
+          'gambar': base64Img,
           'pilihan': pilihanList,
         });
       }
@@ -312,17 +315,33 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
         });
       }
 
-      // First attempt: try sending the entire batch in a single request
-      final batchRes = await ApiService.post('guru/bank_soal', {
+      // Root payload supporting both batch and single format
+      final Map<String, dynamic> mainBatchBody = {
         'quiz_id': _selectedQuizId,
         'soal_list': soalPayloadList,
-      });
+      };
+      if (soalPayloadList.isNotEmpty) {
+        mainBatchBody['pertanyaan'] = soalPayloadList.first['pertanyaan'];
+        mainBatchBody['soal'] = soalPayloadList.first['soal'];
+        mainBatchBody['jenis_soal'] = soalPayloadList.first['jenis_soal'];
+        mainBatchBody['bobot'] = soalPayloadList.first['bobot'];
+        mainBatchBody['pilihan'] = soalPayloadList.first['pilihan'];
+        mainBatchBody['gambar_base64'] = soalPayloadList.first['gambar_base64'];
+        mainBatchBody['file_gambar'] = soalPayloadList.first['file_gambar'];
+      }
+
+      // First attempt: try sending the entire batch in a single request
+      final batchRes = await ApiService.post('guru/bank_soal', mainBatchBody);
 
       // If backend successfully saved all items in batch:
       if (batchRes['success'] == true &&
           batchRes['data'] is Map &&
           (batchRes['data']['total_saved'] ?? 0) >= soalPayloadList.length) {
         successCount = batchRes['data']['total_saved'] ?? soalPayloadList.length;
+        final imgFailed = int.tryParse('${batchRes['data']['image_failed'] ?? 0}') ?? 0;
+        if (imgFailed > 0) {
+          lastErrorMessage = batchRes['message']?.toString();
+        }
       } else {
         // If the backend runs code that only saves 1 item per request:
         // If the batch request above already saved item #0:
@@ -343,10 +362,14 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
           final res = await ApiService.post('guru/bank_soal', {
             'quiz_id': _selectedQuizId,
             'pertanyaan': item['pertanyaan'] ?? '',
+            'soal': item['pertanyaan'] ?? '',
             'jenis_soal': item['jenis_soal'] ?? 'pg',
             'bobot': item['bobot'] ?? 10,
             'pilihan': item['pilihan'] ?? [],
             'gambar_base64': item['gambar_base64'],
+            'file_gambar': item['gambar_base64'],
+            'image_base64': item['gambar_base64'],
+            'gambar': item['gambar_base64'],
             'soal_list': [item],
           });
 
@@ -363,8 +386,10 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
         if (successCount > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Berhasil menyimpan $successCount soal ke Bank Soal! 🎉'),
-              backgroundColor: Colors.green,
+              content: Text(lastErrorMessage != null && lastErrorMessage.contains('gambar gagal')
+                  ? lastErrorMessage
+                  : 'Berhasil menyimpan $successCount soal ke Bank Soal! 🎉'),
+              backgroundColor: (lastErrorMessage != null && lastErrorMessage.contains('gambar gagal')) ? Colors.orange : Colors.green,
             ),
           );
           Navigator.pop(context, true);
