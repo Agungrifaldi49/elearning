@@ -188,7 +188,12 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
 
     if (source != null) {
       try {
-        final picked = await _picker.pickImage(source: source, imageQuality: 85);
+        final picked = await _picker.pickImage(
+          source: source,
+          maxWidth: 1200,
+          maxHeight: 1200,
+          imageQuality: 80,
+        );
         if (picked != null) {
           setState(() {
             item.gambarFile = File(picked.path);
@@ -258,7 +263,9 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
         String? base64Img;
         if (item.gambarFile != null && await item.gambarFile!.exists()) {
           final bytes = await item.gambarFile!.readAsBytes();
-          base64Img = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+          final ext = item.gambarFile!.path.split('.').last.toLowerCase();
+          final mime = (ext == 'png') ? 'png' : ((ext == 'webp') ? 'webp' : 'jpeg');
+          base64Img = 'data:image/$mime;base64,${base64Encode(bytes)}';
         }
 
         final bobot = int.tryParse(item.bobotController.text.trim()) ?? 10;
@@ -285,9 +292,11 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
           });
         }
 
+        final pertText = item.pertController.text.trim();
         soalPayloadList.add({
           'jenis_soal': item.jenisSoal,
-          'pertanyaan': item.pertController.text.trim(),
+          'pertanyaan': pertText,
+          'soal': pertText,
           'bobot': bobot,
           'gambar_base64': base64Img,
           'pilihan': pilihanList,

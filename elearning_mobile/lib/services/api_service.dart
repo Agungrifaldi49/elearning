@@ -89,10 +89,19 @@ class ApiService {
       };
       final bodyString = jsonEncode(body);
 
-      // Mask sensitive fields in log
+      // Mask sensitive/large fields in log
       final maskedBody = Map<String, dynamic>.from(body);
       if (maskedBody.containsKey('password')) {
         maskedBody['password'] = '***';
+      }
+      if (maskedBody.containsKey('gambar_base64')) {
+        maskedBody['gambar_base64'] = '[BASE64_IMAGE_DATA]';
+      }
+      if (maskedBody.containsKey('image_base64')) {
+        maskedBody['image_base64'] = '[BASE64_IMAGE_DATA]';
+      }
+      if (maskedBody['soal_list'] is List) {
+        maskedBody['soal_list'] = '[${(maskedBody['soal_list'] as List).length} SOAL ITEMS]';
       }
 
       debugPrint('=== API REQUEST (POST) ===');
@@ -104,14 +113,14 @@ class ApiService {
         uri,
         headers: headers,
         body: bodyString,
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 45));
 
       return _handleResponse(response, uri.toString());
     } on TimeoutException {
       debugPrint('=== API TIMEOUT ERROR ===');
       return {
         'success': false,
-        'message': 'Koneksi ke server timeout (8 detik).\nServer tidak merespons. Periksa koneksi internet atau ganti URL server.'
+        'message': 'Koneksi ke server timeout (45 detik).\nServer tidak merespons. Periksa koneksi internet atau ganti URL server.'
       };
     } on SocketException catch (e) {
       debugPrint('=== API SOCKET ERROR ===\n$e');

@@ -255,8 +255,10 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
   }
 
   void _openEditSoalModal(Map<String, dynamic> s) {
-    final soalId = s['id'];
-    final pertController = TextEditingController(text: _stripHtml(s['pertanyaan']));
+    final int soalId = int.tryParse((s['id'] ?? s['soal_id'] ?? '0').toString()) ?? 0;
+    final rawPert = (s['pertanyaan'] ?? s['soal'] ?? '').toString();
+    final cleanPert = _stripHtml(rawPert);
+    final pertController = TextEditingController(text: cleanPert.isNotEmpty ? cleanPert : rawPert);
     final bobotController = TextEditingController(text: (s['bobot'] ?? 10).toString());
 
     String rawJenis = (s['jenis_soal'] ?? 'pg').toString().toLowerCase();
@@ -605,7 +607,12 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                           OutlinedButton.icon(
                             onPressed: () async {
                               final picker = ImagePicker();
-                              final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+                              final picked = await picker.pickImage(
+                                source: ImageSource.gallery,
+                                maxWidth: 1200,
+                                maxHeight: 1200,
+                                imageQuality: 80,
+                              );
                               if (picked != null) {
                                 setModalState(() {
                                   newPickedImage = File(picked.path);
@@ -884,17 +891,20 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                                   final Map<String, dynamic> payload = {
                                     'action': 'edit',
                                     'soal_id': soalId,
+                                    'id': soalId,
                                     'pertanyaan': textPert,
+                                    'soal': textPert,
                                     'jenis_soal': currentJenis,
                                     'bobot': int.tryParse(bobotController.text.trim()) ?? 10,
                                     'hapus_gambar': hapusGambarExisting ? 1 : 0,
                                   };
 
-                                  if (newPickedImage != null) {
+                                  if (newPickedImage != null && await newPickedImage!.exists()) {
                                     final bytes = await newPickedImage!.readAsBytes();
                                     final b64 = base64Encode(bytes);
                                     final ext = newPickedImage!.path.split('.').last.toLowerCase();
-                                    payload['gambar_base64'] = 'data:image/$ext;base64,$b64';
+                                    final mime = (ext == 'png') ? 'png' : ((ext == 'webp') ? 'webp' : 'jpeg');
+                                    payload['gambar_base64'] = 'data:image/$mime;base64,$b64';
                                   }
 
                                   if (currentJenis == 'pg' || currentJenis == 'tf') {
