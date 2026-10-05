@@ -10,7 +10,6 @@ import '../views/shared/live_class_screen.dart';
 import '../views/siswa/siswa_chat_screen.dart';
 import '../views/siswa/siswa_forum_screen.dart';
 import '../views/siswa/siswa_main_screen.dart';
-import '../views/guru/guru_main_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -147,7 +146,6 @@ class FcmService {
     if (context == null) return;
 
     final String type = (data['type'] ?? data['notification_type'] ?? '').toString().toLowerCase();
-    final int targetId = int.tryParse((data['id'] ?? data['target_id'] ?? data['sender_id'] ?? '0').toString()) ?? 0;
 
     switch (type) {
       case 'chat':

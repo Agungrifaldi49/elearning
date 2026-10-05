@@ -156,6 +156,20 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
     _openTambahSoalScreen();
   }
 
+  String _stripHtml(String? text) {
+    if (text == null || text.isEmpty) return '';
+    return text
+        .replaceAll(RegExp(r'<[^>]*>'), ' ')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
   String? _getQuestionImageUrl(Map<String, dynamic> s) {
     final possibleUrl = (s['file_gambar_url'] ?? s['gambar_url'] ?? '').toString().trim();
     if (possibleUrl.isNotEmpty && possibleUrl.toLowerCase() != 'null') {
@@ -168,11 +182,14 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
       return ApiService.getFileUrl(rawGambar);
     }
 
-    if (rawGambar.contains('assets/uploads/soal/')) {
-      return ApiService.getFileUrl(rawGambar);
+    final clean = rawGambar.replaceAll(RegExp(r'^/+'), '');
+    if (clean.startsWith('assets/')) {
+      return ApiService.getFileUrl(clean);
+    } else if (clean.startsWith('uploads/')) {
+      return ApiService.getFileUrl('assets/$clean');
     }
 
-    return ApiService.getFileUrl('assets/uploads/soal/$rawGambar');
+    return ApiService.getFileUrl('assets/uploads/soal/$clean');
   }
 
   void _previewImage(String url) {
@@ -239,7 +256,7 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
 
   void _openEditSoalModal(Map<String, dynamic> s) {
     final soalId = s['id'];
-    final pertController = TextEditingController(text: s['pertanyaan'] ?? '');
+    final pertController = TextEditingController(text: _stripHtml(s['pertanyaan']));
     final bobotController = TextEditingController(text: (s['bobot'] ?? 10).toString());
 
     String rawJenis = (s['jenis_soal'] ?? 'pg').toString().toLowerCase();
@@ -256,7 +273,7 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
     if (rawPilihan is List && rawPilihan.isNotEmpty) {
       for (final p in rawPilihan) {
         if (p is Map) {
-          final teks = (p['teks_pilihan'] ?? p['teks'] ?? '').toString();
+          final teks = _stripHtml((p['teks_pilihan'] ?? p['teks'] ?? '').toString());
           final isBnr = (p['is_benar'] == 1 || p['is_benar'] == true || p['is_benar'] == '1');
           choices.add({
             'controller': TextEditingController(text: teks),
@@ -1400,7 +1417,7 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
 
                                   // Pertanyaan
                                   Text(
-                                    s['pertanyaan'] ?? '',
+                                    _stripHtml(s['pertanyaan'] ?? ''),
                                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87, height: 1.4),
                                   ),
 
