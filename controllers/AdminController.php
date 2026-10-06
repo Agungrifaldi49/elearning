@@ -889,7 +889,107 @@ class AdminController {
         $examModel = new ExamModel();
         $quizList = $examModel->getQuizList();
 
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $action = $_POST['action'] ?? '';
+            if ($action === 'edit_soal') {
+                $soalId = (int)($_POST['soal_id'] ?? $_POST['id'] ?? 0);
+                $rawPertanyaan = trim($_POST['pertanyaan'] ?? $_POST['soal'] ?? '');
+                $pertanyaan = Security::sanitize($rawPertanyaan);
+                if ($pertanyaan === '' && $rawPertanyaan !== '') {
+                    $pertanyaan = htmlspecialchars($rawPertanyaan, ENT_QUOTES, 'UTF-8');
+                }
+                if ($pertanyaan === '' && $soalId > 0) {
+                    // Pertahankan teks lama jika field tidak terkirim
+                    $stmtOld = Database::getConnection()->prepare("SELECT pertanyaan FROM soal WHERE id = ?");
+                    $stmtOld->execute([$soalId]);
+                    $pertanyaan = trim((string)($stmtOld->fetchColumn() ?: ''));
+                }
+                if ($pertanyaan === '') {
+                    FlashHelper::setError('Teks pertanyaan soal wajib diisi.');
+                    $redirect = !empty($_POST['redirect_url']) ? $_POST['redirect_url'] : BASE_URL . 'index.php?url=admin/bankSoal';
+                    header('Location: ' . $redirect);
+                    exit();
+                }
+
+                $jenisSoal = strtolower(trim($_POST['jenis_soal'] ?? 'pg'));
+                if (!in_array($jenisSoal, ['pg', 'tf', 'essay'])) {
+                    $jenisSoal = 'pg';
+                }
+                $bobot = (int)($_POST['bobot'] ?? 10);
+                if ($bobot <= 0) $bobot = 10;
+
+                $db = Database::getConnection();
+                $stmtCur = $db->prepare("SELECT * FROM soal WHERE id = ?");
+                $stmtCur->execute([$soalId]);
+                $cur = $stmtCur->fetch(PDO::FETCH_ASSOC);
+
+                if (!$cur) {
+                    FlashHelper::setError('Data butir soal tidak ditemukan atau telah dihapus.');
+                    $redirect = !empty($_POST['redirect_url']) ? $_POST['redirect_url'] : BASE_URL . 'index.php?url=admin/bankSoal';
+                    header('Location: ' . $redirect);
+                    exit();
+                }
+
+                $updateImg = "";
+                $params = ['pt' => $pertanyaan, 'js' => $jenisSoal, 'bb' => $bobot, 'sid' => $soalId];
+
+                if (!empty($_POST['hapus_gambar'])) {
+                    if (!empty($cur['gambar'])) {
+                        $oldImg = ROOT_PATH . 'assets/uploads/soal/' . basename($cur['gambar']);
+                        if (file_exists($oldImg)) @unlink($oldImg);
+                    }
+                    $updateImg = ", gambar = NULL";
+                } elseif (isset($_FILES['gambar_soal']) && $_FILES['gambar_soal']['error'] === UPLOAD_ERR_OK) {
+                    $resImg = UploadHelper::upload($_FILES['gambar_soal'], 'soal');
+                    if ($resImg) {
+                        if (!empty($cur['gambar'])) {
+                            $oldImg = ROOT_PATH . 'assets/uploads/soal/' . basename($cur['gambar']);
+                            if (file_exists($oldImg)) @unlink($oldImg);
+                        }
+                        $updateImg = ", gambar = :gb";
+                        $params['gb'] = $resImg;
+                    }
+                }
+
+                $db->prepare("UPDATE soal SET pertanyaan = :pt, jenis_soal = :js, bobot = :bb $updateImg WHERE id = :sid")->execute($params);
+
+                // Update pilihan
+                $db->prepare("DELETE FROM pilihan_jawaban WHERE soal_id = ?")->execute([$soalId]);
+                if ($jenisSoal === 'pg') {
+                    $pilihanInput = $_POST['pilihan'] ?? [];
+                    $jawabanBenar = isset($_POST['jawaban_benar']) ? (string)$_POST['jawaban_benar'] : '0';
+                    $stmtP = $db->prepare("INSERT INTO pilihan_jawaban (soal_id, teks_pilihan, is_benar) VALUES (?, ?, ?)");
+                    $hasCorrect = false;
+                    foreach ($pilihanInput as $idx => $teks) {
+                        $teksClean = trim($teks);
+                        if ($teksClean !== '') {
+                            $isBnr = ((string)$idx === $jawabanBenar) ? 1 : 0;
+                            if ($isBnr === 1) $hasCorrect = true;
+                            $stmtP->execute([$soalId, $teksClean, $isBnr]);
+                        }
+                    }
+                    if (!$hasCorrect) {
+                        $db->prepare("UPDATE pilihan_jawaban SET is_benar = 1 WHERE soal_id = ? ORDER BY id ASC LIMIT 1")->execute([$soalId]);
+                    }
+                } elseif ($jenisSoal === 'tf') {
+                    $tfVal = strtoupper(trim($_POST['jawaban_tf'] ?? 'BENAR'));
+                    $stmtP = $db->prepare("INSERT INTO pilihan_jawaban (soal_id, teks_pilihan, is_benar) VALUES (?, ?, ?)");
+                    $stmtP->execute([$soalId, 'Benar (True)', ($tfVal === 'BENAR' ? 1 : 0)]);
+                    $stmtP->execute([$soalId, 'Salah (False)', ($tfVal === 'SALAH' ? 1 : 0)]);
+                }
+
+                FlashHelper::setSuccess('Butir Soal berhasil diperbarui!');
+                $redirect = !empty($_POST['redirect_url']) ? $_POST['redirect_url'] : BASE_URL . 'index.php?url=admin/bankSoal';
+                header('Location: ' . $redirect);
+                exit();
+            }
+        }
+
         require_once ROOT_PATH . 'views/guru/bank_soal.php';
+    }
+
+    public function bank_soal() {
+        $this->bankSoal();
     }
 
     public function inputNilai() {

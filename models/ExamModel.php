@@ -493,8 +493,13 @@ class ExamModel extends BaseModel {
 
     public function addSoal($quiz_id, $jenis_soal, $pertanyaan, $bobot, $pilihanArray, $gambar = null) {
         $bobotVal = ((int)$bobot > 0) ? (int)$bobot : 10;
-        $stmt = $this->db->prepare("INSERT INTO soal (quiz_id, jenis_soal, pertanyaan, bobot, gambar) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$quiz_id, $jenis_soal, $pertanyaan, $bobotVal, $gambar]);
+        try {
+            $stmt = $this->db->prepare("INSERT INTO soal (quiz_id, jenis_soal, pertanyaan, bobot, gambar, file_gambar) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$quiz_id, $jenis_soal, $pertanyaan, $bobotVal, $gambar, $gambar]);
+        } catch (\Throwable $e) {
+            $stmt = $this->db->prepare("INSERT INTO soal (quiz_id, jenis_soal, pertanyaan, bobot, gambar) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$quiz_id, $jenis_soal, $pertanyaan, $bobotVal, $gambar]);
+        }
         $soal_id = $this->db->lastInsertId();
 
         if (($jenis_soal === 'pg' || $jenis_soal === 'tf') && !empty($pilihanArray)) {

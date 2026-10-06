@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -80,33 +81,34 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                     ),
                   ),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.amber.shade100,
-                              borderRadius: BorderRadius.circular(12),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.mark_email_unread_rounded, color: Colors.amber.shade900, size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Permintaan Izin Susulan / Suspend',
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            child: Icon(Icons.mark_email_unread_rounded, color: Colors.amber.shade900, size: 24),
-                          ),
-                          const SizedBox(width: 12),
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Permintaan Izin Susulan / Suspend',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                              ),
-                              Text(
-                                'Konfirmasi pengajuan ujian susulan siswa',
-                                style: TextStyle(fontSize: 11, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        ],
+                            Text(
+                              'Konfirmasi pengajuan ujian susulan siswa',
+                              style: TextStyle(fontSize: 11, color: Colors.grey),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close_rounded),
@@ -193,8 +195,10 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                     ],
                                     if (status == 'pending') ...[
                                       const SizedBox(height: 12),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
+                                      Wrap(
+                                        alignment: WrapAlignment.end,
+                                        spacing: 8,
+                                        runSpacing: 8,
                                         children: [
                                           OutlinedButton.icon(
                                             onPressed: () async {
@@ -741,6 +745,9 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                               if (selectedDeadline != null)
                                 IconButton(
                                   icon: const Icon(Icons.close_rounded, size: 18, color: Colors.red),
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.all(4),
+                                  constraints: const BoxConstraints(),
                                   onPressed: () {
                                     setModalState(() {
                                       selectedDeadline = null;
@@ -1453,30 +1460,47 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                 const SizedBox(height: 6),
 
                                 // Info Row (Durasi & Peserta)
-                                Row(
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 6,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
-                                    Icon(Icons.timer_rounded, size: 14, color: Colors.grey.shade600),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${q.durasiMenit} Menit',
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.timer_rounded, size: 14, color: Colors.grey.shade600),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${q.durasiMenit} Menit',
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 12),
-                                    Icon(Icons.people_alt_rounded, size: 14, color: Colors.grey.shade600),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${q.totalPeserta ?? 0} Peserta',
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.people_alt_rounded, size: 14, color: Colors.grey.shade600),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '${q.totalPeserta ?? 0} Peserta',
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 12),
-                                    Icon(Icons.groups_rounded, size: 14, color: Colors.grey.shade600),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        q.namaKelas ?? 'Semua Kelas',
-                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.groups_rounded, size: 14, color: Colors.grey.shade600),
+                                        const SizedBox(width: 4),
+                                        ConstrainedBox(
+                                          constraints: const BoxConstraints(maxWidth: 160),
+                                          child: Text(
+                                            q.namaKelas ?? 'Semua Kelas',
+                                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -1575,26 +1599,48 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                 const SizedBox(height: 14),
 
                                 // Action Row
-                                Row(
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
                                   children: [
-                                    Expanded(
-                                      child: ElevatedButton.icon(
+                                    if (q.accessKey != null && q.accessKey!.trim().isNotEmpty)
+                                      OutlinedButton.icon(
                                         onPressed: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(builder: (_) => GuruBankSoalScreen(quiz: q)),
+                                          Clipboard.setData(ClipboardData(text: q.accessKey!.trim()));
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Token "${q.accessKey}" berhasil disalin! 📋'),
+                                              backgroundColor: Colors.purple.shade800,
+                                              duration: const Duration(seconds: 2),
+                                            ),
                                           );
                                         },
-                                        icon: const Icon(Icons.format_list_bulleted_rounded, size: 16),
-                                        label: const Text('Kelola Bank Soal'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.purple.shade800,
-                                          foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 10),
+                                        icon: const Icon(Icons.copy_rounded, size: 14),
+                                        label: const Text('Salin Token'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.purple.shade800,
+                                          side: BorderSide(color: Colors.purple.shade300),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                           textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                          elevation: 1,
                                         ),
+                                      ),
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (_) => GuruBankSoalScreen(quiz: q)),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.format_list_bulleted_rounded, size: 16),
+                                      label: const Text('Kelola Bank Soal'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.purple.shade800,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        elevation: 1,
                                       ),
                                     ),
                                   ],

@@ -13,7 +13,7 @@ class UploadHelper {
         'profile' => ['jpg', 'jpeg', 'png', 'webp'],
         'sertifikat' => ['pdf', 'jpg', 'png'],
         'logo' => ['jpg', 'jpeg', 'png', 'webp', 'svg', 'ico'],
-        'soal' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        'soal' => ['jpg', 'jpeg', 'jfif', 'png', 'gif', 'webp', 'bmp'],
         'forum' => ['jpg', 'jpeg', 'png', 'gif', 'webp'],
         'pengumuman' => ['jpg', 'jpeg', 'png', 'gif', 'webp']
     ];

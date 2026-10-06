@@ -44,13 +44,14 @@ class ApiController {
     }
 
     private function getPostInput() {
-        $json = file_get_contents('php://input');
-        $data = json_decode($json, true);
+        $json = @file_get_contents('php://input');
+        $data = !empty($json) ? json_decode(trim($json), true) : null;
         if (is_array($data)) {
-            return $data;
+            return !empty($_POST) ? array_merge($_POST, $data) : $data;
         }
-        return $_POST;
+        return !empty($_POST) ? $_POST : [];
     }
+
 
     public function index() {
         $this->jsonResponse(true, 'SMK Muthia Harapan E-Learning Mobile API v1.0', [
@@ -2229,25 +2230,59 @@ class ApiController {
                     $mapelId = intval($input['mapel_id'] ?? 0);
                     $kelasId = intval($input['kelas_id'] ?? 0);
                     $durasi = intval($input['durasi_menit'] ?? 30);
+                    $kategori = trim($input['kategori'] ?? 'kuis');
+                    $randomSoal = trim($input['random_soal'] ?? 'Y');
+                    $randomJawaban = trim($input['random_jawaban'] ?? 'Y');
+                    $deadline = !empty($input['deadline']) ? trim($input['deadline']) : null;
+                    $maxAttempts = isset($input['max_attempts']) ? intval($input['max_attempts']) : 1;
+                    $accessKey = !empty($input['access_key']) ? trim(strtoupper($input['access_key'])) : null;
 
-                    if (empty($judul) || $mapelId <= 0 || $kelasId <= 0) {
-                        $this->jsonResponse(false, 'Judul, Mapel, dan Kelas wajib diisi', null, 400);
+                    // If UTS/UAS selected and access_key is empty, auto-generate token
+                    if (in_array(strtolower($kategori), ['uts', 'uas']) && empty($accessKey)) {
+                        $accessKey = strtoupper($kategori) . '-' . strtoupper(substr(bin2hex(random_bytes(2)), 0, 4));
                     }
 
-                    $stmtIns = $this->db->prepare("
-                        INSERT INTO quiz (guru_id, mapel_id, kelas_id, judul, deskripsi, durasi_menit, status, created_at) 
-                        VALUES (:gid, :mpid, :kid, :jdl, :desk, :dur, 'published', NOW())
-                    ");
-                    $stmtIns->execute([
-                        'gid' => $guru['id'],
-                        'mpid' => $mapelId,
-                        'kid' => $kelasId,
-                        'jdl' => $judul,
-                        'desk' => $deskripsi,
-                        'dur' => $durasi
-                    ]);
+                    $kelasIds = [];
+                    if (!empty($input['kelas_ids']) && is_array($input['kelas_ids'])) {
+                        $kelasIds = array_map('intval', $input['kelas_ids']);
+                    } elseif ($kelasId > 0) {
+                        $kelasIds = [$kelasId];
+                    }
+                    $kelasIds = array_values(array_filter($kelasIds, function($k) { return $k > 0; }));
 
-                    $this->jsonResponse(true, 'Quiz / Ujian berhasil dibuat!');
+                    if (empty($judul) || $mapelId <= 0 || empty($kelasIds)) {
+                        $this->jsonResponse(false, 'Judul, Mapel, dan Kelas target wajib diisi', null, 400);
+                    }
+
+                    $quizId = $examModel->createQuiz(
+                        $guru['id'],
+                        $mapelId,
+                        $kelasIds,
+                        $judul,
+                        $deskripsi,
+                        $durasi,
+                        0,
+                        $randomSoal,
+                        $randomJawaban,
+                        $deadline,
+                        $maxAttempts,
+                        $kategori,
+                        $accessKey
+                    );
+
+                    // Push notification to enrolled students
+                    try {
+                        require_once ROOT_PATH . 'helpers/FcmHelper.php';
+                        foreach ($kelasIds as $kId) {
+                            FcmHelper::sendToKelas($kId, '📝 Ujian / CBT Baru: ' . $judul, 'Paket Ujian baru telah dipublikasikan untuk kelas Anda.', ['type' => 'quiz', 'id' => $quizId]);
+                        }
+                    } catch (\Throwable $e) {}
+
+                    $this->jsonResponse(true, 'Quiz / Ujian CBT berhasil dibuat!', [
+                        'id' => $quizId,
+                        'kategori' => $kategori,
+                        'access_key' => $accessKey
+                    ]);
                 }
 
                 $stmtQ = $this->db->prepare("
@@ -2645,7 +2680,102 @@ class ApiController {
                 ]);
                 break;
 
+            case 'upload_soal_gambar':
+            case 'upload_gambar_soal':
+                require_once ROOT_PATH . 'helpers/UploadHelper.php';
+                $uploadedFilename = null;
+
+                $fileKey = null;
+                if (!empty($_FILES['gambar_soal']) && $_FILES['gambar_soal']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'gambar_soal';
+                } elseif (!empty($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'file';
+                } elseif (!empty($_FILES['gambar']) && $_FILES['gambar']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'gambar';
+                } elseif (!empty($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'image';
+                } elseif (!empty($_FILES['file_gambar']) && $_FILES['file_gambar']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'file_gambar';
+                }
+
+                if ($fileKey === null && !empty($_FILES)) {
+                    foreach ($_FILES as $k => $f) {
+                        if (isset($f['error']) && $f['error'] === UPLOAD_ERR_OK) {
+                            $fileKey = $k;
+                            break;
+                        }
+                    }
+                }
+
+                if ($fileKey !== null) {
+                    $resImg = UploadHelper::upload($_FILES[$fileKey], 'soal');
+                    if ($resImg) {
+                        $uploadedFilename = $resImg;
+                    }
+                }
+
+                // 2. Fallback jika dikirim base64
+                if (empty($uploadedFilename)) {
+                    $input = $this->getPostInput();
+                    $b64 = $input['gambar_base64'] ?? $input['image_base64'] ?? $input['file_gambar'] ?? $input['gambar'] ?? $_POST['gambar_base64'] ?? '';
+                    if (!empty($b64)) {
+                        if (strpos($b64, ';base64,') !== false) {
+                            $parts = explode(';base64,', $b64, 2);
+                            $b64 = $parts[1];
+                        } elseif (strpos($b64, ',') !== false && strpos($b64, 'data:') === 0) {
+                            $parts = explode(',', $b64, 2);
+                            $b64 = $parts[1];
+                        }
+                        $b64Clean = str_replace(' ', '+', $b64);
+                        $b64Clean = preg_replace('/[^a-zA-Z0-9\+\/=]/', '', $b64Clean);
+                        $imgData = base64_decode($b64Clean, true);
+                        if ($imgData !== false && strlen($imgData) >= 10) {
+                            $ext = 'jpg';
+                            if (substr($imgData, 0, 8) === "\x89PNG\r\n\x1a\n") $ext = 'png';
+                            elseif (substr($imgData, 0, 4) === "RIFF") $ext = 'webp';
+                            elseif (substr($imgData, 0, 3) === "GIF") $ext = 'gif';
+
+                            $uploadDir = defined('UPLOADS_PATH') ? UPLOADS_PATH . 'soal/' : (ROOT_PATH . 'assets/uploads/soal/');
+                            $uploadDir = str_replace('\\', '/', $uploadDir);
+                            if (!is_dir($uploadDir)) @mkdir($uploadDir, 0777, true);
+                            @chmod($uploadDir, 0777);
+
+                            $filename = 'soal_' . time() . '_' . mt_rand(1000, 9999) . '.' . $ext;
+                            if (@file_put_contents($uploadDir . $filename, $imgData)) {
+                                @chmod($uploadDir . $filename, 0666);
+                                $uploadedFilename = $filename;
+                            }
+                        }
+                    }
+                }
+
+                if (!empty($uploadedFilename)) {
+                    $fullUrl = BASE_URL . 'assets/uploads/soal/' . $uploadedFilename;
+                    $this->jsonResponse(true, 'Gambar soal berhasil diunggah!', [
+                        'filename' => $uploadedFilename,
+                        'file_url' => $fullUrl,
+                        'gambar' => $uploadedFilename,
+                        'file_gambar' => $uploadedFilename,
+                    ]);
+                } else {
+                    $err = $_SESSION['flash_error'] ?? 'Gagal mengunggah gambar. Pastikan format JPG, PNG, atau WEBP (maks 10MB).';
+                    unset($_SESSION['flash_error']);
+                    $this->jsonResponse(false, $err, null, 400);
+                }
+                break;
+
             case 'bank_soal':
+                // Pastikan tabel soal memiliki kolom gambar dan file_gambar agar selalu sinkron
+                try {
+                    $cols = $this->db->query("SHOW COLUMNS FROM soal")->fetchAll(PDO::FETCH_COLUMN);
+                    if (!in_array('gambar', $cols)) {
+                        $this->db->exec("ALTER TABLE soal ADD COLUMN gambar VARCHAR(255) NULL AFTER bobot");
+                    }
+                    if (!in_array('file_gambar', $cols)) {
+                        $this->db->exec("ALTER TABLE soal ADD COLUMN file_gambar VARCHAR(255) NULL AFTER pertanyaan");
+                    }
+                } catch (\Throwable $eCol) {}
+
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $input = $this->getPostInput();
                     $action = trim($input['action'] ?? '');
@@ -2658,31 +2788,299 @@ class ApiController {
                         }
                     }
 
-                    $quizId = intval($input['quiz_id'] ?? 0);
-                    $pertanyaan = trim($input['pertanyaan'] ?? '');
-                    $jenisSoal = trim($input['jenis_soal'] ?? 'pg');
-                    $bobot = intval($input['bobot'] ?? 10);
-                    $pilihans = $input['pilihan'] ?? [];
+                    // Helper tangguh untuk decode dan menyimpan base64 atau uploaded question image
+                    $saveImageBase64 = function($b64) {
+                        if (empty($b64) || !is_string($b64)) return null;
+                        $b64 = trim($b64, " \t\n\r\0\x0B\"'");
+                        if (empty($b64) || strtolower($b64) === 'null') return null;
 
-                    if ($quizId <= 0 || empty($pertanyaan)) {
-                        $this->jsonResponse(false, 'Quiz dan pertanyaan wajib diisi', null, 400);
-                    }
-                    try {
-                        $stmtIns = $this->db->prepare("INSERT INTO soal (quiz_id, jenis_soal, pertanyaan, bobot) VALUES (:qid, :js, :pt, :bb)");
-                        $stmtIns->execute(['qid' => $quizId, 'js' => $jenisSoal, 'pt' => $pertanyaan, 'bb' => $bobot]);
-                        $newSoalId = $this->db->lastInsertId();
+                        // Jika merupakan URL lengkap atau path assets/uploads/soal/
+                        if (strpos($b64, 'assets/uploads/soal/') !== false) {
+                            $cleanPart = substr($b64, strpos($b64, 'assets/uploads/soal/') + strlen('assets/uploads/soal/'));
+                            return basename($cleanPart);
+                        }
 
-                        if (!empty($pilihans) && is_array($pilihans)) {
-                            $stmtP = $this->db->prepare("INSERT INTO pilihan_jawaban (soal_id, teks_pilihan, is_benar) VALUES (:sid, :tp, :ib)");
-                            foreach ($pilihans as $p) {
-                                $teks = trim(is_array($p) ? ($p['teks'] ?? $p['teks_pilihan'] ?? '') : $p);
-                                $isBenar = is_array($p) ? (!empty($p['is_benar']) ? 1 : 0) : 0;
-                                if (!empty($teks)) {
-                                    $stmtP->execute(['sid' => $newSoalId, 'tp' => $teks, 'ib' => $isBenar]);
+                        // Jika sudah merupakan nama file yang valid tersimpan di server
+                        $bName = basename($b64);
+                        if (preg_match('/^[a-zA-Z0-9_\-\.]+\.(jpg|jpeg|png|gif|webp|bmp|jfif)$/i', $bName)) {
+                            return $bName;
+                        }
+
+                        $ext = 'jpg';
+                        if (strpos($b64, ';base64,') !== false) {
+                            $parts = explode(';base64,', $b64, 2);
+                            if (preg_match('/image\/([a-zA-Z0-9\+\-\.]+)/i', $parts[0], $mMime)) {
+                                $m = strtolower($mMime[1]);
+                                if ($m === 'png') $ext = 'png';
+                                elseif ($m === 'webp') $ext = 'webp';
+                                elseif ($m === 'gif') $ext = 'gif';
+                                else $ext = 'jpg';
+                            }
+                            $b64 = $parts[1];
+                        } elseif (strpos($b64, ',') !== false && strpos($b64, 'data:') === 0) {
+                            $parts = explode(',', $b64, 2);
+                            $b64 = $parts[1];
+                        }
+
+                        // Bersihkan spasi dan karakter non-base64
+                        $b64Clean = str_replace(' ', '+', $b64);
+                        $b64Clean = preg_replace('/[^a-zA-Z0-9\+\/=]/', '', $b64Clean);
+                        if (empty($b64Clean)) return null;
+
+                        $imgData = base64_decode($b64Clean, true);
+                        if ($imgData === false || strlen($imgData) < 10) {
+                            $imgData = base64_decode($b64Clean); // retry loose
+                        }
+                        if ($imgData === false || strlen($imgData) < 10) return null;
+
+                        // Deteksi ekstensi akurat berdasarkan Magic Bytes konten file
+                        if (substr($imgData, 0, 8) === "\x89PNG\r\n\x1a\n") {
+                            $ext = 'png';
+                        } elseif (substr($imgData, 0, 3) === "\xFF\xD8\xFF") {
+                            $ext = 'jpg';
+                        } elseif (substr($imgData, 0, 4) === "RIFF" && substr($imgData, 8, 4) === "WEBP") {
+                            $ext = 'webp';
+                        } elseif (substr($imgData, 0, 3) === "GIF") {
+                            $ext = 'gif';
+                        }
+
+                        $uploadDir = defined('UPLOADS_PATH') ? UPLOADS_PATH . 'soal/' : (ROOT_PATH . 'assets/uploads/soal/');
+                        $uploadDir = str_replace('\\', '/', $uploadDir);
+                        if (!is_dir($uploadDir)) {
+                            @mkdir($uploadDir, 0777, true);
+                        }
+                        @chmod($uploadDir, 0777);
+
+                        $filename = 'soal_' . time() . '_' . mt_rand(1000, 9999) . '.' . $ext;
+                        $targetPath = $uploadDir . $filename;
+                        $written = @file_put_contents($targetPath, $imgData);
+                        if ($written !== false && $written > 0) {
+                            @chmod($targetPath, 0666);
+                            return $filename;
+                        }
+                        return null;
+                    };
+
+                    if ($action === 'edit' || $action === 'update' || $action === 'edit_soal') {
+                        $soalId = intval($input['soal_id'] ?? $input['id'] ?? 0);
+                        $pertanyaan = trim($input['pertanyaan'] ?? $input['soal'] ?? '');
+                        $jenisSoal = strtolower(trim($input['jenis_soal'] ?? 'pg'));
+                        if (!in_array($jenisSoal, ['pg', 'tf', 'essay'])) {
+                            $jenisSoal = 'pg';
+                        }
+                        $bobot = intval($input['bobot'] ?? 10);
+                        if ($bobot <= 0) $bobot = 10;
+                        $pilihan = $input['pilihan'] ?? [];
+                        $hapusGambar = !empty($input['hapus_gambar']);
+                        $imgBase64 = $input['gambar_base64'] ?? $input['file_gambar'] ?? $input['image_base64'] ?? $input['gambar'] ?? null;
+
+                        // Periksa apakah ada file gambar langsung via multipart $_FILES
+                        if (!empty($_FILES)) {
+                            require_once ROOT_PATH . 'helpers/UploadHelper.php';
+                            foreach (['gambar_soal', 'file', 'gambar', 'image', 'file_gambar'] as $fk) {
+                                if (!empty($_FILES[$fk]) && $_FILES[$fk]['error'] === UPLOAD_ERR_OK) {
+                                    $directFileImg = UploadHelper::upload($_FILES[$fk], 'soal');
+                                    if ($directFileImg) {
+                                        $imgBase64 = $directFileImg;
+                                        break;
+                                    }
                                 }
                             }
                         }
-                        $this->jsonResponse(true, 'Soal berhasil ditambahkan ke bank soal!');
+
+                        if ($soalId <= 0) {
+                            $this->jsonResponse(false, 'ID Soal tidak valid atau belum ditentukan', null, 400);
+                        }
+
+                        $stmtCur = $this->db->prepare("SELECT * FROM soal WHERE id = ?");
+                        $stmtCur->execute([$soalId]);
+                        $curSoal = $stmtCur->fetch(PDO::FETCH_ASSOC);
+                        if (!$curSoal) {
+                            $this->jsonResponse(false, 'Data soal tidak ditemukan', null, 404);
+                        }
+
+                        // Jika teks pertanyaan tidak terkirim, pertahankan teks lama (jangan blokir edit)
+                        if ($pertanyaan === '') {
+                            $pertanyaan = trim((string)($curSoal['pertanyaan'] ?? ''));
+                        }
+                        if ($pertanyaan === '') {
+                            $this->jsonResponse(false, 'Teks pertanyaan wajib diisi', null, 400);
+                        }
+
+                        $uploadDir = defined('UPLOADS_PATH') ? UPLOADS_PATH . 'soal/' : (ROOT_PATH . 'assets/uploads/soal/');
+                        $updateImgSql = "";
+                        $params = [
+                            'pt' => $pertanyaan,
+                            'js' => $jenisSoal,
+                            'bb' => $bobot,
+                            'sid' => $soalId
+                        ];
+
+                        if ($hapusGambar) {
+                            if (!empty($curSoal['gambar'])) {
+                                $oldImg = $uploadDir . basename($curSoal['gambar']);
+                                if (file_exists($oldImg)) @unlink($oldImg);
+                            }
+                            if (!empty($curSoal['file_gambar'])) {
+                                $oldImg2 = $uploadDir . basename($curSoal['file_gambar']);
+                                if (file_exists($oldImg2)) @unlink($oldImg2);
+                            }
+                            $updateImgSql = ", gambar = NULL, file_gambar = NULL";
+                        } elseif (!empty($imgBase64)) {
+                            $newImg = $saveImageBase64($imgBase64);
+                            if ($newImg) {
+                                if (!empty($curSoal['gambar'])) {
+                                    $oldImg = $uploadDir . basename($curSoal['gambar']);
+                                    if (file_exists($oldImg)) @unlink($oldImg);
+                                }
+                                if (!empty($curSoal['file_gambar'])) {
+                                    $oldImg2 = $uploadDir . basename($curSoal['file_gambar']);
+                                    if (file_exists($oldImg2)) @unlink($oldImg2);
+                                }
+                                $updateImgSql = ", gambar = :gb, file_gambar = :fg";
+                                $params['gb'] = $newImg;
+                                $params['fg'] = $newImg;
+                            }
+                        }
+
+                        $sql = "UPDATE soal SET pertanyaan = :pt, jenis_soal = :js, bobot = :bb $updateImgSql WHERE id = :sid";
+                        $this->db->prepare($sql)->execute($params);
+
+                        // Update choices
+                        $this->db->prepare("DELETE FROM pilihan_jawaban WHERE soal_id = ?")->execute([$soalId]);
+                        if (($jenisSoal === 'pg' || $jenisSoal === 'tf') && !empty($pilihan) && is_array($pilihan)) {
+                            $stmtP = $this->db->prepare("INSERT INTO pilihan_jawaban (soal_id, teks_pilihan, is_benar) VALUES (:sid, :tp, :ib)");
+                            $hasCorrect = false;
+                            foreach ($pilihan as $p) {
+                                $teks = trim(is_array($p) ? ($p['teks'] ?? $p['teks_pilihan'] ?? '') : $p);
+                                $isBenar = is_array($p) ? (!empty($p['is_benar']) ? 1 : 0) : 0;
+                                if ($isBenar == 1) $hasCorrect = true;
+                                if (!empty($teks)) {
+                                    $stmtP->execute(['sid' => $soalId, 'tp' => $teks, 'ib' => $isBenar]);
+                                }
+                            }
+                            if (!$hasCorrect && $jenisSoal === 'pg') {
+                                $this->db->prepare("UPDATE pilihan_jawaban SET is_benar = 1 WHERE soal_id = ? ORDER BY id ASC LIMIT 1")->execute([$soalId]);
+                            }
+                        }
+
+                        $this->jsonResponse(true, 'Soal berhasil diperbarui!');
+                    }
+
+                    $quizId = intval($input['quiz_id'] ?? $_POST['quiz_id'] ?? $_GET['quiz_id'] ?? 0);
+                    $soalList = $input['soal_list'] ?? $_POST['soal_list'] ?? [];
+
+                    // If soal_list is JSON string, decode it
+                    if (is_string($soalList)) {
+                        $decoded = json_decode($soalList, true);
+                        if (is_array($decoded)) {
+                            $soalList = $decoded;
+                        }
+                    }
+
+                    // If single question was sent instead of soal_list, wrap it into soalList
+                    $singlePert = trim($input['pertanyaan'] ?? $input['soal'] ?? '');
+                    if (empty($soalList) && $singlePert !== '') {
+                        $soalList = [[
+                            'pertanyaan' => $singlePert,
+                            'soal' => $singlePert,
+                            'jenis_soal' => $input['jenis_soal'] ?? 'pg',
+                            'bobot' => $input['bobot'] ?? 10,
+                            'pilihan' => $input['pilihan'] ?? [],
+                            'gambar_base64' => $input['gambar_base64'] ?? $input['file_gambar'] ?? $input['image_base64'] ?? $input['gambar'] ?? null,
+                        ]];
+                    }
+
+                    // Fallback to latest quiz of this guru if quiz_id is 0
+                    if ($quizId <= 0) {
+                        $gid = intval($guru['id'] ?? 0);
+                        if ($gid > 0) {
+                            $stmtLatest = $this->db->prepare("SELECT id FROM quiz WHERE guru_id = ? ORDER BY id DESC LIMIT 1");
+                            $stmtLatest->execute([$gid]);
+                            $quizId = intval($stmtLatest->fetchColumn() ?: 0);
+                        }
+                        if ($quizId <= 0) {
+                            $stmtAny = $this->db->query("SELECT id FROM quiz ORDER BY id DESC LIMIT 1");
+                            $quizId = intval($stmtAny->fetchColumn() ?: 0);
+                        }
+                    }
+
+                    if ($quizId <= 0) {
+                        $this->jsonResponse(false, 'Target Ujian CBT / Quiz belum dipilih atau belum ada quiz yang dibuat.', null, 400);
+                    }
+
+                    if (empty($soalList)) {
+                        $this->jsonResponse(false, 'Daftar pertanyaan soal tidak boleh kosong.', null, 400);
+                    }
+
+                    $totalSuccess = 0;
+                    $imgFailed = 0;
+                    try {
+                        $stmtIns = $this->db->prepare("INSERT INTO soal (quiz_id, jenis_soal, pertanyaan, bobot, gambar, file_gambar) VALUES (:qid, :js, :pt, :bb, :gb, :fg)");
+                        $stmtP = $this->db->prepare("INSERT INTO pilihan_jawaban (soal_id, teks_pilihan, is_benar) VALUES (:sid, :tp, :ib)");
+
+                        foreach ($soalList as $item) {
+                            $pert = trim($item['pertanyaan'] ?? $item['soal'] ?? '');
+                            if (empty($pert)) continue;
+
+                            $jns = strtolower(trim($item['jenis_soal'] ?? 'pg'));
+                            if (!in_array($jns, ['pg', 'tf', 'essay'])) {
+                                $jns = 'pg';
+                            }
+                            $bbt = intval($item['bobot'] ?? 10);
+                            if ($bbt <= 0) $bbt = 10;
+
+                            $imgRaw = $item['gambar_base64'] ?? $item['file_gambar'] ?? $item['image_base64'] ?? $item['gambar'] ?? ($input['gambar_base64'] ?? null);
+                            if (empty($imgRaw) && !empty($_FILES)) {
+                                require_once ROOT_PATH . 'helpers/UploadHelper.php';
+                                foreach (['gambar_soal', 'file', 'gambar', 'image', 'file_gambar'] as $fk) {
+                                    if (!empty($_FILES[$fk]) && $_FILES[$fk]['error'] === UPLOAD_ERR_OK) {
+                                        $resF = UploadHelper::upload($_FILES[$fk], 'soal');
+                                        if ($resF) {
+                                            $imgRaw = $resF;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            $imgFilename = $saveImageBase64($imgRaw);
+                            if (!empty($imgRaw) && empty($imgFilename)) {
+                                $imgFailed++;
+                            }
+
+                            $stmtIns->execute([
+                                'qid' => $quizId,
+                                'js' => $jns,
+                                'pt' => $pert,
+                                'bb' => $bbt,
+                                'gb' => $imgFilename,
+                                'fg' => $imgFilename
+                            ]);
+                            $newSoalId = $this->db->lastInsertId();
+
+                            $pilihans = $item['pilihan'] ?? [];
+                            if (($jns === 'pg' || $jns === 'tf') && !empty($pilihans) && is_array($pilihans)) {
+                                foreach ($pilihans as $p) {
+                                    $teks = trim(is_array($p) ? ($p['teks'] ?? $p['teks_pilihan'] ?? '') : $p);
+                                    $isBenar = is_array($p) ? (!empty($p['is_benar']) ? 1 : 0) : 0;
+                                    if (!empty($teks)) {
+                                        $stmtP->execute(['sid' => $newSoalId, 'tp' => $teks, 'ib' => $isBenar]);
+                                    }
+                                }
+                            }
+                            $totalSuccess++;
+                        }
+
+                        // Update count on quiz table
+                        try {
+                            $this->db->prepare("UPDATE quiz SET jumlah_soal = (SELECT COUNT(*) FROM soal WHERE quiz_id = ?) WHERE id = ?")->execute([$quizId, $quizId]);
+                        } catch (\Throwable $eCnt) {}
+
+                        $msgOk = "Berhasil menyimpan $totalSuccess soal ke Bank Soal!";
+                        if ($imgFailed > 0) {
+                            $msgOk .= " Namun $imgFailed gambar gagal disimpan (periksa format gambar atau izin folder).";
+                        }
+                        $this->jsonResponse(true, $msgOk, ['total_saved' => $totalSuccess, 'image_failed' => $imgFailed]);
                     } catch (\Throwable $eBs) {
                         $this->jsonResponse(false, 'Gagal menambahkan soal: ' . $eBs->getMessage(), null, 500);
                     }
@@ -2693,7 +3091,7 @@ class ApiController {
                     if ($quizId > 0) {
                         $stmtS = $this->db->prepare("SELECT s.*, q.judul as judul_quiz, mp.nama_mapel, k.nama_kelas 
                             FROM soal s 
-                            JOIN quiz q ON s.quiz_id = q.id 
+                            LEFT JOIN quiz q ON s.quiz_id = q.id 
                             LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
                             LEFT JOIN kelas k ON q.kelas_id = k.id 
                             WHERE s.quiz_id = :qid ORDER BY s.id ASC");
@@ -2702,17 +3100,28 @@ class ApiController {
                     } else {
                         $gid = intval($guru['id'] ?? 0);
                         $uid = intval($userId ?? 0);
-                        $stmtS = $this->db->prepare("SELECT s.*, q.judul as judul_quiz, mp.nama_mapel, k.nama_kelas 
-                            FROM soal s 
-                            JOIN quiz q ON s.quiz_id = q.id 
-                            LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
-                            LEFT JOIN kelas k ON q.kelas_id = k.id 
-                            WHERE (q.guru_id = :gid OR q.guru_id = :uid) ORDER BY s.id DESC");
-                        $stmtS->execute(['gid' => $gid, 'uid' => $uid]);
-                        $soals = $stmtS->fetchAll();
+                        $soals = [];
+
+                        if ($gid > 0 || $uid > 0) {
+                            $stmtS = $this->db->prepare("SELECT s.*, q.judul as judul_quiz, mp.nama_mapel, k.nama_kelas 
+                                FROM soal s 
+                                LEFT JOIN quiz q ON s.quiz_id = q.id 
+                                LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
+                                LEFT JOIN kelas k ON q.kelas_id = k.id 
+                                WHERE (q.guru_id = :gid OR q.guru_id = :uid) ORDER BY s.id DESC");
+                            $stmtS->execute(['gid' => $gid, 'uid' => $uid]);
+                            $soals = $stmtS->fetchAll();
+                        }
 
                         if (empty($soals)) {
-                            $soals = [];
+                            $stmtS = $this->db->prepare("SELECT s.*, q.judul as judul_quiz, mp.nama_mapel, k.nama_kelas 
+                                FROM soal s 
+                                LEFT JOIN quiz q ON s.quiz_id = q.id 
+                                LEFT JOIN mata_pelajaran mp ON q.mapel_id = mp.id 
+                                LEFT JOIN kelas k ON q.kelas_id = k.id 
+                                ORDER BY s.id DESC LIMIT 100");
+                            $stmtS->execute();
+                            $soals = $stmtS->fetchAll();
                         }
                     }
 
@@ -2720,6 +3129,27 @@ class ApiController {
                     foreach ($soals as &$s) {
                         $stmtP->execute(['sid' => $s['id']]);
                         $s['pilihan'] = $stmtP->fetchAll();
+                        
+                        $rawImg = !empty($s['gambar']) ? $s['gambar'] : (!empty($s['file_gambar']) ? $s['file_gambar'] : null);
+                        if (!empty($rawImg)) {
+                            $gClean = ltrim($rawImg, '/');
+                            if (strpos($gClean, 'http') === 0) {
+                                $fullImgUrl = $gClean;
+                            } elseif (strpos($gClean, 'assets/') === 0) {
+                                $fullImgUrl = BASE_URL . $gClean;
+                            } else {
+                                $fullImgUrl = BASE_URL . 'assets/uploads/soal/' . $gClean;
+                            }
+                            $s['gambar'] = $rawImg;
+                            $s['file_gambar'] = $rawImg;
+                            $s['gambar_url'] = $fullImgUrl;
+                            $s['file_gambar_url'] = $fullImgUrl;
+                        } else {
+                            $s['gambar'] = null;
+                            $s['file_gambar'] = null;
+                            $s['gambar_url'] = null;
+                            $s['file_gambar_url'] = null;
+                        }
                     }
                     unset($s);
 

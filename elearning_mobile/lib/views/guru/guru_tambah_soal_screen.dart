@@ -476,7 +476,7 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.purple.shade50,
                   borderRadius: BorderRadius.circular(12),
@@ -486,15 +486,15 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.format_list_numbered_rounded, size: 16, color: Colors.purple.shade800),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     Text(
                       '${_draftList.length} Soal',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.purple.shade900),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.purple.shade900),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: _isSubmitting ? null : _submitAllQuestions,
@@ -514,7 +514,7 @@ class _GuruTambahSoalScreenState extends State<GuruTambahSoalScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.purple.shade800,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     elevation: 1,

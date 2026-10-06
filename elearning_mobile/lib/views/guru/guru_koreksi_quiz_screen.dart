@@ -466,10 +466,14 @@ class _GuruKoreksiQuizScreenState extends State<GuruKoreksiQuizScreen> {
                                   const SizedBox(height: 12),
 
                                   // Score & Essay Stats Row
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  Wrap(
+                                    spacing: 12,
+                                    runSpacing: 6,
+                                    alignment: WrapAlignment.spaceBetween,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
                                     children: [
                                       Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           const Icon(Icons.analytics_rounded, size: 16, color: Colors.grey),
                                           const SizedBox(width: 4),
@@ -484,14 +488,24 @@ class _GuruKoreksiQuizScreenState extends State<GuruKoreksiQuizScreen> {
                                         ],
                                       ),
                                       if (totalEssay > 0)
-                                        Text(
-                                          needsCorrection
-                                              ? '$ungradedCount dari $totalEssay Essay Belum Dinilai'
-                                              : '$totalEssay Essay Telah Dinilai',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: needsCorrection ? Colors.amber.shade900 : const Color(0xFF047857),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: needsCorrection ? Colors.amber.shade50 : const Color(0xFFECFDF5),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: needsCorrection ? Colors.amber.shade300 : const Color(0xFFA7F3D0),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            needsCorrection
+                                                ? '$ungradedCount dari $totalEssay Essay Belum Dinilai'
+                                                : '$totalEssay Essay Telah Dinilai',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: needsCorrection ? Colors.amber.shade900 : const Color(0xFF047857),
+                                            ),
                                           ),
                                         ),
                                     ],
@@ -535,46 +549,54 @@ class _GuruKoreksiQuizScreenState extends State<GuruKoreksiQuizScreen> {
     required Color iconColor,
     required Color bgColor,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 105;
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 6 : 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, 2)),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isCompact ? 5 : 8),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
-                  overflow: TextOverflow.ellipsis,
+                child: Icon(icon, color: iconColor, size: isCompact ? 16 : 20),
+              ),
+              SizedBox(width: isCompact ? 5 : 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(fontSize: isCompact ? 9 : 10, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    Text(
+                      value,
+                      style: TextStyle(fontSize: isCompact ? 11 : 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -676,13 +698,14 @@ class _KoreksiDetailBottomSheetState extends State<_KoreksiDetailBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.90),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -752,8 +775,11 @@ class _KoreksiDetailBottomSheetState extends State<_KoreksiDetailBottomSheet> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  Wrap(
+                                    alignment: WrapAlignment.spaceBetween,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 4,
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -795,10 +821,12 @@ class _KoreksiDetailBottomSheetState extends State<_KoreksiDetailBottomSheet> {
                                   const SizedBox(height: 12),
 
                                   // Input Skor Nilai
-                                  Row(
+                                  Wrap(
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 8,
+                                    runSpacing: 6,
                                     children: [
                                       const Text('Input Nilai Skor: ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                      const SizedBox(width: 8),
                                       SizedBox(
                                         width: 80,
                                         height: 38,
@@ -812,7 +840,6 @@ class _KoreksiDetailBottomSheetState extends State<_KoreksiDetailBottomSheet> {
                                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
                                       Text('/ ${maxBobot.toStringAsFixed(0)} Poin', style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w600)),
                                     ],
                                   ),

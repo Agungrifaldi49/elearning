@@ -482,11 +482,15 @@ class GuruController {
         $roleName = strtolower(AuthHelper::user()['role_name'] ?? '');
         $isAdminMonitoring = ($roleName === 'administrator');
         $queryGuruId = $isAdminMonitoring ? null : $guruId;
+        $userId = (int)AuthHelper::userId();
+        $guruUserId = (int)($guru['user_id'] ?? 0);
 
-        $checkQuizPermission = function($targetQuizId) use ($examModel, $isAdminMonitoring, $guruId) {
+        $checkQuizPermission = function($targetQuizId) use ($examModel, $isAdminMonitoring, $guruId, $userId, $guruUserId) {
             if ($isAdminMonitoring) return true;
             $qz = $examModel->getQuizById((int)$targetQuizId);
-            return ($qz && (int)($qz['guru_id'] ?? 0) === (int)$guruId);
+            if (!$qz) return false;
+            $qGid = (int)($qz['guru_id'] ?? 0);
+            return ($qGid === (int)$guruId || ($userId > 0 && $qGid === $userId) || ($guruUserId > 0 && $qGid === $guruUserId));
         };
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -831,11 +835,17 @@ class GuruController {
                 $pertanyaan = Security::sanitize($_POST['pertanyaan']);
                 
                 $gambarPath = null;
+                $imgUploadWarning = '';
                 if (isset($_FILES['gambar_soal']) && $_FILES['gambar_soal']['error'] === UPLOAD_ERR_OK) {
                     $resImg = UploadHelper::upload($_FILES['gambar_soal'], 'soal');
                     if ($resImg) {
                         $gambarPath = $resImg;
+                    } else {
+                        $imgUploadWarning = $_SESSION['flash_error'] ?? 'Gambar gagal diunggah.';
+                        unset($_SESSION['flash_error']);
                     }
+                } elseif (isset($_FILES['gambar_soal']) && $_FILES['gambar_soal']['error'] !== UPLOAD_ERR_NO_FILE) {
+                    $imgUploadWarning = 'Gambar gagal diunggah (kode error ' . (int)$_FILES['gambar_soal']['error'] . '). Kemungkinan ukuran file melebihi batas server.';
                 }
 
                 $pilihan = [];
@@ -868,7 +878,11 @@ class GuruController {
                 }
 
                 $examModel->addSoal($quizId, $jSoal, $pertanyaan, 10, $pilihan, $gambarPath);
-                FlashHelper::setSuccess('Soal baru (' . strtoupper($jSoal) . ') berhasil ditambahkan ke paket Quiz.');
+                if ($imgUploadWarning !== '') {
+                    FlashHelper::setError('Soal tersimpan, tetapi ' . $imgUploadWarning);
+                } else {
+                    FlashHelper::setSuccess('Soal baru (' . strtoupper($jSoal) . ') berhasil ditambahkan ke paket Quiz.');
+                }
 
             } elseif ($action === 'update') {
                 $id = (int)$_POST['id'];
@@ -983,6 +997,98 @@ class GuruController {
                 }
                 $examModel->deleteQuiz($id);
                 FlashHelper::setSuccess('Paket Quiz beserta seluruh soal berhasil dihapus.');
+
+            } elseif ($action === 'edit_soal') {
+                $soalId = (int)($_POST['soal_id'] ?? $_POST['id'] ?? 0);
+                $rawPertanyaan = trim($_POST['pertanyaan'] ?? $_POST['soal'] ?? '');
+                $pertanyaan = Security::sanitize($rawPertanyaan);
+                if ($pertanyaan === '' && $rawPertanyaan !== '') {
+                    $pertanyaan = htmlspecialchars($rawPertanyaan, ENT_QUOTES, 'UTF-8');
+                }
+                if ($pertanyaan === '' && $soalId > 0) {
+                    // Pertahankan teks lama jika field tidak terkirim
+                    $stmtOld = Database::getConnection()->prepare("SELECT pertanyaan FROM soal WHERE id = ?");
+                    $stmtOld->execute([$soalId]);
+                    $pertanyaan = trim((string)($stmtOld->fetchColumn() ?: ''));
+                }
+                if ($pertanyaan === '') {
+                    FlashHelper::setError('Teks pertanyaan soal wajib diisi.');
+                    $redirect = !empty($_POST['redirect_url']) ? $_POST['redirect_url'] : BASE_URL . 'index.php?url=guru/quiz';
+                    header('Location: ' . $redirect);
+                    exit();
+                }
+
+                $jenisSoal = strtolower(trim($_POST['jenis_soal'] ?? 'pg'));
+                if (!in_array($jenisSoal, ['pg', 'tf', 'essay'])) {
+                    $jenisSoal = 'pg';
+                }
+                $bobot = (int)($_POST['bobot'] ?? 10);
+                if ($bobot <= 0) $bobot = 10;
+
+                $db = Database::getConnection();
+                $stmtCur = $db->prepare("SELECT s.* FROM soal s WHERE s.id = ?");
+                $stmtCur->execute([$soalId]);
+                $cur = $stmtCur->fetch(PDO::FETCH_ASSOC);
+
+                if (!$cur) {
+                    FlashHelper::setError('Data butir soal tidak ditemukan atau telah dihapus.');
+                    $redirect = !empty($_POST['redirect_url']) ? $_POST['redirect_url'] : BASE_URL . 'index.php?url=guru/quiz';
+                    header('Location: ' . $redirect);
+                    exit();
+                }
+
+                $updateImg = "";
+                $params = ['pt' => $pertanyaan, 'js' => $jenisSoal, 'bb' => $bobot, 'sid' => $soalId];
+
+                if (!empty($_POST['hapus_gambar'])) {
+                    if (!empty($cur['gambar'])) {
+                        $oldImg = ROOT_PATH . 'assets/uploads/soal/' . basename($cur['gambar']);
+                        if (file_exists($oldImg)) @unlink($oldImg);
+                    }
+                    $updateImg = ", gambar = NULL";
+                } elseif (isset($_FILES['gambar_soal']) && $_FILES['gambar_soal']['error'] === UPLOAD_ERR_OK) {
+                    $resImg = UploadHelper::upload($_FILES['gambar_soal'], 'soal');
+                    if ($resImg) {
+                        if (!empty($cur['gambar'])) {
+                            $oldImg = ROOT_PATH . 'assets/uploads/soal/' . basename($cur['gambar']);
+                            if (file_exists($oldImg)) @unlink($oldImg);
+                        }
+                        $updateImg = ", gambar = :gb";
+                        $params['gb'] = $resImg;
+                    }
+                }
+
+                $db->prepare("UPDATE soal SET pertanyaan = :pt, jenis_soal = :js, bobot = :bb $updateImg WHERE id = :sid")->execute($params);
+
+                // Update pilihan
+                $db->prepare("DELETE FROM pilihan_jawaban WHERE soal_id = ?")->execute([$soalId]);
+                if ($jenisSoal === 'pg') {
+                    $pilihanInput = $_POST['pilihan'] ?? [];
+                    $jawabanBenar = isset($_POST['jawaban_benar']) ? (string)$_POST['jawaban_benar'] : '0';
+                    $stmtP = $db->prepare("INSERT INTO pilihan_jawaban (soal_id, teks_pilihan, is_benar) VALUES (?, ?, ?)");
+                    $hasCorrect = false;
+                    foreach ($pilihanInput as $idx => $teks) {
+                        $teksClean = trim($teks);
+                        if ($teksClean !== '') {
+                            $isBnr = ((string)$idx === $jawabanBenar) ? 1 : 0;
+                            if ($isBnr === 1) $hasCorrect = true;
+                            $stmtP->execute([$soalId, $teksClean, $isBnr]);
+                        }
+                    }
+                    if (!$hasCorrect) {
+                        $db->prepare("UPDATE pilihan_jawaban SET is_benar = 1 WHERE soal_id = ? ORDER BY id ASC LIMIT 1")->execute([$soalId]);
+                    }
+                } elseif ($jenisSoal === 'tf') {
+                    $tfVal = strtoupper(trim($_POST['jawaban_tf'] ?? 'BENAR'));
+                    $stmtP = $db->prepare("INSERT INTO pilihan_jawaban (soal_id, teks_pilihan, is_benar) VALUES (?, ?, ?)");
+                    $stmtP->execute([$soalId, 'Benar (True)', ($tfVal === 'BENAR' ? 1 : 0)]);
+                    $stmtP->execute([$soalId, 'Salah (False)', ($tfVal === 'SALAH' ? 1 : 0)]);
+                }
+
+                FlashHelper::setSuccess('Butir Soal berhasil diperbarui!');
+                $redirect = !empty($_POST['redirect_url']) ? $_POST['redirect_url'] : BASE_URL . 'index.php?url=guru/quiz';
+                header('Location: ' . $redirect);
+                exit();
 
             } elseif ($action === 'delete_soal') {
                 $soalId = (int)$_POST['soal_id'];
@@ -1542,7 +1648,9 @@ class GuruController {
 
     public function bankSoal() {
         $guru = $this->getGuruInfo();
-        $guruId = $guru['id'] ?? 0;
+        $guruId = (int)($guru['id'] ?? 0);
+        $userId = (int)AuthHelper::userId();
+        $guruUserId = (int)($guru['user_id'] ?? 0);
 
         $examModel = new ExamModel();
         
@@ -1555,7 +1663,118 @@ class GuruController {
             $quizList = $examModel->getQuizList(null, $guruId);
         }
 
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $action = $_POST['action'] ?? '';
+            if ($action === 'edit_soal') {
+                $soalId = (int)($_POST['soal_id'] ?? $_POST['id'] ?? 0);
+                $rawPertanyaan = trim($_POST['pertanyaan'] ?? $_POST['soal'] ?? '');
+                $pertanyaan = Security::sanitize($rawPertanyaan);
+                if ($pertanyaan === '' && $rawPertanyaan !== '') {
+                    $pertanyaan = htmlspecialchars($rawPertanyaan, ENT_QUOTES, 'UTF-8');
+                }
+                if ($pertanyaan === '' && $soalId > 0) {
+                    // Pertahankan teks lama jika field tidak terkirim
+                    $stmtOld = Database::getConnection()->prepare("SELECT pertanyaan FROM soal WHERE id = ?");
+                    $stmtOld->execute([$soalId]);
+                    $pertanyaan = trim((string)($stmtOld->fetchColumn() ?: ''));
+                }
+                if ($pertanyaan === '') {
+                    FlashHelper::setError('Teks pertanyaan soal wajib diisi.');
+                    $redirect = !empty($_POST['redirect_url']) ? $_POST['redirect_url'] : BASE_URL . 'index.php?url=guru/bankSoal';
+                    header('Location: ' . $redirect);
+                    exit();
+                }
+
+                $jenisSoal = strtolower(trim($_POST['jenis_soal'] ?? 'pg'));
+                if (!in_array($jenisSoal, ['pg', 'tf', 'essay'])) {
+                    $jenisSoal = 'pg';
+                }
+                $bobot = (int)($_POST['bobot'] ?? 10);
+                if ($bobot <= 0) $bobot = 10;
+
+                $db = Database::getConnection();
+                $stmtCur = $db->prepare("SELECT s.* FROM soal s WHERE s.id = ?");
+                $stmtCur->execute([$soalId]);
+                $cur = $stmtCur->fetch(PDO::FETCH_ASSOC);
+
+                if (!$cur) {
+                    FlashHelper::setError('Data butir soal tidak ditemukan atau telah dihapus.');
+                    $redirect = !empty($_POST['redirect_url']) ? $_POST['redirect_url'] : BASE_URL . 'index.php?url=guru/bankSoal';
+                    header('Location: ' . $redirect);
+                    exit();
+                }
+
+                $updateImg = "";
+                $params = ['pt' => $pertanyaan, 'js' => $jenisSoal, 'bb' => $bobot, 'sid' => $soalId];
+
+                if (!empty($_POST['hapus_gambar'])) {
+                    $oldImgName = !empty($cur['gambar']) ? $cur['gambar'] : ($cur['file_gambar'] ?? '');
+                    if (!empty($oldImgName)) {
+                        $oldImg = ROOT_PATH . 'assets/uploads/soal/' . basename($oldImgName);
+                        if (file_exists($oldImg)) @unlink($oldImg);
+                    }
+                    $updateImg = ", gambar = NULL, file_gambar = NULL";
+                } elseif (isset($_FILES['gambar_soal']) && $_FILES['gambar_soal']['error'] === UPLOAD_ERR_OK) {
+                    $resImg = UploadHelper::upload($_FILES['gambar_soal'], 'soal');
+                    if ($resImg) {
+                        $oldImgName = !empty($cur['gambar']) ? $cur['gambar'] : ($cur['file_gambar'] ?? '');
+                        if (!empty($oldImgName)) {
+                            $oldImg = ROOT_PATH . 'assets/uploads/soal/' . basename($oldImgName);
+                            if (file_exists($oldImg)) @unlink($oldImg);
+                        }
+                        $updateImg = ", gambar = :gb, file_gambar = :fg";
+                        $params['gb'] = $resImg;
+                        $params['fg'] = $resImg;
+                    }
+                }
+
+                try {
+                    $db->prepare("UPDATE soal SET pertanyaan = :pt, jenis_soal = :js, bobot = :bb $updateImg WHERE id = :sid")->execute($params);
+                } catch (\Throwable $eUp) {
+                    // Fallback jika salah satu kolom tidak ada di DB lama
+                    $updateImgFallback = str_replace(", file_gambar = :fg", "", $updateImg);
+                    $updateImgFallback = str_replace(", file_gambar = NULL", "", $updateImgFallback);
+                    unset($params['fg']);
+                    $db->prepare("UPDATE soal SET pertanyaan = :pt, jenis_soal = :js, bobot = :bb $updateImgFallback WHERE id = :sid")->execute($params);
+                }
+
+                // Update pilihan
+                $db->prepare("DELETE FROM pilihan_jawaban WHERE soal_id = ?")->execute([$soalId]);
+                if ($jenisSoal === 'pg') {
+                    $pilihanInput = $_POST['pilihan'] ?? [];
+                    $jawabanBenar = isset($_POST['jawaban_benar']) ? (string)$_POST['jawaban_benar'] : '0';
+                    $stmtP = $db->prepare("INSERT INTO pilihan_jawaban (soal_id, teks_pilihan, is_benar) VALUES (?, ?, ?)");
+                    $hasCorrect = false;
+                    foreach ($pilihanInput as $idx => $teks) {
+                        $teksClean = trim($teks);
+                        if ($teksClean !== '') {
+                            $isBnr = ((string)$idx === $jawabanBenar) ? 1 : 0;
+                            if ($isBnr === 1) $hasCorrect = true;
+                            $stmtP->execute([$soalId, $teksClean, $isBnr]);
+                        }
+                    }
+                    if (!$hasCorrect) {
+                        $db->prepare("UPDATE pilihan_jawaban SET is_benar = 1 WHERE soal_id = ? ORDER BY id ASC LIMIT 1")->execute([$soalId]);
+                    }
+                } elseif ($jenisSoal === 'tf') {
+                    $tfVal = strtoupper(trim($_POST['jawaban_tf'] ?? 'BENAR'));
+                    $stmtP = $db->prepare("INSERT INTO pilihan_jawaban (soal_id, teks_pilihan, is_benar) VALUES (?, ?, ?)");
+                    $stmtP->execute([$soalId, 'Benar (True)', ($tfVal === 'BENAR' ? 1 : 0)]);
+                    $stmtP->execute([$soalId, 'Salah (False)', ($tfVal === 'SALAH' ? 1 : 0)]);
+                }
+
+                FlashHelper::setSuccess('Butir Soal berhasil diperbarui!');
+                $redirect = !empty($_POST['redirect_url']) ? $_POST['redirect_url'] : BASE_URL . 'index.php?url=guru/bankSoal';
+                header('Location: ' . $redirect);
+                exit();
+            }
+        }
+
         require_once ROOT_PATH . 'views/guru/bank_soal.php';
+    }
+
+    public function bank_soal() {
+        $this->bankSoal();
     }
 
     public function kartuGuru() {

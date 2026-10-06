@@ -317,13 +317,16 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
       builder: (modalCtx) {
         return StatefulBuilder(
           builder: (ctx, setModalState) {
+            final bottomInset = MediaQuery.of(modalCtx).viewInsets.bottom;
             return Container(
-              height: MediaQuery.of(context).size.height * 0.88,
+              constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.90),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              child: Column(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: bottomInset),
+                child: Column(
                 children: [
                   // Drag Handle & Header
                   Container(
@@ -989,7 +992,8 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                   ),
                 ],
               ),
-            );
+            ),
+          );
           },
         );
       },
@@ -1434,17 +1438,22 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                                               style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amber.shade900),
                                             ),
                                           ),
-                                          const SizedBox(width: 2),
+                                          const SizedBox(width: 4),
                                           IconButton(
                                             icon: Icon(Icons.edit_note_rounded, color: Colors.blue.shade700, size: 22),
                                             onPressed: () => _openEditSoalModal(s),
                                             visualDensity: VisualDensity.compact,
+                                            padding: const EdgeInsets.all(4),
+                                            constraints: const BoxConstraints(),
                                             tooltip: 'Edit Soal',
                                           ),
+                                          const SizedBox(width: 4),
                                           IconButton(
                                             icon: const Icon(Icons.delete_outline_rounded, color: Colors.red, size: 20),
                                             onPressed: () => _deleteSoal(soalId),
                                             visualDensity: VisualDensity.compact,
+                                            padding: const EdgeInsets.all(4),
+                                            constraints: const BoxConstraints(),
                                             tooltip: 'Hapus Soal',
                                           ),
                                         ],
@@ -1656,46 +1665,54 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
     required Color iconColor,
     required Color bgColor,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: iconColor, size: 20),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 105;
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: isCompact ? 6 : 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, 2)),
+            ],
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(fontSize: 10, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isCompact ? 5 : 8),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
-                  overflow: TextOverflow.ellipsis,
+                child: Icon(icon, color: iconColor, size: isCompact ? 16 : 20),
+              ),
+              SizedBox(width: isCompact ? 5 : 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(fontSize: isCompact ? 9 : 10, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    Text(
+                      value,
+                      style: TextStyle(fontSize: isCompact ? 11 : 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

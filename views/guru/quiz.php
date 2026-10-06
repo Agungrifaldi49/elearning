@@ -115,6 +115,7 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
 
 <main class="main-content px-3 px-md-4 quiz-guru-page-wrapper">
     <div class="container-fluid">
+        <?= FlashHelper::display() ?>
         <?php if ($isAdminMonitoring): ?>
             <div class="alert alert-info border-0 rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-left: 5px solid #0284c7 !important;">
                 <div class="bg-primary text-white p-2.5 rounded-3 shadow-xs">
@@ -1478,19 +1479,38 @@ if (!in_array($activeTab, ['paket', 'koreksi', 'susulan', 'laporan'])) {
                                             <?php endif; ?>
                                         </div>
                                         <?php if (!$isAdminMonitoring): ?>
-                                            <form action="<?= BASE_URL ?>index.php?url=guru/quiz" method="POST" onsubmit="return confirm('Hapus soal nomor ini?');" class="d-inline">
-                                                <?= Security::csrfField() ?>
-                                                <input type="hidden" name="action" value="delete_soal">
-                                                <input type="hidden" name="soal_id" value="<?= $s['id'] ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill" style="font-size:0.75rem;"><i class="bi bi-trash"></i> Hapus</button>
-                                            </form>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 rounded-pill" style="font-size:0.75rem;" onclick='openEditSoalModalFromQuiz(<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>)' title="Edit Soal Ini">
+                                                    <i class="bi bi-pencil-square me-1"></i>Edit
+                                                </button>
+                                                <form action="<?= BASE_URL ?>index.php?url=guru/quiz" method="POST" onsubmit="return confirm('Hapus soal nomor ini?');" class="d-inline">
+                                                    <?= Security::csrfField() ?>
+                                                    <input type="hidden" name="action" value="delete_soal">
+                                                    <input type="hidden" name="soal_id" value="<?= $s['id'] ?>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-pill" style="font-size:0.75rem;"><i class="bi bi-trash"></i> Hapus</button>
+                                                </form>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
                                     <div class="fw-semibold text-dark mb-2" style="white-space: pre-wrap; word-break: break-word; font-size: 0.95rem; line-height: 1.6;"><?= Security::safeText($s['pertanyaan']) ?></div>
 
-                                    <?php if (!empty($s['gambar'])): ?>
+                                    <?php if (!empty($s['gambar'])): 
+                                        $qGbr = trim($s['gambar']);
+                                        if (strpos($qGbr, 'http://') === 0 || strpos($qGbr, 'https://') === 0) {
+                                            $qImgUrl = $qGbr;
+                                        } else {
+                                            $cleanQp = ltrim($qGbr, '/');
+                                            if (strpos($cleanQp, 'assets/') === 0) {
+                                                $qImgUrl = BASE_URL . $cleanQp;
+                                            } elseif (strpos($cleanQp, 'uploads/') === 0) {
+                                                $qImgUrl = BASE_URL . 'assets/' . $cleanQp;
+                                            } else {
+                                                $qImgUrl = BASE_URL . 'assets/uploads/soal/' . $cleanQp;
+                                            }
+                                        }
+                                    ?>
                                         <div class="my-2 p-2 bg-light rounded-3 border text-center">
-                                            <img src="<?= (strpos($s['gambar'], 'http') === 0) ? htmlspecialchars($s['gambar']) : BASE_URL . 'assets/uploads/soal/' . htmlspecialchars($s['gambar']) ?>" alt="Gambar Soal" class="img-fluid rounded-3 shadow-xs" style="max-height: 250px; object-fit: contain;">
+                                            <img src="<?= htmlspecialchars($qImgUrl) ?>" alt="Gambar Soal" class="img-fluid rounded-3 shadow-xs" style="max-height: 250px; object-fit: contain;">
                                         </div>
                                     <?php endif; ?>
 
@@ -2548,6 +2568,229 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+<!-- Modal Edit Soal from Quiz Page -->
+<div class="modal fade" id="modalEditQuizSoal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <form method="POST" action="" enctype="multipart/form-data">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="action" value="edit_soal">
+                <input type="hidden" name="soal_id" id="editQuizSoalId" value="">
+                <input type="hidden" name="redirect_url" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '') ?>">
+
+                <div class="modal-header border-bottom py-3 px-4">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="bi bi-pencil-square text-primary me-2"></i>Edit Butir Soal
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">Jenis Soal</label>
+                            <select name="jenis_soal" id="editQuizJenisSoal" class="form-select rounded-3" onchange="toggleEditQuizJenisFields()">
+                                <option value="pg">Pilihan Ganda (PG)</option>
+                                <option value="tf">Benar / Salah (True/False)</option>
+                                <option value="essay">Uraian / Essay</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">Bobot Poin</label>
+                            <input type="number" name="bobot" id="editQuizBobot" class="form-control rounded-3" min="1" value="10" required>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted">Teks Pertanyaan Soal *</label>
+                            <textarea name="pertanyaan" id="editQuizPertanyaan" class="form-control rounded-3" rows="4" required></textarea>
+                        </div>
+
+                        <!-- Gambar Soal -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted">Lampiran Gambar Soal (Opsional)</label>
+                            <div id="editQuizCurrentImgContainer" class="d-none mb-2 p-2 bg-light rounded-3 border d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <img id="editQuizCurrentImgTag" src="" alt="Gambar Saat Ini" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;">
+                                    <div>
+                                        <div class="small fw-bold text-dark">Gambar Soal Saat Ini</div>
+                                        <small class="text-muted">Tersimpan di server</small>
+                                    </div>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="hapus_gambar" value="1" id="checkQuizHapusGambar">
+                                    <label class="form-check-label small text-danger fw-semibold" for="checkQuizHapusGambar">
+                                        Hapus Gambar Ini
+                                    </label>
+                                </div>
+                            </div>
+                            <input type="file" name="gambar_soal" class="form-control rounded-3" accept="image/*">
+                            <small class="text-muted d-block mt-1">Format: JPG, PNG, WEBP. Maks 5MB. Unggah file baru untuk menggantikan gambar lama.</small>
+                        </div>
+
+                        <!-- Opsi Jawaban PG -->
+                        <div class="col-12" id="editQuizPgOptionsContainer">
+                            <label class="form-label fw-bold small text-muted d-flex justify-content-between align-items-center">
+                                <span>Pilihan Jawaban & Tandai Kunci Benar *</span>
+                                <small class="text-primary fw-normal">Pilih radio button di sebelah kiri untuk kunci benar</small>
+                            </label>
+                            <div id="editQuizPilihanList">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Opsi Jawaban TF -->
+                        <div class="col-12 d-none" id="editQuizTfOptionsContainer">
+                            <label class="form-label fw-bold small text-muted">Kunci Jawaban Benar (True / False) *</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="jawaban_tf" id="editQuizTfBenar" value="BENAR" checked>
+                                    <label class="form-check-label fw-semibold" for="editQuizTfBenar">Benar (True)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="jawaban_tf" id="editQuizTfSalah" value="SALAH">
+                                    <label class="form-check-label fw-semibold" for="editQuizTfSalah">Salah (False)</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info Essay -->
+                        <div class="col-12 d-none" id="editQuizEssayInfoContainer">
+                            <div class="alert alert-info rounded-3 mb-0 small">
+                                <i class="bi bi-info-circle-fill me-1.5"></i>
+                                Soal jenis <strong>Essay</strong> tidak memiliki pilihan jawaban otomatis. Penilaian dilakukan oleh Guru di menu Koreksi Kuis.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top py-2.5 px-4 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">
+                        <i class="bi bi-check-circle me-1.5"></i>Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openEditSoalModalFromQuiz(soal) {
+    if (!soal) return;
+    document.getElementById('editQuizSoalId').value = soal.id || soal.soal_id || '';
+    document.getElementById('editQuizPertanyaan').value = soal.pertanyaan || soal.soal || '';
+    document.getElementById('editQuizBobot').value = soal.bobot || 10;
+
+    let jenis = (soal.jenis_soal || 'pg').toLowerCase();
+    if (jenis === 'true/false') jenis = 'tf';
+    document.getElementById('editQuizJenisSoal').value = jenis;
+
+    // Check image
+    const currentImgContainer = document.getElementById('editQuizCurrentImgContainer');
+    const currentImgTag = document.getElementById('editQuizCurrentImgTag');
+    const checkHapus = document.getElementById('checkQuizHapusGambar');
+    if (checkHapus) checkHapus.checked = false;
+
+    if (soal.gambar && soal.gambar.trim() !== '') {
+        const raw = soal.gambar.trim();
+        let fullUrl = '';
+        if (raw.startsWith('http://') || raw.startsWith('https://')) {
+            fullUrl = raw;
+        } else {
+            const clean = raw.replace(/^\/+/, '');
+            if (clean.startsWith('assets/')) {
+                fullUrl = '<?= BASE_URL ?>' + clean;
+            } else if (clean.startsWith('uploads/')) {
+                fullUrl = '<?= BASE_URL ?>assets/' + clean;
+            } else {
+                fullUrl = '<?= BASE_URL ?>assets/uploads/soal/' + clean;
+            }
+        }
+        currentImgTag.src = fullUrl;
+        currentImgContainer.classList.remove('d-none');
+    } else {
+        currentImgContainer.classList.add('d-none');
+    }
+
+    // Populate choices
+    const container = document.getElementById('editQuizPilihanList');
+    container.innerHTML = '';
+    const choices = Array.isArray(soal.pilihan) ? soal.pilihan : [];
+
+    if (choices.length > 0) {
+        choices.forEach((p, idx) => {
+            const label = String.fromCharCode(65 + idx);
+            const isBenar = (p.is_benar == 1 || p.is_benar === true || p.is_benar === '1');
+            const teks = p.teks_pilihan || p.teks || '';
+            container.appendChild(createQuizChoiceItem(idx, label, teks, isBenar));
+        });
+    } else {
+        ['A', 'B', 'C', 'D'].forEach((label, idx) => {
+            container.appendChild(createQuizChoiceItem(idx, label, '', idx === 0));
+        });
+    }
+
+    // Set TF answer if applicable
+    if (jenis === 'tf') {
+        let isBenarTrue = true;
+        if (choices.length > 0) {
+            const firstIsBenar = (choices[0].is_benar == 1 || choices[0].is_benar === true);
+            const firstTeks = (choices[0].teks_pilihan || choices[0].teks || '').toLowerCase();
+            if (firstTeks.includes('salah') && firstIsBenar) {
+                isBenarTrue = false;
+            }
+        }
+        document.getElementById('editQuizTfBenar').checked = isBenarTrue;
+        document.getElementById('editQuizTfSalah').checked = !isBenarTrue;
+    }
+
+    toggleEditQuizJenisFields();
+
+    const modalEl = document.getElementById('modalEditQuizSoal');
+    if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+}
+
+function createQuizChoiceItem(idx, label, text, isBenar) {
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.innerHTML = `
+        <div class="input-group-text bg-light">
+            <input class="form-check-input mt-0 me-1" type="radio" name="jawaban_benar" value="${idx}" ${isBenar ? 'checked' : ''} title="Tandai sebagai kunci benar">
+            <span class="fw-bold">${label}</span>
+        </div>
+        <input type="text" name="pilihan[${idx}]" class="form-control" value="${text.replace(/"/g, '&quot;')}" placeholder="Pilihan jawaban ${label}..." required>
+    `;
+    return div;
+}
+
+function toggleEditQuizJenisFields() {
+    const jenis = document.getElementById('editQuizJenisSoal').value;
+    const pgBox = document.getElementById('editQuizPgOptionsContainer');
+    const tfBox = document.getElementById('editQuizTfOptionsContainer');
+    const essayBox = document.getElementById('editQuizEssayInfoContainer');
+
+    pgBox.classList.add('d-none');
+    tfBox.classList.add('d-none');
+    essayBox.classList.add('d-none');
+
+    const pgInputs = pgBox.querySelectorAll('input[type="text"]');
+
+    if (jenis === 'pg') {
+        pgBox.classList.remove('d-none');
+        pgInputs.forEach(i => i.setAttribute('required', 'required'));
+    } else if (jenis === 'tf') {
+        tfBox.classList.remove('d-none');
+        pgInputs.forEach(i => i.removeAttribute('required'));
+    } else {
+        essayBox.classList.remove('d-none');
+        pgInputs.forEach(i => i.removeAttribute('required'));
+    }
+}
 </script>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
