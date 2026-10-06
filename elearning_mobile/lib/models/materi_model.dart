@@ -3,6 +3,7 @@ class MateriModel {
   final int guruId;
   final int mapelId;
   final int kelasId;
+  final String? kelasIds;
   final String judul;
   final String deskripsi;
   final String jenisFile;
@@ -18,6 +19,7 @@ class MateriModel {
     required this.guruId,
     required this.mapelId,
     required this.kelasId,
+    this.kelasIds,
     required this.judul,
     required this.deskripsi,
     required this.jenisFile,
@@ -45,6 +47,7 @@ class MateriModel {
       guruId: _parseInt(json['guru_id']),
       mapelId: _parseInt(json['mapel_id']),
       kelasId: _parseInt(json['kelas_id']),
+      kelasIds: json['kelas_ids']?.toString(),
       judul: json['judul'] ?? '',
       deskripsi: json['deskripsi'] ?? '',
       jenisFile: json['jenis_file'] ?? 'pdf',
@@ -55,5 +58,19 @@ class MateriModel {
       namaKelas: json['nama_kelas'],
       createdAt: json['created_at'] ?? '',
     );
+  }
+
+  List<int> get targetKelasIds {
+    if (kelasIds != null && kelasIds!.trim().isNotEmpty) {
+      return kelasIds!
+          .split(',')
+          .map((s) => int.tryParse(s.trim()) ?? 0)
+          .where((id) => id > 0)
+          .toList();
+    }
+    if (kelasId > 0) {
+      return [kelasId];
+    }
+    return [];
   }
 }

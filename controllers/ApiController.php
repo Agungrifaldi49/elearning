@@ -1995,11 +1995,35 @@ class ApiController {
             case 'materi':
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $input = $this->getPostInput();
+                    $actionType = strtolower(trim($input['action'] ?? ($input['_action'] ?? 'create')));
+                    $materiId = intval($input['materi_id'] ?? ($input['id'] ?? 0));
+
+                    // 1. Delete Materi Action
+                    if ($actionType === 'delete' && $materiId > 0) {
+                        $stmtCheck = $this->db->prepare("SELECT * FROM materi WHERE id = ? LIMIT 1");
+                        $stmtCheck->execute([$materiId]);
+                        $targetMateri = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$targetMateri) {
+                            $this->jsonResponse(false, 'Data materi tidak ditemukan', null, 404);
+                        }
+                        if ((int)$targetMateri['guru_id'] !== (int)$guru['id'] && (int)$targetMateri['guru_id'] !== (int)$guru['user_id']) {
+                            $this->jsonResponse(false, 'Anda tidak memiliki hak akses untuk menghapus materi ini', null, 403);
+                        }
+
+                        $learningModel->deleteMateri($materiId);
+                        $this->jsonResponse(true, 'Materi pembelajaran berhasil dihapus!');
+                    }
+
+                    // 2. Create or Update Materi Action
+                    $isUpdate = ($actionType === 'update' || $actionType === 'edit' || ($materiId > 0 && $actionType !== 'create'));
+
                     $judul = trim($input['judul'] ?? '');
                     $deskripsi = trim($input['deskripsi'] ?? '');
                     $mapelId = intval($input['mapel_id'] ?? 0);
                     $jenisFile = $input['jenis_file'] ?? 'pdf';
                     $youtubeUrl = trim($input['youtube_url'] ?? '');
+                    $filePath = trim($input['file_path'] ?? '');
 
                     $kelasIds = [];
                     if (isset($input['kelas_ids']) && is_array($input['kelas_ids'])) {
@@ -2017,12 +2041,28 @@ class ApiController {
                         $this->jsonResponse(false, 'Judul, Mapel, dan minimal 1 Kelas wajib diisi', null, 400);
                     }
 
+                    if ($isUpdate && $materiId > 0) {
+                        $stmtCheck = $this->db->prepare("SELECT * FROM materi WHERE id = ? LIMIT 1");
+                        $stmtCheck->execute([$materiId]);
+                        $targetMateri = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$targetMateri) {
+                            $this->jsonResponse(false, 'Data materi tidak ditemukan', null, 404);
+                        }
+                        if ((int)$targetMateri['guru_id'] !== (int)$guru['id'] && (int)$targetMateri['guru_id'] !== (int)$guru['user_id']) {
+                            $this->jsonResponse(false, 'Anda tidak memiliki hak akses untuk mengedit materi ini', null, 403);
+                        }
+
+                        $learningModel->updateMateri($materiId, $mapelId, $kelasIds, $judul, $deskripsi, $jenisFile, !empty($filePath) ? $filePath : null, $youtubeUrl ?: null);
+                        $this->jsonResponse(true, 'Materi pembelajaran berhasil diperbarui!', ['id' => $materiId]);
+                    }
+
                     $primaryKelasId = $kelasIds[0] ?? 0;
                     $kelasIdsStr = implode(',', $kelasIds);
 
                     $stmtIns = $this->db->prepare("
-                        INSERT INTO materi (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, jenis_file, youtube_url, created_at) 
-                        VALUES (:gid, :mpid, :kid, :kids, :jdl, :desk, :jf, :yt, NOW())
+                        INSERT INTO materi (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, jenis_file, file_path, youtube_url, created_at) 
+                        VALUES (:gid, :mpid, :kid, :kids, :jdl, :desk, :jf, :fp, :yt, NOW())
                     ");
                     $stmtIns->execute([
                         'gid' => $guru['id'],
@@ -2032,6 +2072,7 @@ class ApiController {
                         'jdl' => $judul,
                         'desk' => $deskripsi,
                         'jf' => $jenisFile,
+                        'fp' => $filePath,
                         'yt' => $youtubeUrl
                     ]);
 
@@ -2765,6 +2806,81 @@ class ApiController {
                     'selected_mapel_id' => $selectedMapelId,
                     'students' => $students
                 ]);
+                break;
+
+            case 'upload_materi_file':
+            case 'upload_materi':
+                require_once ROOT_PATH . 'helpers/UploadHelper.php';
+                $uploadedFilename = null;
+
+                $fileKey = null;
+                if (!empty($_FILES['file_materi']) && $_FILES['file_materi']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'file_materi';
+                } elseif (!empty($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'file';
+                } elseif (!empty($_FILES['lampiran']) && $_FILES['lampiran']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'lampiran';
+                }
+
+                if ($fileKey === null && !empty($_FILES)) {
+                    foreach ($_FILES as $k => $f) {
+                        if (isset($f['error']) && $f['error'] === UPLOAD_ERR_OK) {
+                            $fileKey = $k;
+                            break;
+                        }
+                    }
+                }
+
+                if ($fileKey !== null) {
+                    $resFile = UploadHelper::upload($_FILES[$fileKey], 'materi');
+                    if ($resFile) {
+                        $uploadedFilename = $resFile;
+                    }
+                }
+
+                if (empty($uploadedFilename)) {
+                    $input = $this->getPostInput();
+                    $b64 = $input['file_base64'] ?? $input['base64'] ?? '';
+                    $originalName = trim($input['file_name'] ?? 'modul_materi.pdf');
+                    if (!empty($b64)) {
+                        if (strpos($b64, ';base64,') !== false) {
+                            $parts = explode(';base64,', $b64, 2);
+                            $b64 = $parts[1];
+                        } elseif (strpos($b64, ',') !== false && strpos($b64, 'data:') === 0) {
+                            $parts = explode(',', $b64, 2);
+                            $b64 = $parts[1];
+                        }
+                        $b64Clean = str_replace(' ', '+', $b64);
+                        $b64Clean = preg_replace('/[^a-zA-Z0-9\+\/=]/', '', $b64Clean);
+                        $fileData = base64_decode($b64Clean, true);
+                        if ($fileData !== false && strlen($fileData) > 0) {
+                            $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION)) ?: 'pdf';
+                            $targetDir = defined('UPLOADS_PATH') ? UPLOADS_PATH . 'materi/' : (ROOT_PATH . 'assets/uploads/materi/');
+                            $targetDir = str_replace('\\', '/', $targetDir);
+                            if (!is_dir($targetDir)) @mkdir($targetDir, 0777, true);
+                            @chmod($targetDir, 0777);
+
+                            $filename = 'materi_' . time() . '_' . mt_rand(1000, 9999) . '.' . $ext;
+                            if (@file_put_contents($targetDir . $filename, $fileData)) {
+                                @chmod($targetDir . $filename, 0666);
+                                $uploadedFilename = $filename;
+                            }
+                        }
+                    }
+                }
+
+                if (!empty($uploadedFilename)) {
+                    $fullUrl = BASE_URL . 'assets/uploads/materi/' . $uploadedFilename;
+                    $this->jsonResponse(true, 'Berkas materi berhasil diunggah!', [
+                        'filename' => $uploadedFilename,
+                        'file_url' => $fullUrl,
+                        'file_path' => $uploadedFilename,
+                    ]);
+                } else {
+                    $err = $_SESSION['flash_error'] ?? 'Gagal mengunggah berkas. Pastikan format file sesuai (PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, ZIP, RAR, MP4 maks 50MB).';
+                    unset($_SESSION['flash_error']);
+                    $this->jsonResponse(false, $err, null, 400);
+                }
                 break;
 
             case 'upload_tugas_file':

@@ -99,14 +99,25 @@ class GuruProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> createMateri(int userId, String judul, String deskripsi, int mapelId, dynamic kelasIdOrIds, String jenisFile, String youtubeUrl) async {
+  Future<bool> createMateri(
+    int userId,
+    String judul,
+    String deskripsi,
+    int mapelId,
+    dynamic kelasIdOrIds,
+    String jenisFile,
+    String youtubeUrl, {
+    String? filePath,
+  }) async {
     final Map<String, dynamic> body = {
       'user_id': userId,
+      'action': 'create',
       'judul': judul,
       'deskripsi': deskripsi,
       'mapel_id': mapelId,
       'jenis_file': jenisFile,
       'youtube_url': youtubeUrl,
+      'file_path': filePath ?? '',
     };
 
     if (kelasIdOrIds is List) {
@@ -123,6 +134,80 @@ class GuruProvider with ChangeNotifier {
       return true;
     }
     return false;
+  }
+
+  Future<bool> updateMateri(
+    int userId,
+    int materiId,
+    String judul,
+    String deskripsi,
+    int mapelId,
+    dynamic kelasIdOrIds,
+    String jenisFile,
+    String youtubeUrl, {
+    String? filePath,
+  }) async {
+    final Map<String, dynamic> body = {
+      'user_id': userId,
+      'action': 'update',
+      'materi_id': materiId,
+      'id': materiId,
+      'judul': judul,
+      'deskripsi': deskripsi,
+      'mapel_id': mapelId,
+      'jenis_file': jenisFile,
+      'youtube_url': youtubeUrl,
+      'file_path': filePath ?? '',
+    };
+
+    if (kelasIdOrIds is List) {
+      body['kelas_ids'] = kelasIdOrIds;
+      body['kelas_id'] = kelasIdOrIds.isNotEmpty ? kelasIdOrIds[0] : 0;
+    } else {
+      body['kelas_id'] = kelasIdOrIds;
+      body['kelas_ids'] = [kelasIdOrIds];
+    }
+
+    final res = await ApiService.post('guru/materi', body);
+    if (res['success'] == true) {
+      await fetchMateri(userId);
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> deleteMateri(int userId, int materiId) async {
+    final Map<String, dynamic> body = {
+      'user_id': userId,
+      'action': 'delete',
+      'materi_id': materiId,
+      'id': materiId,
+    };
+
+    final res = await ApiService.post('guru/materi', body);
+    if (res['success'] == true) {
+      await fetchMateri(userId);
+      return true;
+    }
+    return false;
+  }
+
+  Future<String?> uploadMateriFile(File file) async {
+    try {
+      final res = await ApiService.postMultipart(
+        'guru/upload_materi_file',
+        files: {'file_materi': file},
+      );
+      if (res['success'] == true && res['data'] is Map) {
+        final filename = res['data']['filename'] ?? res['data']['file_path'];
+        if (filename != null && filename.toString().trim().isNotEmpty) {
+          return filename.toString().trim();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error uploading materi file: $e');
+    }
+    return null;
   }
 
   Future<void> fetchTugas(int userId) async {

@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/materi_model.dart';
@@ -277,6 +279,46 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                   ],
                 ),
               ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showAddMateriModal(m);
+                      },
+                      icon: const Icon(Icons.edit_rounded, size: 16),
+                      label: const Text('Edit Materi'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.blue.shade700,
+                        side: BorderSide(color: Colors.blue.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _confirmDeleteMateri(m);
+                      },
+                      icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                      label: const Text('Hapus Materi'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                        side: BorderSide(color: Colors.red.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         );
@@ -284,14 +326,111 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
     );
   }
 
-  void _showAddMateriModal() {
+  void _confirmDeleteMateri(MateriModel m) {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user == null) return;
+    final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.delete_forever_rounded, color: Colors.red.shade700, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Hapus Materi?',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Apakah Anda yakin ingin menghapus materi "${m.judul}"?',
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded, size: 18, color: Colors.amber.shade900),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Materi ini tidak akan dapat diakses lagi oleh siswa di kelas target.',
+                      style: TextStyle(fontSize: 11.5, color: Colors.amber.shade900, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              final messenger = ScaffoldMessenger.of(context);
+              final ok = await guruProvider.deleteMateri(user.id, m.id);
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(ok ? 'Materi berhasil dihapus' : 'Gagal menghapus materi'),
+                  backgroundColor: ok ? AppTheme.secondaryColor : Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Hapus Materi', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddMateriModal([MateriModel? materiToEdit]) {
     final guruProvider = Provider.of<GuruProvider>(context, listen: false);
     final jadwalList = guruProvider.jadwalList;
     final mapelListRaw = guruProvider.mapelList;
     final kelasListRaw = guruProvider.kelasList;
 
+    final bool isEdit = materiToEdit != null;
+
     // Construct unique Mapel Options from Schedule & Assignments
     final Map<int, String> mapelOptions = {};
+
+    if (isEdit && materiToEdit.mapelId > 0) {
+      mapelOptions[materiToEdit.mapelId] =
+          materiToEdit.namaMapel.isNotEmpty ? materiToEdit.namaMapel : 'Mapel #${materiToEdit.mapelId}';
+    }
+
     for (var j in jadwalList) {
       if (j.mapelId > 0 && j.namaMapel.isNotEmpty) {
         mapelOptions[j.mapelId] = j.namaMapel;
@@ -326,13 +465,47 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
       kelasOptions[1] = 'Semua Kelas';
     }
 
-    final judulController = TextEditingController();
-    final deskripsiController = TextEditingController();
-    final mediaController = TextEditingController();
+    final judulController = TextEditingController(text: materiToEdit?.judul ?? '');
+    final deskripsiController = TextEditingController(text: materiToEdit?.deskripsi ?? '');
+    final youtubeController = TextEditingController(text: materiToEdit?.youtubeUrl ?? '');
+    final driveLinkController = TextEditingController();
 
-    int selectedMapel = mapelOptions.keys.first;
-    Set<int> selectedKelasIds = kelasOptions.keys.toSet();
-    String jenisFile = 'pdf';
+    String jenisFile = isEdit ? materiToEdit.jenisFile : 'pdf';
+
+    // File / Attachment Handling for Document type
+    final String initialFilePath = (materiToEdit?.filePath ?? '').trim();
+    final bool isInitialDrive = initialFilePath.startsWith('http://') || initialFilePath.startsWith('https://');
+
+    String attachmentType = isInitialDrive ? 'drive' : (initialFilePath.isNotEmpty ? 'upload' : 'drive');
+    if (isInitialDrive) {
+      driveLinkController.text = initialFilePath;
+    }
+
+    File? selectedLocalFile;
+    String? existingServerFilename = (!isInitialDrive && initialFilePath.isNotEmpty) ? initialFilePath : null;
+    bool isUploadingFile = false;
+
+    int selectedMapel = isEdit
+        ? materiToEdit.mapelId
+        : (mapelOptions.containsKey(1) ? 1 : mapelOptions.keys.first);
+
+    if (!mapelOptions.containsKey(selectedMapel)) {
+      selectedMapel = mapelOptions.keys.first;
+    }
+
+    Set<int> selectedKelasIds = isEdit
+        ? materiToEdit.targetKelasIds.toSet()
+        : kelasOptions.keys.toSet();
+
+    if (isEdit && selectedKelasIds.isEmpty && materiToEdit.kelasId > 0) {
+      selectedKelasIds.add(materiToEdit.kelasId);
+    }
+
+    for (var kid in selectedKelasIds) {
+      if (!kelasOptions.containsKey(kid)) {
+        kelasOptions[kid] = 'Kelas #$kid';
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -373,18 +546,35 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withAlpha(25),
+                          color: (isEdit ? Colors.blue : AppTheme.primaryColor).withAlpha(25),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.post_add_rounded, color: AppTheme.primaryColor, size: 24),
+                        child: Icon(
+                          isEdit ? Icons.edit_note_rounded : Icons.post_add_rounded,
+                          color: isEdit ? Colors.blue.shade700 : AppTheme.primaryColor,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Upload Materi Pembelajaran',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isEdit ? 'Edit Materi Pembelajaran' : 'Upload Materi Pembelajaran',
+                              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              isEdit ? 'Perbarui judul, modul berkas, atau video pembelajaran' : 'Publikasikan modul PDF atau video YouTube untuk siswa',
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
                         ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
                       ),
                     ],
                   ),
@@ -451,62 +641,49 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-
+                  const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,
                     runSpacing: 6,
-                    children: [
-                      FilterChip(
-                        label: const Text('Pilih Semua Kelas'),
-                        selected: selectedKelasIds.length == kelasOptions.length,
-                        selectedColor: Colors.blue.shade100,
-                        checkmarkColor: Colors.blue.shade900,
+                    children: kelasOptions.entries.map((entry) {
+                      final isSelected = selectedKelasIds.contains(entry.key);
+                      return FilterChip(
+                        selected: isSelected,
+                        label: Text(entry.value),
                         labelStyle: TextStyle(
                           fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: selectedKelasIds.length == kelasOptions.length ? Colors.blue.shade900 : Colors.black87,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected ? Colors.white : Colors.black87,
                         ),
-                        onSelected: (bool sel) {
+                        selectedColor: AppTheme.primaryColor,
+                        backgroundColor: Colors.grey.shade100,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300),
+                        ),
+                        onSelected: (bool selected) {
                           setModalState(() {
-                            if (sel) {
-                              selectedKelasIds = kelasOptions.keys.toSet();
+                            if (selected) {
+                              selectedKelasIds.add(entry.key);
                             } else {
-                              selectedKelasIds = {kelasOptions.keys.first};
+                              if (selectedKelasIds.length > 1) {
+                                selectedKelasIds.remove(entry.key);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Minimal 1 kelas harus dipilih!'), duration: Duration(seconds: 1)),
+                                );
+                              }
                             }
                           });
                         },
-                      ),
-                      ...kelasOptions.entries.map((entry) {
-                        final isSelected = selectedKelasIds.contains(entry.key);
-                        return FilterChip(
-                          label: Text(entry.value),
-                          selected: isSelected,
-                          selectedColor: AppTheme.primaryColor.withAlpha(35),
-                          checkmarkColor: AppTheme.primaryColor,
-                          labelStyle: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? AppTheme.primaryColor : Colors.black87,
-                          ),
-                          onSelected: (bool sel) {
-                            setModalState(() {
-                              if (sel) {
-                                selectedKelasIds.add(entry.key);
-                              } else {
-                                if (selectedKelasIds.length > 1) {
-                                  selectedKelasIds.remove(entry.key);
-                                }
-                              }
-                            });
-                          },
-                        );
-                      }),
-                    ],
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 14),
 
-                  // Segmented Type Selector
+                  // Jenis Format Berkas
+                  const Text('Format Modul Pembelajaran *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Expanded(
@@ -516,7 +693,7 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                             children: [
                               Icon(Icons.picture_as_pdf_rounded, size: 16),
                               SizedBox(width: 6),
-                              Text('Dokumen PDF'),
+                              Text('Dokumen Modul'),
                             ],
                           ),
                           selected: jenisFile == 'pdf',
@@ -558,16 +735,322 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Media Link / File Path
-                  TextField(
-                    controller: mediaController,
-                    decoration: InputDecoration(
-                      labelText: jenisFile == 'video' ? 'Link YouTube / URL Video' : 'File Path / Link Drive Berkas',
-                      hintText: jenisFile == 'video' ? 'https://youtube.com/watch?v=...' : 'assets/uploads/materi/modul.pdf',
-                      prefixIcon: Icon(jenisFile == 'video' ? Icons.ondemand_video_rounded : Icons.attachment_rounded),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                  // Media Input (YouTube Link vs Document File/Drive)
+                  if (jenisFile == 'video') ...[
+                    TextField(
+                      controller: youtubeController,
+                      decoration: InputDecoration(
+                        labelText: 'Link YouTube / URL Video Pembelajaran *',
+                        hintText: 'https://youtube.com/watch?v=... atau https://youtu.be/...',
+                        prefixIcon: const Icon(Icons.ondemand_video_rounded, color: Colors.red),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, size: 13, color: Colors.grey.shade600),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Siswa dapat langsung menonton video di aplikasi atau membukanya di YouTube.',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    // Segmented Switcher for Document: Link Drive vs Upload
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => setModalState(() => attachmentType = 'drive'),
+                              borderRadius: BorderRadius.circular(9),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: attachmentType == 'drive' ? AppTheme.primaryColor : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(9),
+                                  boxShadow: attachmentType == 'drive'
+                                      ? [BoxShadow(color: AppTheme.primaryColor.withAlpha(50), blurRadius: 4, offset: const Offset(0, 2))]
+                                      : null,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.link_rounded,
+                                      size: 16,
+                                      color: attachmentType == 'drive' ? Colors.white : Colors.grey.shade700,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Link Drive / URL',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: attachmentType == 'drive' ? Colors.white : Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => setModalState(() => attachmentType = 'upload'),
+                              borderRadius: BorderRadius.circular(9),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: attachmentType == 'upload' ? AppTheme.primaryColor : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(9),
+                                  boxShadow: attachmentType == 'upload'
+                                      ? [BoxShadow(color: AppTheme.primaryColor.withAlpha(50), blurRadius: 4, offset: const Offset(0, 2))]
+                                      : null,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.upload_file_rounded,
+                                      size: 16,
+                                      color: attachmentType == 'upload' ? Colors.white : Colors.grey.shade700,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Upload Berkas File',
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: attachmentType == 'upload' ? Colors.white : Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    if (attachmentType == 'drive') ...[
+                      TextField(
+                        controller: driveLinkController,
+                        decoration: InputDecoration(
+                          hintText: 'https://drive.google.com/file/d/.../view',
+                          prefixIcon: const Icon(Icons.cloud_circle_rounded, size: 22, color: Color(0xFF1A73E8)),
+                          suffixIcon: driveLinkController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear_rounded, size: 18),
+                                  onPressed: () => setModalState(() => driveLinkController.clear()),
+                                )
+                              : null,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        onChanged: (val) => setModalState(() {}),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 13, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Pastikan link Google Drive atau URL berkas dapat diakses oleh siswa.',
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      if (selectedLocalFile != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.insert_drive_file_rounded, color: Colors.green.shade800, size: 22),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      selectedLocalFile!.path.split(Platform.pathSeparator).last,
+                                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.black87),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${(selectedLocalFile!.lengthSync() / 1024).toStringAsFixed(1)} KB • Berkas lokal siap diunggah',
+                                      style: TextStyle(fontSize: 11, color: Colors.green.shade800),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.change_circle_rounded, color: Colors.blue),
+                                tooltip: 'Ganti File',
+                                onPressed: () async {
+                                  final result = await FilePicker.pickFiles(
+                                    type: FileType.custom,
+                                    allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'zip', 'rar', 'mp4'],
+                                  );
+                                  if (result.isNotEmpty && result.first.path != null) {
+                                    setModalState(() {
+                                      selectedLocalFile = File(result.first.path!);
+                                    });
+                                  }
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded, color: Colors.red),
+                                tooltip: 'Batal',
+                                onPressed: () => setModalState(() => selectedLocalFile = null),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else if (existingServerFilename != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(Icons.cloud_done_rounded, color: Colors.blue.shade800, size: 22),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      existingServerFilename!,
+                                      style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.black87),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Tersimpan di server • Klik ganti untuk memperbarui',
+                                      style: TextStyle(fontSize: 11, color: Colors.blue.shade800),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  final result = await FilePicker.pickFiles(
+                                    type: FileType.custom,
+                                    allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'zip', 'rar', 'mp4'],
+                                  );
+                                  if (result.isNotEmpty && result.first.path != null) {
+                                    setModalState(() {
+                                      selectedLocalFile = File(result.first.path!);
+                                      existingServerFilename = null;
+                                    });
+                                  }
+                                },
+                                icon: const Icon(Icons.upload_rounded, size: 14),
+                                label: const Text('Ganti', style: TextStyle(fontSize: 11)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.primaryColor,
+                                  side: const BorderSide(color: AppTheme.primaryColor),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        InkWell(
+                          onTap: () async {
+                            final result = await FilePicker.pickFiles(
+                              type: FileType.custom,
+                              allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'zip', 'rar', 'mp4'],
+                            );
+                            if (result.isNotEmpty && result.first.path != null) {
+                              setModalState(() {
+                                selectedLocalFile = File(result.first.path!);
+                              });
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryColor.withAlpha(20),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.cloud_upload_rounded, color: AppTheme.primaryColor, size: 28),
+                                ),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  'Pilih Dokumen / File Modul',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Format: PDF, Word DOC, PPT, Excel, TXT, ZIP (Maks 50 MB)',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
                   const SizedBox(height: 12),
 
                   // Deskripsi
@@ -585,43 +1068,120 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                   SizedBox(
                     width: double.infinity,
                     height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        if (judulController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Judul modul wajib diisi!'), backgroundColor: Colors.red),
-                          );
-                          return;
-                        }
+                    child: ElevatedButton(
+                      onPressed: isUploadingFile
+                          ? null
+                          : () async {
+                              if (judulController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Judul modul wajib diisi!'), backgroundColor: Colors.red),
+                                );
+                                return;
+                              }
 
-                        final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-                        final messenger = ScaffoldMessenger.of(context);
-                        final nav = Navigator.of(context);
-                        if (user != null) {
-                          final ok = await Provider.of<GuruProvider>(context, listen: false).createMateri(
-                            user.id,
-                            judulController.text.trim(),
-                            deskripsiController.text.trim(),
-                            selectedMapel,
-                            selectedKelasIds.toList(),
-                            jenisFile,
-                            mediaController.text.trim(),
-                          );
-                          nav.pop();
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(ok ? 'Materi berhasil diterbitkan untuk kelas yang dipilih!' : 'Gagal publish materi'),
-                              backgroundColor: ok ? AppTheme.secondaryColor : Colors.red,
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.send_rounded, size: 20),
-                      label: const Text('Terbitkan Materi Modul', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                              final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+                              final messenger = ScaffoldMessenger.of(context);
+                              final nav = Navigator.of(context);
+                              if (user == null) return;
+
+                              String finalFilePath = '';
+                              String finalYoutubeUrl = '';
+
+                              if (jenisFile == 'video') {
+                                finalYoutubeUrl = youtubeController.text.trim();
+                                if (finalYoutubeUrl.isEmpty) {
+                                  messenger.showSnackBar(
+                                    const SnackBar(content: Text('Link video YouTube wajib diisi!'), backgroundColor: Colors.red),
+                                  );
+                                  return;
+                                }
+                              } else {
+                                if (attachmentType == 'drive') {
+                                  finalFilePath = driveLinkController.text.trim();
+                                } else {
+                                  if (selectedLocalFile != null) {
+                                    setModalState(() => isUploadingFile = true);
+                                    final uploadedName = await guruProvider.uploadMateriFile(selectedLocalFile!);
+                                    setModalState(() => isUploadingFile = false);
+
+                                    if (uploadedName == null || uploadedName.isEmpty) {
+                                      messenger.showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Gagal mengunggah berkas ke server. Pastikan ukuran file maks 50MB dan format sesuai.'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    finalFilePath = uploadedName;
+                                  } else if (existingServerFilename != null) {
+                                    finalFilePath = existingServerFilename!;
+                                  }
+                                }
+                              }
+
+                              final ok = isEdit
+                                  ? await guruProvider.updateMateri(
+                                      user.id,
+                                      materiToEdit.id,
+                                      judulController.text.trim(),
+                                      deskripsiController.text.trim(),
+                                      selectedMapel,
+                                      selectedKelasIds.toList(),
+                                      jenisFile,
+                                      finalYoutubeUrl,
+                                      filePath: finalFilePath,
+                                    )
+                                  : await guruProvider.createMateri(
+                                      user.id,
+                                      judulController.text.trim(),
+                                      deskripsiController.text.trim(),
+                                      selectedMapel,
+                                      selectedKelasIds.toList(),
+                                      jenisFile,
+                                      finalYoutubeUrl,
+                                      filePath: finalFilePath,
+                                    );
+
+                              nav.pop();
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(ok
+                                      ? (isEdit ? 'Materi berhasil diperbarui!' : 'Materi berhasil diterbitkan untuk kelas yang dipilih!')
+                                      : (isEdit ? 'Gagal memperbarui materi' : 'Gagal publish materi')),
+                                  backgroundColor: ok ? AppTheme.secondaryColor : Colors.red,
+                                ),
+                              );
+                            },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: isEdit ? Colors.blue.shade700 : AppTheme.primaryColor,
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
+                      child: isUploadingFile
+                          ? const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                                ),
+                                SizedBox(width: 10),
+                                Text('Mengunggah Berkas Materi...'),
+                              ],
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(isEdit ? Icons.save_rounded : Icons.send_rounded, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  isEdit ? 'Simpan Perubahan Materi' : 'Terbitkan Materi Modul',
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
                     ),
                   ),
                 ],
@@ -633,7 +1193,7 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
     );
   }
 
-  @override
+    @override
   Widget build(BuildContext context) {
     final guruProvider = Provider.of<GuruProvider>(context);
     final allMateri = guruProvider.materiList;
@@ -1121,30 +1681,46 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                 const Divider(height: 1),
                 const SizedBox(height: 10),
 
-                // Interactive Action Buttons Row
+                // Primary action: Tonton Video / Buka Berkas
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (isVideo) {
+                      FileService.openFileOrUrl(context, targetOpenUrl);
+                    } else {
+                      FileService.showInAppPreview(
+                        context,
+                        targetOpenUrl,
+                        m.filePath ?? 'Dokumen PDF',
+                      );
+                    }
+                  },
+                  icon: Icon(
+                    isVideo ? Icons.play_arrow_rounded : Icons.visibility_rounded,
+                    size: 15,
+                  ),
+                  label: Text(isVideo ? 'Tonton Video Learning' : 'Buka Berkas Materi'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 36),
+                    backgroundColor: isVideo ? Colors.red.shade700 : AppTheme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                // Secondary actions: Edit + Detail + Hapus
                 Row(
                   children: [
                     Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          if (isVideo) {
-                            FileService.openFileOrUrl(context, targetOpenUrl);
-                          } else {
-                            FileService.showInAppPreview(
-                              context,
-                              targetOpenUrl,
-                              m.filePath ?? 'Dokumen PDF',
-                            );
-                          }
-                        },
-                        icon: Icon(
-                          isVideo ? Icons.play_arrow_rounded : Icons.visibility_rounded,
-                          size: 14,
-                        ),
-                        label: Text(isVideo ? 'Tonton Video' : 'Lihat PDF'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isVideo ? Colors.red.shade700 : AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _showAddMateriModal(m),
+                        icon: const Icon(Icons.edit_rounded, size: 14),
+                        label: const Text('Edit'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.blue.shade700,
+                          side: BorderSide(color: Colors.blue.shade300),
                           padding: const EdgeInsets.symmetric(vertical: 6),
                           textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                           visualDensity: VisualDensity.compact,
@@ -1152,12 +1728,12 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => _showMateriDetailModal(m),
                         icon: const Icon(Icons.info_outline_rounded, size: 14),
-                        label: const Text('Detail Modul'),
+                        label: const Text('Detail'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppTheme.primaryColor,
                           side: const BorderSide(color: AppTheme.primaryColor),
@@ -1165,6 +1741,34 @@ class _GuruMateriTabState extends State<GuruMateriTab> {
                           textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                           visualDensity: VisualDensity.compact,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () => _confirmDeleteMateri(m),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.delete_outline_rounded, size: 15, color: Colors.red.shade700),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Hapus',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
