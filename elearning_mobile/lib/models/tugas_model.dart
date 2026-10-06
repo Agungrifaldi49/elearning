@@ -20,6 +20,7 @@ class TugasModel {
   final bool canSubmit;
   final bool isExpired;
   final String lockStatus;
+  final String? kelasIds;
   final String? susulanStatus;
   final int? pendingSusulanCount;
 
@@ -28,6 +29,7 @@ class TugasModel {
     required this.guruId,
     required this.mapelId,
     required this.kelasId,
+    this.kelasIds,
     required this.judul,
     required this.deskripsi,
     this.filePath,
@@ -97,6 +99,7 @@ class TugasModel {
       guruId: _parseInt(json['guru_id']),
       mapelId: _parseInt(json['mapel_id']),
       kelasId: _parseInt(json['kelas_id']),
+      kelasIds: json['kelas_ids']?.toString(),
       judul: json['judul'] ?? '',
       deskripsi: json['deskripsi'] ?? '',
       filePath: json['file_path'],
@@ -117,6 +120,20 @@ class TugasModel {
       susulanStatus: susulanSt,
       pendingSusulanCount: json['pending_susulan_count'] != null ? _parseInt(json['pending_susulan_count']) : null,
     );
+  }
+
+  List<int> get targetKelasIds {
+    if (kelasIds != null && kelasIds!.trim().isNotEmpty) {
+      return kelasIds!
+          .split(',')
+          .map((s) => int.tryParse(s.trim()) ?? 0)
+          .where((id) => id > 0)
+          .toList();
+    }
+    if (kelasId > 0) {
+      return [kelasId];
+    }
+    return [];
   }
 
   bool get isSubmitted => submissionId != null;

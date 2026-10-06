@@ -47,18 +47,27 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
     }
   }
 
-  void _showAddTugasModal() {
+  void _showAddTugasModal([TugasModel? tugasToEdit]) {
     final guruProvider = Provider.of<GuruProvider>(context, listen: false);
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user == null) return;
 
-    final judulController = TextEditingController();
-    final deskripsiController = TextEditingController();
-    final fileAttachmentController = TextEditingController();
+    final bool isEdit = tugasToEdit != null;
+    final judulController = TextEditingController(text: tugasToEdit?.judul ?? '');
+    final deskripsiController = TextEditingController(text: tugasToEdit?.deskripsi ?? '');
+    final fileAttachmentController = TextEditingController(text: tugasToEdit?.filePath ?? '');
 
     // Dynamically build mapel options strictly from teacher's schedule & assigned subjects
     final List<Map<String, dynamic>> mapels = [];
     final Set<int> mapelIdsSeen = {};
+
+    if (isEdit && tugasToEdit.mapelId > 0) {
+      mapelIdsSeen.add(tugasToEdit.mapelId);
+      mapels.add({
+        'id': tugasToEdit.mapelId,
+        'nama_mapel': (tugasToEdit.namaMapel.isNotEmpty) ? tugasToEdit.namaMapel : 'Mapel #${tugasToEdit.mapelId}',
+      });
+    }
 
     for (var j in guruProvider.jadwalList) {
       if (j.mapelId > 0 && !mapelIdsSeen.contains(j.mapelId)) {
@@ -76,6 +85,10 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
         mapelIdsSeen.add(mId);
         mapels.add(m);
       }
+    }
+
+    if (mapels.isEmpty) {
+      mapels.add({'id': 1, 'nama_mapel': 'Mata Pelajaran Umum'});
     }
 
     // Dynamically build kelas options strictly from teacher's schedule & assigned classes
@@ -100,16 +113,44 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
       }
     }
 
-    int selectedMapelId = mapels.isNotEmpty
-        ? (mapels.first['id'] is int ? mapels.first['id'] as int : int.tryParse(mapels.first['id'].toString()) ?? 1)
-        : 1;
+    int selectedMapelId = isEdit
+        ? tugasToEdit.mapelId
+        : (mapels.isNotEmpty
+            ? (mapels.first['id'] is int ? mapels.first['id'] as int : int.tryParse(mapels.first['id'].toString()) ?? 1)
+            : 1);
 
-    final Set<int> selectedKelasIds = {
-      if (kelases.isNotEmpty)
-        (kelases.first['id'] is int ? kelases.first['id'] as int : int.tryParse(kelases.first['id'].toString()) ?? 1)
-    };
+    if (mapels.isNotEmpty && !mapels.any((m) => m['id'] == selectedMapelId)) {
+      selectedMapelId = mapels.first['id'] is int ? mapels.first['id'] as int : int.tryParse(mapels.first['id'].toString()) ?? 1;
+    }
+
+    final Set<int> selectedKelasIds = isEdit
+        ? tugasToEdit.targetKelasIds.toSet()
+        : {
+            if (kelases.isNotEmpty)
+              (kelases.first['id'] is int ? kelases.first['id'] as int : int.tryParse(kelases.first['id'].toString()) ?? 1)
+          };
+
+    if (isEdit && selectedKelasIds.isEmpty && tugasToEdit.kelasId > 0) {
+      selectedKelasIds.add(tugasToEdit.kelasId);
+    }
+
+    for (var kId in selectedKelasIds) {
+      if (kId > 0 && !kelasIdsSeen.contains(kId)) {
+        kelasIdsSeen.add(kId);
+        kelases.add({
+          'id': kId,
+          'nama_kelas': 'Kelas #$kId',
+        });
+      }
+    }
 
     DateTime selectedDeadline = DateTime.now().add(const Duration(days: 7));
+    if (isEdit && tugasToEdit.deadline.isNotEmpty) {
+      final parsed = DateTime.tryParse(tugasToEdit.deadline);
+      if (parsed != null) {
+        selectedDeadline = parsed;
+      }
+    }
 
     showModalBottomSheet(
       context: context,
@@ -149,18 +190,18 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withAlpha(25),
+                          color: (isEdit ? Colors.blue : AppTheme.primaryColor).withAlpha(25),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.add_task_rounded, color: AppTheme.primaryColor, size: 24),
+                        child: Icon(isEdit ? Icons.edit_note_rounded : Icons.add_task_rounded, color: isEdit ? Colors.blue.shade700 : AppTheme.primaryColor, size: 24),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Buat Tugas Modul Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                            Text('Input petunjuk, target kelas, deadline, & berkas lampiran', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text(isEdit ? 'Edit Penugasan & Rubrik' : 'Buat Tugas Modul Baru', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            Text(isEdit ? 'Perbarui petunjuk, target kelas, deadline, & berkas lampiran' : 'Input petunjuk, target kelas, deadline, & berkas lampiran', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                           ],
                         ),
                       ),
@@ -282,6 +323,10 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                             } else {
                               if (selectedKelasIds.length > 1) {
                                 selectedKelasIds.remove(kId);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Minimal 1 kelas harus dipilih!'), duration: Duration(seconds: 1)),
+                                );
                               }
                             }
                           });
@@ -291,15 +336,15 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 4. Batas Akhir (Deadline Picker)
-                  const Text('Batas Akhir (Deadline) *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  // 4. Batas Waktu / Deadline
+                  const Text('Batas Akhir Pengumpulan (Deadline) *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   const SizedBox(height: 6),
                   InkWell(
                     onTap: () async {
                       final pickedDate = await showDatePicker(
                         context: context,
                         initialDate: selectedDeadline,
-                        firstDate: DateTime.now(),
+                        firstDate: DateTime.now().subtract(const Duration(days: 30)),
                         lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
                       if (pickedDate != null && context.mounted) {
@@ -324,27 +369,20 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        border: Border.all(color: Colors.grey.shade400),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.event_available_rounded, color: Color(0xFF1D4ED8), size: 20),
+                          const Icon(Icons.calendar_month_rounded, size: 20, color: AppTheme.primaryColor),
                           const SizedBox(width: 10),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Tanggal & Waktu Batas Akhir', style: TextStyle(fontSize: 10, color: Color(0xFF1D4ED8), fontWeight: FontWeight.w600)),
-                                Text(
-                                  deadlineFormatted,
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
-                                ),
-                              ],
+                            child: Text(
+                              deadlineFormatted,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                             ),
                           ),
-                          const Icon(Icons.edit_calendar_rounded, size: 18, color: AppTheme.primaryColor),
+                          const Icon(Icons.arrow_drop_down_rounded),
                         ],
                       ),
                     ),
@@ -393,29 +431,42 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                       final nav = Navigator.of(context);
                       final messenger = ScaffoldMessenger.of(context);
 
-                      final ok = await guruProvider.createTugas(
-                        user.id,
-                        judulController.text.trim(),
-                        deskripsiController.text.trim(),
-                        selectedMapelId,
-                        selectedKelasIds.toList(),
-                        deadlineFormatted,
-                        filePath: fileAttachmentController.text.trim(),
-                      );
+                      final ok = isEdit
+                          ? await guruProvider.updateTugas(
+                              user.id,
+                              tugasToEdit.id,
+                              judulController.text.trim(),
+                              deskripsiController.text.trim(),
+                              selectedMapelId,
+                              selectedKelasIds.toList(),
+                              deadlineFormatted,
+                              filePath: fileAttachmentController.text.trim(),
+                            )
+                          : await guruProvider.createTugas(
+                              user.id,
+                              judulController.text.trim(),
+                              deskripsiController.text.trim(),
+                              selectedMapelId,
+                              selectedKelasIds.toList(),
+                              deadlineFormatted,
+                              filePath: fileAttachmentController.text.trim(),
+                            );
 
                       nav.pop();
                       messenger.showSnackBar(
                         SnackBar(
-                          content: Text(ok ? 'Tugas berhasil dipublikasikan!' : 'Gagal membuat tugas'),
+                          content: Text(ok
+                              ? (isEdit ? 'Tugas berhasil diperbarui!' : 'Tugas berhasil dipublikasikan!')
+                              : (isEdit ? 'Gagal memperbarui tugas' : 'Gagal membuat tugas')),
                           backgroundColor: ok ? AppTheme.secondaryColor : Colors.red,
                         ),
                       );
                     },
-                    icon: const Icon(Icons.send_rounded, size: 18),
-                    label: const Text('Publikasikan Tugas Baru'),
+                    icon: Icon(isEdit ? Icons.save_rounded : Icons.send_rounded, size: 18),
+                    label: Text(isEdit ? 'Simpan Perubahan Tugas' : 'Publikasikan Tugas Baru'),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 50),
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: isEdit ? Colors.blue.shade700 : AppTheme.primaryColor,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
@@ -426,6 +477,95 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _confirmDeleteTugas(TugasModel t) {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user == null) return;
+    final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.delete_forever_rounded, color: Colors.red.shade700, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Hapus Tugas?',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Apakah Anda yakin ingin menghapus tugas "${t.judul}"?',
+              style: const TextStyle(fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded, size: 18, color: Colors.amber.shade900),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Semua data pengumpulan berkas dan nilai siswa pada tugas ini juga akan terhapus secara permanen.',
+                      style: TextStyle(fontSize: 11.5, color: Colors.amber.shade900, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              final messenger = ScaffoldMessenger.of(context);
+              final ok = await guruProvider.deleteTugas(user.id, t.id);
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(ok ? 'Tugas berhasil dihapus' : 'Gagal menghapus tugas'),
+                  backgroundColor: ok ? AppTheme.secondaryColor : Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Hapus Tugas', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }
@@ -526,6 +666,46 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showAddTugasModal(t);
+                    },
+                    icon: const Icon(Icons.edit_rounded, size: 16),
+                    label: const Text('Edit Tugas'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.blue.shade700,
+                      side: BorderSide(color: Colors.blue.shade300),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _confirmDeleteTugas(t);
+                    },
+                    icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                    label: const Text('Hapus Tugas'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade700,
+                      side: BorderSide(color: Colors.red.shade300),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1711,38 +1891,78 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                                 ),
                                 const SizedBox(height: 14),
 
-                                // Actions Row (Koreksi + Detail)
+                                // Actions Row (Koreksi + Edit + Detail + Hapus)
+                                ElevatedButton.icon(
+                                  onPressed: () => _viewSubmissions(t.id, t.judul),
+                                  icon: const Icon(Icons.assignment_turned_in_rounded, size: 16),
+                                  label: Text('Koreksi & Nilai ($subCount Kiriman)'),
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size(double.infinity, 40),
+                                    backgroundColor: Colors.amber.shade700,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 9),
+                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    elevation: 1,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
                                 Row(
                                   children: [
                                     Expanded(
-                                      flex: 3,
-                                      child: ElevatedButton.icon(
-                                        onPressed: () => _viewSubmissions(t.id, t.judul),
-                                        icon: const Icon(Icons.assignment_turned_in_rounded, size: 16),
-                                        label: Text('Koreksi & Nilai ($subCount)'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.amber.shade700,
-                                          foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 10),
-                                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                          elevation: 1,
+                                      child: OutlinedButton.icon(
+                                        onPressed: () => _showAddTugasModal(t),
+                                        icon: const Icon(Icons.edit_rounded, size: 14),
+                                        label: const Text('Edit'),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.blue.shade700,
+                                          side: BorderSide(color: Colors.blue.shade300),
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 6),
                                     Expanded(
-                                      flex: 2,
                                       child: OutlinedButton.icon(
                                         onPressed: () => _showTaskDetailDialog(t),
-                                        icon: const Icon(Icons.info_outline_rounded, size: 16),
+                                        icon: const Icon(Icons.info_outline_rounded, size: 14),
                                         label: const Text('Detail'),
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: AppTheme.primaryColor,
                                           side: const BorderSide(color: AppTheme.primaryColor),
-                                          padding: const EdgeInsets.symmetric(vertical: 10),
-                                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          textStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    InkWell(
+                                      onTap: () => _confirmDeleteTugas(t),
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade50,
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: Colors.red.shade200),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.delete_outline_rounded, size: 16, color: Colors.red.shade700),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Hapus',
+                                              style: TextStyle(
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.red.shade700,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),

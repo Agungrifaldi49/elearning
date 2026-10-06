@@ -2068,52 +2068,28 @@ class ApiController {
             case 'tugas':
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $input = $this->getPostInput();
-                    $action = $input['action'] ?? 'create';
+                    $actionType = strtolower(trim($input['action'] ?? ($input['_action'] ?? 'create')));
+                    $tugasId = intval($input['tugas_id'] ?? ($input['id'] ?? 0));
 
-                    if ($action === 'create') {
-                        $judul = trim($input['judul'] ?? '');
-                        $deskripsi = trim($input['deskripsi'] ?? '');
-                        $mapelId = intval($input['mapel_id'] ?? 0);
-                        $filePath = trim($input['file_path'] ?? '');
-                        
-                        $kelasIds = [];
-                        if (isset($input['kelas_ids']) && is_array($input['kelas_ids'])) {
-                            $kelasIds = array_map('intval', $input['kelas_ids']);
-                        } elseif (!empty($input['kelas_id'])) {
-                            if (is_array($input['kelas_id'])) {
-                                $kelasIds = array_map('intval', $input['kelas_id']);
-                            } else {
-                                $kelasIds = array_map('intval', explode(',', (string)$input['kelas_id']));
-                            }
+                    // 1. Delete Tugas Action
+                    if ($actionType === 'delete' && $tugasId > 0) {
+                        $stmtCheck = $this->db->prepare("SELECT * FROM tugas WHERE id = ? LIMIT 1");
+                        $stmtCheck->execute([$tugasId]);
+                        $targetTugas = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$targetTugas) {
+                            $this->jsonResponse(false, 'Data tugas tidak ditemukan', null, 404);
                         }
-                        $kelasIds = array_values(array_filter($kelasIds, function($id) { return $id > 0; }));
-
-                        $deadline = $input['deadline'] ?? date('Y-m-d H:i:s', strtotime('+7 days'));
-
-                        if (empty($judul) || $mapelId <= 0 || empty($kelasIds)) {
-                            $this->jsonResponse(false, 'Judul, Mapel, dan minimal 1 Kelas wajib diisi', null, 400);
+                        if ((int)$targetTugas['guru_id'] !== (int)$guru['id'] && (int)$targetTugas['guru_id'] !== (int)$guru['user_id']) {
+                            $this->jsonResponse(false, 'Anda tidak memiliki hak akses untuk menghapus tugas ini', null, 403);
                         }
 
-                        $primaryKelasId = $kelasIds[0] ?? 0;
-                        $kelasIdsStr = implode(',', $kelasIds);
+                        $learningModel->deleteTugas($tugasId);
+                        $this->jsonResponse(true, 'Tugas berhasil dihapus!');
+                    }
 
-                        $stmtIns = $this->db->prepare("
-                            INSERT INTO tugas (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, file_path, deadline, created_at) 
-                            VALUES (:gid, :mpid, :kid, :kids, :jdl, :desk, :fp, :dl, NOW())
-                        ");
-                        $stmtIns->execute([
-                            'gid' => $guru['id'],
-                            'mpid' => $mapelId,
-                            'kid' => $primaryKelasId,
-                            'kids' => $kelasIdsStr,
-                            'jdl' => $judul,
-                            'desk' => $deskripsi,
-                            'fp' => $filePath,
-                            'dl' => $deadline
-                        ]);
-
-                        $this->jsonResponse(true, 'Tugas berhasil dipublikasikan!');
-                    } else if ($action === 'grade') {
+                    // 2. Grade Tugas Action
+                    if ($actionType === 'grade') {
                         $submissionId = intval($input['submission_id'] ?? 0);
                         $nilai = floatval($input['nilai'] ?? 0);
                         $komentar = trim($input['komentar_guru'] ?? '');
@@ -2127,6 +2103,68 @@ class ApiController {
 
                         $this->jsonResponse(true, 'Nilai tugas berhasil disimpan!');
                     }
+
+                    // 3. Create or Update Tugas Action
+                    $isUpdate = ($actionType === 'update' || $actionType === 'edit' || ($tugasId > 0 && $actionType !== 'create'));
+
+                    $judul = trim($input['judul'] ?? '');
+                    $deskripsi = trim($input['deskripsi'] ?? '');
+                    $mapelId = intval($input['mapel_id'] ?? 0);
+                    $filePath = trim($input['file_path'] ?? '');
+                    
+                    $kelasIds = [];
+                    if (isset($input['kelas_ids']) && is_array($input['kelas_ids'])) {
+                        $kelasIds = array_map('intval', $input['kelas_ids']);
+                    } elseif (!empty($input['kelas_id'])) {
+                        if (is_array($input['kelas_id'])) {
+                            $kelasIds = array_map('intval', $input['kelas_id']);
+                        } else {
+                            $kelasIds = array_map('intval', explode(',', (string)$input['kelas_id']));
+                        }
+                    }
+                    $kelasIds = array_values(array_filter($kelasIds, function($id) { return $id > 0; }));
+
+                    $deadline = $input['deadline'] ?? date('Y-m-d H:i:s', strtotime('+7 days'));
+
+                    if (empty($judul) || $mapelId <= 0 || empty($kelasIds)) {
+                        $this->jsonResponse(false, 'Judul, Mapel, dan minimal 1 Kelas wajib diisi', null, 400);
+                    }
+
+                    if ($isUpdate && $tugasId > 0) {
+                        $stmtCheck = $this->db->prepare("SELECT * FROM tugas WHERE id = ? LIMIT 1");
+                        $stmtCheck->execute([$tugasId]);
+                        $targetTugas = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$targetTugas) {
+                            $this->jsonResponse(false, 'Data tugas tidak ditemukan', null, 404);
+                        }
+                        if ((int)$targetTugas['guru_id'] !== (int)$guru['id'] && (int)$targetTugas['guru_id'] !== (int)$guru['user_id']) {
+                            $this->jsonResponse(false, 'Anda tidak memiliki hak akses untuk mengedit tugas ini', null, 403);
+                        }
+
+                        $learningModel->updateTugas($tugasId, $mapelId, $kelasIds, $judul, $deskripsi, !empty($filePath) ? $filePath : null, $deadline);
+                        $this->jsonResponse(true, 'Tugas berhasil diperbarui!', ['id' => $tugasId]);
+                    }
+
+                    $primaryKelasId = $kelasIds[0] ?? 0;
+                    $kelasIdsStr = implode(',', $kelasIds);
+
+                    $stmtIns = $this->db->prepare("
+                        INSERT INTO tugas (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, file_path, deadline, created_at) 
+                        VALUES (:gid, :mpid, :kid, :kids, :jdl, :desk, :fp, :dl, NOW())
+                    ");
+                    $stmtIns->execute([
+                        'gid' => $guru['id'],
+                        'mpid' => $mapelId,
+                        'kid' => $primaryKelasId,
+                        'kids' => $kelasIdsStr,
+                        'jdl' => $judul,
+                        'desk' => $deskripsi,
+                        'fp' => $filePath,
+                        'dl' => $deadline
+                    ]);
+
+                    $this->jsonResponse(true, 'Tugas berhasil dipublikasikan!');
                 }
 
                 $stmtT = $this->db->prepare("

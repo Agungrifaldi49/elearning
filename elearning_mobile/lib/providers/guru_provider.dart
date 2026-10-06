@@ -188,6 +188,60 @@ class GuruProvider with ChangeNotifier {
     return false;
   }
 
+  Future<bool> updateTugas(
+    int userId,
+    int tugasId,
+    String judul,
+    String deskripsi,
+    int mapelId,
+    dynamic kelasIdOrIds,
+    String deadline, {
+    String? filePath,
+  }) async {
+    final Map<String, dynamic> body = {
+      'user_id': userId,
+      'action': 'update',
+      'tugas_id': tugasId,
+      'id': tugasId,
+      'judul': judul,
+      'deskripsi': deskripsi,
+      'mapel_id': mapelId,
+      'deadline': deadline,
+      'file_path': filePath ?? '',
+    };
+
+    if (kelasIdOrIds is List) {
+      body['kelas_ids'] = kelasIdOrIds;
+      body['kelas_id'] = kelasIdOrIds.isNotEmpty ? kelasIdOrIds[0] : 0;
+    } else {
+      body['kelas_id'] = kelasIdOrIds;
+      body['kelas_ids'] = [kelasIdOrIds];
+    }
+
+    final res = await ApiService.post('guru/tugas', body);
+    if (res['success'] == true) {
+      await fetchTugas(userId);
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> deleteTugas(int userId, int tugasId) async {
+    final Map<String, dynamic> body = {
+      'user_id': userId,
+      'action': 'delete',
+      'tugas_id': tugasId,
+      'id': tugasId,
+    };
+
+    final res = await ApiService.post('guru/tugas', body);
+    if (res['success'] == true) {
+      await fetchTugas(userId);
+      return true;
+    }
+    return false;
+  }
+
   Future<List<dynamic>> fetchSubmissions(int userId, int tugasId) async {
     final res = await ApiService.get('guru/submissions', params: {
       'user_id': userId.toString(),
