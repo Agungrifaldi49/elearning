@@ -2672,21 +2672,60 @@ class ApiController {
                         $this->jsonResponse(false, 'Data presensi siswa tidak boleh kosong', null, 400);
                     }
 
+                    // Validasi jadwal operasional jam masuk dan pulang
+                    $sched = $absensiModel->getPresensiScheduleInfo($guruId, $mapelId, $tanggal);
+                    if ($kategori === 'pulang') {
+                        if (!$sched['can_absen_pulang']) {
+                            $this->jsonResponse(false, $sched['pesan_jam_pulang'] ?: "Belum memasuki jadwal jam pulang (dibuka mulai pukul {$sched['jam_pulang_mulai']} WIB).", [
+                                'schedule' => $sched
+                            ], 400);
+                        }
+                    } else {
+                        if (!$sched['can_absen_masuk']) {
+                            $this->jsonResponse(false, $sched['pesan_jam_masuk'] ?: "Belum memasuki jadwal jam masuk (dibuka mulai pukul {$sched['jam_masuk_mulai']} WIB).", [
+                                'schedule' => $sched
+                            ], 400);
+                        }
+                    }
+
                     $saved = 0;
+                    $skippedBelumMasuk = 0;
                     foreach ($presensi as $siswaId => $status) {
                         $sId = intval($siswaId);
                         $ket = Security::sanitize($keteranganMap[$siswaId] ?? '');
                         if ($sId > 0 && !empty($status)) {
-                            if ($absensiModel->saveManualAttendance($guruId, $mapelId, $sId, $tanggal, $status, $ket, $kategori)) {
+                            $res = $absensiModel->saveManualAttendance($guruId, $mapelId, $sId, $tanggal, $status, $ket, $kategori);
+                            if (is_array($res)) {
+                                if (!empty($res['success'])) {
+                                    $saved++;
+                                } elseif (($res['reason'] ?? '') === 'belum_masuk') {
+                                    $skippedBelumMasuk++;
+                                }
+                            } elseif ($res === true) {
                                 $saved++;
                             }
                         }
                     }
 
                     if ($saved > 0) {
-                        $this->jsonResponse(true, "Presensi manual berhasil disimpan untuk {$saved} siswa!");
+                        $katLabel = strtoupper($kategori);
+                        $msg = "Presensi manual ({$katLabel}) berhasil disimpan untuk {$saved} siswa!";
+                        if ($skippedBelumMasuk > 0) {
+                            $msg .= " ({$skippedBelumMasuk} siswa dilewati karena belum absen masuk).";
+                        }
+                        $this->jsonResponse(true, $msg, [
+                            'saved' => $saved,
+                            'skipped_belum_masuk' => $skippedBelumMasuk,
+                            'schedule' => $sched
+                        ]);
                     } else {
-                        $this->jsonResponse(false, "Gagal menyimpan presensi manual. Silakan periksa kembali data siswa.", null, 400);
+                        if ($kategori === 'pulang' && $skippedBelumMasuk > 0) {
+                            $this->jsonResponse(false, "Tidak dapat menyimpan presensi pulang: Siswa yang dipilih belum melakukan Absen Masuk. Siswa wajib absen masuk terlebih dahulu sebelum bisa absen pulang!", [
+                                'skipped_belum_masuk' => $skippedBelumMasuk
+                            ], 400);
+                        } else {
+                            $this->jsonResponse(false, "Gagal menyimpan presensi manual. Silakan periksa kembali data siswa dan jadwal.", null, 400);
+                        }
                     }
                 }
 
@@ -2699,11 +2738,14 @@ class ApiController {
                     $students = $absensiModel->getEnrolledStudentsForAttendance($guruId, $selectedMapelId, $tanggal);
                 }
 
+                $sched = $absensiModel->getPresensiScheduleInfo($guruId, $selectedMapelId, $tanggal);
+
                 $this->jsonResponse(true, 'Data Presensi Manual Guru', [
                     'mapel_list' => $myMapelList,
                     'selected_mapel_id' => $selectedMapelId,
                     'tanggal' => $tanggal,
-                    'students' => $students
+                    'students' => $students,
+                    'schedule' => $sched
                 ]);
                 break;
 

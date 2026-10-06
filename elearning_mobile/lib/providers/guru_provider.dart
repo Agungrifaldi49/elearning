@@ -975,7 +975,7 @@ class GuruProvider with ChangeNotifier {
     };
   }
 
-  Future<bool> saveManualAttendance(
+  Future<Map<String, dynamic>> saveManualAttendance(
     int userId,
     int mapelId,
     String tanggal,
@@ -985,7 +985,9 @@ class GuruProvider with ChangeNotifier {
   }) async {
     final Map<String, dynamic> formattedAbsensi = {};
     absensiMap.forEach((k, v) {
-      formattedAbsensi[k.toString()] = v;
+      if (v.trim().isNotEmpty) {
+        formattedAbsensi[k.toString()] = v;
+      }
     });
 
     final Map<String, dynamic> formattedKeterangan = {};
@@ -1005,6 +1007,10 @@ class GuruProvider with ChangeNotifier {
     };
 
     final res = await ApiService.post('guru/input_absensi', body);
-    return res['success'] == true;
+    return {
+      'success': res['success'] == true,
+      'message': res['message']?.toString() ?? (res['success'] == true ? 'Presensi manual berhasil disimpan' : 'Gagal menyimpan presensi manual'),
+      'data': res['data'],
+    };
   }
 }

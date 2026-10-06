@@ -22,6 +22,8 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
   String _selectedKategori = 'masuk'; // 'masuk' or 'pulang'
   String _activeFilter = 'all'; // 'all', 'belum_masuk', 'belum_pulang'
 
+  Map<String, dynamic>? _scheduleInfo;
+
   List<dynamic> _students = [];
   List<dynamic> _filteredStudents = [];
   final Map<int, String> _absensiMap = {};
@@ -48,6 +50,27 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
     return _selectedDate.toString().substring(0, 10);
   }
 
+  bool get _isToday {
+    final nowStr = DateTime.now().toString().substring(0, 10);
+    return _formattedDate == nowStr;
+  }
+
+  bool get _canAbsenMasuk {
+    if (!_isToday) return true;
+    return _scheduleInfo?['can_absen_masuk'] != false;
+  }
+
+  bool get _canAbsenPulang {
+    if (!_isToday) return true;
+    return _scheduleInfo?['can_absen_pulang'] != false;
+  }
+
+  bool _studentHasMasuk(dynamic s) {
+    final wMasuk = (s['waktu_masuk'] ?? s['waktu_hadir'] ?? '').toString();
+    final st = (s['status_absensi'] ?? '').toString();
+    return wMasuk.isNotEmpty && st.toLowerCase() == 'hadir';
+  }
+
   Future<void> _loadData() async {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user == null) return;
@@ -67,6 +90,7 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
         selId = int.parse((mList[0]['id'] ?? 0).toString());
       }
       final sList = data['students'] as List? ?? [];
+      final sched = data['schedule'] != null ? Map<String, dynamic>.from(data['schedule']) : null;
 
       _absensiMap.clear();
       _keteranganMap.clear();
@@ -74,7 +98,15 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
       for (var s in sList) {
         final sid = int.parse((s['siswa_id'] ?? 0).toString());
         final st = (s['status_absensi'] ?? 'Belum Absen').toString();
-        _absensiMap[sid] = (st != 'Belum Absen') ? st : 'Hadir';
+        if (_selectedKategori == 'pulang') {
+          if (_studentHasMasuk(s)) {
+            _absensiMap[sid] = 'Hadir';
+          } else {
+            _absensiMap[sid] = '';
+          }
+        } else {
+          _absensiMap[sid] = (st != 'Belum Absen') ? st : 'Hadir';
+        }
         if (s['keterangan'] != null) {
           _keteranganMap[sid] = s['keterangan'].toString();
         }
@@ -84,10 +116,32 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
         _mapelList = mList;
         _selectedMapelId = selId;
         _students = sList;
+        _scheduleInfo = sched;
         _applySearchFilter();
         _isLoading = false;
       });
     }
+  }
+
+  void _switchKategori(String kategori) {
+    if (_selectedKategori == kategori) return;
+    setState(() {
+      _selectedKategori = kategori;
+      for (var s in _students) {
+        final sid = int.parse((s['siswa_id'] ?? 0).toString());
+        if (_selectedKategori == 'pulang') {
+          if (_studentHasMasuk(s)) {
+            _absensiMap[sid] = 'Hadir';
+          } else {
+            _absensiMap[sid] = '';
+          }
+        } else {
+          final st = (s['status_absensi'] ?? 'Belum Absen').toString();
+          _absensiMap[sid] = (st != 'Belum Absen') ? st : 'Hadir';
+        }
+      }
+      _applySearchFilter();
+    });
   }
 
   bool _isAbsentStatus(String st) {
@@ -108,9 +162,7 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
 
   int get _countBelumPulang {
     return _students.where((s) {
-      final sid = int.parse((s['siswa_id'] ?? 0).toString());
-      final currentSt = _absensiMap[sid] ?? (s['status_absensi'] ?? '').toString();
-      if (_isAbsentStatus(currentSt)) return false;
+      if (!_studentHasMasuk(s)) return false;
       final wPulang = (s['waktu_pulang'] ?? '').toString();
       return wPulang.isEmpty;
     }).length;
@@ -136,7 +188,7 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
           final status = (s['status_absensi'] ?? '').toString();
           return wMasuk.isEmpty || status == 'Belum Absen';
         } else if (_activeFilter == 'belum_pulang') {
-          if (_isAbsentStatus(currentSt)) return false;
+          if (!_studentHasMasuk(s)) return false;
           final wPulang = (s['waktu_pulang'] ?? '').toString();
           return wPulang.isEmpty;
         }
@@ -148,9 +200,28 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
 
   void _markAllStatus(String status) {
     setState(() {
+      int count = 0;
       for (var s in _filteredStudents) {
         final sid = int.parse((s['siswa_id'] ?? 0).toString());
-        _absensiMap[sid] = status;
+        if (_selectedKategori == 'pulang') {
+          if (_studentHasMasuk(s)) {
+            _absensiMap[sid] = status;
+            count++;
+          }
+        } else {
+          _absensiMap[sid] = status;
+          count++;
+        }
+      }
+      if (_selectedKategori == 'pulang') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(count > 0
+                ? '$count siswa yang sudah absen masuk ditandai Hadir Pulang.'
+                : 'Tidak ada siswa yang sudah absen masuk untuk ditandai pulang.'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     });
   }
@@ -170,11 +241,82 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
     }
   }
 
+  void _showScheduleWarningDialog({required String title, required String message}) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+            const SizedBox(width: 8),
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        content: Text(message, style: const TextStyle(fontSize: 13, height: 1.4)),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Mengerti', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveAbsensi() async {
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user == null || _selectedMapelId <= 0) return;
 
-    if (_absensiMap.isEmpty) {
+    // 1. Cek validasi jadwal jam operasional sekolah/KBM
+    if (_selectedKategori == 'pulang' && !_canAbsenPulang) {
+      final jPulang = _scheduleInfo?['jam_pulang_mulai'] ?? '15:00';
+      final cTime = _scheduleInfo?['current_time'] ?? '';
+      _showScheduleWarningDialog(
+        title: 'Belum Memasuki Jam Pulang',
+        message: 'Presensi Pulang hanya dapat dilakukan mulai pukul $jPulang WIB sesuai jadwal KBM/sekolah.\n\nWaktu saat ini: ${cTime.isNotEmpty ? "$cTime WIB" : "Belum jam pulang"}.',
+      );
+      return;
+    }
+
+    if (_selectedKategori == 'masuk' && !_canAbsenMasuk) {
+      final jMasuk = _scheduleInfo?['jam_masuk_mulai'] ?? '06:00';
+      final cTime = _scheduleInfo?['current_time'] ?? '';
+      _showScheduleWarningDialog(
+        title: 'Belum Memasuki Jam Masuk',
+        message: 'Presensi Masuk baru dibuka mulai pukul $jMasuk WIB.\n\nWaktu saat ini: ${cTime.isNotEmpty ? "$cTime WIB" : "Belum jam masuk"}.',
+      );
+      return;
+    }
+
+    // 2. Cek validasi data absen pulang (harus sudah absen masuk)
+    final Map<int, String> payloadMap = {};
+    if (_selectedKategori == 'pulang') {
+      for (var s in _students) {
+        final sid = int.parse((s['siswa_id'] ?? 0).toString());
+        final status = _absensiMap[sid] ?? '';
+        if (status.isNotEmpty && _studentHasMasuk(s)) {
+          payloadMap[sid] = status;
+        }
+      }
+
+      if (payloadMap.isEmpty) {
+        _showScheduleWarningDialog(
+          title: 'Tidak Ada Siswa Yang Memenuhi Syarat',
+          message: 'Seluruh siswa yang dipilih belum melakukan Absen Masuk.\n\nSecara sistem, siswa WAJIB melakukan Absen Masuk terlebih dahulu sebelum bisa melakukan Absen Pulang!',
+        );
+        return;
+      }
+    } else {
+      payloadMap.addAll(_absensiMap);
+    }
+
+    if (payloadMap.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Tidak ada data siswa terdaftar yang dapat dipresensi.')),
       );
@@ -183,24 +325,31 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
 
     setState(() => _isSaving = true);
 
-    final ok = await Provider.of<GuruProvider>(context, listen: false).saveManualAttendance(
+    final res = await Provider.of<GuruProvider>(context, listen: false).saveManualAttendance(
       user.id,
       _selectedMapelId,
       _formattedDate,
-      _absensiMap,
+      payloadMap,
       keteranganMap: _keteranganMap,
       kategori: _selectedKategori,
     );
 
     if (mounted) {
       setState(() => _isSaving = false);
+      final ok = res['success'] == true;
       final katLabel = _selectedKategori == 'masuk' ? 'MASUK' : 'PULANG';
+      final msg = (res['message'] != null && res['message'].toString().isNotEmpty)
+          ? res['message'].toString()
+          : (ok ? 'Presensi manual ($katLabel) berhasil disimpan ke database!' : 'Gagal menyimpan presensi manual.');
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(ok ? 'Presensi manual ($katLabel) berhasil disimpan ke database!' : 'Gagal menyimpan presensi manual.'),
+          content: Text(msg),
           backgroundColor: ok ? AppTheme.primaryColor : Colors.red,
+          duration: const Duration(seconds: 4),
         ),
       );
+
       if (ok) {
         _loadData();
       }
@@ -215,6 +364,11 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
 
     final numBelumMasuk = _countBelumMasuk;
     final numBelumPulang = _countBelumPulang;
+
+    final jamMasukMulai = (_scheduleInfo?['jam_masuk_mulai'] ?? '06:00').toString();
+    final jamMasukBatas = (_scheduleInfo?['jam_masuk_batas'] ?? '07:30').toString();
+    final jamPulangMulai = (_scheduleInfo?['jam_pulang_mulai'] ?? '15:00').toString();
+    final currentTime = (_scheduleInfo?['current_time'] ?? '').toString();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -276,6 +430,30 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                     ),
                   ),
                 ),
+
+                // Schedule Info Chip
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white30),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule_rounded, size: 14, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Jadwal KBM: Masuk $jamMasukMulai - $jamMasukBatas WIB • Pulang Mulai $jamPulangMulai WIB',
+                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 12),
 
                 // Kategori Selector Segmented Toggle (Absen Masuk vs Absen Pulang)
@@ -289,11 +467,7 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                     children: [
                       Expanded(
                         child: InkWell(
-                          onTap: () {
-                            setState(() {
-                              _selectedKategori = 'masuk';
-                            });
-                          },
+                          onTap: () => _switchKategori('masuk'),
                           borderRadius: BorderRadius.circular(10),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
@@ -322,11 +496,7 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                       ),
                       Expanded(
                         child: InkWell(
-                          onTap: () {
-                            setState(() {
-                              _selectedKategori = 'pulang';
-                            });
-                          },
+                          onTap: () => _switchKategori('pulang'),
                           borderRadius: BorderRadius.circular(10),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
@@ -406,6 +576,75 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
             ),
           ),
 
+          // Schedule Alert Banner (Jika belum masuk jam masuk atau belum masuk jam pulang)
+          if (!_isLoading && _isToday) ...[
+            if (_selectedKategori == 'pulang' && !_canAbsenPulang) ...[
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.red.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.lock_clock_rounded, color: Colors.red.shade800, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '⛔ Belum Memasuki Jadwal Jam Pulang',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.red.shade900),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Presensi pulang baru dapat disimpan mulai pukul $jamPulangMulai WIB (Waktu saat ini: ${currentTime.isNotEmpty ? "$currentTime WIB" : "sekarang"}). Sesuai jadwal resmi, belum waktunya siswa pulang.',
+                            style: TextStyle(fontSize: 11, color: Colors.red.shade800),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (_selectedKategori == 'masuk' && !_canAbsenMasuk) ...[
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.orange.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.lock_clock_rounded, color: Colors.orange.shade800, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '⏰ Belum Memasuki Jadwal Jam Masuk',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange.shade900),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Presensi masuk baru dibuka mulai pukul $jamMasukMulai WIB (Waktu saat ini: ${currentTime.isNotEmpty ? "$currentTime WIB" : "sekarang"}).',
+                            style: TextStyle(fontSize: 11, color: Colors.orange.shade900),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+
           // Smart Reminder Banner (Pengingat Belum Absen Masuk & Pulang)
           if (!_isLoading && _students.isNotEmpty && (numBelumMasuk > 0 || numBelumPulang > 0)) ...[
             Container(
@@ -430,7 +669,7 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '$numBelumMasuk siswa belum Absen Masuk • $numBelumPulang siswa belum Absen Pulang hari ini.',
+                          '$numBelumMasuk siswa belum Absen Masuk • $numBelumPulang siswa hadir belum Absen Pulang hari ini.',
                           style: TextStyle(fontSize: 11, color: Colors.amber.shade900),
                         ),
                       ],
@@ -455,7 +694,7 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                       const SizedBox(width: 8),
                       _buildFilterChip('belum_masuk', '☀️ Belum Masuk ($numBelumMasuk)', Icons.sunny, Colors.orange),
                       const SizedBox(width: 8),
-                      _buildFilterChip('belum_pulang', '🌙 Belum Pulang ($numBelumPulang)', Icons.nights_stay_rounded, Colors.indigo),
+                      _buildFilterChip('belum_pulang', '🌙 Siap Pulang ($numBelumPulang)', Icons.nights_stay_rounded, Colors.indigo),
                     ],
                   ),
                 ),
@@ -734,18 +973,78 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                                   ),
                                   const SizedBox(height: 10),
 
-                                  // Status Radio Segment Buttons (Hadir, Izin, Sakit, Alpha)
-                                  Row(
-                                    children: [
-                                      _buildStatusPill(sid, 'Hadir', 'H', Colors.green, currentStatus),
-                                      const SizedBox(width: 6),
-                                      _buildStatusPill(sid, 'Izin', 'I', Colors.blue, currentStatus),
-                                      const SizedBox(width: 6),
-                                      _buildStatusPill(sid, 'Sakit', 'S', Colors.orange, currentStatus),
-                                      const SizedBox(width: 6),
-                                      _buildStatusPill(sid, 'Alpha', 'A', Colors.red, currentStatus),
-                                    ],
-                                  ),
+                                  // Status Controls:
+                                  if (_selectedKategori == 'pulang' && !_studentHasMasuk(s)) ...[
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.shade50,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: Colors.amber.shade300),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.lock_clock_rounded, size: 15, color: Colors.amber.shade900),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              'Belum Absen Masuk • Tidak dapat Absen Pulang',
+                                              style: TextStyle(
+                                                fontSize: 10.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.amber.shade900,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ] else if (_selectedKategori == 'pulang' && _studentHasMasuk(s)) ...[
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: hasPulang ? Colors.green.shade50 : Colors.indigo.shade50,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: hasPulang ? Colors.green.shade300 : Colors.indigo.shade300,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            hasPulang ? Icons.check_circle_rounded : Icons.nights_stay_rounded,
+                                            size: 15,
+                                            color: hasPulang ? Colors.green.shade800 : Colors.indigo.shade800,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            hasPulang ? 'Sudah Absen Pulang ($jamPulangStr)' : 'Siap Presensi Pulang (Hadir)',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: hasPulang ? Colors.green.shade900 : Colors.indigo.shade900,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ] else ...[
+                                    // Status Radio Segment Buttons (Hadir, Izin, Sakit, Alpha)
+                                    Row(
+                                      children: [
+                                        _buildStatusPill(sid, 'Hadir', 'H', Colors.green, currentStatus),
+                                        const SizedBox(width: 6),
+                                        _buildStatusPill(sid, 'Izin', 'I', Colors.blue, currentStatus),
+                                        const SizedBox(width: 6),
+                                        _buildStatusPill(sid, 'Sakit', 'S', Colors.orange, currentStatus),
+                                        const SizedBox(width: 6),
+                                        _buildStatusPill(sid, 'Alpha', 'A', Colors.red, currentStatus),
+                                      ],
+                                    ),
+                                  ],
                                 ],
                               ),
                             );
@@ -757,13 +1056,25 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _isSaving ? null : _saveAbsensi,
-        backgroundColor: _selectedKategori == 'masuk' ? AppTheme.primaryColor : Colors.indigo.shade800,
+        backgroundColor: (_selectedKategori == 'pulang' && _isToday && !_canAbsenPulang) ||
+                (_selectedKategori == 'masuk' && _isToday && !_canAbsenMasuk)
+            ? Colors.grey.shade600
+            : (_selectedKategori == 'masuk' ? AppTheme.primaryColor : Colors.indigo.shade800),
         foregroundColor: Colors.white,
         icon: _isSaving
             ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-            : const Icon(Icons.save_rounded),
+            : Icon((_selectedKategori == 'pulang' && _isToday && !_canAbsenPulang) ||
+                    (_selectedKategori == 'masuk' && _isToday && !_canAbsenMasuk)
+                ? Icons.lock_clock_rounded
+                : Icons.save_rounded),
         label: Text(
-          _isSaving ? 'Menyimpan...' : 'Simpan Presensi (${_selectedKategori == 'masuk' ? 'MASUK' : 'PULANG'})',
+          _isSaving
+              ? 'Menyimpan...'
+              : (_selectedKategori == 'pulang' && _isToday && !_canAbsenPulang)
+                  ? 'Belum Jam Pulang ($jamPulangMulai WIB)'
+                  : (_selectedKategori == 'masuk' && _isToday && !_canAbsenMasuk)
+                      ? 'Belum Jam Masuk ($jamMasukMulai WIB)'
+                      : 'Simpan Presensi (${_selectedKategori == 'masuk' ? 'MASUK' : 'PULANG'})',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),

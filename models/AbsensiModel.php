@@ -1595,6 +1595,107 @@ class AbsensiModel extends BaseModel {
         return $stmt->fetchAll();
     }
 
+    public function getPresensiScheduleInfo($guruId, $mapelId, $tanggal = null) {
+        $guruId = (int)$guruId;
+        $mapelId = (int)$mapelId;
+        if (!$tanggal) $tanggal = date('Y-m-d');
+
+        require_once ROOT_PATH . 'models/SettingsModel.php';
+        $settingsModel = new SettingsModel();
+        $settings = $settingsModel->getAll();
+
+        $standarMasukMulai = $settings['presensi_jam_masuk_mulai'] ?? '06:00';
+        $standarMasukBatas = $settings['presensi_jam_masuk_batas'] ?? '07:30';
+        $standarPulangMulai = $settings['presensi_jam_pulang_mulai'] ?? '15:00';
+
+        $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+        $dayNum = (int)date('N', strtotime($tanggal));
+        $hariName = $daysMap[$dayNum] ?? 'Senin';
+
+        // Cari jadwal spesifik mapel ini untuk guru pada hari ini
+        $stmt = $this->db->prepare("
+            SELECT MIN(jam_mulai) as min_mulai, MAX(jam_selesai) as max_selesai, COUNT(*) as total_sesi
+            FROM jadwal 
+            WHERE guru_id = ? AND mapel_id = ? AND hari = ?
+        ");
+        $stmt->execute([$guruId, $mapelId, $hariName]);
+        $jMapel = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $jamMasukMulai = $standarMasukMulai;
+        $jamMasukBatas = $standarMasukBatas;
+        $jamPulangMulai = $standarPulangMulai;
+        $sumber = 'standar_sekolah';
+        $keteranganJadwal = "Jam Standar Sekolah (Masuk: {$standarMasukMulai} - {$standarMasukBatas} WIB, Pulang: {$standarPulangMulai} WIB)";
+
+        if (!empty($jMapel['min_mulai']) && !empty($jMapel['max_selesai'])) {
+            $jamMulaiKbm = substr($jMapel['min_mulai'], 0, 5);
+            $jamSelesaiKbm = substr($jMapel['max_selesai'], 0, 5);
+            $jamMasukMulai = min($standarMasukMulai, date('H:i', strtotime($tanggal . ' ' . $jamMulaiKbm . ' -30 minutes')));
+            $jamMasukBatas = $jamMulaiKbm;
+            $jamPulangMulai = $jamSelesaiKbm;
+            $sumber = 'jadwal_mapel';
+            $keteranganJadwal = "Jadwal KBM {$hariName}: Masuk {$jamMasukMulai} - {$jamMasukBatas} WIB, Pulang Mulai {$jamPulangMulai} WIB";
+        } else {
+            // Cek apakah ada jadwal KBM guru lain di hari ini
+            $stmtG = $this->db->prepare("
+                SELECT MIN(jam_mulai) as min_mulai, MAX(jam_selesai) as max_selesai, COUNT(*) as total_sesi
+                FROM jadwal 
+                WHERE guru_id = ? AND hari = ?
+            ");
+            $stmtG->execute([$guruId, $hariName]);
+            $jGuru = $stmtG->fetch(PDO::FETCH_ASSOC);
+            if (!empty($jGuru['min_mulai']) && !empty($jGuru['max_selesai'])) {
+                $jamMulaiKbm = substr($jGuru['min_mulai'], 0, 5);
+                $jamSelesaiKbm = substr($jGuru['max_selesai'], 0, 5);
+                $jamMasukMulai = min($standarMasukMulai, date('H:i', strtotime($tanggal . ' ' . $jamMulaiKbm . ' -30 minutes')));
+                $jamMasukBatas = $jamMulaiKbm;
+                $jamPulangMulai = $jamSelesaiKbm;
+                $sumber = 'jadwal_guru';
+                $keteranganJadwal = "Jadwal KBM Guru {$hariName}: Masuk {$jamMasukMulai} - {$jamMasukBatas} WIB, Pulang Mulai {$jamPulangMulai} WIB";
+            }
+        }
+
+        $isToday = ($tanggal === date('Y-m-d'));
+        $currentTime = date('H:i');
+
+        $canAbsenMasuk = true;
+        $canAbsenPulang = true;
+        $pesanJamMasuk = '';
+        $pesanJamPulang = '';
+
+        if ($isToday) {
+            if ($currentTime < $jamMasukMulai) {
+                $canAbsenMasuk = false;
+                $pesanJamMasuk = "Belum memasuki jadwal jam masuk. Jam masuk dibuka mulai pukul {$jamMasukMulai} WIB (Waktu sekarang: {$currentTime} WIB).";
+            }
+            if ($currentTime < $jamPulangMulai) {
+                $canAbsenPulang = false;
+                $pesanJamPulang = "Belum memasuki jadwal jam pulang. Jam kepulangan resmi dibuka mulai pukul {$jamPulangMulai} WIB (Waktu sekarang: {$currentTime} WIB).";
+            }
+        } elseif ($tanggal > date('Y-m-d')) {
+            $canAbsenMasuk = false;
+            $canAbsenPulang = false;
+            $pesanJamMasuk = "Tidak dapat melakukan presensi untuk tanggal di masa depan.";
+            $pesanJamPulang = "Tidak dapat melakukan presensi untuk tanggal di masa depan.";
+        }
+
+        return [
+            'tanggal' => $tanggal,
+            'hari' => $hariName,
+            'is_today' => $isToday,
+            'current_time' => $currentTime,
+            'jam_masuk_mulai' => $jamMasukMulai,
+            'jam_masuk_batas' => $jamMasukBatas,
+            'jam_pulang_mulai' => $jamPulangMulai,
+            'can_absen_masuk' => $canAbsenMasuk,
+            'can_absen_pulang' => $canAbsenPulang,
+            'pesan_jam_masuk' => $pesanJamMasuk,
+            'pesan_jam_pulang' => $pesanJamPulang,
+            'keterangan_jadwal' => $keteranganJadwal,
+            'sumber' => $sumber
+        ];
+    }
+
     public function saveManualAttendance($guruId, $mapelId, $siswaId, $tanggal, $status, $keterangan = '', $kategori = 'masuk') {
         $guruId = (int)$guruId;
         $mapelId = (int)$mapelId;
@@ -1609,6 +1710,26 @@ class AbsensiModel extends BaseModel {
             $kategori = 'masuk';
         }
 
+        // 1. Validasi Jadwal Jam Masuk & Pulang
+        $sched = $this->getPresensiScheduleInfo($guruId, $mapelId, $tanggal);
+        if ($kategori === 'pulang') {
+            if (!$sched['can_absen_pulang']) {
+                return [
+                    'success' => false,
+                    'reason' => 'belum_jam_pulang',
+                    'message' => $sched['pesan_jam_pulang'] ?: "Belum memasuki jadwal jam pulang (dibuka mulai pukul {$sched['jam_pulang_mulai']} WIB)."
+                ];
+            }
+        } else {
+            if (!$sched['can_absen_masuk']) {
+                return [
+                    'success' => false,
+                    'reason' => 'belum_jam_masuk',
+                    'message' => $sched['pesan_jam_masuk'] ?: "Belum memasuki jadwal jam masuk (dibuka mulai pukul {$sched['jam_masuk_mulai']} WIB)."
+                ];
+            }
+        }
+
         // Verify enrollment with fallback
         $chk = $this->db->prepare("SELECT id FROM siswa_mapel_enrollment WHERE siswa_id = ? AND mapel_id = ?");
         $chk->execute([$siswaId, $mapelId]);
@@ -1617,48 +1738,65 @@ class AbsensiModel extends BaseModel {
             $chk2 = $this->db->prepare("SELECT id FROM siswa WHERE id = ?");
             $chk2->execute([$siswaId]);
             if (!$chk2->fetch()) {
-                return false;
+                return [
+                    'success' => false,
+                    'reason' => 'not_found',
+                    'message' => 'Data siswa tidak ditemukan.'
+                ];
             }
         }
 
-        $stmtExist = $this->db->prepare("SELECT id, waktu_masuk, waktu_pulang FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
+        $stmtExist = $this->db->prepare("SELECT id, waktu_masuk, waktu_pulang, status FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
         $stmtExist->execute([$siswaId, $tanggal]);
-        $exist = $stmtExist->fetch();
+        $exist = $stmtExist->fetch(PDO::FETCH_ASSOC);
 
         $isAbsent = in_array($status, ['Izin', 'Sakit', 'Alpha']);
         $now = date('Y-m-d H:i:s');
         $resSave = false;
-        if ($exist) {
+
+        if ($kategori === 'pulang') {
+            // LOGIKA UTAMA: Siswa HARUS absen masuk terlebih dahulu baru bisa absen pulang!
+            // Cek apakah data absensi sudah ada, waktu_masuk tidak kosong, dan status awal siswa adalah Hadir
+            if (!$exist || empty($exist['waktu_masuk']) || strtolower($exist['status'] ?? '') !== 'hadir') {
+                return [
+                    'success' => false,
+                    'reason' => 'belum_masuk',
+                    'message' => 'Siswa belum melakukan absen masuk! Siswa wajib absen masuk terlebih dahulu sebelum bisa absen pulang.'
+                ];
+            }
+
             if ($isAbsent) {
                 $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_pulang = NULL, keterangan = ? WHERE id = ?");
                 $resSave = $stmt->execute([$guruId, $status, $keterangan ?: 'Tidak Hadir Ke Sekolah (' . $status . ')', $exist['id']]);
-            } else if ($kategori === 'pulang') {
+            } else {
                 $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_pulang = COALESCE(waktu_pulang, ?), keterangan = ? WHERE id = ?");
                 $resSave = $stmt->execute([$guruId, $status, $now, $keterangan ?: 'Presensi Manual Pulang Guru', $exist['id']]);
-            } else {
-                $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_masuk = COALESCE(waktu_masuk, ?), keterangan = ? WHERE id = ?");
-                $resSave = $stmt->execute([$guruId, $status, $now, $keterangan ?: 'Presensi Manual Masuk Guru', $exist['id']]);
             }
         } else {
-            $qrCodeVal = "MANUAL_" . $siswaId . "_" . date('YmdHis');
-            if ($isAbsent) {
-                $stmt = $this->db->prepare("
-                    INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
-                    VALUES (NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)
-                ");
-                $resSave = $stmt->execute([$siswaId, $guruId, $tanggal, $now, $status, $qrCodeVal, $keterangan ?: 'Tidak Hadir Ke Sekolah (' . $status . ')']);
-            } else if ($kategori === 'pulang') {
-                $stmt = $this->db->prepare("
-                    INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
-                    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ");
-                $resSave = $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Pulang Guru']);
+            // Kategori Masuk
+            if ($exist) {
+                if ($isAbsent) {
+                    $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_pulang = NULL, keterangan = ? WHERE id = ?");
+                    $resSave = $stmt->execute([$guruId, $status, $keterangan ?: 'Tidak Hadir Ke Sekolah (' . $status . ')', $exist['id']]);
+                } else {
+                    $stmt = $this->db->prepare("UPDATE absensi SET guru_id = ?, status = ?, waktu_masuk = COALESCE(waktu_masuk, ?), keterangan = ? WHERE id = ?");
+                    $resSave = $stmt->execute([$guruId, $status, $now, $keterangan ?: 'Presensi Manual Masuk Guru', $exist['id']]);
+                }
             } else {
-                $stmt = $this->db->prepare("
-                    INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
-                    VALUES (NULL, ?, ?, ?, ?, NULL, ?, ?, ?, ?)
-                ");
-                $resSave = $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Masuk Guru']);
+                $qrCodeVal = "MANUAL_" . $siswaId . "_" . date('YmdHis');
+                if ($isAbsent) {
+                    $stmt = $this->db->prepare("
+                        INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
+                        VALUES (NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)
+                    ");
+                    $resSave = $stmt->execute([$siswaId, $guruId, $tanggal, $now, $status, $qrCodeVal, $keterangan ?: 'Tidak Hadir Ke Sekolah (' . $status . ')']);
+                } else {
+                    $stmt = $this->db->prepare("
+                        INSERT INTO absensi (jadwal_id, siswa_id, guru_id, tanggal, waktu_masuk, waktu_pulang, waktu_hadir, status, qr_code, keterangan) 
+                        VALUES (NULL, ?, ?, ?, ?, NULL, ?, ?, ?, ?)
+                    ");
+                    $resSave = $stmt->execute([$siswaId, $guruId, $tanggal, $now, $now, $status, $qrCodeVal, $keterangan ?: 'Presensi Manual Masuk Guru']);
+                }
             }
         }
 
@@ -1688,7 +1826,10 @@ class AbsensiModel extends BaseModel {
             } catch (\Throwable $eWa) {}
         }
 
-        return $resSave;
+        return [
+            'success' => (bool)$resSave,
+            'message' => $resSave ? 'Presensi berhasil disimpan' : 'Gagal menyimpan data absensi'
+        ];
     }
 
     public function getMonthlyRecapForGuru($guruId, $bulan, $tahun, $mapelId = null, $kelasId = null) {
