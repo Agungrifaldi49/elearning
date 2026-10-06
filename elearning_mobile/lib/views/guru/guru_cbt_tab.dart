@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../models/quiz_model.dart';
 import 'guru_bank_soal_screen.dart';
 import 'guru_koreksi_quiz_screen.dart';
 
@@ -288,15 +289,16 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
 
 
 
-  void _showAddQuizModal() {
+  void _showAddQuizModal([QuizModel? quizToEdit]) {
     final guruProvider = Provider.of<GuruProvider>(context, listen: false);
     final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
     if (user == null) return;
 
-    final judulController = TextEditingController();
-    final deskripsiController = TextEditingController();
-    final durasiController = TextEditingController(text: '30');
-    final accessKeyController = TextEditingController();
+    final isEdit = quizToEdit != null;
+    final judulController = TextEditingController(text: quizToEdit?.judul ?? '');
+    final deskripsiController = TextEditingController(text: quizToEdit?.deskripsi ?? '');
+    final durasiController = TextEditingController(text: (quizToEdit?.durasiMenit ?? 30).toString());
+    final accessKeyController = TextEditingController(text: quizToEdit?.accessKey ?? '');
 
     final List<Map<String, dynamic>> mapels = [];
     final Set<int> mapelIdsSeen = {};
@@ -313,6 +315,10 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
         mapelIdsSeen.add(mId);
         mapels.add(m);
       }
+    }
+    if (quizToEdit != null && quizToEdit.mapelId > 0 && !mapelIdsSeen.contains(quizToEdit.mapelId)) {
+      mapels.insert(0, {'id': quizToEdit.mapelId, 'nama_mapel': quizToEdit.namaMapel});
+      mapelIdsSeen.add(quizToEdit.mapelId);
     }
 
     final List<Map<String, dynamic>> kelases = [];
@@ -331,14 +337,23 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
         kelases.add(k);
       }
     }
+    if (quizToEdit != null && quizToEdit.kelasId > 0 && !kelasIdsSeen.contains(quizToEdit.kelasId)) {
+      kelases.insert(0, {'id': quizToEdit.kelasId, 'nama_kelas': quizToEdit.namaKelas ?? 'Kelas #${quizToEdit.kelasId}'});
+      kelasIdsSeen.add(quizToEdit.kelasId);
+    }
 
-    int selectedMapelId = mapels.isNotEmpty ? (mapels.first['id'] is int ? mapels.first['id'] as int : int.parse(mapels.first['id'].toString())) : 1;
-    List<int> selectedKelasIds = kelases.isNotEmpty ? [(kelases.first['id'] is int ? kelases.first['id'] as int : int.parse(kelases.first['id'].toString()))] : [1];
+    int selectedMapelId = quizToEdit != null && quizToEdit.mapelId > 0
+        ? quizToEdit.mapelId
+        : (mapels.isNotEmpty ? (mapels.first['id'] is int ? mapels.first['id'] as int : int.parse(mapels.first['id'].toString())) : 1);
 
-    String selectedKategori = 'kuis';
-    String selectedRandomSoal = 'Y';
-    int selectedMaxAttempts = 1;
-    DateTime? selectedDeadline;
+    List<int> selectedKelasIds = quizToEdit != null && quizToEdit.targetKelasIds.isNotEmpty
+        ? List<int>.from(quizToEdit.targetKelasIds)
+        : (kelases.isNotEmpty ? [(kelases.first['id'] is int ? kelases.first['id'] as int : int.parse(kelases.first['id'].toString()))] : [1]);
+
+    String selectedKategori = quizToEdit?.kategori ?? 'kuis';
+    String selectedRandomSoal = quizToEdit?.randomSoal ?? 'Y';
+    int selectedMaxAttempts = quizToEdit?.maxAttempts ?? 1;
+    DateTime? selectedDeadline = quizToEdit?.deadline != null ? DateTime.tryParse(quizToEdit!.deadline!) : null;
     bool isSubmitting = false;
 
     // Helper to generate clean random token
@@ -385,20 +400,32 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: Colors.purple.shade50,
+                              color: isEdit ? Colors.blue.shade50 : Colors.purple.shade50,
                               borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: Colors.purple.shade100),
+                              border: Border.all(color: isEdit ? Colors.blue.shade200 : Colors.purple.shade100),
                             ),
-                            child: Icon(Icons.quiz_rounded, color: Colors.purple.shade800, size: 24),
+                            child: Icon(
+                              isEdit ? Icons.edit_note_rounded : Icons.quiz_rounded,
+                              color: isEdit ? Colors.blue.shade800 : Colors.purple.shade800,
+                              size: 24,
+                            ),
                           ),
                           const SizedBox(width: 12),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Buat Ujian CBT / Quiz Baru', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: -0.3)),
-                                SizedBox(height: 2),
-                                Text('Atur kategori ujian, token, durasi, dan deadline', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                Text(
+                                  isEdit ? 'Edit Ujian CBT / Quiz' : 'Buat Ujian CBT / Quiz Baru',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: -0.3),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isEdit
+                                      ? 'Perbarui judul, durasi, kelas, dan batas waktu kuis'
+                                      : 'Atur kategori ujian, token, durasi, dan deadline',
+                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
                               ],
                             ),
                           ),
@@ -896,27 +923,46 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                       ? DateFormat('yyyy-MM-dd HH:mm:ss').format(selectedDeadline!)
                                       : null;
 
-                                  final ok = await guruProvider.createQuiz(
-                                    user.id,
-                                    judulController.text.trim(),
-                                    deskripsiController.text.trim(),
-                                    selectedMapelId,
-                                    selectedKelasIds.first,
-                                    durasi,
-                                    kategori: selectedKategori,
-                                    deadline: deadlineStr,
-                                    randomSoal: selectedRandomSoal,
-                                    randomJawaban: 'Y',
-                                    maxAttempts: selectedMaxAttempts,
-                                    accessKey: tokenValue.isNotEmpty ? tokenValue : null,
-                                    kelasIds: selectedKelasIds,
-                                  );
+                                  final ok = isEdit
+                                      ? await guruProvider.updateQuiz(
+                                          user.id,
+                                          quizToEdit.id,
+                                          judulController.text.trim(),
+                                          deskripsiController.text.trim(),
+                                          selectedMapelId,
+                                          selectedKelasIds.first,
+                                          durasi,
+                                          kategori: selectedKategori,
+                                          deadline: deadlineStr,
+                                          randomSoal: selectedRandomSoal,
+                                          randomJawaban: 'Y',
+                                          maxAttempts: selectedMaxAttempts,
+                                          accessKey: tokenValue.isNotEmpty ? tokenValue : null,
+                                          kelasIds: selectedKelasIds,
+                                        )
+                                      : await guruProvider.createQuiz(
+                                          user.id,
+                                          judulController.text.trim(),
+                                          deskripsiController.text.trim(),
+                                          selectedMapelId,
+                                          selectedKelasIds.first,
+                                          durasi,
+                                          kategori: selectedKategori,
+                                          deadline: deadlineStr,
+                                          randomSoal: selectedRandomSoal,
+                                          randomJawaban: 'Y',
+                                          maxAttempts: selectedMaxAttempts,
+                                          accessKey: tokenValue.isNotEmpty ? tokenValue : null,
+                                          kelasIds: selectedKelasIds,
+                                        );
 
                                   if (context.mounted) {
                                     nav.pop();
                                     messenger.showSnackBar(
                                       SnackBar(
-                                        content: Text(ok ? 'Quiz CBT berhasil diterbitkan! ✅' : 'Gagal membuat quiz ❌'),
+                                        content: Text(ok
+                                            ? (isEdit ? 'Quiz CBT berhasil diperbarui! ✅' : 'Quiz CBT berhasil diterbitkan! ✅')
+                                            : (isEdit ? 'Gagal memperbarui quiz ❌' : 'Gagal membuat quiz ❌')),
                                         backgroundColor: ok ? AppTheme.primaryColor : Colors.red,
                                       ),
                                     );
@@ -928,11 +974,13 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                   height: 18,
                                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                                 )
-                              : const Icon(Icons.publish_rounded, size: 18),
-                          label: Text(isSubmitting ? 'Menerbitkan Ujian...' : 'Terbitkan Ujian CBT'),
+                              : Icon(isEdit ? Icons.save_rounded : Icons.publish_rounded, size: 18),
+                          label: Text(isSubmitting
+                              ? (isEdit ? 'Menyimpan Perubahan...' : 'Menerbitkan Ujian...')
+                              : (isEdit ? 'Simpan Perubahan Quiz' : 'Terbitkan Ujian CBT')),
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size(double.infinity, 52),
-                            backgroundColor: Colors.purple.shade800,
+                            backgroundColor: isEdit ? Colors.blue.shade800 : Colors.purple.shade800,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
@@ -1598,10 +1646,11 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                 ),
                                 const SizedBox(height: 14),
 
-                                // Action Row
+                                // Action Row (Edit, Kelola Soal, Salin Token, Hapus)
                                 Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
                                   children: [
                                     if (q.accessKey != null && q.accessKey!.trim().isNotEmpty)
                                       OutlinedButton.icon(
@@ -1615,16 +1664,28 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                             ),
                                           );
                                         },
-                                        icon: const Icon(Icons.copy_rounded, size: 14),
+                                        icon: const Icon(Icons.copy_rounded, size: 13),
                                         label: const Text('Salin Token'),
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: Colors.purple.shade800,
                                           side: BorderSide(color: Colors.purple.shade300),
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                          textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                         ),
                                       ),
+                                    OutlinedButton.icon(
+                                      onPressed: () => _showAddQuizModal(q),
+                                      icon: const Icon(Icons.edit_note_rounded, size: 15),
+                                      label: const Text('Edit Quiz'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.blue.shade800,
+                                        side: BorderSide(color: Colors.blue.shade300),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                    ),
                                     ElevatedButton.icon(
                                       onPressed: () {
                                         Navigator.push(
@@ -1632,16 +1693,24 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                                           MaterialPageRoute(builder: (_) => GuruBankSoalScreen(quiz: q)),
                                         );
                                       },
-                                      icon: const Icon(Icons.format_list_bulleted_rounded, size: 16),
-                                      label: const Text('Kelola Bank Soal'),
+                                      icon: const Icon(Icons.format_list_bulleted_rounded, size: 14),
+                                      label: const Text('Kelola Soal'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.purple.shade800,
                                         foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                         elevation: 1,
                                       ),
+                                    ),
+                                    IconButton(
+                                      tooltip: 'Hapus Quiz',
+                                      visualDensity: VisualDensity.compact,
+                                      padding: const EdgeInsets.all(4),
+                                      constraints: const BoxConstraints(),
+                                      icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 20),
+                                      onPressed: () => _confirmDeleteQuiz(q),
                                     ),
                                   ],
                                 ),
@@ -1656,6 +1725,61 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDeleteQuiz(QuizModel q) {
+    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+    if (user == null) return;
+    final guruProvider = Provider.of<GuruProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(10)),
+              child: Icon(Icons.delete_forever_rounded, color: Colors.red.shade700, size: 22),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text('Hapus Ujian CBT?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus ujian "${q.judul}"? Semua butir soal dan data pengerjaan siswa terkait kuis ini akan dihapus.',
+          style: const TextStyle(fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final messenger = ScaffoldMessenger.of(context);
+              final ok = await guruProvider.deleteQuiz(user.id, q.id);
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(ok ? 'Quiz "${q.judul}" berhasil dihapus! 🗑️' : 'Gagal menghapus quiz ❌'),
+                  backgroundColor: ok ? Colors.green.shade700 : Colors.red,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade700,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Hapus Quiz'),
+          ),
+        ],
       ),
     );
   }

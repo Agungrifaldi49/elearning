@@ -29,6 +29,7 @@ class QuizModel {
   final String? accessKey;
   final String? deadline;
   final String randomSoal;
+  final List<int> kelasIds;
 
   QuizModel({
     required this.id,
@@ -59,6 +60,7 @@ class QuizModel {
     this.accessKey,
     this.deadline,
     this.randomSoal = 'Y',
+    this.kelasIds = const [],
   });
 
   static int _parseInt(dynamic val, [int defaultVal = 0]) {
@@ -111,7 +113,16 @@ class QuizModel {
       accessKey: json['access_key'] ?? json['token'] ?? json['kunci_akses'],
       deadline: json['deadline']?.toString(),
       randomSoal: json['random_soal']?.toString() ?? 'Y',
+      kelasIds: (json['kelas_ids'] != null && json['kelas_ids'].toString().isNotEmpty)
+          ? json['kelas_ids'].toString().split(',').map((e) => int.tryParse(e.trim()) ?? 0).where((e) => e > 0).toList()
+          : (json['kelas_id'] != null && _parseInt(json['kelas_id']) > 0 ? [_parseInt(json['kelas_id'])] : const []),
     );
+  }
+
+  List<int> get targetKelasIds {
+    if (kelasIds.isNotEmpty) return kelasIds;
+    if (kelasId > 0) return [kelasId];
+    return const [];
   }
 
   bool get isCompleted => finishedAt != null || totalNilai != null;

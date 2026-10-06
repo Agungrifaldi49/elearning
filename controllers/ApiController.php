@@ -2225,6 +2225,25 @@ class ApiController {
             case 'quiz':
                 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $input = $this->getPostInput();
+                    $actionType = strtolower(trim($input['action'] ?? ($input['_action'] ?? 'create')));
+                    $quizId = intval($input['quiz_id'] ?? ($input['id'] ?? 0));
+
+                    // 1. Delete Quiz Action
+                    if ($actionType === 'delete' && $quizId > 0) {
+                        $targetQuiz = $examModel->getQuizById($quizId);
+                        if (!$targetQuiz) {
+                            $this->jsonResponse(false, 'Data kuis tidak ditemukan', null, 404);
+                        }
+                        if ((int)$targetQuiz['guru_id'] !== (int)$guru['id']) {
+                            $this->jsonResponse(false, 'Anda tidak memiliki hak akses untuk menghapus kuis ini', null, 403);
+                        }
+                        $examModel->deleteQuiz($quizId);
+                        $this->jsonResponse(true, 'Quiz / Ujian CBT berhasil dihapus!');
+                    }
+
+                    // 2. Create or Update Quiz Action
+                    $isUpdate = ($actionType === 'update' || $actionType === 'edit' || ($quizId > 0 && $actionType !== 'create'));
+
                     $judul = trim($input['judul'] ?? '');
                     $deskripsi = trim($input['deskripsi'] ?? '');
                     $mapelId = intval($input['mapel_id'] ?? 0);
@@ -2252,6 +2271,36 @@ class ApiController {
 
                     if (empty($judul) || $mapelId <= 0 || empty($kelasIds)) {
                         $this->jsonResponse(false, 'Judul, Mapel, dan Kelas target wajib diisi', null, 400);
+                    }
+
+                    if ($isUpdate && $quizId > 0) {
+                        $targetQuiz = $examModel->getQuizById($quizId);
+                        if (!$targetQuiz) {
+                            $this->jsonResponse(false, 'Data kuis tidak ditemukan', null, 404);
+                        }
+                        if ((int)$targetQuiz['guru_id'] !== (int)$guru['id']) {
+                            $this->jsonResponse(false, 'Anda tidak memiliki hak akses untuk mengedit kuis ini', null, 403);
+                        }
+
+                        $examModel->updateQuiz(
+                            $quizId,
+                            $mapelId,
+                            $kelasIds,
+                            $judul,
+                            $deskripsi,
+                            $durasi,
+                            $randomSoal,
+                            $deadline,
+                            $maxAttempts,
+                            $kategori,
+                            $accessKey
+                        );
+
+                        $this->jsonResponse(true, 'Quiz / Ujian CBT berhasil diperbarui!', [
+                            'id' => $quizId,
+                            'kategori' => $kategori,
+                            'access_key' => $accessKey
+                        ]);
                     }
 
                     $quizId = $examModel->createQuiz(
