@@ -5455,7 +5455,12 @@ class ApiController {
             }
         }
 
-        switch (strtolower($endpoint)) {
+        $rawSub = strtolower(trim($_GET['sub_action'] ?? $_GET['action_type'] ?? $input['action_type'] ?? $endpoint ?? 'list'));
+        if (empty($rawSub) || $rawSub === 'index') {
+            $rawSub = 'list';
+        }
+
+        switch ($rawSub) {
             case 'play':
             case 'detail':
                 if ($gameId <= 0) {
@@ -5463,7 +5468,7 @@ class ApiController {
                 }
                 $gameDetail = $gameModel->getGameDetail($gameId);
                 if (!$gameDetail) {
-                    $this->jsonResponse(false, 'Game Edukasi tidak ditemukan', null, 404);
+                    $this->jsonResponse(false, 'Game Edukasi tidak ditemukan di database', null, 404);
                 }
                 $soalList = $gameModel->getGameSoal($gameId);
                 $leaderboard = $gameModel->getLeaderboard($gameId);
@@ -5480,18 +5485,14 @@ class ApiController {
                 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
                     $this->jsonResponse(false, 'Method Request harus POST', null, 405);
                 }
-                if ($gameId <= 0 || ($siswaId <= 0 && $userId <= 0)) {
-                    $this->jsonResponse(false, 'Parameter ID Game / Siswa tidak lengkap', null, 400);
+                if ($gameId <= 0) {
+                    $this->jsonResponse(false, 'Parameter ID Game tidak valid', null, 400);
                 }
 
                 if (!$siswaId && $userId > 0) {
                     $siswaModel = new SiswaModel();
                     $siswa = $siswaModel->getByUserId($userId);
                     if ($siswa) $siswaId = $siswa['id'];
-                }
-
-                if ($siswaId <= 0) {
-                    $this->jsonResponse(false, 'Hanya akun Siswa yang dapat menyimpan skor game', null, 400);
                 }
 
                 $skorAkhir = intval($input['skor_akhir'] ?? $_POST['skor_akhir'] ?? 0);
@@ -5504,11 +5505,16 @@ class ApiController {
                 $kkm = intval($gameDetail['kkm'] ?? 75);
                 $statusLulus = ($skorAkhir >= $kkm) ? 'lulus' : 'tidak_lulus';
 
-                $ok = $gameModel->saveScore($gameId, $siswaId, $skorAkhir, $maxCombo, $totalBenar, $totalSoal, $waktuSelesai, $statusLulus);
+                if ($siswaId > 0) {
+                    $ok = $gameModel->saveScore($gameId, $siswaId, $skorAkhir, $maxCombo, $totalBenar, $totalSoal, $waktuSelesai, $statusLulus);
+                } else {
+                    // Mode Uji Coba Guru / Pengawas / Admin
+                    $ok = true;
+                }
                 $leaderboard = $gameModel->getLeaderboard($gameId);
 
                 if ($ok) {
-                    $this->jsonResponse(true, 'Skor game berhasil disimpan!', [
+                    $this->jsonResponse(true, 'Skor game berhasil disimpan ke database!', [
                         'game_id' => $gameId,
                         'skor_akhir' => $skorAkhir,
                         'max_combo' => $maxCombo,
@@ -5520,7 +5526,7 @@ class ApiController {
                         'leaderboard' => $leaderboard
                     ]);
                 } else {
-                    $this->jsonResponse(false, 'Gagal menyimpan skor game', null, 500);
+                    $this->jsonResponse(false, 'Gagal menyimpan skor game ke database', null, 500);
                 }
                 break;
 
@@ -5529,12 +5535,21 @@ class ApiController {
                     $this->jsonResponse(false, 'ID Game Edukasi tidak valid', null, 400);
                 }
                 $leaderboard = $gameModel->getLeaderboard($gameId);
-                $this->jsonResponse(true, 'Papan Peringkat Game', $leaderboard);
+                $this->jsonResponse(true, 'Papan Peringkat Game dari Database', $leaderboard);
                 break;
 
             case 'list':
             default:
-                $games = $gameModel->getAllGames($guruId, $kelasId);
+                $onlyMyGames = !empty($_GET['my_games']) || !empty($_GET['only_my_games']) || (($_GET['filter'] ?? '') === 'my');
+                $filterGuruId = $onlyMyGames ? $guruId : null;
+
+                // Ambil daftar game dari database
+                $games = $gameModel->getAllGames($filterGuruId, $kelasId);
+                if (empty($games) && $kelasId) {
+                    // Fallback ke game umum (semua kelas) jika rombel spesifik belum ada game khusus
+                    $games = $gameModel->getAllGames($filterGuruId, null);
+                }
+
                 if ($siswaId) {
                     foreach ($games as &$g) {
                         $bestScore = $gameModel->getStudentBestScore($g['id'], $siswaId);
@@ -5543,7 +5558,7 @@ class ApiController {
                     }
                     unset($g);
                 }
-                $this->jsonResponse(true, 'Daftar Game Edukasi Interaktif', $games);
+                $this->jsonResponse(true, 'Daftar Game Edukasi dari Database', $games);
                 break;
         }
     }

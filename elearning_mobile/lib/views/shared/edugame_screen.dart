@@ -48,77 +48,29 @@ class _EduGameScreenState extends State<EduGameScreen> {
 
     final res = await ApiService.get('game', params: {'user_id': userId.toString()});
     if (mounted) {
-      if (res['success'] == true && res['data'] is List && (res['data'] as List).isNotEmpty) {
+      if (res['success'] == true && res['data'] is List) {
         setState(() {
-          _games = res['data'];
+          _games = List<dynamic>.from(res['data'] ?? []);
           _applyFilters();
           _isLoading = false;
         });
       } else {
         setState(() {
-          _games = _getDefaultGamesFallback();
+          _games = [];
           _applyFilters();
           _isLoading = false;
         });
+        if (res['message'] != null && res['message'].toString().isNotEmpty && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(res['message'].toString()),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     }
-  }
-
-  List<Map<String, dynamic>> _getDefaultGamesFallback() {
-    return [
-      {
-        'id': 1,
-        'judul': 'Kuis Cerdas Cermat SMK & Kejuruan',
-        'deskripsi': 'Uji wawasan keahlian vokasi dan pengetahuan umummu dalam kuis kecepatan interaktif!',
-        'nama_mapel': 'Pengetahuan Umum & Kejuruan',
-        'nama_guru': 'Tim Kurikulum SMK',
-        'tipe_game': 'quiz_speed',
-        'total_soal': 4,
-        'durasi_per_soal': 15,
-        'kkm': 75,
-        'my_best_score': 100,
-        'my_status': 'lulus'
-      },
-      {
-        'id': 2,
-        'judul': 'Tebak Istilah Vokasi & Teknologi',
-        'deskripsi': 'Tebak istilah populer keahlian dan kejuruan SMK dalam mode kuis pilihan cepat!',
-        'nama_mapel': 'Keahlian IT & Vokasi',
-        'nama_guru': 'Tim Kurikulum SMK',
-        'tipe_game': 'spin_wheel',
-        'total_soal': 4,
-        'durasi_per_soal': 20,
-        'kkm': 70,
-        'my_best_score': null,
-        'my_status': null
-      },
-      {
-        'id': 3,
-        'judul': 'Memory Match Kosa Kata & Konsep SMK',
-        'deskripsi': 'Uji daya ingat dan pemahaman konsep keahlianmu dalam tantangan Memory Match!',
-        'nama_mapel': 'Konsentrasi Keahlian',
-        'nama_guru': 'Tim Kurikulum SMK',
-        'tipe_game': 'memory_match',
-        'total_soal': 4,
-        'durasi_per_soal': 20,
-        'kkm': 75,
-        'my_best_score': 75,
-        'my_status': 'lulus'
-      },
-      {
-        'id': 4,
-        'judul': 'Runner Quiz Kecepatan Kejuruan',
-        'deskripsi': 'Berlari cepat dan jawab tantangan kuis keahlian kejuruan sebelum waktu habis!',
-        'nama_mapel': 'Dasar Keahlian SMK',
-        'nama_guru': 'Tim Kurikulum SMK',
-        'tipe_game': 'mario_run',
-        'total_soal': 4,
-        'durasi_per_soal': 15,
-        'kkm': 75,
-        'my_best_score': null,
-        'my_status': null
-      }
-    ];
   }
 
   void _applyFilters() {
@@ -126,10 +78,10 @@ class _EduGameScreenState extends State<EduGameScreen> {
 
     setState(() {
       _filteredGames = _games.where((game) {
-        final judul = (game['judul'] ?? '').toString().toLowerCase();
+        final judul = (game['judul'] ?? game['nama_game'] ?? '').toString().toLowerCase();
         final mapel = (game['nama_mapel'] ?? '').toString().toLowerCase();
         final guru = (game['nama_guru'] ?? '').toString().toLowerCase();
-        final tipe = (game['tipe_game'] ?? '').toString().toLowerCase();
+        final tipe = (game['tipe_game'] ?? '').toString().toLowerCase().trim();
 
         final matchesSearch = query.isEmpty ||
             judul.contains(query) ||
@@ -138,13 +90,13 @@ class _EduGameScreenState extends State<EduGameScreen> {
 
         bool matchesMode = true;
         if (_selectedMode == 'Kuis Speed') {
-          matchesMode = tipe == 'quiz_speed';
+          matchesMode = tipe == 'quiz_speed' || tipe.contains('speed');
         } else if (_selectedMode == 'Spin Wheel') {
-          matchesMode = tipe == 'spin_wheel';
+          matchesMode = tipe == 'spin_wheel' || tipe.contains('spin') || tipe.contains('wheel');
         } else if (_selectedMode == 'Memory Match') {
-          matchesMode = tipe == 'memory_match';
+          matchesMode = tipe == 'memory_match' || tipe.contains('memory');
         } else if (_selectedMode == 'Mario Runner') {
-          matchesMode = tipe == 'mario_run' || tipe == 'runner';
+          matchesMode = tipe == 'mario_run' || tipe == 'runner' || tipe.contains('mario');
         }
 
         return matchesSearch && matchesMode;
@@ -313,22 +265,54 @@ class _EduGameScreenState extends State<EduGameScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator(color: Colors.purple))
                   : _filteredGames.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.videogame_asset_off_rounded, size: 54, color: Colors.grey.shade400),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Belum ada game edukasi tersedia.',
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 14, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Silakan periksa kembali filter atau pencarian Anda.',
-                                style: TextStyle(color: Colors.grey.shade500, fontSize: 11.5),
-                              ),
-                            ],
+                      ? SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.shade50,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.videogame_asset_off_rounded, size: 54, color: Colors.purple.shade400),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  _searchController.text.isNotEmpty || _selectedMode != 'Semua'
+                                      ? 'Tidak ada game yang sesuai filter'
+                                      : 'Belum Ada Game Edukasi di Database',
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white : Colors.black87,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _searchController.text.isNotEmpty || _selectedMode != 'Semua'
+                                      ? 'Coba sesuaikan pencarian atau pilih mode game lainnya.'
+                                      : 'Game edukasi interaktif dari database sekolah akan muncul di sini.',
+                                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 20),
+                                ElevatedButton.icon(
+                                  onPressed: _fetchGames,
+                                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                                  label: const Text('Segarkan Data'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.purple.shade800,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         )
                       : ListView.builder(
@@ -342,10 +326,10 @@ class _EduGameScreenState extends State<EduGameScreen> {
                             final mapelName = (game['nama_mapel'] ?? 'Mata Pelajaran').toString();
                             final guruName = (game['nama_guru'] ?? 'Guru Pengampu').toString();
                             final tipeGame = (game['tipe_game'] ?? 'quiz_speed').toString();
-                            final totalSoal = game['total_soal'] ?? 0;
-                            final kkm = game['kkm'] ?? 75;
-                            final myBestScore = game['my_best_score'];
-                            final myStatus = game['my_status'];
+                            final totalSoal = int.tryParse((game['total_soal'] ?? 0).toString()) ?? 0;
+                            final kkm = int.tryParse((game['kkm'] ?? 75).toString()) ?? 75;
+                            final myBestScore = game['my_best_score'] != null ? int.tryParse(game['my_best_score'].toString()) : null;
+                            final myStatus = game['my_status']?.toString();
 
                             final modeColor = _getTipeColor(tipeGame);
 

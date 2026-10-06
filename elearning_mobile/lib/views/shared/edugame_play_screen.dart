@@ -79,6 +79,14 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
         }
       } else {
         setState(() => _isLoading = false);
+        if (res['message'] != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(res['message'].toString()),
+              backgroundColor: Colors.red.shade700,
+            ),
+          );
+        }
       }
     }
   }
