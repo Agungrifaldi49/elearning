@@ -1,9 +1,12 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/tugas_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/guru_provider.dart';
 import '../../services/file_service.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 
 class GuruTugasTab extends StatefulWidget {
@@ -55,7 +58,16 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
     final bool isEdit = tugasToEdit != null;
     final judulController = TextEditingController(text: tugasToEdit?.judul ?? '');
     final deskripsiController = TextEditingController(text: tugasToEdit?.deskripsi ?? '');
-    final fileAttachmentController = TextEditingController(text: tugasToEdit?.filePath ?? '');
+
+    // Determine initial attachment type (Drive link vs Server/Local Upload)
+    final String initialFilePath = tugasToEdit?.filePath?.trim() ?? '';
+    final bool isInitialDrive = initialFilePath.startsWith('http://') || initialFilePath.startsWith('https://');
+
+    String attachmentType = isInitialDrive ? 'drive' : (initialFilePath.isNotEmpty ? 'upload' : 'drive');
+    final driveLinkController = TextEditingController(text: isInitialDrive ? initialFilePath : '');
+    File? selectedLocalFile;
+    String? existingServerFilename = (!isInitialDrive && initialFilePath.isNotEmpty) ? initialFilePath : null;
+    bool isUploadingFile = false;
 
     // Dynamically build mapel options strictly from teacher's schedule & assigned subjects
     final List<Map<String, dynamic>> mapels = [];
@@ -404,66 +416,401 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 6. Lampiran File Soal / Link Google Drive (Opsional)
-                  const Text('Lampiran File Soal / Link Drive (Opsional)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: fileAttachmentController,
-                    decoration: InputDecoration(
-                      hintText: 'Contoh: modul_tugas.pdf atau https://drive.google.com/...',
-                      prefixIcon: const Icon(Icons.attach_file_rounded, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  // 6. Lampiran File Soal (Pilihan Link Drive atau Upload Berkas)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Lampiran Berkas Soal / Modul (Opsional)',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      if (selectedLocalFile != null || driveLinkController.text.isNotEmpty || existingServerFilename != null)
+                        InkWell(
+                          onTap: () {
+                            setModalState(() {
+                              driveLinkController.clear();
+                              selectedLocalFile = null;
+                              existingServerFilename = null;
+                            });
+                          },
+                          child: const Text(
+                            'Hapus Lampiran',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.red),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Segmented Switcher (Link Drive vs Upload File)
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => setModalState(() => attachmentType = 'drive'),
+                            borderRadius: BorderRadius.circular(9),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: attachmentType == 'drive' ? AppTheme.primaryColor : Colors.transparent,
+                                borderRadius: BorderRadius.circular(9),
+                                boxShadow: attachmentType == 'drive'
+                                    ? [BoxShadow(color: AppTheme.primaryColor.withAlpha(50), blurRadius: 4, offset: const Offset(0, 2))]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.link_rounded,
+                                    size: 16,
+                                    color: attachmentType == 'drive' ? Colors.white : Colors.grey.shade700,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Link Drive / URL',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: attachmentType == 'drive' ? Colors.white : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => setModalState(() => attachmentType = 'upload'),
+                            borderRadius: BorderRadius.circular(9),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: attachmentType == 'upload' ? AppTheme.primaryColor : Colors.transparent,
+                                borderRadius: BorderRadius.circular(9),
+                                boxShadow: attachmentType == 'upload'
+                                    ? [BoxShadow(color: AppTheme.primaryColor.withAlpha(50), blurRadius: 4, offset: const Offset(0, 2))]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.upload_file_rounded,
+                                    size: 16,
+                                    color: attachmentType == 'upload' ? Colors.white : Colors.grey.shade700,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Upload File Dokumen',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: attachmentType == 'upload' ? Colors.white : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 10),
+
+                  // Option 1: Drive / URL Field
+                  if (attachmentType == 'drive') ...[
+                    TextField(
+                      controller: driveLinkController,
+                      decoration: InputDecoration(
+                        hintText: 'https://drive.google.com/file/d/.../view',
+                        prefixIcon: const Icon(Icons.cloud_circle_rounded, size: 22, color: Color(0xFF1A73E8)),
+                        suffixIcon: driveLinkController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () => setModalState(() => driveLinkController.clear()),
+                              )
+                            : null,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                      onChanged: (val) => setModalState(() {}),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, size: 13, color: Colors.grey.shade600),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Pastikan akses link Google Drive disetel ke "Siapa saja yang memiliki link".',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+
+                  // Option 2: Upload File Box
+                  if (attachmentType == 'upload') ...[
+                    if (selectedLocalFile != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.green.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.insert_drive_file_rounded, color: Colors.green.shade800, size: 22),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    selectedLocalFile!.path.split(Platform.pathSeparator).last,
+                                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.black87),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${(selectedLocalFile!.lengthSync() / 1024).toStringAsFixed(1)} KB • Berkas lokal siap diunggah',
+                                    style: TextStyle(fontSize: 11, color: Colors.green.shade800),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.change_circle_rounded, color: Colors.blue),
+                              tooltip: 'Ganti File',
+                              onPressed: () async {
+                                final result = await FilePicker.pickFiles(
+                                  type: FileType.custom,
+                                  allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip', 'rar', 'jpg', 'jpeg', 'png'],
+                                );
+                                if (result.isNotEmpty && result.first.path != null) {
+                                  setModalState(() {
+                                    selectedLocalFile = File(result.first.path!);
+                                  });
+                                }
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, color: Colors.red),
+                              tooltip: 'Batal',
+                              onPressed: () => setModalState(() => selectedLocalFile = null),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (existingServerFilename != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.cloud_done_rounded, color: Colors.blue.shade800, size: 22),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    existingServerFilename!,
+                                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.black87),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Tersimpan di server • Klik ganti untuk memperbarui',
+                                    style: TextStyle(fontSize: 11, color: Colors.blue.shade800),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final result = await FilePicker.pickFiles(
+                                  type: FileType.custom,
+                                  allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip', 'rar', 'jpg', 'jpeg', 'png'],
+                                );
+                                if (result.isNotEmpty && result.first.path != null) {
+                                  setModalState(() {
+                                    selectedLocalFile = File(result.first.path!);
+                                    existingServerFilename = null;
+                                  });
+                                }
+                              },
+                              icon: const Icon(Icons.upload_rounded, size: 14),
+                              label: const Text('Ganti', style: TextStyle(fontSize: 11)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppTheme.primaryColor,
+                                side: const BorderSide(color: AppTheme.primaryColor),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      InkWell(
+                        onTap: () async {
+                          final result = await FilePicker.pickFiles(
+                            type: FileType.custom,
+                            allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip', 'rar', 'jpg', 'jpeg', 'png'],
+                          );
+                          if (result.isNotEmpty && result.first.path != null) {
+                            setModalState(() {
+                              selectedLocalFile = File(result.first.path!);
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withAlpha(20),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.cloud_upload_rounded, color: AppTheme.primaryColor, size: 28),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Klik untuk Pilih Dokumen / File',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Format didukung: PDF, Word DOC, PPT, Excel, Gambar, ZIP (Maks 25 MB)',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                   const SizedBox(height: 20),
 
                   // Submit Button
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      if (judulController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Judul tugas wajib diisi!'), backgroundColor: Colors.red),
-                        );
-                        return;
-                      }
+                  ElevatedButton(
+                    onPressed: isUploadingFile
+                        ? null
+                        : () async {
+                            if (judulController.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Judul tugas wajib diisi!'), backgroundColor: Colors.red),
+                              );
+                              return;
+                            }
 
-                      final nav = Navigator.of(context);
-                      final messenger = ScaffoldMessenger.of(context);
+                            final nav = Navigator.of(context);
+                            final messenger = ScaffoldMessenger.of(context);
 
-                      final ok = isEdit
-                          ? await guruProvider.updateTugas(
-                              user.id,
-                              tugasToEdit.id,
-                              judulController.text.trim(),
-                              deskripsiController.text.trim(),
-                              selectedMapelId,
-                              selectedKelasIds.toList(),
-                              deadlineFormatted,
-                              filePath: fileAttachmentController.text.trim(),
-                            )
-                          : await guruProvider.createTugas(
-                              user.id,
-                              judulController.text.trim(),
-                              deskripsiController.text.trim(),
-                              selectedMapelId,
-                              selectedKelasIds.toList(),
-                              deadlineFormatted,
-                              filePath: fileAttachmentController.text.trim(),
+                            // Handle file upload or drive link
+                            String finalFilePath = '';
+                            if (attachmentType == 'drive') {
+                              finalFilePath = driveLinkController.text.trim();
+                            } else {
+                              if (selectedLocalFile != null) {
+                                setModalState(() => isUploadingFile = true);
+                                final uploadedName = await guruProvider.uploadTugasFile(selectedLocalFile!);
+                                setModalState(() => isUploadingFile = false);
+
+                                if (uploadedName == null || uploadedName.isEmpty) {
+                                  if (context.mounted) {
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Gagal mengunggah berkas ke server. Pastikan ukuran file maks 25MB dan koneksi lancar.'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+                                finalFilePath = uploadedName;
+                              } else if (existingServerFilename != null && existingServerFilename!.isNotEmpty) {
+                                finalFilePath = existingServerFilename!;
+                              }
+                            }
+
+                            final ok = isEdit
+                                ? await guruProvider.updateTugas(
+                                    user.id,
+                                    tugasToEdit.id,
+                                    judulController.text.trim(),
+                                    deskripsiController.text.trim(),
+                                    selectedMapelId,
+                                    selectedKelasIds.toList(),
+                                    deadlineFormatted,
+                                    filePath: finalFilePath,
+                                  )
+                                : await guruProvider.createTugas(
+                                    user.id,
+                                    judulController.text.trim(),
+                                    deskripsiController.text.trim(),
+                                    selectedMapelId,
+                                    selectedKelasIds.toList(),
+                                    deadlineFormatted,
+                                    filePath: finalFilePath,
+                                  );
+
+                            nav.pop();
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(ok
+                                    ? (isEdit ? 'Tugas berhasil diperbarui!' : 'Tugas berhasil dipublikasikan!')
+                                    : (isEdit ? 'Gagal memperbarui tugas' : 'Gagal membuat tugas')),
+                                backgroundColor: ok ? AppTheme.secondaryColor : Colors.red,
+                              ),
                             );
-
-                      nav.pop();
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(ok
-                              ? (isEdit ? 'Tugas berhasil diperbarui!' : 'Tugas berhasil dipublikasikan!')
-                              : (isEdit ? 'Gagal memperbarui tugas' : 'Gagal membuat tugas')),
-                          backgroundColor: ok ? AppTheme.secondaryColor : Colors.red,
-                        ),
-                      );
-                    },
-                    icon: Icon(isEdit ? Icons.save_rounded : Icons.send_rounded, size: 18),
-                    label: Text(isEdit ? 'Simpan Perubahan Tugas' : 'Publikasikan Tugas Baru'),
+                          },
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 50),
                       backgroundColor: isEdit ? Colors.blue.shade700 : AppTheme.primaryColor,
@@ -471,6 +818,27 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
+                    child: isUploadingFile
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                              ),
+                              SizedBox(width: 10),
+                              Text('Mengunggah Berkas Lampiran...'),
+                            ],
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(isEdit ? Icons.save_rounded : Icons.send_rounded, size: 18),
+                              const SizedBox(width: 8),
+                              Text(isEdit ? 'Simpan Perubahan Tugas' : 'Publikasikan Tugas Baru'),
+                            ],
+                          ),
                   ),
                 ],
               ),
@@ -639,7 +1007,7 @@ class _GuruTugasTabState extends State<GuruTugasTab> {
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  FileService.showInAppPreview(context, t.filePath!, 'Lampiran Soal: ${t.judul}', studentName: 'Guru');
+                  FileService.showInAppPreview(context, ApiService.getFileUrl(t.filePath), 'Lampiran Soal: ${t.judul}', studentName: 'Guru');
                 },
                 icon: const Icon(Icons.file_present_rounded),
                 label: const Text('Buka Berkas Soal / Modul'),

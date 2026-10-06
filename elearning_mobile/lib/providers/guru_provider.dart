@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/materi_model.dart';
@@ -240,6 +241,24 @@ class GuruProvider with ChangeNotifier {
       return true;
     }
     return false;
+  }
+
+  Future<String?> uploadTugasFile(File file) async {
+    try {
+      final res = await ApiService.postMultipart(
+        'guru/upload_tugas_file',
+        files: {'file_tugas': file},
+      );
+      if (res['success'] == true && res['data'] is Map) {
+        final filename = res['data']['filename'] ?? res['data']['file_path'];
+        if (filename != null && filename.toString().trim().isNotEmpty) {
+          return filename.toString().trim();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error uploading tugas file: $e');
+    }
+    return null;
   }
 
   Future<List<dynamic>> fetchSubmissions(int userId, int tugasId) async {

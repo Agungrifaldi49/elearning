@@ -2767,6 +2767,82 @@ class ApiController {
                 ]);
                 break;
 
+            case 'upload_tugas_file':
+            case 'upload_tugas':
+                require_once ROOT_PATH . 'helpers/UploadHelper.php';
+                $uploadedFilename = null;
+
+                $fileKey = null;
+                if (!empty($_FILES['file_tugas']) && $_FILES['file_tugas']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'file_tugas';
+                } elseif (!empty($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'file';
+                } elseif (!empty($_FILES['lampiran']) && $_FILES['lampiran']['error'] === UPLOAD_ERR_OK) {
+                    $fileKey = 'lampiran';
+                }
+
+                if ($fileKey === null && !empty($_FILES)) {
+                    foreach ($_FILES as $k => $f) {
+                        if (isset($f['error']) && $f['error'] === UPLOAD_ERR_OK) {
+                            $fileKey = $k;
+                            break;
+                        }
+                    }
+                }
+
+                if ($fileKey !== null) {
+                    $resFile = UploadHelper::upload($_FILES[$fileKey], 'tugas');
+                    if ($resFile) {
+                        $uploadedFilename = $resFile;
+                    }
+                }
+
+                // Fallback jika base64
+                if (empty($uploadedFilename)) {
+                    $input = $this->getPostInput();
+                    $b64 = $input['file_base64'] ?? $input['base64'] ?? '';
+                    $originalName = trim($input['file_name'] ?? 'lampiran_tugas.pdf');
+                    if (!empty($b64)) {
+                        if (strpos($b64, ';base64,') !== false) {
+                            $parts = explode(';base64,', $b64, 2);
+                            $b64 = $parts[1];
+                        } elseif (strpos($b64, ',') !== false && strpos($b64, 'data:') === 0) {
+                            $parts = explode(',', $b64, 2);
+                            $b64 = $parts[1];
+                        }
+                        $b64Clean = str_replace(' ', '+', $b64);
+                        $b64Clean = preg_replace('/[^a-zA-Z0-9\+\/=]/', '', $b64Clean);
+                        $fileData = base64_decode($b64Clean, true);
+                        if ($fileData !== false && strlen($fileData) > 0) {
+                            $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION)) ?: 'pdf';
+                            $targetDir = defined('UPLOADS_PATH') ? UPLOADS_PATH . 'tugas/' : (ROOT_PATH . 'assets/uploads/tugas/');
+                            $targetDir = str_replace('\\', '/', $targetDir);
+                            if (!is_dir($targetDir)) @mkdir($targetDir, 0777, true);
+                            @chmod($targetDir, 0777);
+
+                            $filename = 'tugas_' . time() . '_' . mt_rand(1000, 9999) . '.' . $ext;
+                            if (@file_put_contents($targetDir . $filename, $fileData)) {
+                                @chmod($targetDir . $filename, 0666);
+                                $uploadedFilename = $filename;
+                            }
+                        }
+                    }
+                }
+
+                if (!empty($uploadedFilename)) {
+                    $fullUrl = BASE_URL . 'assets/uploads/tugas/' . $uploadedFilename;
+                    $this->jsonResponse(true, 'Berkas lampiran tugas berhasil diunggah!', [
+                        'filename' => $uploadedFilename,
+                        'file_url' => $fullUrl,
+                        'file_path' => $uploadedFilename,
+                    ]);
+                } else {
+                    $err = $_SESSION['flash_error'] ?? 'Gagal mengunggah berkas. Pastikan format file sesuai (PDF, DOC, DOCX, PPT, PPTX, JPG, PNG, ZIP, RAR maks 25MB).';
+                    unset($_SESSION['flash_error']);
+                    $this->jsonResponse(false, $err, null, 400);
+                }
+                break;
+
             case 'upload_soal_gambar':
             case 'upload_gambar_soal':
                 require_once ROOT_PATH . 'helpers/UploadHelper.php';
