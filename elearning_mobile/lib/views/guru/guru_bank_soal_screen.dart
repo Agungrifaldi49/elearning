@@ -1097,8 +1097,11 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -1388,41 +1391,42 @@ class _GuruBankSoalScreenState extends State<GuruBankSoalScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // Header Badges Row (Overflow-safe)
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  Wrap(
+                                    alignment: WrapAlignment.spaceBetween,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 6,
+                                    runSpacing: 6,
                                     children: [
-                                      Flexible(
-                                        child: Wrap(
-                                          spacing: 6,
-                                          runSpacing: 4,
-                                          crossAxisAlignment: WrapCrossAlignment.center,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: Colors.purple.shade50,
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                'Soal #${index + 1}',
-                                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple.shade800),
-                                              ),
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 4,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.purple.shade50,
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(color: Colors.purple.shade200),
                                             ),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: jenisBgColor,
-                                                borderRadius: BorderRadius.circular(20),
-                                              ),
-                                              child: Text(
-                                                jenisLabel,
-                                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: jenisTextColor),
-                                              ),
+                                            child: Text(
+                                              'Soal #${index + 1}',
+                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple.shade800),
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: jenisBgColor,
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              jenisLabel,
+                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: jenisTextColor),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 8),
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [

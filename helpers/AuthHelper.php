@@ -89,6 +89,24 @@ class AuthHelper {
     }
 
     /**
+     * Get Current Logged In User ID
+     */
+    public static function userId() {
+        if (isset($_SESSION['user_id'])) {
+            return (int)$_SESSION['user_id'];
+        }
+        $u = self::user();
+        return (int)($u['id'] ?? 0);
+    }
+
+    /**
+     * Alias for userId()
+     */
+    public static function id() {
+        return self::userId();
+    }
+
+    /**
      * Set User Session after successful login
      */
     public static function login($user) {

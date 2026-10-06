@@ -482,7 +482,7 @@ class GuruController {
         $roleName = strtolower(AuthHelper::user()['role_name'] ?? '');
         $isAdminMonitoring = ($roleName === 'administrator');
         $queryGuruId = $isAdminMonitoring ? null : $guruId;
-        $userId = (int)AuthHelper::userId();
+        $userId = (int)(AuthHelper::userId() ?: ($_SESSION['user_id'] ?? (AuthHelper::user()['id'] ?? 0)));
         $guruUserId = (int)($guru['user_id'] ?? 0);
 
         $checkQuizPermission = function($targetQuizId) use ($examModel, $isAdminMonitoring, $guruId, $userId, $guruUserId) {
@@ -1649,7 +1649,7 @@ class GuruController {
     public function bankSoal() {
         $guru = $this->getGuruInfo();
         $guruId = (int)($guru['id'] ?? 0);
-        $userId = (int)AuthHelper::userId();
+        $userId = (int)(AuthHelper::userId() ?: ($_SESSION['user_id'] ?? (AuthHelper::user()['id'] ?? 0)));
         $guruUserId = (int)($guru['user_id'] ?? 0);
 
         $examModel = new ExamModel();

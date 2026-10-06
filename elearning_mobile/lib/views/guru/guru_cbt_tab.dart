@@ -1013,36 +1013,33 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF38BDF8),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.quiz_rounded, size: 14, color: Color(0xFF0F172A)),
-                              SizedBox(width: 4),
-                              Flexible(
-                                child: Text(
-                                  'CBT & Quiz Center',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF38BDF8),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.quiz_rounded, size: 14, color: Color(0xFF0F172A)),
+                            SizedBox(width: 4),
+                            Text(
+                              'CBT & Quiz Center',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
                       ElevatedButton.icon(
                         onPressed: _showAddQuizModal,
-                        icon: const Icon(Icons.add_circle_rounded, size: 16),
+                        icon: const Icon(Icons.add_circle_rounded, size: 15),
                         label: const Text('Buat Quiz'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.purple.shade600,
@@ -1379,57 +1376,60 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // Mapel, Kategori & Status Badges
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                Wrap(
+                                  alignment: WrapAlignment.spaceBetween,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 6,
+                                  runSpacing: 6,
                                   children: [
-                                    Flexible(
-                                      child: Wrap(
-                                        spacing: 6,
-                                        runSpacing: 4,
-                                        crossAxisAlignment: WrapCrossAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: Colors.purple.shade50,
-                                              borderRadius: BorderRadius.circular(20),
-                                              border: Border.all(color: Colors.purple.shade200),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(Icons.book_rounded, size: 12, color: Colors.purple.shade800),
-                                                const SizedBox(width: 4),
-                                                Text(
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.purple.shade50,
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: Colors.purple.shade200),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.book_rounded, size: 12, color: Colors.purple.shade800),
+                                              const SizedBox(width: 4),
+                                              ConstrainedBox(
+                                                constraints: const BoxConstraints(maxWidth: 130),
+                                                child: Text(
                                                   q.namaMapel,
                                                   style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.purple.shade800),
                                                   overflow: TextOverflow.ellipsis,
                                                 ),
-                                              ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: q.isUts || q.isUas ? Colors.amber.shade100 : Colors.blue.shade50,
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(
+                                              color: q.isUts || q.isUas ? Colors.amber.shade400 : Colors.blue.shade200,
                                             ),
                                           ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: q.isUts || q.isUas ? Colors.amber.shade100 : Colors.blue.shade50,
-                                              borderRadius: BorderRadius.circular(20),
-                                              border: Border.all(
-                                                color: q.isUts || q.isUas ? Colors.amber.shade400 : Colors.blue.shade200,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              q.kategoriBadgeText,
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: q.isUts || q.isUas ? Colors.amber.shade900 : Colors.blue.shade900,
-                                              ),
+                                          child: Text(
+                                            q.kategoriBadgeText,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: q.isUts || q.isUas ? Colors.amber.shade900 : Colors.blue.shade900,
                                             ),
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 6),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
@@ -1667,46 +1667,54 @@ class _GuruCbtTabState extends State<GuruCbtTab> {
     required Color iconColor,
     required Color bgColor,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: iconColor, size: 22),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 150;
+        return Container(
+          padding: EdgeInsets.all(isCompact ? 10 : 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 10, offset: const Offset(0, 2)),
+            ],
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isCompact ? 6 : 8),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                Text(
-                  value,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87),
-                  overflow: TextOverflow.ellipsis,
+                child: Icon(icon, color: iconColor, size: isCompact ? 18 : 20),
+              ),
+              SizedBox(width: isCompact ? 6 : 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(fontSize: isCompact ? 10 : 11, color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                    Text(
+                      value,
+                      style: TextStyle(fontSize: isCompact ? 12 : 14, fontWeight: FontWeight.bold, color: Colors.black87),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
