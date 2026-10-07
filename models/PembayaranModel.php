@@ -123,29 +123,53 @@ class PembayaranModel {
     /**
      * Get All Bills for a Specific Student
      */
-    public function getSiswaBills($siswaId) {
+    public function getSiswaBills($siswaId, $nis = null, $nisn = null) {
         $siswaId = (int)$siswaId;
+        $clauses = ["t.siswa_id = ?"];
+        $params = [$siswaId];
+        if (!empty($nisn)) {
+            $clauses[] = "(t.nisn IS NOT NULL AND t.nisn != '' AND t.nisn = ?)";
+            $params[] = trim($nisn);
+        }
+        if (!empty($nis)) {
+            $clauses[] = "(t.nis IS NOT NULL AND t.nis != '' AND t.nis = ?)";
+            $params[] = trim($nis);
+        }
+        $where = "(" . implode(" OR ", $clauses) . ")";
+
         $stmt = $this->db->prepare("
             SELECT t.*,
                    COALESCE((SELECT r.tanggal_bayar FROM pembayaran_riwayat r WHERE r.tagihan_id = t.id AND r.status = 'berhasil' ORDER BY r.id DESC LIMIT 1), NULL) as tgl_terakhir_bayar,
                    COALESCE((SELECT r.metode_pembayaran FROM pembayaran_riwayat r WHERE r.tagihan_id = t.id AND r.status = 'berhasil' ORDER BY r.id DESC LIMIT 1), NULL) as metode_terakhir_bayar,
                    COALESCE((SELECT r.nomor_transaksi FROM pembayaran_riwayat r WHERE r.tagihan_id = t.id AND r.status = 'berhasil' ORDER BY r.id DESC LIMIT 1), NULL) as nomor_transaksi
             FROM pembayaran_tagihan t
-            WHERE t.siswa_id = ?
+            WHERE {$where}
             ORDER BY 
                 CASE WHEN t.status = 'belum_lunas' THEN 1 WHEN t.status = 'sebagian' THEN 2 ELSE 3 END,
                 t.tanggal_jatuh_tempo ASC, 
                 t.id DESC
         ");
-        $stmt->execute([$siswaId]);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     /**
      * Get Student Payment Summary (Total, Paid, Outstanding, Clearance)
      */
-    public function getSiswaPaymentSummary($siswaId) {
+    public function getSiswaPaymentSummary($siswaId, $nis = null, $nisn = null) {
         $siswaId = (int)$siswaId;
+        $clauses = ["siswa_id = ?"];
+        $params = [$siswaId];
+        if (!empty($nisn)) {
+            $clauses[] = "(nisn IS NOT NULL AND nisn != '' AND nisn = ?)";
+            $params[] = trim($nisn);
+        }
+        if (!empty($nis)) {
+            $clauses[] = "(nis IS NOT NULL AND nis != '' AND nis = ?)";
+            $params[] = trim($nis);
+        }
+        $where = "(" . implode(" OR ", $clauses) . ")";
+
         $stmt = $this->db->prepare("
             SELECT 
                 COUNT(*) as total_item_tagihan,
@@ -155,9 +179,9 @@ class PembayaranModel {
                 SUM(CASE WHEN status = 'lunas' THEN 1 ELSE 0 END) as count_lunas,
                 SUM(CASE WHEN status != 'lunas' THEN 1 ELSE 0 END) as count_belum_lunas
             FROM pembayaran_tagihan
-            WHERE siswa_id = ?
+            WHERE {$where}
         ");
-        $stmt->execute([$siswaId]);
+        $stmt->execute($params);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
         $totalTagihan = (float)($row['total_nominal_tagihan'] ?? 0);
@@ -170,13 +194,13 @@ class PembayaranModel {
                 'total_tagihan' => 0,
                 'total_terbayar' => 0,
                 'total_tunggakan' => 0,
-                'persen_lunas' => 0,
+                'persen_lunas' => 100,
                 'count_lunas' => 0,
                 'count_belum_lunas' => 0,
                 'has_bills' => false,
-                'is_bebas_keuangan' => false,
-                'status_label' => 'Belum Ada Data Tagihan',
-                'badge_class' => 'bg-secondary text-white'
+                'is_bebas_keuangan' => true,
+                'status_label' => 'Bebas Tanggungan (Tidak Ada Tagihan)',
+                'badge_class' => 'bg-success text-white'
             ];
         }
 
@@ -200,16 +224,28 @@ class PembayaranModel {
     /**
      * Get Student Payment Transaction History
      */
-    public function getSiswaRiwayatPembayaran($siswaId) {
+    public function getSiswaRiwayatPembayaran($siswaId, $nis = null, $nisn = null) {
         $siswaId = (int)$siswaId;
+        $clauses = ["r.siswa_id = ?"];
+        $params = [$siswaId];
+        if (!empty($nisn)) {
+            $clauses[] = "(t.nisn IS NOT NULL AND t.nisn != '' AND t.nisn = ?)";
+            $params[] = trim($nisn);
+        }
+        if (!empty($nis)) {
+            $clauses[] = "(t.nis IS NOT NULL AND t.nis != '' AND t.nis = ?)";
+            $params[] = trim($nis);
+        }
+        $where = "(" . implode(" OR ", $clauses) . ")";
+
         $stmt = $this->db->prepare("
             SELECT r.*, t.judul as nama_tagihan, t.jenis_pembayaran, t.periode_bulan, t.kode_tagihan, t.tahun_ajaran
             FROM pembayaran_riwayat r
             JOIN pembayaran_tagihan t ON r.tagihan_id = t.id
-            WHERE r.siswa_id = ?
+            WHERE {$where}
             ORDER BY r.tanggal_bayar DESC, r.id DESC
         ");
-        $stmt->execute([$siswaId]);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 

@@ -790,7 +790,7 @@ class _SiswaPembayaranScreenState extends State<SiswaPembayaranScreen> with Sing
             child: _buildMetricTile(
               label: 'Total Tagihan',
               amount: totalTagihan,
-              sub: 'T.A 2025/2026',
+              sub: 'T.A ${(_summary['tahun_ajaran'] ?? '2025/2026')}',
               accentColor: const Color(0xFF0284C7),
               icon: Icons.receipt_long_rounded,
               isDark: isDark,

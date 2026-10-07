@@ -236,25 +236,41 @@ class ApiController {
         }
 
         $siswa = null;
-        if ($userId > 0 && isset($userObj['role_id']) && (int)$userObj['role_id'] === 3) {
-            $siswa = $siswaModel->ensureSiswaProfile($userId, $userObj['full_name'] ?? '');
-        }
-
-        if (!$siswa && $userId > 0) {
-            $stmtS2 = $this->db->prepare("
-                SELECT s.*, k.nama_kelas, j.nama_jurusan 
+        if ($userId > 0) {
+            // 1. Direct match by siswa.user_id = $userId (account ID)
+            $stmtS1 = $this->db->prepare("
+                SELECT s.*, k.nama_kelas, k.tingkat, j.nama_jurusan 
                 FROM siswa s 
                 LEFT JOIN kelas k ON s.kelas_id = k.id 
                 LEFT JOIN jurusan j ON s.jurusan_id = j.id 
-                WHERE s.id = :sid LIMIT 1
+                WHERE s.user_id = :uid LIMIT 1
             ");
-            $stmtS2->execute(['sid' => $userId]);
-            $siswa = $stmtS2->fetch(PDO::FETCH_ASSOC);
+            $stmtS1->execute(['uid' => $userId]);
+            $siswa = $stmtS1->fetch(PDO::FETCH_ASSOC);
+
+            // 2. Match by siswa.id = $userId
+            if (!$siswa) {
+                $stmtS2 = $this->db->prepare("
+                    SELECT s.*, k.nama_kelas, k.tingkat, j.nama_jurusan 
+                    FROM siswa s 
+                    LEFT JOIN kelas k ON s.kelas_id = k.id 
+                    LEFT JOIN jurusan j ON s.jurusan_id = j.id 
+                    WHERE s.id = :sid LIMIT 1
+                ");
+                $stmtS2->execute(['sid' => $userId]);
+                $siswa = $stmtS2->fetch(PDO::FETCH_ASSOC);
+            }
+
+            // 3. Fallback to ensureSiswaProfile if userObj exists
+            if (!$siswa && $userObj) {
+                $siswa = $siswaModel->ensureSiswaProfile($userId, $userObj['full_name'] ?? '');
+            }
         }
 
-        if (!$siswa) {
+        // Only fall back to first student if userId was 0 / not provided (e.g. testing)
+        if (!$siswa && $userId <= 0) {
             $stmtS = $this->db->query("
-                SELECT s.*, k.nama_kelas, j.nama_jurusan 
+                SELECT s.*, k.nama_kelas, k.tingkat, j.nama_jurusan 
                 FROM siswa s 
                 LEFT JOIN kelas k ON s.kelas_id = k.id 
                 LEFT JOIN jurusan j ON s.jurusan_id = j.id 
@@ -1280,11 +1296,8 @@ class ApiController {
                 require_once ROOT_PATH . 'models/PembayaranModel.php';
                 $pembayaranModel = new PembayaranModel();
                 $siswaId = intval($siswa['id'] ?? 0);
-
-                // Auto-seed sample bills if table is completely empty so student immediately sees realistic portal
-                try {
-                    $pembayaranModel->seedInitialDataIfEmpty();
-                } catch (\Throwable $eSeed) {}
+                $nis = trim($siswa['nis'] ?? '');
+                $nisn = trim($siswa['nisn'] ?? '');
 
                 // Check if specific slip is requested
                 $subAction = strtolower($input['sub_action'] ?? $input['action'] ?? $_GET['sub_action'] ?? $_POST['action'] ?? $endpoint);
@@ -1299,10 +1312,16 @@ class ApiController {
                     break;
                 }
 
-                $bills = $pembayaranModel->getSiswaBills($siswaId);
-                $summary = $pembayaranModel->getSiswaPaymentSummary($siswaId);
-                $riwayat = $pembayaranModel->getSiswaRiwayatPembayaran($siswaId);
+                // Query authentic database records matching this student
+                $bills = $pembayaranModel->getSiswaBills($siswaId, $nis, $nisn);
+                $summary = $pembayaranModel->getSiswaPaymentSummary($siswaId, $nis, $nisn);
+                $riwayat = $pembayaranModel->getSiswaRiwayatPembayaran($siswaId, $nis, $nisn);
                 $rekeningConfig = $pembayaranModel->getRekeningConfig();
+
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                $academicModel = new AcademicModel();
+                $activeTa = $academicModel->getActiveTahunAjaran();
+                $summary['tahun_ajaran'] = $activeTa['tahun_ajaran'] ?? '2025/2026';
 
                 $unpaidBills = array_values(array_filter($bills, function($b) {
                     return $b['status'] !== 'lunas';
