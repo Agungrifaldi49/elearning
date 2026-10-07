@@ -8,44 +8,44 @@ if (!function_exists('formatTpDescriptionHtml')) {
         if (empty($text)) return '';
         $lines = preg_split('/\r\n|\r|\n/', trim($text));
         if (count($lines) <= 1 && !preg_match('/^(\d+[\.\)\-]|[a-zA-Z][\.\)]|[•\-\*✓✔☑▪▫►▶→➔➢+~–—\x{2022}\x{25AA}\x{2713}\x{2714}])\s*/u', trim($text))) {
-            return '<div class="tp-deskripsi-text" style="color: #1e293b; line-height: 1.65; font-size: 0.91rem;">' . nl2br(htmlspecialchars($text)) . '</div>';
+            return '<div class="tp-deskripsi-text">' . nl2br(htmlspecialchars($text)) . '</div>';
         }
-        $html = '<div class="tp-formatted-list d-flex flex-column" style="gap: 7px; margin-top: 4px;">';
+        $html = '<div class="tp-formatted-list d-flex flex-column">';
         foreach ($lines as $line) {
             $trimmed = trim($line);
             if ($trimmed === '') continue;
             // 1. Numbered: 1. or 1) or 1-
             if (preg_match('/^(\d+)[\.\)\-]\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 9px;">'
-                      . '<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace rounded-pill flex-shrink-0" style="font-size:0.75rem; min-width:24px; padding: 2.5px 7px; text-align:center; font-weight:700;">' . $m[1] . '</span>'
-                      . '<span class="tp-list-text" style="color: #1e293b; line-height: 1.62; font-size: 0.91rem;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start">'
+                      . '<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-monospace rounded-pill flex-shrink-0 tp-num-badge">' . $m[1] . '</span>'
+                      . '<div class="tp-list-text flex-grow-1">' . htmlspecialchars($m[2]) . '</div>'
                       . '</div>';
             // 2. Lettered: a. or A. or a)
             } elseif (preg_match('/^([a-zA-Z])[\.\)]\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 9px;">'
-                      . '<span class="badge bg-secondary-subtle text-dark border font-monospace rounded-pill flex-shrink-0" style="font-size:0.75rem; min-width:24px; padding: 2.5px 7px; text-align:center; font-weight:700;">' . strtoupper($m[1]) . '</span>'
-                      . '<span class="tp-list-text" style="color: #1e293b; line-height: 1.62; font-size: 0.91rem;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start">'
+                      . '<span class="badge bg-secondary-subtle text-dark border font-monospace rounded-pill flex-shrink-0 tp-num-badge">' . strtoupper($m[1]) . '</span>'
+                      . '<div class="tp-list-text flex-grow-1">' . htmlspecialchars($m[2]) . '</div>'
                       . '</div>';
             // 3. Checkmarks: ✓, ✔, ☑
             } elseif (preg_match('/^([✓✔☑\x{2713}\x{2714}])\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 9px;">'
-                      . '<span class="text-success flex-shrink-0 fw-bold" style="font-size:1rem; line-height:1.5; width:20px; text-align:center;"><i class="bi bi-check-circle-fill"></i></span>'
-                      . '<span class="tp-list-text" style="color: #1e293b; line-height: 1.62; font-size: 0.91rem;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start">'
+                      . '<span class="text-success flex-shrink-0 tp-icon-bullet"><i class="bi bi-check-circle-fill"></i></span>'
+                      . '<div class="tp-list-text flex-grow-1">' . htmlspecialchars($m[2]) . '</div>'
                       . '</div>';
             // 4. Arrows: →, ➔, ➢, ►, >
             } elseif (preg_match('/^([→➔➢►▶>])\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 9px;">'
-                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:1rem; line-height:1.5; width:20px; text-align:center;"><i class="bi bi-arrow-right-short fs-5"></i></span>'
-                      . '<span class="tp-list-text" style="color: #1e293b; line-height: 1.62; font-size: 0.91rem;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start">'
+                      . '<span class="text-primary flex-shrink-0 tp-icon-bullet"><i class="bi bi-arrow-right-short fs-5"></i></span>'
+                      . '<div class="tp-list-text flex-grow-1">' . htmlspecialchars($m[2]) . '</div>'
                       . '</div>';
             // 5. Bullets: •, -, *, ▪, ▫, +
             } elseif (preg_match('/^([•\-\*▪▫+–—\x{2022}\x{25AA}])\s*(.*)$/u', $trimmed, $m)) {
-                $html .= '<div class="tp-list-row d-flex align-items-start" style="gap: 9px;">'
-                      . '<span class="text-primary flex-shrink-0 fw-bold" style="font-size:1.2rem; line-height:1.2; width:20px; text-align:center;">•</span>'
-                      . '<span class="tp-list-text" style="color: #1e293b; line-height: 1.62; font-size: 0.91rem;">' . htmlspecialchars($m[2]) . '</span>'
+                $html .= '<div class="tp-list-row d-flex align-items-start">'
+                      . '<span class="text-primary flex-shrink-0 tp-icon-bullet">•</span>'
+                      . '<div class="tp-list-text flex-grow-1">' . htmlspecialchars($m[2]) . '</div>'
                       . '</div>';
             } else {
-                $html .= '<div class="tp-list-text" style="color: #1e293b; line-height: 1.62; font-size: 0.91rem;">' . htmlspecialchars($trimmed) . '</div>';
+                $html .= '<div class="tp-list-text w-100">' . htmlspecialchars($trimmed) . '</div>';
             }
         }
         $html .= '</div>';
@@ -55,7 +55,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
 ?>
 
 <style>
-/* Modern, Clean & Responsive CP/TP Styles for Students */
+/* Modern, Mobile-First & Strictly Responsive CP/TP Styles for Students */
 :root {
     --cptp-primary: #3b82f6;
     --cptp-primary-dark: #1d4ed8;
@@ -68,108 +68,247 @@ if (!function_exists('formatTpDescriptionHtml')) {
     --cptp-slate-800: #1e293b;
 }
 
+/* Global Reset to Prevent Horizontal Overflow on Mobile */
+.cptp-page-container {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+.cptp-page-container * {
+    min-width: 0;
+}
+
+/* Badge Text Wrapping - CRITICAL FOR PREVENTING MOBILE CARD OVERFLOW */
+.cptp-page-container .badge {
+    white-space: normal !important;
+    text-align: left;
+    line-height: 1.35;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cptp-page-container .badge.font-monospace,
+.cptp-page-container .badge.badge-pill-fixed {
+    white-space: nowrap !important;
+    text-align: center;
+}
+
+/* Header Gradient Card */
 .cptp-header-gradient {
     background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #38bdf8 100%);
     color: #ffffff;
-    border-radius: 18px;
+    border-radius: 16px;
     position: relative;
     overflow: hidden;
+    word-break: break-word;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
 }
 .cptp-header-gradient::after {
     content: '';
     position: absolute;
     top: -40%;
     right: -10%;
-    width: 320px;
-    height: 320px;
+    width: 260px;
+    height: 260px;
     background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%);
     border-radius: 50%;
     pointer-events: none;
 }
 
+/* Metric KPI Stat Cards */
 .cptp-stat-card {
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: 14px;
     border: 1px solid var(--cptp-slate-200);
-    padding: 18px 20px;
+    padding: 14px 16px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    height: 100%;
 }
 .cptp-stat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 }
 
+/* Mapel Section Card */
 .mapel-section-card {
     background: #ffffff;
-    border-radius: 16px;
+    border-radius: 14px;
     border: 1px solid var(--cptp-slate-200);
     box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
-    margin-bottom: 24px;
+    margin-bottom: 20px;
     overflow: hidden;
-    transition: box-shadow 0.2s ease;
-}
-.mapel-section-card:hover {
-    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.07);
+    max-width: 100% !important;
 }
 
 .mapel-header-bar {
     background: linear-gradient(to right, #f8fafc, #ffffff);
     border-bottom: 1px solid var(--cptp-slate-200);
-    padding: 16px 22px;
+    padding: 14px 18px;
 }
 
+/* CP Container Card */
 .cp-card-item {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    margin-bottom: 18px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.cp-card-item:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+    max-width: 100% !important;
 }
 
 .cp-header-box {
     background-color: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
-    padding: 14px 18px;
-    border-top-left-radius: 14px;
-    border-top-right-radius: 14px;
+    padding: 12px 16px;
 }
 
+/* TP Item Box */
 .tp-card-box {
     background-color: #ffffff;
     border: 1px solid #e2e8f0;
-    border-left: 4px solid #10b981;
-    border-radius: 12px;
-    padding: 14px 16px;
-    margin-bottom: 12px;
+    border-left: 4px solid #10b981 !important;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    max-width: 100% !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .tp-card-box:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
 }
 
+/* Typography & Lists */
+.tp-deskripsi-wrapper,
+.tp-deskripsi-text,
+.tp-list-text {
+    color: #1e293b;
+    line-height: 1.6;
+    font-size: 0.88rem;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    max-width: 100% !important;
+}
+
+.tp-formatted-list {
+    gap: 6px;
+    margin-top: 4px;
+    width: 100%;
+}
+
+.tp-list-row {
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+}
+
+.tp-num-badge {
+    font-size: 0.72rem;
+    min-width: 22px;
+    padding: 2px 6px;
+    font-weight: 700;
+}
+
+.tp-icon-bullet {
+    font-size: 0.95rem;
+    line-height: 1.4;
+    width: 18px;
+    text-align: center;
+}
+
+/* Uniform Form Inputs */
 .filter-input-uniform {
-    height: 44px;
-    border-radius: 10px;
+    height: 42px;
+    border-radius: 8px;
     border: 1px solid #cbd5e1;
     background-color: #ffffff;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    max-width: 100%;
 }
 .filter-input-uniform:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
+/* Mobile Responsive Optimization (@media max-width: 767.98px) */
+@media (max-width: 767.98px) {
+    .main-content {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+    .container-fluid {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    .cptp-header-gradient {
+        padding: 16px 14px !important;
+        border-radius: 12px;
+    }
+    .cptp-header-gradient h3 {
+        font-size: 1.25rem !important;
+    }
+    .cptp-header-gradient p {
+        font-size: 0.8rem !important;
+    }
+    .cptp-stat-card {
+        padding: 10px 12px !important;
+        border-radius: 10px;
+    }
+    .cptp-stat-card h3,
+    .cptp-stat-card h4 {
+        font-size: 1.15rem !important;
+    }
+    .mapel-section-card {
+        border-radius: 10px;
+        margin-bottom: 14px;
+    }
+    .mapel-header-bar {
+        padding: 12px 12px !important;
+    }
+    .mapel-body-inner {
+        padding: 10px 10px !important;
+    }
+    .cp-card-item {
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    .cp-header-box {
+        padding: 10px 10px !important;
+    }
+    .cp-desc-box {
+        padding: 10px 10px !important;
+    }
+    .cp-tp-container {
+        padding: 10px 10px !important;
+    }
+    .tp-card-box {
+        padding: 10px 10px !important;
+        border-radius: 8px;
+        margin-bottom: 8px;
+    }
+    .btn-mobile-full {
+        width: 100% !important;
+    }
+    .cptp-badge-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        width: 100%;
+    }
+}
+
 @media print {
     body {
         background: #ffffff !important;
-        font-size: 11pt;
+        font-size: 10.5pt;
     }
     .app-navbar, .sidebar, .cptp-actions-nonprint, .breadcrumb, #themeToggle, .btn {
         display: none !important;
@@ -192,7 +331,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
 }
 </style>
 
-<main class="main-content px-3 px-md-4 py-3">
+<main class="main-content px-2 px-md-4 py-3 cptp-page-container">
 <div class="container-fluid">
 
     <!-- 1. Breadcrumb Navigation -->
@@ -204,40 +343,40 @@ if (!function_exists('formatTpDescriptionHtml')) {
                 </a>
             </li>
             <li class="breadcrumb-item text-muted">Pembelajaran & Kurikulum</li>
-            <li class="breadcrumb-item active text-primary fw-semibold" aria-current="page">
+            <li class="breadcrumb-item active text-primary fw-semibold text-truncate" aria-current="page">
                 Capaian & Tujuan Pembelajaran (CP & TP)
             </li>
         </ol>
     </nav>
 
     <!-- 2. Hero Banner Header -->
-    <div class="cptp-header-gradient p-4 p-md-4 mb-4 shadow-sm">
+    <div class="cptp-header-gradient p-3 p-md-4 mb-3 mb-md-4 shadow-sm">
         <div class="row align-items-center g-3">
             <div class="col-12 col-lg-8">
-                <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-                    <span class="badge bg-white text-primary rounded-pill px-3 py-1.5 fw-bold font-monospace shadow-xs" style="font-size: 0.76rem;">
+                <div class="d-flex align-items-center gap-1.5 mb-2 flex-wrap">
+                    <span class="badge bg-white text-primary rounded-pill px-2.5 py-1 fw-bold font-monospace shadow-xs" style="font-size: 0.72rem;">
                         <i class="bi bi-mortarboard-fill me-1"></i><?= htmlspecialchars($namaKurikulum) ?> (<?= htmlspecialchars($kodeKurikulum) ?>)
                     </span>
-                    <span class="badge bg-white bg-opacity-25 text-white rounded-pill px-3 py-1.5 fw-semibold" style="font-size: 0.76rem;">
+                    <span class="badge bg-white bg-opacity-25 text-white rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.72rem;">
                         <i class="bi bi-layers-fill me-1"></i><?= htmlspecialchars($faseInfo) ?>
                     </span>
                 </div>
-                <h3 class="fw-bold mb-1 d-flex align-items-center gap-2.5">
-                    <i class="bi bi-diagram-3-fill fs-2"></i>
-                    <span>Capaian & Tujuan Pembelajaran (CP & TP)</span>
+                <h3 class="fw-bold mb-1 d-flex align-items-center gap-2">
+                    <i class="bi bi-diagram-3-fill fs-3 flex-shrink-0"></i>
+                    <span class="text-break">Capaian & Tujuan Pembelajaran (CP & TP)</span>
                 </h3>
-                <p class="mb-0 text-white text-opacity-90 small" style="max-width: 680px; line-height: 1.6;">
-                    Pantau target kompetensi pokok, rumusan capaian kurikulum, butir tujuan pembelajaran (TP), dan kriteria ketuntasan (KKTP) untuk mata pelajaran yang telah Anda ambil di rombel ini.
+                <p class="mb-0 text-white text-opacity-90 small" style="max-width: 680px; line-height: 1.55;">
+                    Target kompetensi pokok kurikulum, butir capaian (CP), tujuan pembelajaran (TP), dan kriteria ketuntasan (KKTP) khusus untuk mata pelajaran yang Anda ikuti.
                 </p>
             </div>
             <div class="col-12 col-lg-4 text-lg-end cptp-actions-nonprint">
-                <div class="d-flex gap-2 justify-content-lg-end flex-wrap">
-                    <button type="button" class="btn btn-light text-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2" onclick="window.print()" title="Cetak atau simpan ringkasan CP & TP ke PDF">
-                        <i class="bi bi-printer-fill fs-5"></i>
+                <div class="d-flex gap-2 justify-content-start justify-content-lg-end flex-wrap">
+                    <button type="button" class="btn btn-light text-primary fw-bold px-3 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-1.5 flex-grow-1 flex-lg-grow-0 justify-content-center" onclick="window.print()" title="Cetak atau simpan ringkasan CP & TP ke PDF">
+                        <i class="bi bi-printer-fill fs-6"></i>
                         <span>Cetak Ringkasan</span>
                     </button>
-                    <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-outline-light fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-2" title="Kelola / gabung mata pelajaran lain">
-                        <i class="bi bi-bounding-box-circles fs-5"></i>
+                    <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-outline-light fw-semibold px-3 py-2 rounded-3 d-inline-flex align-items-center gap-1.5 flex-grow-1 flex-lg-grow-0 justify-content-center" title="Kelola / gabung mata pelajaran lain">
+                        <i class="bi bi-bounding-box-circles fs-6"></i>
                         <span>Kelas Virtual</span>
                     </a>
                 </div>
@@ -245,89 +384,89 @@ if (!function_exists('formatTpDescriptionHtml')) {
         </div>
     </div>
 
-    <!-- 3. KPI Metric Cards -->
-    <div class="row g-3 mb-4">
+    <!-- 3. KPI Metric Cards (2x2 on Mobile, 1x4 on Desktop) -->
+    <div class="row g-2 g-md-3 mb-3 mb-md-4">
         <!-- Metric 1: Mapel Terdaftar -->
         <div class="col-6 col-lg-3">
-            <div class="cptp-stat-card border-start border-4 border-primary h-100">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 0.73rem; letter-spacing: 0.5px;">Mapel Terdaftar</span>
-                        <h3 class="fw-bold text-primary mb-0"><?= count($enrolledMapelIds) ?></h3>
+            <div class="cptp-stat-card border-start border-4 border-primary">
+                <div class="d-flex justify-content-between align-items-start mb-1.5">
+                    <div class="min-w-0 flex-grow-1 pe-1">
+                        <span class="text-muted fw-bold text-uppercase d-block mb-0.5 text-truncate" style="font-size: 0.68rem; letter-spacing: 0.3px;">Mapel Terdaftar</span>
+                        <h3 class="fw-bold text-primary mb-0 fs-4"><?= count($enrolledMapelIds) ?></h3>
                     </div>
-                    <div class="rounded-circle p-2.5 bg-primary-subtle text-primary">
-                        <i class="bi bi-journal-bookmark-fill fs-4"></i>
+                    <div class="rounded-circle p-2 bg-primary-subtle text-primary flex-shrink-0">
+                        <i class="bi bi-journal-bookmark-fill fs-5"></i>
                     </div>
                 </div>
-                <div class="text-muted small" style="font-size: 0.75rem;">
-                    <i class="bi bi-check-circle-fill text-primary me-1"></i>Sesuai jadwal rombel Anda
+                <div class="text-muted small text-truncate" style="font-size: 0.72rem;">
+                    <i class="bi bi-check-circle-fill text-primary me-1"></i>Sesuai rombel Anda
                 </div>
             </div>
         </div>
 
         <!-- Metric 2: Capaian Pembelajaran (CP) -->
         <div class="col-6 col-lg-3">
-            <div class="cptp-stat-card border-start border-4 border-info h-100">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 0.73rem; letter-spacing: 0.5px;">Capaian (CP)</span>
-                        <h3 class="fw-bold text-info mb-0"><?= $totalCpCount ?></h3>
+            <div class="cptp-stat-card border-start border-4 border-info">
+                <div class="d-flex justify-content-between align-items-start mb-1.5">
+                    <div class="min-w-0 flex-grow-1 pe-1">
+                        <span class="text-muted fw-bold text-uppercase d-block mb-0.5 text-truncate" style="font-size: 0.68rem; letter-spacing: 0.3px;">Capaian (CP)</span>
+                        <h3 class="fw-bold text-info mb-0 fs-4"><?= $totalCpCount ?></h3>
                     </div>
-                    <div class="rounded-circle p-2.5 bg-info-subtle text-info">
-                        <i class="bi bi-diagram-2-fill fs-4"></i>
+                    <div class="rounded-circle p-2 bg-info-subtle text-info flex-shrink-0">
+                        <i class="bi bi-diagram-2-fill fs-5"></i>
                     </div>
                 </div>
-                <div class="text-muted small" style="font-size: 0.75rem;">
-                    <i class="bi bi-check-circle-fill text-info me-1"></i>Target kompetensi induk
+                <div class="text-muted small text-truncate" style="font-size: 0.72rem;">
+                    <i class="bi bi-check-circle-fill text-info me-1"></i>Kompetensi induk
                 </div>
             </div>
         </div>
 
         <!-- Metric 3: Tujuan Pembelajaran (TP) -->
         <div class="col-6 col-lg-3">
-            <div class="cptp-stat-card border-start border-4 border-success h-100">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 0.73rem; letter-spacing: 0.5px;">Tujuan (TP)</span>
-                        <h3 class="fw-bold text-success mb-0"><?= $totalTpCount ?></h3>
+            <div class="cptp-stat-card border-start border-4 border-success">
+                <div class="d-flex justify-content-between align-items-start mb-1.5">
+                    <div class="min-w-0 flex-grow-1 pe-1">
+                        <span class="text-muted fw-bold text-uppercase d-block mb-0.5 text-truncate" style="font-size: 0.68rem; letter-spacing: 0.3px;">Tujuan (TP)</span>
+                        <h3 class="fw-bold text-success mb-0 fs-4"><?= $totalTpCount ?></h3>
                     </div>
-                    <div class="rounded-circle p-2.5 bg-success-subtle text-success">
-                        <i class="bi bi-bullseye fs-4"></i>
+                    <div class="rounded-circle p-2 bg-success-subtle text-success flex-shrink-0">
+                        <i class="bi bi-bullseye fs-5"></i>
                     </div>
                 </div>
-                <div class="text-muted small" style="font-size: 0.75rem;">
-                    <i class="bi bi-check-circle-fill text-success me-1"></i>Sasaran pembelajaran KBM
+                <div class="text-muted small text-truncate" style="font-size: 0.72rem;">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i>Sasaran target KBM
                 </div>
             </div>
         </div>
 
         <!-- Metric 4: Kriteria Ketuntasan (KKTP) -->
         <div class="col-6 col-lg-3">
-            <div class="cptp-stat-card border-start border-4 border-warning h-100">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 0.73rem; letter-spacing: 0.5px;">Standar Kelulusan</span>
-                        <h4 class="fw-bold text-warning mb-0" style="font-size: 1.35rem;">KKTP / 75</h4>
+            <div class="cptp-stat-card border-start border-4 border-warning">
+                <div class="d-flex justify-content-between align-items-start mb-1.5">
+                    <div class="min-w-0 flex-grow-1 pe-1">
+                        <span class="text-muted fw-bold text-uppercase d-block mb-0.5 text-truncate" style="font-size: 0.68rem; letter-spacing: 0.3px;">Kelulusan KKTP</span>
+                        <h4 class="fw-bold text-warning mb-0 fs-5 text-truncate">Skor 75</h4>
                     </div>
-                    <div class="rounded-circle p-2.5 bg-warning-subtle text-warning">
-                        <i class="bi bi-award-fill fs-4"></i>
+                    <div class="rounded-circle p-2 bg-warning-subtle text-warning flex-shrink-0">
+                        <i class="bi bi-award-fill fs-5"></i>
                     </div>
                 </div>
-                <div class="text-muted small" style="font-size: 0.75rem;">
-                    <i class="bi bi-shield-check text-warning me-1"></i>Indikator E-Rapor Digital
+                <div class="text-muted small text-truncate" style="font-size: 0.72rem;">
+                    <i class="bi bi-shield-check text-warning me-1"></i>Indikator E-Rapor
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 4. Filter Toolbar & Search Bar (HANYA Menampilkan Mapel Terdaftar) -->
-    <div class="card border-0 shadow-sm rounded-4 p-3.5 mb-4 bg-white cptp-actions-nonprint">
-        <form method="GET" action="<?= BASE_URL ?>index.php" class="row g-2.5 align-items-end" id="filterForm">
+    <!-- 4. Filter Toolbar & Search Bar (Strictly Enrolled Subjects Only) -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 p-md-3.5 mb-3 mb-md-4 bg-white cptp-actions-nonprint">
+        <form method="GET" action="<?= BASE_URL ?>index.php" class="row g-2 align-items-end" id="filterForm">
             <input type="hidden" name="url" value="siswa/cptp">
 
             <!-- Filter Mapel Terdaftar -->
             <div class="col-12 col-md-5">
-                <label class="small fw-bold text-secondary mb-1.5 d-flex align-items-center gap-1">
+                <label class="small fw-bold text-secondary mb-1 d-flex align-items-center gap-1">
                     <i class="bi bi-book-half text-primary"></i>
                     <span>Pilih Mata Pelajaran Terdaftar:</span>
                 </label>
@@ -335,7 +474,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
                     <option value="">-- Semua Mata Pelajaran Saya (<?= count($enrolledMapels) ?>) --</option>
                     <?php foreach ($enrolledMapels as $em): ?>
                         <option value="<?= $em['mapel_id'] ?>" <?= ($filterMapelId == $em['mapel_id']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($em['nama_mapel']) ?> (Guru: <?= htmlspecialchars($em['nama_guru']) ?>)
+                            <?= htmlspecialchars($em['nama_mapel']) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -343,7 +482,7 @@ if (!function_exists('formatTpDescriptionHtml')) {
 
             <!-- Quick Keyword Search -->
             <div class="col-12 col-md-5">
-                <label class="small fw-bold text-secondary mb-1.5 d-flex align-items-center gap-1">
+                <label class="small fw-bold text-secondary mb-1 d-flex align-items-center gap-1">
                     <i class="bi bi-search text-primary"></i>
                     <span>Cari Materi / Rumusan CP & TP:</span>
                 </label>
@@ -358,13 +497,13 @@ if (!function_exists('formatTpDescriptionHtml')) {
             </div>
 
             <!-- Action Buttons -->
-            <div class="col-12 col-md-2 d-flex gap-2">
-                <button type="submit" class="btn btn-primary flex-fill fw-semibold rounded-3 d-flex align-items-center justify-content-center gap-1.5" style="height: 44px;">
+            <div class="col-12 col-md-2 d-flex gap-1.5">
+                <button type="submit" class="btn btn-primary flex-fill fw-semibold rounded-3 d-flex align-items-center justify-content-center gap-1" style="height: 42px;">
                     <i class="bi bi-funnel-fill"></i>
-                    <span>Cari</span>
+                    <span>Filter</span>
                 </button>
                 <?php if ($filterMapelId || !empty($searchKeyword)): ?>
-                    <a href="<?= BASE_URL ?>index.php?url=siswa/cptp" class="btn btn-outline-secondary rounded-3 px-3 d-flex align-items-center justify-content-center" style="height: 44px;" title="Reset Semua Filter">
+                    <a href="<?= BASE_URL ?>index.php?url=siswa/cptp" class="btn btn-outline-secondary rounded-3 px-3 d-flex align-items-center justify-content-center" style="height: 42px;" title="Reset Filter">
                         <i class="bi bi-arrow-counterclockwise"></i>
                     </a>
                 <?php endif; ?>
@@ -374,15 +513,15 @@ if (!function_exists('formatTpDescriptionHtml')) {
 
     <!-- 5. Interactive Expand/Collapse & Summary Helper -->
     <?php if (!empty($mapelGroups)): ?>
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 cptp-actions-nonprint">
-            <div class="small text-muted">
-                Menampilkan <strong><?= count($mapelGroups) ?></strong> mata pelajaran terdaftar dengan total <strong><?= $totalCpCount ?></strong> Capaian (CP) dan <strong><?= $totalTpCount ?></strong> Tujuan Pembelajaran (TP).
+        <div class="d-flex justify-content-between align-items-center mb-2.5 flex-wrap gap-2 cptp-actions-nonprint">
+            <div class="small text-muted" style="font-size: 0.8rem;">
+                Menampilkan <strong><?= count($mapelGroups) ?></strong> mapel terdaftar (<strong><?= $totalCpCount ?></strong> CP & <strong><?= $totalTpCount ?></strong> TP).
             </div>
-            <div class="d-flex gap-2">
-                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold" id="btnExpandAll">
+            <div class="d-flex gap-1.5">
+                <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 fw-semibold" style="font-size:0.75rem;" id="btnExpandAll">
                     <i class="bi bi-arrows-expand me-1"></i>Buka Semua
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold" id="btnCollapseAll">
+                <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 fw-semibold" style="font-size:0.75rem;" id="btnCollapseAll">
                     <i class="bi bi-arrows-collapse me-1"></i>Tutup Semua
                 </button>
             </div>
@@ -392,18 +531,18 @@ if (!function_exists('formatTpDescriptionHtml')) {
     <!-- 6. Main Content Section: Subject Groups & CP/TP Cards -->
     <?php if (empty($enrolledMapelIds)): ?>
         <!-- EMPTY STATE: Belum ada mata pelajaran terdaftar sama sekali -->
-        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white my-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 text-center bg-white my-3">
             <div class="mb-3">
-                <div class="rounded-circle bg-warning-subtle text-warning d-inline-flex align-items-center justify-content-center p-4" style="width: 84px; height: 84px;">
-                    <i class="bi bi-journal-x fs-1"></i>
+                <div class="rounded-circle bg-warning-subtle text-warning d-inline-flex align-items-center justify-content-center p-3.5" style="width: 72px; height: 72px;">
+                    <i class="bi bi-journal-x fs-2"></i>
                 </div>
             </div>
-            <h4 class="fw-bold text-dark mb-2">Belum Ada Mata Pelajaran yang Terdaftar</h4>
-            <p class="text-muted mx-auto mb-4" style="max-width: 540px; line-height: 1.6;">
-                Anda belum terdaftar pada mata pelajaran manapun di rombel ini. Agar Capaian & Tujuan Pembelajaran (CP & TP) dapat ditampilkan, silakan bergabung ke kelas virtual dengan memasukkan enrollment key dari bapak/ibu guru.
+            <h5 class="fw-bold text-dark mb-2">Belum Ada Mata Pelajaran yang Terdaftar</h5>
+            <p class="text-muted mx-auto mb-3 small" style="max-width: 500px; line-height: 1.6;">
+                Anda belum terdaftar pada mata pelajaran manapun di rombel ini. Agar Capaian & Tujuan Pembelajaran (CP & TP) dapat ditampilkan, silakan bergabung ke kelas virtual terlebih dahulu.
             </p>
-            <div class="d-flex justify-content-center gap-2">
-                <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-primary fw-bold px-4 py-2.5 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
+            <div class="d-flex justify-content-center">
+                <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-primary fw-bold px-3.5 py-2 rounded-3 shadow-sm d-inline-flex align-items-center gap-2">
                     <i class="bi bi-bounding-box-circles fs-5"></i>
                     <span>Buka Menu Gabung Kelas Virtual</span>
                 </a>
@@ -412,17 +551,17 @@ if (!function_exists('formatTpDescriptionHtml')) {
 
     <?php elseif (empty($mapelGroups)): ?>
         <!-- EMPTY STATE: Filter atau pencarian tidak menghasilkan data -->
-        <div class="card border-0 shadow-sm rounded-4 p-5 text-center bg-white my-4">
+        <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 text-center bg-white my-3">
             <div class="mb-3">
-                <div class="rounded-circle bg-info-subtle text-info d-inline-flex align-items-center justify-content-center p-4" style="width: 80px; height: 80px;">
-                    <i class="bi bi-search fs-1"></i>
+                <div class="rounded-circle bg-info-subtle text-info d-inline-flex align-items-center justify-content-center p-3.5" style="width: 70px; height: 70px;">
+                    <i class="bi bi-search fs-2"></i>
                 </div>
             </div>
-            <h5 class="fw-bold text-dark mb-2">Tidak Ditemukan Data CP / TP yang Sesuai</h5>
-            <p class="text-muted mx-auto mb-3" style="max-width: 500px;">
+            <h6 class="fw-bold text-dark mb-1.5">Tidak Ditemukan Data CP / TP yang Sesuai</h6>
+            <p class="text-muted mx-auto mb-3 small" style="max-width: 460px;">
                 Tidak ada rumusan Capaian atau Tujuan Pembelajaran yang sesuai dengan kriteria filter atau kata kunci "<em><?= htmlspecialchars($searchKeyword) ?></em>".
             </p>
-            <a href="<?= BASE_URL ?>index.php?url=siswa/cptp" class="btn btn-outline-primary fw-semibold px-4 py-2 rounded-3">
+            <a href="<?= BASE_URL ?>index.php?url=siswa/cptp" class="btn btn-outline-primary fw-semibold px-3.5 py-2 rounded-3 small">
                 <i class="bi bi-arrow-counterclockwise me-1"></i>Kembalikan ke Semua Mapel
             </a>
         </div>
@@ -438,59 +577,64 @@ if (!function_exists('formatTpDescriptionHtml')) {
         ?>
             <div class="mapel-section-card" id="mapel_card_<?= $mId ?>">
                 
-                <!-- Mapel Header Bar -->
-                <div class="mapel-header-bar d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-primary text-white p-2.5 d-flex align-items-center justify-content-center shadow-xs" style="width: 46px; height: 46px;">
-                            <i class="bi bi-book-half fs-4"></i>
-                        </div>
-                        <div>
-                            <div class="d-flex align-items-center gap-2 flex-wrap mb-0.5">
-                                <h5 class="fw-bold mb-0 text-dark">
-                                    <?= htmlspecialchars($mInfo['nama_mapel']) ?>
-                                </h5>
-                                <?php if (!empty($mInfo['kode_mapel'])): ?>
-                                    <span class="badge bg-secondary-subtle text-dark border font-monospace px-2 py-0.5 rounded-2" style="font-size: 0.74rem;">
-                                        <?= htmlspecialchars($mInfo['kode_mapel']) ?>
+                <!-- Mapel Header Bar (Fully Mobile Responsive Stack) -->
+                <div class="mapel-header-bar">
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                        <!-- Left Subject Details -->
+                        <div class="d-flex align-items-start align-items-sm-center gap-2.5 w-100 flex-grow-1">
+                            <div class="rounded-3 bg-primary text-white p-2 d-flex align-items-center justify-content-center shadow-xs flex-shrink-0" style="width: 40px; height: 40px;">
+                                <i class="bi bi-book-half fs-5"></i>
+                            </div>
+                            <div class="min-w-0 flex-grow-1">
+                                <div class="d-flex align-items-center gap-1.5 flex-wrap mb-0.5">
+                                    <h6 class="fw-bold mb-0 text-dark text-break" style="font-size: 0.95rem;">
+                                        <?= htmlspecialchars($mInfo['nama_mapel']) ?>
+                                    </h6>
+                                    <?php if (!empty($mInfo['kode_mapel'])): ?>
+                                        <span class="badge bg-secondary-subtle text-dark border font-monospace px-1.5 py-0.5 rounded-2 badge-pill-fixed" style="font-size: 0.7rem;">
+                                            <?= htmlspecialchars($mInfo['kode_mapel']) ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="small text-muted d-flex align-items-center gap-1.5 flex-wrap" style="font-size: 0.78rem;">
+                                    <span class="d-inline-flex align-items-center gap-1 text-primary fw-medium text-break">
+                                        <i class="bi bi-person-badge-fill flex-shrink-0"></i> Guru: <?= htmlspecialchars($mInfo['nama_guru']) ?>
                                     </span>
-                                <?php endif; ?>
-                            </div>
-                            <div class="small text-muted d-flex align-items-center gap-2 flex-wrap" style="font-size: 0.82rem;">
-                                <span class="d-inline-flex align-items-center gap-1 text-primary fw-medium">
-                                    <i class="bi bi-person-badge-fill"></i> Guru: <?= htmlspecialchars($mInfo['nama_guru']) ?>
-                                </span>
-                                <?php if (!empty($mInfo['nama_kelas'])): ?>
-                                    <span>•</span>
-                                    <span><i class="bi bi-people-fill text-secondary me-1"></i><?= htmlspecialchars($mInfo['nama_kelas']) ?></span>
-                                <?php endif; ?>
+                                    <?php if (!empty($mInfo['nama_kelas'])): ?>
+                                        <span>•</span>
+                                        <span class="text-break"><i class="bi bi-people-fill text-secondary me-0.5"></i><?= htmlspecialchars($mInfo['nama_kelas']) ?></span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Right Summary & Collapse Toggle -->
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-semibold" style="font-size: 0.78rem;">
-                            <i class="bi bi-diagram-2 me-1"></i><?= $mapelCpCount ?> Capaian (CP)
-                        </span>
-                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-semibold" style="font-size: 0.78rem;">
-                            <i class="bi bi-bullseye me-1"></i><?= $mapelTpCount ?> Tujuan (TP)
-                        </span>
-                        <button class="btn btn-sm btn-outline-secondary rounded-circle p-2 d-flex align-items-center justify-content-center toggle-mapel-btn" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $collapseId ?>" aria-expanded="true" aria-controls="<?= $collapseId ?>" title="Sembunyikan/Buka Rincian Mapel Ini" style="width: 34px; height: 34px;">
-                            <i class="bi bi-chevron-down"></i>
-                        </button>
+                        <!-- Right Summary & Collapse Toggle -->
+                        <div class="d-flex align-items-center justify-content-between justify-content-sm-end gap-1.5 w-100 w-sm-auto pt-1 pt-sm-0 border-top border-sm-0">
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.72rem;">
+                                    <i class="bi bi-diagram-2 me-0.5"></i><?= $mapelCpCount ?> CP
+                                </span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.72rem;">
+                                    <i class="bi bi-bullseye me-0.5"></i><?= $mapelTpCount ?> TP
+                                </span>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary rounded-circle p-1.5 d-flex align-items-center justify-content-center toggle-mapel-btn flex-shrink-0 ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#<?= $collapseId ?>" aria-expanded="true" aria-controls="<?= $collapseId ?>" title="Sembunyikan/Buka Rincian Mapel Ini" style="width: 32px; height: 32px;">
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Collapsible Body for CP & TP Items -->
                 <div class="collapse show mapel-collapse-target" id="<?= $collapseId ?>">
-                    <div class="p-3 p-md-4 bg-white">
+                    <div class="p-2 p-md-3.5 bg-white mapel-body-inner">
                         
                         <?php if (empty($cps)): ?>
                             <!-- Subject has no CP compiled yet by teacher -->
-                            <div class="p-4 rounded-3 bg-light border border-dashed text-center">
-                                <i class="bi bi-hourglass-split text-warning fs-3 d-block mb-2"></i>
-                                <h6 class="fw-bold text-dark mb-1">CP & TP Sedang Dalam Penyusunan</h6>
-                                <p class="text-muted small mb-0" style="max-width: 520px; margin: 0 auto;">
+                            <div class="p-3 p-md-4 rounded-3 bg-light border border-dashed text-center">
+                                <i class="bi bi-hourglass-split text-warning fs-4 d-block mb-1.5"></i>
+                                <h6 class="fw-bold text-dark mb-1" style="font-size: 0.9rem;">CP & TP Sedang Dalam Penyusunan</h6>
+                                <p class="text-muted small mb-0" style="max-width: 500px; margin: 0 auto; font-size: 0.8rem;">
                                     Bapak/Ibu <strong><?= htmlspecialchars($mInfo['nama_guru']) ?></strong> sedang merumuskan butir Capaian dan Tujuan Pembelajaran untuk mata pelajaran ini. Silakan periksa kembali secara berkala.
                                 </p>
                             </div>
@@ -501,60 +645,60 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                 $childTps = $cp['tps'] ?? [];
                             ?>
                                 <div class="cp-card-item">
-                                    <!-- CP Card Header -->
-                                    <div class="cp-header-box d-flex justify-content-between align-items-start gap-2 flex-wrap">
-                                        <div class="d-flex align-items-start gap-2.5">
-                                            <span class="badge bg-primary text-white font-monospace px-2.5 py-1.5 rounded-2 shadow-xs fw-bold" style="font-size: 0.82rem;">
-                                                <i class="bi bi-bookmark-fill me-1"></i><?= htmlspecialchars($cp['kode_cp']) ?>
+                                    <!-- CP Card Header (Responsive Wrapping) -->
+                                    <div class="cp-header-box d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-1.5">
+                                        <div class="d-flex align-items-start gap-2 w-100 flex-grow-1 min-w-0">
+                                            <span class="badge bg-primary text-white font-monospace px-2 py-1 rounded-2 shadow-xs fw-bold flex-shrink-0 badge-pill-fixed" style="font-size: 0.78rem;">
+                                                <i class="bi bi-bookmark-fill me-0.5"></i><?= htmlspecialchars($cp['kode_cp']) ?>
                                             </span>
-                                            <div>
+                                            <div class="min-w-0 flex-grow-1">
                                                 <?php if (!empty($cp['elemen'])): ?>
-                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1 rounded-2 small fw-bold mb-1 d-inline-block">
-                                                        <i class="bi bi-tag-fill me-1"></i>Elemen: <?= htmlspecialchars($cp['elemen']) ?>
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 rounded-2 small fw-bold mb-0.5 d-inline-block text-break" style="font-size: 0.75rem;">
+                                                        <i class="bi bi-tag-fill me-1 flex-shrink-0"></i>Elemen: <?= htmlspecialchars($cp['elemen']) ?>
                                                     </span>
                                                 <?php endif; ?>
                                                 <?php if (!empty($cp['nama_fase'])): ?>
-                                                    <span class="badge bg-secondary-subtle text-dark border px-2 py-1 rounded-2 small fw-semibold ms-1">
+                                                    <span class="badge bg-secondary-subtle text-dark border px-2 py-0.5 rounded-2 small fw-semibold ms-1" style="font-size: 0.72rem;">
                                                         <?= htmlspecialchars($cp['nama_fase']) ?>
                                                     </span>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge bg-light text-secondary border px-2.5 py-1 rounded-pill small fw-semibold">
+                                        <div class="d-flex align-items-center gap-1 flex-shrink-0 mt-1 mt-sm-0">
+                                            <span class="badge bg-light text-secondary border px-2 py-0.5 rounded-pill small fw-semibold" style="font-size: 0.72rem;">
                                                 <i class="bi bi-bullseye text-success me-1"></i><?= count($childTps) ?> Butir TP
                                             </span>
                                         </div>
                                     </div>
 
                                     <!-- CP Description Body -->
-                                    <div class="p-3 p-md-3.5 border-bottom" style="background-color: #fafbfc;">
-                                        <div class="text-uppercase fw-bold text-muted mb-1.5" style="font-size: 0.72rem; letter-spacing: 0.6px;">
-                                            <i class="bi bi-card-text text-primary me-1"></i>Rumusan Capaian Pembelajaran (CP):
+                                    <div class="p-2.5 p-md-3 border-bottom cp-desc-box" style="background-color: #fafbfc;">
+                                        <div class="text-uppercase fw-bold text-muted mb-1" style="font-size: 0.68rem; letter-spacing: 0.5px;">
+                                            <i class="bi bi-card-text text-primary me-1"></i>Deskripsi Capaian Pembelajaran (CP):
                                         </div>
-                                        <div class="text-dark small lh-base" style="font-size: 0.92rem; color: #1e293b; line-height: 1.68;">
+                                        <div class="text-dark small lh-base text-break" style="font-size: 0.88rem; color: #1e293b; line-height: 1.62;">
                                             <?= nl2br(htmlspecialchars($cp['deskripsi'])) ?>
                                         </div>
                                     </div>
 
                                     <!-- TP (Tujuan Pembelajaran) Child Container -->
-                                    <div class="p-3 p-md-3.5">
-                                        <div class="d-flex justify-content-between align-items-center mb-2.5">
-                                            <span class="text-uppercase fw-bold text-dark d-flex align-items-center gap-1.5" style="font-size: 0.78rem; letter-spacing: 0.5px;">
+                                    <div class="p-2.5 p-md-3 cp-tp-container">
+                                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
+                                            <span class="text-uppercase fw-bold text-dark d-flex align-items-center gap-1" style="font-size: 0.74rem; letter-spacing: 0.4px;">
                                                 <i class="bi bi-check2-all text-success fs-6"></i>
-                                                <span>Rincian Tujuan Pembelajaran (TP) & Standar KKTP:</span>
+                                                <span>Rincian TP & Standar KKTP:</span>
                                             </span>
-                                            <small class="text-muted" style="font-size: 0.75rem;">
-                                                Materi pokok & target kelulusan asesmen
+                                            <small class="text-muted d-none d-sm-inline" style="font-size: 0.72rem;">
+                                                Materi pokok & target kelulusan
                                             </small>
                                         </div>
 
                                         <?php if (empty($childTps)): ?>
-                                            <div class="p-3 rounded-3 bg-light border border-dashed text-center text-muted small">
+                                            <div class="p-2.5 rounded-3 bg-light border border-dashed text-center text-muted small" style="font-size: 0.8rem;">
                                                 <i class="bi bi-info-circle me-1"></i> Belum ada butir TP turunan untuk Capaian Pembelajaran ini.
                                             </div>
                                         <?php else: ?>
-                                            <div class="d-flex flex-column gap-2.5">
+                                            <div class="d-flex flex-column gap-2">
                                                 <?php foreach ($childTps as $tp): 
                                                     $kMetode = $tp['kktp_metode'] ?? 'interval_nilai';
                                                     $kMin = !empty($tp['kktp_nilai_min']) ? floatval($tp['kktp_nilai_min']) : 75.00;
@@ -562,31 +706,32 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                                     $kKriteria = trim($tp['kktp_kriteria'] ?? '');
                                                 ?>
                                                     <div class="tp-card-box">
-                                                        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
-                                                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                                <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace px-2.5 py-1 rounded fw-bold" style="font-size: 0.78rem;">
+                                                        <!-- Top Row: Kode TP, Materi Pokok & KKTP Badge -->
+                                                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-1.5 mb-1.5">
+                                                            <div class="d-flex align-items-center gap-1.5 flex-wrap min-w-0 w-100 w-sm-auto">
+                                                                <span class="badge bg-success-subtle text-success border border-success-subtle font-monospace px-2 py-0.5 rounded fw-bold flex-shrink-0 badge-pill-fixed" style="font-size: 0.75rem;">
                                                                     <?= htmlspecialchars($tp['kode_tp']) ?>
                                                                 </span>
 
                                                                 <?php if (!empty($tp['materi_pokok'])): ?>
-                                                                    <span class="badge bg-light text-dark border px-2.5 py-1 rounded fw-semibold" style="font-size: 0.76rem; background-color: #f8fafc !important;">
-                                                                        <i class="bi bi-bookmark-star-fill text-primary me-1"></i><?= htmlspecialchars($tp['materi_pokok']) ?>
+                                                                    <span class="badge bg-light text-dark border px-2 py-0.5 rounded fw-semibold text-break" style="font-size: 0.74rem; background-color: #f8fafc !important;">
+                                                                        <i class="bi bi-bookmark-star-fill text-primary me-0.5 flex-shrink-0"></i><?= htmlspecialchars($tp['materi_pokok']) ?>
                                                                     </span>
                                                                 <?php endif; ?>
                                                             </div>
 
-                                                            <!-- KKTP Status Pill for Student Awareness -->
-                                                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                                            <!-- KKTP Status Pill for Student Awareness (Wraps Cleanly on Mobile) -->
+                                                            <div class="d-flex align-items-center gap-1 flex-wrap flex-shrink-0">
                                                                 <?php if ($kMetode === 'checklist'): ?>
-                                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2.5 py-1 rounded fw-semibold" style="font-size: 0.75rem;" title="Target ketuntasan checklist indikator">
+                                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-0.5 rounded fw-semibold text-break" style="font-size: 0.72rem;" title="Target ketuntasan checklist indikator">
                                                                         <i class="bi bi-check2-square me-1"></i>Target: <?= $kTarget ?> Indikator Tuntas
                                                                     </span>
                                                                 <?php elseif ($kMetode === 'rubrik'): ?>
-                                                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2.5 py-1 rounded fw-semibold" style="font-size: 0.75rem;" title="Target rubrik capaian kompetensi">
+                                                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-0.5 rounded fw-semibold text-break" style="font-size: 0.72rem;" title="Target rubrik capaian kompetensi">
                                                                         <i class="bi bi-ui-checks-grid me-1"></i>Rubrik Min: <?= number_format($kMin, 0) ?>
                                                                     </span>
                                                                 <?php else: ?>
-                                                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2.5 py-1 rounded fw-semibold" style="font-size: 0.75rem;" title="Ambang batas ketuntasan nilai minimal">
+                                                                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-2 py-0.5 rounded fw-semibold text-break" style="font-size: 0.72rem;" title="Ambang batas ketuntasan nilai minimal">
                                                                         <i class="bi bi-bullseye me-1"></i>Batas Tuntas (KKTP): <?= number_format($kMin, 0) ?>
                                                                     </span>
                                                                 <?php endif; ?>
@@ -594,15 +739,15 @@ if (!function_exists('formatTpDescriptionHtml')) {
                                                         </div>
 
                                                         <!-- TP Description Formatted -->
-                                                        <div class="tp-deskripsi-wrapper mb-2">
+                                                        <div class="tp-deskripsi-wrapper mb-1.5 text-break">
                                                             <?= formatTpDescriptionHtml($tp['deskripsi']) ?>
                                                         </div>
 
                                                         <!-- KKTP Description Detail (if any) -->
                                                         <?php if (!empty($kKriteria)): ?>
-                                                            <div class="mt-2 pt-2 border-top border-light d-flex align-items-start gap-2 small text-muted" style="font-size: 0.8rem;">
-                                                                <i class="bi bi-info-circle-fill text-info mt-0.5"></i>
-                                                                <div>
+                                                            <div class="mt-1.5 pt-1.5 border-top border-light d-flex align-items-start gap-1.5 small text-muted text-break" style="font-size: 0.76rem;">
+                                                                <i class="bi bi-info-circle-fill text-info mt-0.5 flex-shrink-0"></i>
+                                                                <div class="text-break">
                                                                     <strong>Pedoman Ketuntasan:</strong> <?= htmlspecialchars($kKriteria) ?>
                                                                 </div>
                                                             </div>
@@ -624,28 +769,28 @@ if (!function_exists('formatTpDescriptionHtml')) {
     <?php endif; ?>
 
     <!-- 7. Informative Guide Card for Students -->
-    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4 cptp-actions-nonprint">
-        <div class="row align-items-center g-3">
+    <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 bg-white mb-3 cptp-actions-nonprint">
+        <div class="row align-items-center g-2.5">
             <div class="col-12 col-md-8">
-                <div class="d-flex align-items-start gap-3">
-                    <div class="rounded-circle bg-primary-subtle text-primary p-3 flex-shrink-0 d-none d-sm-block">
-                        <i class="bi bi-lightbulb-fill fs-3"></i>
+                <div class="d-flex align-items-start gap-2.5">
+                    <div class="rounded-circle bg-primary-subtle text-primary p-2.5 flex-shrink-0 d-none d-sm-block">
+                        <i class="bi bi-lightbulb-fill fs-4"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold text-dark mb-1 d-flex align-items-center gap-1.5">
+                        <h6 class="fw-bold text-dark mb-1 d-flex align-items-center gap-1.5" style="font-size: 0.9rem;">
                             <i class="bi bi-info-circle text-primary d-sm-none"></i>
                             <span>Apa Arti CP, TP, dan KKTP bagi Siswa?</span>
                         </h6>
-                        <p class="text-muted small mb-0 lh-base" style="font-size: 0.84rem;">
-                            <strong>Capaian Pembelajaran (CP)</strong> merupakan kompetensi inti yang harus Anda kuasai dalam 1 fase belajar. <strong>Tujuan Pembelajaran (TP)</strong> adalah butir sasaran harian per materi. Sedangkan <strong>KKTP</strong> adalah kriteria ketuntasan minimal (standar 75) yang harus Anda raih pada nilai tugas, kuis CBT, dan evaluasi sumatif agar dinyatakan tuntas pada lembar E-Rapor Digital.
+                        <p class="text-muted small mb-0 lh-base text-break" style="font-size: 0.8rem;">
+                            <strong>Capaian Pembelajaran (CP)</strong> merupakan kompetensi inti fase belajar. <strong>Tujuan Pembelajaran (TP)</strong> adalah butir sasaran harian per materi. Sedangkan <strong>KKTP</strong> adalah kriteria ketuntasan minimal (standar 75) yang harus Anda raih pada nilai tugas, kuis CBT, dan evaluasi sumatif agar dinyatakan tuntas pada lembar E-Rapor Digital.
                         </p>
                     </div>
                 </div>
             </div>
             <div class="col-12 col-md-4 text-md-end">
-                <a href="<?= BASE_URL ?>index.php?url=siswa/panduan" class="btn btn-outline-primary fw-semibold rounded-3 px-3 py-2 small d-inline-flex align-items-center gap-1.5">
+                <a href="<?= BASE_URL ?>index.php?url=siswa/panduan" class="btn btn-outline-primary fw-semibold rounded-3 px-3 py-1.5 small d-inline-flex align-items-center gap-1.5 w-100 w-md-auto justify-content-center" style="font-size: 0.82rem;">
                     <i class="bi bi-book-half"></i>
-                    <span>Baca Panduan Siswa Lengkap</span>
+                    <span>Baca Panduan Siswa</span>
                 </a>
             </div>
         </div>
