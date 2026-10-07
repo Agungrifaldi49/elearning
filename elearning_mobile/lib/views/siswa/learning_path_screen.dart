@@ -200,7 +200,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
       Provider.of<SiswaProvider>(context, listen: false).markMateriAsSeen(materiId);
     }
 
-    final String fileUrl = ApiService.getFileUrl(rawFilePath);
+    final String fileUrl = ApiService.getMateriUrl(rawFilePath);
 
     showModalBottomSheet(
       context: context,
@@ -453,7 +453,7 @@ class _LearningPathScreenState extends State<LearningPathScreen> {
                         height: 40,
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            final fileUrl = ApiService.getFileUrl(rawFilePath);
+                            final fileUrl = ApiService.getTugasUrl(rawFilePath);
                             FileService.showInAppPreview(context, fileUrl, judul, studentName: guru);
                           },
                           icon: const Icon(Icons.attach_file_rounded, size: 16),

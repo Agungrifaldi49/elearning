@@ -1,3 +1,5 @@
+import '../services/api_service.dart';
+
 class MateriModel {
   final int id;
   final int guruId;
@@ -8,6 +10,7 @@ class MateriModel {
   final String deskripsi;
   final String jenisFile;
   final String? filePath;
+  final String? fileUrl;
   final String? youtubeUrl;
   final String namaMapel;
   final String? namaGuru;
@@ -24,12 +27,20 @@ class MateriModel {
     required this.deskripsi,
     required this.jenisFile,
     this.filePath,
+    this.fileUrl,
     this.youtubeUrl,
     required this.namaMapel,
     this.namaGuru,
     this.namaKelas,
     required this.createdAt,
   });
+
+  String get effectiveFileUrl {
+    if (fileUrl != null && fileUrl!.trim().isNotEmpty) {
+      return ApiService.getFileUrl(fileUrl);
+    }
+    return ApiService.getMateriUrl(filePath);
+  }
 
   static int _parseInt(dynamic val, [int defaultVal = 0]) {
     if (val == null) return defaultVal;
@@ -52,6 +63,7 @@ class MateriModel {
       deskripsi: json['deskripsi'] ?? '',
       jenisFile: json['jenis_file'] ?? 'pdf',
       filePath: json['file_path'],
+      fileUrl: json['file_url'],
       youtubeUrl: json['youtube_url'],
       namaMapel: json['nama_mapel'] ?? '',
       namaGuru: json['nama_guru'],

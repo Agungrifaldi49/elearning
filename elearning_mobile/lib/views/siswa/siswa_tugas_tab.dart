@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/tugas_model.dart';
@@ -176,9 +178,16 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
     Provider.of<SiswaProvider>(context, listen: false).markTugasAsSeen(t.id);
 
     final catatanController = TextEditingController(text: t.catatanSiswa ?? '');
-    final fileController = TextEditingController(text: t.filePathSiswa ?? '');
+    final bool isExistingDrive = t.filePathSiswa != null &&
+        (t.filePathSiswa!.startsWith('http://') || t.filePathSiswa!.startsWith('https://'));
+    final driveController = TextEditingController(text: isExistingDrive ? t.filePathSiswa! : '');
+    File? selectedLocalFile;
+    String submissionMode = isExistingDrive ? 'link' : 'file';
+    bool isSubmitting = false;
 
-    final fileUrl = ApiService.getFileUrl(t.filePath);
+    final fileUrl = t.effectiveFileUrl.isNotEmpty
+        ? t.effectiveFileUrl
+        : ApiService.getTugasUrl(t.filePath);
 
     showModalBottomSheet(
       context: context,
@@ -187,18 +196,20 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            top: 20,
-            left: 20,
-            right: 20,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                top: 20,
+                left: 20,
+                right: 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -277,14 +288,29 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                 if (t.filePath != null && t.filePath!.isNotEmpty) ...[
                   SizedBox(
                     width: double.infinity,
-                    height: 46,
+                    height: 48,
                     child: ElevatedButton.icon(
                       onPressed: () => FileService.openFileOrUrl(context, fileUrl),
-                      icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white),
-                      label: const Text('Buka Berkas Lampiran Tugas (PDF)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 22),
+                      label: const Text('Buka Berkas Lampiran Tugas (PDF)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue.shade700,
                         foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: () => FileService.openFileOrUrl(context, fileUrl, preferInApp: false),
+                      icon: const Icon(Icons.download_rounded, size: 20),
+                      label: const Text('Unduh Berkas Lampiran ke HP', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.blue.shade800,
+                        side: BorderSide(color: Colors.blue.shade300),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
@@ -449,48 +475,355 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
                     maxLines: 3,
                     decoration: InputDecoration(
                       labelText: 'Catatan / Jawaban Teks',
-                      hintText: 'Tuliskan penjelasan jawaban Anda di sini...',
+                      hintText: 'Tuliskan penjelasan jawaban atau ringkasan tugas di sini...',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: fileController,
-                    decoration: InputDecoration(
-                      labelText: 'Nama Berkas / Link Tugas Google Drive (Opsional)',
-                      hintText: 'jawaban_tugas.pdf atau https://drive.google.com/...',
-                      prefixIcon: const Icon(Icons.attach_file_rounded),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(height: 14),
+                  const Text('Pilih Metode Berkas Jawaban:', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.black87)),
+                  const SizedBox(height: 8),
+
+                  // Segmented switch for File Upload vs Google Drive Link
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => setModalState(() => submissionMode = 'file'),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: submissionMode == 'file' ? AppTheme.secondaryColor : Colors.transparent,
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.upload_file_rounded, size: 18, color: submissionMode == 'file' ? Colors.white : Colors.grey.shade700),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Upload File Berkas',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: submissionMode == 'file' ? Colors.white : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => setModalState(() => submissionMode = 'link'),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: submissionMode == 'link' ? AppTheme.secondaryColor : Colors.transparent,
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.link_rounded, size: 18, color: submissionMode == 'link' ? Colors.white : Colors.grey.shade700),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Link Google Drive',
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: submissionMode == 'link' ? Colors.white : Colors.grey.shade700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+
+                  if (submissionMode == 'file') ...[
+                    if (selectedLocalFile != null) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.green.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.insert_drive_file_rounded, color: Colors.green.shade800, size: 22),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    selectedLocalFile!.path.split(Platform.pathSeparator).last,
+                                    style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.black87),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${(selectedLocalFile!.lengthSync() / 1024).toStringAsFixed(1)} KB • Siap diunggah',
+                                    style: TextStyle(fontSize: 11, color: Colors.green.shade800),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.change_circle_rounded, color: Colors.blue),
+                              tooltip: 'Ganti File',
+                              onPressed: () async {
+                                final result = await FilePicker.pickFiles(
+                                  type: FileType.custom,
+                                  allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip', 'rar', 'jpg', 'jpeg', 'png'],
+                                );
+                                if (result.isNotEmpty && result.first.path != null) {
+                                  setModalState(() {
+                                    selectedLocalFile = File(result.first.path!);
+                                  });
+                                }
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, color: Colors.red),
+                              tooltip: 'Batal',
+                              onPressed: () => setModalState(() => selectedLocalFile = null),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      InkWell(
+                        onTap: () async {
+                          final result = await FilePicker.pickFiles(
+                            type: FileType.custom,
+                            allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip', 'rar', 'jpg', 'jpeg', 'png'],
+                          );
+                          if (result.isNotEmpty && result.first.path != null) {
+                            setModalState(() {
+                              selectedLocalFile = File(result.first.path!);
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue.shade300, width: 1.5),
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade100,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.cloud_upload_rounded, color: Colors.blue.shade800, size: 28),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Ketuk untuk Memilih Berkas Tugas dari HP',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.blue),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Format: PDF, Word (DOC/DOCX), Excel, PPT, ZIP, JPG, PNG (Maks 25 MB)',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ] else ...[
+                    TextField(
+                      controller: driveController,
+                      decoration: InputDecoration(
+                        labelText: 'Link Berkas / Google Drive',
+                        hintText: 'https://drive.google.com/file/d/.../view?usp=sharing',
+                        prefixIcon: const Icon(Icons.link_rounded),
+                        helperText: 'Pastikan setelan Google Drive: "Siapa saja yang memiliki link dapat melihat".',
+                        helperMaxLines: 2,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+
+                  if (t.isSubmitted && t.filePathSiswa != null && t.filePathSiswa!.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade100,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              (t.filePathSiswa!.startsWith('http://') || t.filePathSiswa!.startsWith('https://'))
+                                  ? Icons.link_rounded
+                                  : Icons.file_present_rounded,
+                              color: Colors.blue.shade800,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  (t.filePathSiswa!.startsWith('http://') || t.filePathSiswa!.startsWith('https://'))
+                                      ? 'Link Google Drive Terkirim:'
+                                      : 'Berkas Jawaban Terkirim:',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  t.filePathSiswa!,
+                                  style: const TextStyle(fontSize: 12),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: () => FileService.openFileOrUrl(context, t.effectiveFileUrlSiswa),
+                            icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                            label: Text(
+                              (t.filePathSiswa!.startsWith('http://') || t.filePathSiswa!.startsWith('https://'))
+                                  ? 'Buka Link'
+                                  : 'Buka File',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  const SizedBox(height: 6),
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton.icon(
-                      onPressed: () async {
-                        final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-                        final nav = Navigator.of(context);
-                        final messenger = ScaffoldMessenger.of(context);
-                        if (user != null) {
-                          final res = await Provider.of<SiswaProvider>(context, listen: false).submitTugasWithResponse(
-                            user.id,
-                            t.id,
-                            catatanController.text,
-                            fileController.text,
-                          );
-                          nav.pop();
-                          final success = res['success'] == true;
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(res['message'] ?? (success ? 'Tugas berhasil dikumpulkan!' : 'Gagal mengirim tugas')),
-                              backgroundColor: success ? Colors.green : Colors.red,
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.send_rounded),
-                      label: Text(t.isSubmitted ? 'Simpan Perubahan Jawaban' : 'Kirim Jawaban Tugas', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+                              if (user == null) return;
+
+                              final notes = catatanController.text.trim();
+                              final driveLink = driveController.text.trim();
+
+                              if (submissionMode == 'file') {
+                                if (selectedLocalFile == null && (!t.isSubmitted || (t.filePathSiswa == null || t.filePathSiswa!.isEmpty)) && notes.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Silakan pilih berkas dari HP atau tuliskan catatan jawaban tugas.'),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                  return;
+                                }
+                              } else {
+                                if (driveLink.isEmpty && notes.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Silakan masukkan link Google Drive atau tuliskan catatan jawaban tugas.'),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                  return;
+                                }
+                              }
+
+                              setModalState(() => isSubmitting = true);
+
+                              String finalFilePath = '';
+                              File? finalFileToUpload;
+
+                              if (submissionMode == 'file') {
+                                if (selectedLocalFile != null) {
+                                  finalFileToUpload = selectedLocalFile;
+                                } else {
+                                  finalFilePath = t.filePathSiswa ?? '';
+                                }
+                              } else {
+                                finalFilePath = driveLink;
+                              }
+
+                              final messenger = ScaffoldMessenger.of(context);
+                              final nav = Navigator.of(context);
+
+                              final res = await Provider.of<SiswaProvider>(context, listen: false).submitTugasWithResponse(
+                                user.id,
+                                t.id,
+                                notes,
+                                finalFilePath,
+                                file: finalFileToUpload,
+                              );
+
+                              if (mounted) {
+                                setModalState(() => isSubmitting = false);
+                              }
+                              nav.pop();
+
+                              final success = res['success'] == true;
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(res['message'] ?? (success ? 'Tugas berhasil dikumpulkan!' : 'Gagal mengirim tugas')),
+                                  backgroundColor: success ? Colors.green : Colors.red,
+                                ),
+                              );
+                            },
+                      icon: isSubmitting
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Icon(Icons.send_rounded),
+                      label: Text(
+                        isSubmitting
+                            ? 'Mengunggah Jawaban...'
+                            : (t.isSubmitted ? 'Simpan Perubahan Jawaban' : 'Kirim Jawaban Tugas'),
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.secondaryColor,
                         foregroundColor: Colors.white,
@@ -505,6 +838,8 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
         );
       },
     );
+  },
+);
   }
 
   @override

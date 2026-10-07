@@ -77,7 +77,63 @@ class ApiService {
     }
 
     final cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+
+    // 4. Auto-detect category prefix for files saved via UploadHelper (e.g. materi_xxx.pdf, tugas_xxx.pdf)
+    const uploadCategories = [
+      'materi',
+      'tugas',
+      'video',
+      'soal',
+      'profile',
+      'avatar',
+      'sertifikat',
+      'forum',
+      'pengumuman',
+      'logo',
+      'library',
+    ];
+    for (final cat in uploadCategories) {
+      if (cleanPath.startsWith('${cat}_') || cleanPath.startsWith('$cat/')) {
+        final subPath = cleanPath.startsWith('$cat/') ? cleanPath : '$cat/$cleanPath';
+        return '${serverRootUrl}assets/uploads/$subPath';
+      }
+    }
+
     return '$serverRootUrl$cleanPath';
+  }
+
+  /// Generates full URL specifically for materi files (PDF, doc, etc.)
+  static String getMateriUrl(String? path) {
+    if (path == null || path.trim().isEmpty) return '';
+    final trimmed = path.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return getFileUrl(trimmed);
+    }
+    if (trimmed.contains('assets/uploads/')) {
+      return getFileUrl(trimmed);
+    }
+    final clean = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    if (clean.startsWith('materi/')) {
+      return getFileUrl('assets/uploads/$clean');
+    }
+    return getFileUrl('assets/uploads/materi/$clean');
+  }
+
+  /// Generates full URL specifically for tugas files (PDF, doc, zip, etc.)
+  static String getTugasUrl(String? path) {
+    if (path == null || path.trim().isEmpty) return '';
+    final trimmed = path.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return getFileUrl(trimmed);
+    }
+    if (trimmed.contains('assets/uploads/')) {
+      return getFileUrl(trimmed);
+    }
+    final clean = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    if (clean.startsWith('tugas/')) {
+      return getFileUrl('assets/uploads/$clean');
+    }
+    return getFileUrl('assets/uploads/tugas/$clean');
   }
 
   static Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> body) async {

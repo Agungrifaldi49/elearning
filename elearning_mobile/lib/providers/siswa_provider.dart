@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/materi_model.dart';
@@ -329,21 +330,50 @@ class SiswaProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>> submitTugasWithResponse(int userId, int tugasId, String catatan, String filePath) async {
-    final res = await ApiService.post('siswa/submit_tugas', {
-      'user_id': userId,
-      'tugas_id': tugasId,
-      'catatan_siswa': catatan,
-      'file_path': filePath,
-    });
+  Future<Map<String, dynamic>> submitTugasWithResponse(
+    int userId,
+    int tugasId,
+    String catatan,
+    String filePath, {
+    File? file,
+  }) async {
+    Map<String, dynamic> res;
+    if (file != null && await file.exists()) {
+      res = await ApiService.postMultipart(
+        'siswa/submit_tugas',
+        fields: {
+          'user_id': userId.toString(),
+          'tugas_id': tugasId.toString(),
+          'catatan_siswa': catatan,
+          'file_path': filePath,
+        },
+        files: {
+          'file': file,
+        },
+      );
+    } else {
+      res = await ApiService.post('siswa/submit_tugas', {
+        'user_id': userId,
+        'tugas_id': tugasId,
+        'catatan_siswa': catatan,
+        'file_path': filePath,
+      });
+    }
+
     if (res['success'] == true) {
       await fetchTugas(userId);
     }
     return res;
   }
 
-  Future<bool> submitTugas(int userId, int tugasId, String catatan, String filePath) async {
-    final res = await submitTugasWithResponse(userId, tugasId, catatan, filePath);
+  Future<bool> submitTugas(
+    int userId,
+    int tugasId,
+    String catatan,
+    String filePath, {
+    File? file,
+  }) async {
+    final res = await submitTugasWithResponse(userId, tugasId, catatan, filePath, file: file);
     return res['success'] == true;
   }
 

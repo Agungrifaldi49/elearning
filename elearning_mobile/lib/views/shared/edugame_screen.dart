@@ -120,6 +120,22 @@ class _EduGameScreenState extends State<EduGameScreen> {
     }
   }
 
+  IconData _getModeIcon(String mode) {
+    switch (mode) {
+      case 'Kuis Speed':
+        return Icons.bolt_rounded;
+      case 'Spin Wheel':
+        return Icons.rotate_right_rounded;
+      case 'Memory Match':
+        return Icons.extension_rounded;
+      case 'Mario Runner':
+        return Icons.directions_run_rounded;
+      case 'Semua':
+      default:
+        return Icons.grid_view_rounded;
+    }
+  }
+
   Color _getTipeColor(String? tipe) {
     switch (tipe?.toLowerCase()) {
       case 'quiz_speed':
@@ -206,22 +222,39 @@ class _EduGameScreenState extends State<EduGameScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: TextField(
                     controller: _searchController,
                     onChanged: (_) => _applyFilters(),
-                    style: const TextStyle(fontSize: 12.5, color: Colors.black87),
-                    decoration: const InputDecoration(
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A), fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
                       hintText: 'Cari judul game atau mata pelajaran...',
-                      prefixIcon: Icon(Icons.search_rounded, size: 20, color: Colors.purple),
+                      hintStyle: const TextStyle(fontSize: 12.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.normal),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF6B21A8)),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18, color: Color(0xFF94A3B8)),
+                              onPressed: () {
+                                _searchController.clear();
+                                _applyFilters();
+                              },
+                            )
+                          : null,
                       border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
-                // Game Mode Chips Filter Row
+                // Game Mode Chips Filter Row (High Contrast Custom Chips)
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -229,26 +262,62 @@ class _EduGameScreenState extends State<EduGameScreen> {
                       final isSelected = _selectedMode == mode;
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: FilterChip(
-                          selected: isSelected,
-                          showCheckmark: false,
-                          label: Text(
-                            mode,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.bold,
-                              color: isSelected ? Colors.purple.shade900 : Colors.white,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _selectedMode = mode;
+                                _applyFilters();
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Colors.white
+                                    : const Color(0x33FFFFFF), // Frosted glass 20%
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : const Color(0x80FFFFFF), // Visible 50% border
+                                  width: 1.4,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.18),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _getModeIcon(mode),
+                                    size: 15,
+                                    color: isSelected ? const Color(0xFF5B21B6) : Colors.white,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    mode,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                      color: isSelected ? const Color(0xFF5B21B6) : Colors.white,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          backgroundColor: Colors.white12,
-                          selectedColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          onSelected: (selected) {
-                            setState(() {
-                              _selectedMode = mode;
-                              _applyFilters();
-                            });
-                          },
                         ),
                       );
                     }).toList(),

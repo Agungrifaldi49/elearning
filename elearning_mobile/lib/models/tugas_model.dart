@@ -1,3 +1,5 @@
+import '../services/api_service.dart';
+
 class TugasModel {
   final int id;
   final int guruId;
@@ -6,6 +8,7 @@ class TugasModel {
   final String judul;
   final String deskripsi;
   final String? filePath;
+  final String? fileUrl;
   final String deadline;
   final String namaMapel;
   final String? namaGuru;
@@ -17,6 +20,7 @@ class TugasModel {
   final int? totalPengumpulan;
   final String? catatanSiswa;
   final String? filePathSiswa;
+  final String? fileUrlSiswa;
   final bool canSubmit;
   final bool isExpired;
   final String lockStatus;
@@ -33,6 +37,7 @@ class TugasModel {
     required this.judul,
     required this.deskripsi,
     this.filePath,
+    this.fileUrl,
     required this.deadline,
     required this.namaMapel,
     this.namaGuru,
@@ -44,12 +49,27 @@ class TugasModel {
     this.totalPengumpulan,
     this.catatanSiswa,
     this.filePathSiswa,
+    this.fileUrlSiswa,
     this.canSubmit = true,
     this.isExpired = false,
     this.lockStatus = 'terbuka',
     this.susulanStatus,
     this.pendingSusulanCount,
   });
+
+  String get effectiveFileUrl {
+    if (fileUrl != null && fileUrl!.trim().isNotEmpty) {
+      return ApiService.getFileUrl(fileUrl);
+    }
+    return ApiService.getTugasUrl(filePath);
+  }
+
+  String get effectiveFileUrlSiswa {
+    if (fileUrlSiswa != null && fileUrlSiswa!.trim().isNotEmpty) {
+      return ApiService.getFileUrl(fileUrlSiswa);
+    }
+    return ApiService.getTugasUrl(filePathSiswa);
+  }
 
   static int _parseInt(dynamic val, [int defaultVal = 0]) {
     if (val == null) return defaultVal;
@@ -103,6 +123,7 @@ class TugasModel {
       judul: json['judul'] ?? '',
       deskripsi: json['deskripsi'] ?? '',
       filePath: json['file_path'],
+      fileUrl: json['file_url'],
       deadline: json['deadline'] ?? '',
       namaMapel: json['nama_mapel'] ?? '',
       namaGuru: json['nama_guru'],
@@ -114,6 +135,7 @@ class TugasModel {
       totalPengumpulan: json['total_pengumpulan'] != null ? _parseInt(json['total_pengumpulan']) : null,
       catatanSiswa: json['catatan_siswa']?.toString(),
       filePathSiswa: json['file_path_siswa']?.toString(),
+      fileUrlSiswa: json['file_url_siswa']?.toString(),
       canSubmit: parsedCanSubmit,
       isExpired: parsedExpired,
       lockStatus: lockSt,

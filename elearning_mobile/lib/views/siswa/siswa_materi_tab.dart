@@ -35,7 +35,9 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
   void _showMateriDetailModal(MateriModel m) {
     Provider.of<SiswaProvider>(context, listen: false).markMateriAsSeen(m.id);
 
-    final fileUrl = ApiService.getFileUrl(m.filePath);
+    final fileUrl = m.effectiveFileUrl.isNotEmpty
+        ? m.effectiveFileUrl
+        : ApiService.getMateriUrl(m.filePath);
 
     showModalBottomSheet(
       context: context,
@@ -166,6 +168,21 @@ class _SiswaMateriTabState extends State<SiswaMateriTab> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue.shade700,
                       foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: () => FileService.openFileOrUrl(context, fileUrl, preferInApp: false),
+                    icon: const Icon(Icons.download_rounded, size: 20),
+                    label: const Text('Unduh Berkas PDF ke HP', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.blue.shade800,
+                      side: BorderSide(color: Colors.blue.shade300),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),

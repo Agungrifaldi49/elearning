@@ -605,9 +605,16 @@ class ApiController {
 
                     // 1. Real Materi added by Guru
                     foreach ($materiRows as $mItem) {
-                        $fileUrl = !empty($mItem['file_path']) 
-                            ? (str_starts_with($mItem['file_path'], 'http') ? $mItem['file_path'] : BASE_URL . ltrim($mItem['file_path'], '/'))
-                            : null;
+                        $fPath = trim($mItem['file_path'] ?? '');
+                        if (empty($fPath)) {
+                            $fileUrl = null;
+                        } elseif (strpos($fPath, 'http://') === 0 || strpos($fPath, 'https://') === 0) {
+                            $fileUrl = $fPath;
+                        } elseif (strpos($fPath, 'assets/uploads/') !== false) {
+                            $fileUrl = BASE_URL . ltrim($fPath, '/');
+                        } else {
+                            $fileUrl = BASE_URL . 'assets/uploads/materi/' . ltrim($fPath, '/');
+                        }
 
                         $sequenceItems[] = [
                             'id' => intval($mItem['id']),
@@ -643,12 +650,25 @@ class ApiController {
                             }
                         }
 
+                        $tFPath = trim($tItem['file_path'] ?? '');
+                        if (empty($tFPath)) {
+                            $tFileUrl = null;
+                        } elseif (strpos($tFPath, 'http://') === 0 || strpos($tFPath, 'https://') === 0) {
+                            $tFileUrl = $tFPath;
+                        } elseif (strpos($tFPath, 'assets/uploads/') !== false) {
+                            $tFileUrl = BASE_URL . ltrim($tFPath, '/');
+                        } else {
+                            $tFileUrl = BASE_URL . 'assets/uploads/tugas/' . ltrim($tFPath, '/');
+                        }
+
                         $sequenceItems[] = [
                             'id' => intval($tItem['id']),
                             'type' => 'tugas',
                             'title' => 'Penugasan: ' . $tItem['judul'],
                             'desc' => $tItem['deskripsi'] ?: 'Tugas KBM & Praktikum.',
                             'guru' => $tItem['nama_guru'] ?: $namaGuru,
+                            'file_path' => $tFPath,
+                            'file_url' => $tFileUrl,
                             'is_completed' => $isSub,
                             'submission_id' => $tItem['submission_id'] ? intval($tItem['submission_id']) : null,
                             'nilai' => $nilai,
@@ -895,6 +915,22 @@ class ApiController {
                     return isset($enrolledMapels[$v['mapel_id'] . '_' . ($v['guru_id'] ?? 0)]) || isset($enrolledMapels[$v['mapel_id']]);
                 }));
 
+                foreach ($materiList as &$m) {
+                    if (!empty($m['file_path'])) {
+                        $fPath = trim($m['file_path']);
+                        if (strpos($fPath, 'http://') === 0 || strpos($fPath, 'https://') === 0) {
+                            $m['file_url'] = $fPath;
+                        } elseif (strpos($fPath, 'assets/uploads/') !== false) {
+                            $m['file_url'] = BASE_URL . ltrim($fPath, '/');
+                        } else {
+                            $m['file_url'] = BASE_URL . 'assets/uploads/materi/' . ltrim($fPath, '/');
+                        }
+                    } else {
+                        $m['file_url'] = null;
+                    }
+                }
+                unset($m);
+
                 $this->jsonResponse(true, 'Daftar Materi Pembelajaran', [
                     'materi' => $materiList,
                     'videos' => $videoList
@@ -952,6 +988,32 @@ class ApiController {
                         $t['submitted_at'] = null;
                         $t['file_path_siswa'] = null;
                         $t['is_submitted'] = false;
+                    }
+
+                    if (!empty($t['file_path'])) {
+                        $fPath = trim($t['file_path']);
+                        if (strpos($fPath, 'http://') === 0 || strpos($fPath, 'https://') === 0) {
+                            $t['file_url'] = $fPath;
+                        } elseif (strpos($fPath, 'assets/uploads/') !== false) {
+                            $t['file_url'] = BASE_URL . ltrim($fPath, '/');
+                        } else {
+                            $t['file_url'] = BASE_URL . 'assets/uploads/tugas/' . ltrim($fPath, '/');
+                        }
+                    } else {
+                        $t['file_url'] = null;
+                    }
+
+                    if (!empty($t['file_path_siswa'])) {
+                        $subPath = trim($t['file_path_siswa']);
+                        if (strpos($subPath, 'http://') === 0 || strpos($subPath, 'https://') === 0) {
+                            $t['file_url_siswa'] = $subPath;
+                        } elseif (strpos($subPath, 'assets/uploads/') !== false) {
+                            $t['file_url_siswa'] = BASE_URL . ltrim($subPath, '/');
+                        } else {
+                            $t['file_url_siswa'] = BASE_URL . 'assets/uploads/tugas/' . ltrim($subPath, '/');
+                        }
+                    } else {
+                        $t['file_url_siswa'] = null;
                     }
                 }
                 unset($t);
@@ -2100,6 +2162,18 @@ class ApiController {
                         }
                     }
                     $item['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($item['nama_kelas'] ?? 'Semua Kelas');
+                    if (!empty($item['file_path'])) {
+                        $fPath = trim($item['file_path']);
+                        if (strpos($fPath, 'http://') === 0 || strpos($fPath, 'https://') === 0) {
+                            $item['file_url'] = $fPath;
+                        } elseif (strpos($fPath, 'assets/uploads/') !== false) {
+                            $item['file_url'] = BASE_URL . ltrim($fPath, '/');
+                        } else {
+                            $item['file_url'] = BASE_URL . 'assets/uploads/materi/' . ltrim($fPath, '/');
+                        }
+                    } else {
+                        $item['file_url'] = null;
+                    }
                 }
                 unset($item);
 
@@ -2247,6 +2321,18 @@ class ApiController {
                         }
                     }
                     $item['nama_kelas'] = !empty($names) ? implode(', ', $names) : ($item['nama_kelas'] ?? 'Semua Kelas');
+                    if (!empty($item['file_path'])) {
+                        $fPath = trim($item['file_path']);
+                        if (strpos($fPath, 'http://') === 0 || strpos($fPath, 'https://') === 0) {
+                            $item['file_url'] = $fPath;
+                        } elseif (strpos($fPath, 'assets/uploads/') !== false) {
+                            $item['file_url'] = BASE_URL . ltrim($fPath, '/');
+                        } else {
+                            $item['file_url'] = BASE_URL . 'assets/uploads/tugas/' . ltrim($fPath, '/');
+                        }
+                    } else {
+                        $item['file_url'] = null;
+                    }
                 }
                 unset($item);
 
