@@ -1165,6 +1165,114 @@ class ApiController {
                 ]);
                 break;
 
+            case 'ekstrakurikuler':
+            case 'ekskul':
+            case 'join_ekskul':
+            case 'leave_ekskul':
+                require_once ROOT_PATH . 'models/EkstrakurikulerModel.php';
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                $ekskulModel = new EkstrakurikulerModel();
+                $academicModel = new AcademicModel();
+
+                $siswaId = intval($siswa['id'] ?? 0);
+                $activeTa = $academicModel->getActiveTahunAjaran();
+                $taId = intval($activeTa['id'] ?? 4);
+                $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+
+                $subAction = strtolower($input['sub_action'] ?? $input['action'] ?? $_GET['sub_action'] ?? $_POST['action'] ?? $endpoint);
+                $ekskulId = intval($input['ekskul_id'] ?? $_POST['ekskul_id'] ?? $_GET['ekskul_id'] ?? 0);
+
+                if ($subAction === 'join_ekskul' || $endpoint === 'join_ekskul') {
+                    if ($ekskulId <= 0) {
+                        $this->jsonResponse(false, 'ID Ekstrakurikuler tidak valid.', null, 400);
+                    }
+                    $joined = $ekskulModel->joinEkskul($siswaId, $ekskulId, $taId, $activeSemester);
+                    if ($joined) {
+                        $this->jsonResponse(true, 'Selamat! Anda telah berhasil mengikuti kegiatan ekstrakurikuler ini.', [
+                            'ekskul_id' => $ekskulId,
+                            'status' => 'aktif'
+                        ]);
+                    } else {
+                        $this->jsonResponse(false, 'Gagal mengikuti ekstrakurikuler.', null, 500);
+                    }
+                    break;
+                }
+
+                if ($subAction === 'leave_ekskul' || $endpoint === 'leave_ekskul') {
+                    if ($ekskulId <= 0) {
+                        $this->jsonResponse(false, 'ID Ekstrakurikuler tidak valid.', null, 400);
+                    }
+                    $left = $ekskulModel->leaveEkskul($siswaId, $ekskulId);
+                    if ($left) {
+                        $this->jsonResponse(true, 'Anda telah membatalkan keikutsertaan pada ekstrakurikuler ini.', [
+                            'ekskul_id' => $ekskulId,
+                            'status' => 'keluar'
+                        ]);
+                    } else {
+                        $this->jsonResponse(false, 'Gagal membatalkan keikutsertaan ekstrakurikuler.', null, 500);
+                    }
+                    break;
+                }
+
+                // Default: Fetch all available & student's joined ekstrakurikuler
+                $allEkskul = [];
+                try {
+                    $allEkskul = $ekskulModel->getAllEkskul(true);
+                } catch (\Throwable $eAll) {
+                    $allEkskul = [];
+                }
+
+                $myEkskul = [];
+                try {
+                    $myEkskul = $ekskulModel->getEkskulBySiswa($siswaId, $taId, $activeSemester);
+                    if (empty($myEkskul)) {
+                        $myEkskul = $ekskulModel->getEkskulBySiswa($siswaId, null, null);
+                    }
+                } catch (\Throwable $eMy) {
+                    $myEkskul = [];
+                }
+
+                $enrolledIds = array_values(array_filter(array_map('intval', array_column($myEkskul, 'ekskul_id'))));
+
+                // Enrich allEkskul with is_joined flag and normalized fields
+                foreach ($allEkskul as &$ae) {
+                    $ae['id'] = intval($ae['id']);
+                    $ae['is_joined'] = in_array($ae['id'], $enrolledIds);
+                    $ae['total_anggota'] = intval($ae['total_anggota'] ?? 0);
+                    if ($ae['tipe_pembimbing'] === 'luar') {
+                        $ae['pembimbing_nama'] = !empty($ae['nama_pembimbing_luar']) ? $ae['nama_pembimbing_luar'] : 'Instruktur Luar';
+                    } else {
+                        $ae['pembimbing_nama'] = !empty($ae['nama_guru']) ? $ae['nama_guru'] : 'Guru Pembimbing';
+                    }
+                }
+                unset($ae);
+
+                foreach ($myEkskul as &$me) {
+                    $me['ekskul_id'] = intval($me['ekskul_id']);
+                    if ($me['tipe_pembimbing'] === 'luar') {
+                        $me['pembimbing_nama'] = !empty($me['nama_pembimbing_luar']) ? $me['nama_pembimbing_luar'] : 'Instruktur Luar';
+                    } else {
+                        $me['pembimbing_nama'] = !empty($me['nama_guru_pembimbing']) ? $me['nama_guru_pembimbing'] : 'Guru Pembimbing';
+                    }
+                }
+                unset($me);
+
+                $this->jsonResponse(true, 'Data Portal Ekstrakurikuler Siswa', [
+                    'active_ta' => [
+                        'id' => $taId,
+                        'tahun_ajaran' => $activeTa['tahun_ajaran'] ?? '2026/2027',
+                        'semester' => $activeSemester
+                    ],
+                    'stats' => [
+                        'total_diikuti' => count($myEkskul),
+                        'total_tersedia' => count($allEkskul)
+                    ],
+                    'my_ekskul' => $myEkskul,
+                    'all_ekskul' => $allEkskul,
+                    'enrolled_ids' => $enrolledIds
+                ]);
+                break;
+
             case 'tugas':
                 require_once ROOT_PATH . 'models/LearningModel.php';
                 $learningModel = new LearningModel();

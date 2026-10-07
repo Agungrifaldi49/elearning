@@ -18,6 +18,7 @@ import 'siswa_forum_screen.dart';
 import 'siswa_chat_screen.dart';
 import 'gabung_kelas_screen.dart';
 import 'siswa_cptp_screen.dart';
+import 'siswa_ekskul_screen.dart';
 import '../shared/notifications_screen.dart';
 import '../shared/edit_profil_screen.dart';
 import '../../services/attendance_reminder_service.dart';
@@ -386,12 +387,15 @@ class _SiswaMainScreenState extends State<SiswaMainScreen> {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaNilaiTab()));
               } else if (value == 'cptp') {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaCptpScreen()));
+              } else if (value == 'ekskul') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaEkskulScreen()));
               }
             },
             itemBuilder: (context) => [
               const PopupMenuItem(value: 'profil', child: Row(children: [Icon(Icons.person_outline_rounded, size: 20, color: Colors.blue), SizedBox(width: 10), Text('Edit & Update Profil')])),
               const PopupMenuItem(value: 'gabung_kelas', child: Row(children: [Icon(Icons.key_rounded, size: 20, color: Colors.amber), SizedBox(width: 10), Text('Gabung Rombel & Key Mapel')])),
               const PopupMenuItem(value: 'cptp', child: Row(children: [Icon(Icons.track_changes_rounded, size: 20, color: Colors.indigo), SizedBox(width: 10), Text('Capaian & TP Mapel')])),
+              const PopupMenuItem(value: 'ekskul', child: Row(children: [Icon(Icons.stars_rounded, size: 20, color: Color(0xFF2563EB)), SizedBox(width: 10), Text('Portal Ekstrakurikuler')])),
               const PopupMenuItem(value: 'kartu', child: Row(children: [Icon(Icons.badge_outlined, size: 20, color: Colors.purple), SizedBox(width: 10), Text('Kartu Pelajar Digital')])),
               const PopupMenuItem(value: 'library', child: Row(children: [Icon(Icons.local_library_outlined, size: 20, color: Colors.deepOrange), SizedBox(width: 10), Text('Perpustakaan Digital')])),
               const PopupMenuItem(value: 'game', child: Row(children: [Icon(Icons.sports_esports_outlined, size: 20, color: Colors.pink), SizedBox(width: 10), Text('EduGame & Kuis Interaktif')])),
