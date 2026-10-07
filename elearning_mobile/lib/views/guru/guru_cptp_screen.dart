@@ -176,276 +176,321 @@ class _GuruCptpScreenState extends State<GuruCptpScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (modalContext, setModalState) {
-            return Container(
-              padding: EdgeInsets.only(
-                left: 20,
-                right: 20,
-                top: 20,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-              ),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: SingleChildScrollView(
+            final mediaQuery = MediaQuery.of(ctx);
+            final bottomInset = mediaQuery.viewInsets.bottom;
+            final availableHeight = (mediaQuery.size.height - bottomInset).clamp(260.0, mediaQuery.size.height * 0.9);
+
+            final hasMapel = mapelId > 0 && _teacherMapels.any((m) => (int.tryParse((m['id'] ?? 0).toString()) ?? 0) == mapelId);
+            final selectedMapelVal = hasMapel ? mapelId : (_teacherMapels.isNotEmpty ? (int.tryParse((_teacherMapels[0]['id'] ?? 0).toString()) ?? 0) : null);
+
+            final hasKur = kurId > 0 && _kurikulumList.any((k) => (int.tryParse((k['id'] ?? 0).toString()) ?? 0) == kurId);
+            final selectedKurVal = hasKur ? kurId : (_kurikulumList.isNotEmpty ? (int.tryParse((_kurikulumList[0]['id'] ?? 0).toString()) ?? 0) : null);
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: bottomInset),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: availableHeight,
+                ),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEEF2FF),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.bookmark_added_rounded, color: Color(0xFF4F46E5), size: 24),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                isEdit ? 'Edit Capaian Pembelajaran' : 'Tambah Capaian Pembelajaran (CP)',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF0F172A),
-                                ),
-                              ),
-                              Text(
-                                'Penyusunan kompetensi inti Kurikulum Merdeka',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 11.5,
-                                  color: const Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close_rounded),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 24),
-
-                    // Mapel Dropdown
-                    Text('Mata Pelajaran', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<int>(
-                      initialValue: mapelId > 0 ? mapelId : null,
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
+                    // Top drag indicator
+                    Container(
+                      margin: const EdgeInsets.only(top: 10, bottom: 6),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      hint: const Text('Pilih Mata Pelajaran'),
-                      items: _teacherMapels.map((m) {
-                        final id = int.tryParse((m['id'] ?? 0).toString()) ?? 0;
-                        return DropdownMenuItem<int>(
-                          value: id,
-                          child: Text(m['nama_mapel']?.toString() ?? 'Mapel', overflow: TextOverflow.ellipsis),
-                        );
-                      }).toList(),
-                      onChanged: (val) async {
-                        if (val != null) {
-                          setModalState(() => mapelId = val);
-                          if (!isEdit && kurId > 0) {
-                            try {
-                              final resCode = await ApiService.post('guru/cptp?user_id=$userId', {
-                                'action': 'get_next_code',
-                                'type': 'cp',
-                                'kurikulum_id': kurId,
-                                'mapel_id': val,
-                              });
-                              if (resCode['success'] == true && resCode['data']?['next_code'] != null) {
-                                setModalState(() {
-                                  kodeController.text = resCode['data']['next_code'].toString();
-                                });
-                              }
-                            } catch (_) {}
-                          }
-                        }
-                      },
                     ),
-                    const SizedBox(height: 14),
-
-                    // Kurikulum & Fase Row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Kurikulum', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 6),
-                              DropdownButtonFormField<int>(
-                                initialValue: kurId > 0 ? kurId : null,
-                                decoration: InputDecoration(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  filled: true,
-                                  fillColor: const Color(0xFFF8FAFC),
+                    // Pinned Header
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEEF2FF),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.bookmark_added_rounded, color: Color(0xFF4F46E5), size: 22),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isEdit ? 'Edit Capaian Pembelajaran' : 'Tambah Capaian Pembelajaran (CP)',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF0F172A),
+                                  ),
                                 ),
-                                hint: const Text('Kurikulum'),
-                                items: _kurikulumList.map((k) {
-                                  final id = int.tryParse((k['id'] ?? 0).toString()) ?? 0;
-                                  return DropdownMenuItem<int>(
-                                    value: id,
-                                    child: Text(k['kode']?.toString() ?? 'KM', overflow: TextOverflow.ellipsis),
+                                Text(
+                                  'Penyusunan kompetensi inti Kurikulum Merdeka',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 11,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 20),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    // Scrollable Form Body
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Mapel Dropdown
+                            Text('Mata Pelajaran', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            DropdownButtonFormField<int>(
+                              initialValue: selectedMapelVal,
+                              isExpanded: true,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                              ),
+                              hint: const Text('Pilih Mata Pelajaran', overflow: TextOverflow.ellipsis),
+                              items: _teacherMapels.map((m) {
+                                final id = int.tryParse((m['id'] ?? 0).toString()) ?? 0;
+                                return DropdownMenuItem<int>(
+                                  value: id,
+                                  child: Text(m['nama_mapel']?.toString() ?? 'Mapel', overflow: TextOverflow.ellipsis),
+                                );
+                              }).toList(),
+                              onChanged: (val) async {
+                                if (val != null) {
+                                  setModalState(() => mapelId = val);
+                                  if (!isEdit && kurId > 0) {
+                                    try {
+                                      final resCode = await ApiService.post('guru/cptp?user_id=$userId', {
+                                        'action': 'get_next_code',
+                                        'type': 'cp',
+                                        'kurikulum_id': kurId,
+                                        'mapel_id': val,
+                                      });
+                                      if (resCode['success'] == true && resCode['data']?['next_code'] != null) {
+                                        setModalState(() {
+                                          kodeController.text = resCode['data']['next_code'].toString();
+                                        });
+                                      }
+                                    } catch (_) {}
+                                  }
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Kurikulum & Fase Row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Kurikulum', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 6),
+                                      DropdownButtonFormField<int>(
+                                        initialValue: selectedKurVal,
+                                        isExpanded: true,
+                                        decoration: InputDecoration(
+                                          isDense: true,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                          filled: true,
+                                          fillColor: const Color(0xFFF8FAFC),
+                                        ),
+                                        hint: const Text('Kurikulum', overflow: TextOverflow.ellipsis),
+                                        items: _kurikulumList.map((k) {
+                                          final id = int.tryParse((k['id'] ?? 0).toString()) ?? 0;
+                                          return DropdownMenuItem<int>(
+                                            value: id,
+                                            child: Text(k['kode']?.toString() ?? 'KM', overflow: TextOverflow.ellipsis),
+                                          );
+                                        }).toList(),
+                                        onChanged: (val) {
+                                          if (val != null) setModalState(() => kurId = val);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Fase / Tingkat', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 6),
+                                      DropdownButtonFormField<int>(
+                                        initialValue: faseId,
+                                        isExpanded: true,
+                                        decoration: InputDecoration(
+                                          isDense: true,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                          filled: true,
+                                          fillColor: const Color(0xFFF8FAFC),
+                                        ),
+                                        hint: const Text('Pilih Fase', overflow: TextOverflow.ellipsis),
+                                        items: [
+                                          const DropdownMenuItem<int>(value: null, child: Text('Semua Fase', overflow: TextOverflow.ellipsis)),
+                                          ..._faseList.map((f) {
+                                            final id = int.tryParse((f['id'] ?? 0).toString()) ?? 0;
+                                            return DropdownMenuItem<int>(
+                                              value: id,
+                                              child: Text(f['nama']?.toString() ?? 'Fase', overflow: TextOverflow.ellipsis),
+                                            );
+                                          }),
+                                        ],
+                                        onChanged: (val) {
+                                          setModalState(() => faseId = val);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Kode CP
+                            Text('Kode CP', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: kodeController,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: 'Contoh: CP-RPL-01',
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Elemen CP
+                            Text('Elemen Pembelajaran', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: elemenController,
+                              decoration: InputDecoration(
+                                isDense: true,
+                                hintText: 'Contoh: Pemrograman Berorientasi Objek',
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // Deskripsi CP
+                            Text('Deskripsi Capaian Pembelajaran', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: deskripsiController,
+                              maxLines: 4,
+                              decoration: InputDecoration(
+                                hintText: 'Tuliskan deskripsi lengkap capaian pembelajaran fase ini...',
+                                contentPadding: const EdgeInsets.all(14),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Submit Button
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                if (mapelId <= 0) {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih mata pelajaran')));
+                                  return;
+                                }
+                                if (deskripsiController.text.trim().isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deskripsi CP wajib diisi')));
+                                  return;
+                                }
+
+                                Navigator.pop(ctx);
+                                setState(() => _isLoading = true);
+
+                                final body = {
+                                  'action': isEdit ? 'update_cp' : 'create_cp',
+                                  if (isEdit) 'id': cpData['id'],
+                                  'kurikulum_id': kurId,
+                                  'mapel_id': mapelId,
+                                  'fase_id': faseId ?? '',
+                                  'kode_cp': kodeController.text.trim(),
+                                  'elemen': elemenController.text.trim(),
+                                  'deskripsi': deskripsiController.text.trim(),
+                                };
+
+                                final res = await ApiService.post('guru/cptp?user_id=$userId', body);
+                                if (!mounted) return;
+
+                                if (res['success'] == true) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(res['message']?.toString() ?? 'CP berhasil disimpan!'),
+                                      backgroundColor: const Color(0xFF10B981),
+                                    ),
                                   );
-                                }).toList(),
-                                onChanged: (val) {
-                                  if (val != null) setModalState(() => kurId = val);
-                                },
+                                  _fetchCptpData();
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(res['message']?.toString() ?? 'Gagal menyimpan CP'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  setState(() => _isLoading = false);
+                                }
+                              },
+                              icon: const Icon(Icons.check_rounded, color: Colors.white),
+                              label: Text(
+                                isEdit ? 'Perbarui Capaian Pembelajaran' : 'Simpan Capaian Pembelajaran',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Fase / Tingkat', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 6),
-                              DropdownButtonFormField<int>(
-                                initialValue: faseId,
-                                decoration: InputDecoration(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  filled: true,
-                                  fillColor: const Color(0xFFF8FAFC),
-                                ),
-                                hint: const Text('Pilih Fase'),
-                                items: [
-                                  const DropdownMenuItem<int>(value: null, child: Text('Semua Fase')),
-                                  ..._faseList.map((f) {
-                                    final id = int.tryParse((f['id'] ?? 0).toString()) ?? 0;
-                                    return DropdownMenuItem<int>(
-                                      value: id,
-                                      child: Text(f['nama']?.toString() ?? 'Fase', overflow: TextOverflow.ellipsis),
-                                    );
-                                  }),
-                                ],
-                                onChanged: (val) {
-                                  setModalState(() => faseId = val);
-                                },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF4F46E5),
+                                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Kode CP
-                    Text('Kode CP', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: kodeController,
-                      decoration: InputDecoration(
-                        hintText: 'Contoh: CP-RPL-01',
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Elemen CP
-                    Text('Elemen Pembelajaran', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: elemenController,
-                      decoration: InputDecoration(
-                        hintText: 'Contoh: Pemrograman Berorientasi Objek',
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-
-                    // Deskripsi CP
-                    Text('Deskripsi Capaian Pembelajaran', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: deskripsiController,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        hintText: 'Tuliskan deskripsi lengkap capaian pembelajaran fase ini...',
-                        contentPadding: const EdgeInsets.all(14),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: const Color(0xFFF8FAFC),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Submit Button
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        if (mapelId <= 0) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pilih mata pelajaran')));
-                          return;
-                        }
-                        if (deskripsiController.text.trim().isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deskripsi CP wajib diisi')));
-                          return;
-                        }
-
-                        Navigator.pop(ctx);
-                        setState(() => _isLoading = true);
-
-                        final body = {
-                          'action': isEdit ? 'update_cp' : 'create_cp',
-                          if (isEdit) 'id': cpData['id'],
-                          'kurikulum_id': kurId,
-                          'mapel_id': mapelId,
-                          'fase_id': faseId ?? '',
-                          'kode_cp': kodeController.text.trim(),
-                          'elemen': elemenController.text.trim(),
-                          'deskripsi': deskripsiController.text.trim(),
-                        };
-
-                        final res = await ApiService.post('guru/cptp?user_id=$userId', body);
-                        if (!mounted) return;
-
-                        if (res['success'] == true) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(res['message']?.toString() ?? 'CP berhasil disimpan!'),
-                              backgroundColor: const Color(0xFF10B981),
-                            ),
-                          );
-                          _fetchCptpData();
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(res['message']?.toString() ?? 'Gagal menyimpan CP'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                          setState(() => _isLoading = false);
-                        }
-                      },
-                      icon: const Icon(Icons.check_rounded, color: Colors.white),
-                      label: Text(
-                        isEdit ? 'Perbarui Capaian Pembelajaran' : 'Simpan Capaian Pembelajaran',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4F46E5),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
                   ],
@@ -490,194 +535,228 @@ class _GuruCptpScreenState extends State<GuruCptpScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Container(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: SingleChildScrollView(
+        final mediaQuery = MediaQuery.of(ctx);
+        final bottomInset = mediaQuery.viewInsets.bottom;
+        final availableHeight = (mediaQuery.size.height - bottomInset).clamp(260.0, mediaQuery.size.height * 0.9);
+
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: availableHeight,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0FDF4),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(Icons.flag_rounded, color: Color(0xFF10B981), size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isEdit ? 'Edit Tujuan Pembelajaran' : 'Tambah Tujuan Pembelajaran (TP)',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF0F172A),
-                            ),
-                          ),
-                          Text(
-                            'Induk: ${cpKode ?? "CP"} • ${cpElemen ?? ""}',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 11.5,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-
-                // Kode TP & Urutan Row
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Kode TP', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: kodeController,
-                            decoration: InputDecoration(
-                              hintText: 'Contoh: TP-01.1',
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Urutan TP', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 6),
-                          TextField(
-                            controller: urutanController,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              hintText: '1',
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                // Materi Pokok
-                Text('Materi Pokok / Lingkup Topik', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: materiController,
-                  decoration: InputDecoration(
-                    hintText: 'Contoh: Struktur Kontrol Percabangan & Perulangan',
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
+                // Top drag indicator
+                Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 6),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 14),
-
-                // Deskripsi TP
-                Text('Deskripsi Tujuan Pembelajaran (TP)', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: deskripsiController,
-                  maxLines: 4,
-                  decoration: InputDecoration(
-                    hintText: 'Tuliskan kompetensi yang diharapkan dicapai siswa...',
-                    contentPadding: const EdgeInsets.all(14),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Submit Button
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    if (deskripsiController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deskripsi TP wajib diisi')));
-                      return;
-                    }
-
-                    Navigator.pop(ctx);
-                    setState(() => _isLoading = true);
-
-                    final body = {
-                      'action': isEdit ? 'update_tp' : 'create_tp',
-                      if (isEdit) 'id': tpData['id'],
-                      'cp_id': cpId,
-                      'kode_tp': kodeController.text.trim(),
-                      'materi_pokok': materiController.text.trim(),
-                      'deskripsi': deskripsiController.text.trim(),
-                      'urutan': int.tryParse(urutanController.text.trim()) ?? 1,
-                    };
-
-                    final res = await ApiService.post('guru/cptp?user_id=$userId', body);
-                    if (!mounted) return;
-
-                    if (res['success'] == true) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(res['message']?.toString() ?? 'TP berhasil disimpan!'),
-                          backgroundColor: const Color(0xFF10B981),
+                // Pinned Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 8, 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      );
-                      _fetchCptpData();
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(res['message']?.toString() ?? 'Gagal menyimpan TP'),
-                          backgroundColor: Colors.red,
+                        child: const Icon(Icons.flag_rounded, color: Color(0xFF10B981), size: 22),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isEdit ? 'Edit Tujuan Pembelajaran' : 'Tambah Tujuan Pembelajaran (TP)',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                            Text(
+                              'Induk: ${cpKode ?? "CP"}${cpElemen != null && cpElemen.isNotEmpty ? " • $cpElemen" : ""}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 11,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                      setState(() => _isLoading = false);
-                    }
-                  },
-                  icon: const Icon(Icons.check_rounded, color: Colors.white),
-                  label: Text(
-                    isEdit ? 'Perbarui Tujuan Pembelajaran' : 'Simpan Tujuan Pembelajaran',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                const Divider(height: 1),
+                // Scrollable Form Body
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Kode TP & Urutan Row
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Kode TP', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: kodeController,
+                                    decoration: InputDecoration(
+                                      isDense: true,
+                                      hintText: 'Contoh: TP-01.1',
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      filled: true,
+                                      fillColor: const Color(0xFFF8FAFC),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 2,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Urutan TP', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 6),
+                                  TextField(
+                                    controller: urutanController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      isDense: true,
+                                      hintText: '1',
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                      filled: true,
+                                      fillColor: const Color(0xFFF8FAFC),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Materi Pokok
+                        Text('Materi Pokok / Lingkup Topik', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: materiController,
+                          decoration: InputDecoration(
+                            isDense: true,
+                            hintText: 'Contoh: Struktur Kontrol Percabangan',
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Deskripsi TP
+                        Text('Deskripsi Tujuan Pembelajaran (TP)', style: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: deskripsiController,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            hintText: 'Tuliskan kompetensi yang diharapkan dicapai siswa...',
+                            contentPadding: const EdgeInsets.all(14),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Submit Button
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            if (deskripsiController.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deskripsi TP wajib diisi')));
+                              return;
+                            }
+
+                            Navigator.pop(ctx);
+                            setState(() => _isLoading = true);
+
+                            final body = {
+                              'action': isEdit ? 'update_tp' : 'create_tp',
+                              if (isEdit) 'id': tpData['id'],
+                              'cp_id': cpId,
+                              'kode_tp': kodeController.text.trim(),
+                              'materi_pokok': materiController.text.trim(),
+                              'deskripsi': deskripsiController.text.trim(),
+                              'urutan': int.tryParse(urutanController.text.trim()) ?? 1,
+                            };
+
+                            final res = await ApiService.post('guru/cptp?user_id=$userId', body);
+                            if (!mounted) return;
+
+                            if (res['success'] == true) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(res['message']?.toString() ?? 'TP berhasil disimpan!'),
+                                  backgroundColor: const Color(0xFF10B981),
+                                ),
+                              );
+                              _fetchCptpData();
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(res['message']?.toString() ?? 'Gagal menyimpan TP'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              setState(() => _isLoading = false);
+                            }
+                          },
+                          icon: const Icon(Icons.check_rounded, color: Colors.white),
+                          label: Text(
+                            isEdit ? 'Perbarui Tujuan Pembelajaran' : 'Simpan Tujuan Pembelajaran',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -976,12 +1055,16 @@ class _GuruCptpScreenState extends State<GuruCptpScreen> {
               children: [
                 const Icon(Icons.school_rounded, color: Colors.amber, size: 14),
                 const SizedBox(width: 6),
-                Text(
-                  'Standar Kurikulum Merdeka Kejuruan (Fase E & Fase F)',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                Flexible(
+                  child: Text(
+                    'Standar Kurikulum Merdeka Kejuruan (Fase E & Fase F)',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -1252,6 +1335,8 @@ class _GuruCptpScreenState extends State<GuruCptpScreen> {
                       children: [
                         Text(
                           namaMapel,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
@@ -1510,15 +1595,19 @@ class _GuruCptpScreenState extends State<GuruCptpScreen> {
                       children: [
                         const Icon(Icons.format_list_bulleted_rounded, size: 16, color: Color(0xFF10B981)),
                         const SizedBox(width: 6),
-                        Text(
-                          '$totalTp Tujuan Pembelajaran (TP)',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0F172A),
+                        Expanded(
+                          child: Text(
+                            '$totalTp Tujuan Pembelajaran (TP)',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF0F172A),
+                            ),
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 8),
                         Text(
                           isExpanded ? 'Tutup' : 'Lihat Rincian',
                           style: GoogleFonts.plusJakartaSans(
