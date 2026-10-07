@@ -1373,6 +1373,121 @@ class ApiController {
                 ]);
                 break;
 
+            case 'sertifikat':
+            case 'certificate':
+                require_once ROOT_PATH . 'models/SiswaModel.php';
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                require_once ROOT_PATH . 'models/NilaiModel.php';
+                $siswaModel = new SiswaModel();
+                $academicModel = new AcademicModel();
+                $nilaiModel = new NilaiModel();
+
+                $siswaId = intval($siswa['id'] ?? 0);
+
+                // Sinkronisasi nilai terbaru siswa sebelum kalkulasi sertifikat
+                if ($siswaId > 0) {
+                    try {
+                        $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
+                        if (!empty($enrolledList)) {
+                            foreach ($enrolledList as $em) {
+                                $mId = intval($em['mapel_id'] ?? $em['id'] ?? 0);
+                                if ($mId > 0) {
+                                    $nilaiModel->syncSiswaMapelNilai($siswaId, $mId);
+                                }
+                            }
+                        }
+                    } catch (\Throwable $eSync) {}
+                }
+
+                // Ambil metrik riil sertifikat siswa
+                $certStats = $siswaId > 0 ? $siswaModel->getSiswaCertificateRealStats($siswaId) : [
+                    'predikat' => 'Belum Ada Data',
+                    'presensi_log' => 'Belum Ada Data',
+                    'evaluasi_lms' => 'Belum Ada Nilai',
+                    'evaluasi_nilai' => 0.0,
+                    'predikat_grade' => 'D',
+                    'predikat_label' => 'Perlu Bimbingan',
+                    'is_tuntas' => false,
+                    'kkm' => 75
+                ];
+
+                // Pengaturan sekolah dari settings.json
+                $appSettings = [];
+                $settingsPath = ROOT_PATH . 'config/settings.json';
+                if (file_exists($settingsPath)) {
+                    $appSettings = json_decode(file_get_contents($settingsPath), true) ?: [];
+                }
+
+                $schoolName = !empty($appSettings['nama_sekolah']) ? $appSettings['nama_sekolah'] : APP_NAME;
+                $kepalaSekolah = !empty($appSettings['kepala_sekolah']) ? $appSettings['kepala_sekolah'] : 'H. ASEP SAEPULLOH, S. Ag';
+                $alamat = !empty($appSettings['alamat']) ? $appSettings['alamat'] : 'Jalan Babakan Peuteuy Nomor 300, Desa Babakanpeuteuy, Kecamatan Cicalengka, Kabupaten Bandung, Jawa Barat';
+                $tahunAjaran = !empty($appSettings['tahun_ajaran']) ? $appSettings['tahun_ajaran'] : '2025/2026';
+                $semester = !empty($appSettings['semester']) ? $appSettings['semester'] : 'Ganjil';
+                $activeTemplate = !empty($appSettings['sertifikat_active_template']) ? $appSettings['sertifikat_active_template'] : 'kelulusan';
+
+                $rawLogo = $appSettings['logo'] ?? '';
+                $logoUrl = null;
+                if (!empty($rawLogo)) {
+                    if (strpos($rawLogo, 'assets/uploads/') === 0 || strpos($rawLogo, 'uploads/') === 0) {
+                        $logoUrl = BASE_URL . $rawLogo;
+                    } else {
+                        $logoUrl = BASE_URL . 'assets/uploads/logo/' . $rawLogo;
+                    }
+                }
+
+                $templateTitles = [
+                    'kelulusan' => 'SERTIFIKAT PENGHARGAAN KELULUSAN DIGITAL',
+                    'prestasi' => 'SERTIFIKAT PENGHARGAAN PRESTASI AKADEMIK',
+                    'ukk' => 'SERTIFIKAT UJI KOMPETENSI KEAHLIAN (UKK)'
+                ];
+                $certTitle = $templateTitles[$activeTemplate] ?? 'SERTIFIKAT PENGHARGAAN KELULUSAN DIGITAL';
+
+                $nomorSertifikat = 'SMKMH/SERT/' . date('Y') . '/' . str_pad($siswaId ?: 1, 4, '0', STR_PAD_LEFT);
+                $nisnVal = !empty($siswa['nisn']) ? $siswa['nisn'] : (!empty($siswa['nis']) ? $siswa['nis'] : 'UNKNOWN');
+                $qrData = 'SMKMH-CERT-' . $nisnVal;
+                $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($qrData) . '&color=0056d3&bgcolor=ffffff';
+
+                $bulanIndo = [
+                    1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+                    5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+                    9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+                ];
+                $tglTerbitIndo = date('d') . ' ' . ($bulanIndo[(int)date('n')] ?? date('F')) . ' ' . date('Y');
+
+                $statementText = "Telah berhasil menyelesaikan seluruh Program Pembelajaran Digital E-Learning Semester " . $semester . " Tahun Pelajaran " . $tahunAjaran . " dengan perolehan hasil yang memuaskan serta menunjukkan kedisiplinan dan semangat belajar yang luar biasa.";
+
+                $this->jsonResponse(true, 'Data Sertifikat Digital Siswa', [
+                    'siswa' => [
+                        'id' => $siswaId,
+                        'nama_lengkap' => $siswa['nama_lengkap'] ?? '',
+                        'nis' => $siswa['nis'] ?? '',
+                        'nisn' => $siswa['nisn'] ?? '',
+                        'nama_kelas' => $siswa['nama_kelas'] ?? '',
+                        'nama_jurusan' => $siswa['nama_jurusan'] ?? ''
+                    ],
+                    'school' => [
+                        'nama_sekolah' => $schoolName,
+                        'kepala_sekolah' => $kepalaSekolah,
+                        'alamat' => $alamat,
+                        'logo_url' => $logoUrl,
+                        'tahun_ajaran' => $tahunAjaran,
+                        'semester' => $semester
+                    ],
+                    'cert_info' => [
+                        'title' => $certTitle,
+                        'template_type' => $activeTemplate,
+                        'nomor_sertifikat' => $nomorSertifikat,
+                        'tanggal_terbit' => $tglTerbitIndo,
+                        'tanggal_terbit_raw' => date('Y-m-d'),
+                        'kota_terbit' => 'Cicalengka',
+                        'statement' => $statementText,
+                        'qr_data' => $qrData,
+                        'qr_url' => $qrUrl
+                    ],
+                    'stats' => $certStats
+                ]);
+                break;
+
             case 'tugas':
                 require_once ROOT_PATH . 'models/LearningModel.php';
                 $learningModel = new LearningModel();

@@ -89,9 +89,10 @@ if (!method_exists($controller, $method)) {
         'quiz_review', 'record_violation', 'checkin_absensi', 'learning_path', 'alur_belajar',
         'cptp', 'capaian_pembelajaran', 'cp_tp',
         'ekstrakurikuler', 'ekskul', 'join_ekskul', 'leave_ekskul',
-        'pembayaran', 'tagihan', 'spp', 'slip_pembayaran'
+        'pembayaran', 'tagihan', 'spp', 'slip_pembayaran',
+        'sertifikat', 'certificate', 'sertifikat_digital'
     ];
-    if (in_array($method, $knownSiswaActions) || strpos($method, 'siswa_') === 0 || strpos($method, 'request_') === 0 || strpos($method, 'ekskul') === 0 || strpos($method, 'pembayaran') === 0 || strpos($method, 'tagihan') === 0) {
+    if (in_array($method, $knownSiswaActions) || strpos($method, 'siswa_') === 0 || strpos($method, 'request_') === 0 || strpos($method, 'ekskul') === 0 || strpos($method, 'pembayaran') === 0 || strpos($method, 'tagihan') === 0 || strpos($method, 'sertifikat') === 0) {
         $param = $method;
         $method = 'siswa';
     } elseif (strpos($method, 'guru_') === 0) {
