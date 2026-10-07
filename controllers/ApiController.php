@@ -2567,6 +2567,12 @@ class ApiController {
                 $myWaliKelas = $stmtWali->fetchAll(PDO::FETCH_ASSOC) ?: [];
                 $isWaliKelas = !empty($myWaliKelas);
 
+                // Check if this guru is pembimbing ekstrakurikuler
+                require_once ROOT_PATH . 'models/EkstrakurikulerModel.php';
+                $ekskulModel = new EkstrakurikulerModel();
+                $guidedEkskul = $ekskulModel->getEkskulByGuru($guruId);
+                $isPembimbingEkskul = !empty($guidedEkskul);
+
                 $this->jsonResponse(true, 'Dashboard Guru Overview', [
                     'guru' => $guru,
                     'user' => $userObj ?: ['full_name' => $guru['nama_lengkap']],
@@ -2574,6 +2580,9 @@ class ApiController {
                     'active_ta' => $activeTa,
                     'is_wali_kelas' => $isWaliKelas,
                     'wali_kelas_list' => $myWaliKelas,
+                    'is_pembimbing_ekskul' => $isPembimbingEkskul,
+                    'guided_ekskul_count' => count($guidedEkskul),
+                    'guided_ekskul_list' => $guidedEkskul,
                     'stats' => [
                         'materi' => $totalMateri,
                         'tugas' => $totalTugas,
@@ -5144,6 +5153,145 @@ class ApiController {
                     'kurikulum_list' => $kurikulumList,
                     'fase_list' => $allFaseList,
                     'mapel_groups' => $mapelGroups
+                ]);
+                break;
+
+            case 'ekstrakurikuler':
+            case 'ekskul':
+                require_once ROOT_PATH . 'models/EkstrakurikulerModel.php';
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                require_once ROOT_PATH . 'models/SiswaModel.php';
+
+                $ekskulModel = new EkstrakurikulerModel();
+                $academicModel = new AcademicModel();
+                $siswaModel = new SiswaModel();
+
+                $activeTa = $academicModel->getActiveTahunAjaran();
+                $taId = $activeTa['id'] ?? 4;
+                $activeSemester = $activeTa['semester'] ?? 'Ganjil';
+
+                // Ambil daftar ekskul binaan guru ini
+                $guidedEkskul = $ekskulModel->getEkskulByGuru($guruId);
+                $isPembimbing = !empty($guidedEkskul);
+
+                if (!$isPembimbing) {
+                    $this->jsonResponse(true, 'Anda belum ditugaskan sebagai pembimbing ekstrakurikuler.', [
+                        'is_pembimbing' => false,
+                        'guided_ekskul' => [],
+                        'selected_ekskul' => null,
+                        'anggota_list' => [],
+                        'available_siswa' => []
+                    ]);
+                    break;
+                }
+
+                // Handle POST actions
+                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                    $action = $input['action'] ?? $_POST['action'] ?? '';
+                    $ekskulId = intval($input['ekskul_id'] ?? $_POST['ekskul_id'] ?? $_GET['id'] ?? 0);
+
+                    $allowedEkskulIds = array_column($guidedEkskul, 'id');
+                    if ($ekskulId > 0 && !in_array($ekskulId, $allowedEkskulIds)) {
+                        $this->jsonResponse(false, 'Anda tidak memiliki hak akses bimbingan pada ekstrakurikuler ini.', null, 403);
+                    }
+
+                    if ($action === 'save_nilai_deskripsi') {
+                        $nilaiData = $input['nilai'] ?? $_POST['nilai'] ?? [];
+                        $countSaved = 0;
+                        if (!empty($nilaiData) && is_array($nilaiData)) {
+                            foreach ($nilaiData as $key => $val) {
+                                $anggotaId = is_numeric($key) && intval($key) > 0 ? intval($key) : intval($val['anggota_id'] ?? $val['id'] ?? 0);
+                                $pred = trim($val['predikat'] ?? 'Sangat Baik');
+                                $desk = trim($val['deskripsi'] ?? ($val['nilai_deskripsi'] ?? ''));
+                                if ($anggotaId > 0) {
+                                    if ($ekskulModel->updateNilaiDeskripsi($anggotaId, $pred, $desk)) {
+                                        $countSaved++;
+                                    }
+                                }
+                            }
+                        }
+                        $this->jsonResponse(true, "Berhasil memperbarui nilai deskripsi capaian {$countSaved} siswa untuk E-Rapor.", [
+                            'count_saved' => $countSaved
+                        ]);
+                    }
+
+                    if ($action === 'add_anggota_manual') {
+                        $siswaId = intval($input['siswa_id'] ?? $_POST['siswa_id'] ?? 0);
+                        if ($siswaId <= 0 || $ekskulId <= 0) {
+                            $this->jsonResponse(false, 'Data siswa atau ekstrakurikuler tidak valid.', null, 400);
+                        }
+                        $joined = $ekskulModel->joinEkskul($siswaId, $ekskulId, $taId, $activeSemester);
+                        if ($joined) {
+                            $this->jsonResponse(true, 'Siswa berhasil didaftarkan ke dalam kelompok bimbingan ekstrakurikuler.');
+                        } else {
+                            $this->jsonResponse(false, 'Gagal mendaftarkan siswa ke dalam ekstrakurikuler.', null, 500);
+                        }
+                    }
+
+                    if ($action === 'remove_anggota') {
+                        $siswaId = intval($input['siswa_id'] ?? $_POST['siswa_id'] ?? 0);
+                        if ($siswaId <= 0 || $ekskulId <= 0) {
+                            $this->jsonResponse(false, 'Data siswa atau ekstrakurikuler tidak valid.', null, 400);
+                        }
+                        $removed = $ekskulModel->leaveEkskul($siswaId, $ekskulId);
+                        if ($removed) {
+                            $this->jsonResponse(true, 'Siswa berhasil dikeluarkan dari kelompok ekstrakurikuler.');
+                        } else {
+                            $this->jsonResponse(false, 'Gagal mengeluarkan siswa dari ekstrakurikuler.', null, 500);
+                        }
+                    }
+                }
+
+                // Tentukan ekskul yang sedang aktif dipilih
+                $selectedId = intval($_GET['id'] ?? $_GET['ekskul_id'] ?? 0);
+                $selectedEkskul = null;
+                if ($selectedId > 0) {
+                    foreach ($guidedEkskul as $ge) {
+                        if (intval($ge['id']) === $selectedId) {
+                            $selectedEkskul = $ge;
+                            break;
+                        }
+                    }
+                }
+                if (!$selectedEkskul && !empty($guidedEkskul)) {
+                    $selectedEkskul = $guidedEkskul[0];
+                    $selectedId = intval($selectedEkskul['id']);
+                }
+
+                $anggotaList = [];
+                $availableSiswa = [];
+                if ($selectedEkskul) {
+                    $anggotaList = $ekskulModel->getAnggotaEkskul($selectedId, $taId, $activeSemester);
+                    $allSiswa = $siswaModel->getAll();
+                    $joinedSiswaIds = array_column($anggotaList, 'siswa_id');
+                    foreach ($allSiswa as $s) {
+                        if (!in_array($s['id'], $joinedSiswaIds)) {
+                            $availableSiswa[] = [
+                                'id' => (int)$s['id'],
+                                'nama_lengkap' => $s['nama_lengkap'] ?? '',
+                                'nis' => $s['nis'] ?? '',
+                                'nama_kelas' => $s['nama_kelas'] ?? ''
+                            ];
+                        }
+                    }
+                }
+
+                $this->jsonResponse(true, 'Data Bimbingan Ekstrakurikuler & Penilaian E-Rapor', [
+                    'is_pembimbing' => true,
+                    'guru' => [
+                        'id' => $guruId,
+                        'nama_lengkap' => $guru['nama_lengkap'] ?? '',
+                        'nip' => $guru['nip'] ?? ''
+                    ],
+                    'active_ta' => [
+                        'id' => $taId,
+                        'tahun' => $activeTa['tahun'] ?? ($activeTa['tahun_ajaran'] ?? 'Aktif'),
+                        'semester' => $activeSemester
+                    ],
+                    'guided_ekskul' => $guidedEkskul,
+                    'selected_ekskul' => $selectedEkskul,
+                    'anggota_list' => $anggotaList,
+                    'available_siswa' => $availableSiswa
                 ]);
                 break;
 

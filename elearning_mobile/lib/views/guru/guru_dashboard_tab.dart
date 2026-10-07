@@ -19,6 +19,7 @@ import 'guru_scan_qr_screen.dart';
 import 'guru_presensi_selfie_screen.dart';
 import 'guru_wali_kelas_screen.dart';
 import 'guru_cptp_screen.dart';
+import 'guru_ekskul_screen.dart';
 
 class GuruDashboardTab extends StatefulWidget {
   const GuruDashboardTab({super.key});
@@ -65,14 +66,26 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
     final taSem = (activeTa['semester'] ?? '').toString();
     final tahunAjaranStr = (guruProvider.dashboardData?['tahun_ajaran'] ?? (taTahun.isNotEmpty ? "T.A. $taTahun — Semester $taSem" : 'T.A. 2025/2026 — Semester Ganjil')).toString();
 
+    final isWaliKelas = guruProvider.dashboardData?['is_wali_kelas'] == true ||
+        ((guruProvider.dashboardData?['wali_kelas_list'] as List?)?.isNotEmpty == true);
+    final isPembimbingEkskul = guruProvider.isPembimbingEkskul;
+
     // Complete Features List for Guru
     final allFeatures = [
-      _buildFeatureGridItem(
-        icon: Icons.supervised_user_circle_rounded,
-        label: 'Wali Kelas',
-        color: const Color(0xFFF59E0B),
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruWaliKelasScreen())),
-      ),
+      if (isWaliKelas)
+        _buildFeatureGridItem(
+          icon: Icons.supervised_user_circle_rounded,
+          label: 'Wali Kelas',
+          color: const Color(0xFFF59E0B),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruWaliKelasScreen())),
+        ),
+      if (isPembimbingEkskul)
+        _buildFeatureGridItem(
+          icon: Icons.emoji_events_rounded,
+          label: 'Bimbingan Ekskul',
+          color: const Color(0xFFD97706),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruEkskulScreen())),
+        ),
       _buildFeatureGridItem(
         icon: Icons.camera_front_rounded,
         label: 'Presensi Selfie',
@@ -478,6 +491,113 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
                             ),
                           ),
                           const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            // Ekstrakurikuler Special Banner (If Guru is Pembimbing Ekstrakurikuler)
+            Builder(
+              builder: (context) {
+                final isPembimbing = guruProvider.isPembimbingEkskul;
+                final guidedList = guruProvider.guidedEkskulList;
+                if (!isPembimbing) return const SizedBox.shrink();
+
+                final firstEkskul = (guidedList.isNotEmpty && guidedList.first is Map) ? (guidedList.first as Map) : null;
+                final namaEkskul = firstEkskul?['nama_ekskul']?.toString() ?? 'Ekstrakurikuler';
+                final totalAnggota = firstEkskul?['total_anggota'] ?? 0;
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: InkWell(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruEkskulScreen())),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFD97706), Color(0xFFB45309), Color(0xFF78350F)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFD97706).withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 28),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'PEMBIMBING EKSTRAKURIKULER',
+                                      style: TextStyle(
+                                        color: Colors.amberAccent,
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.6,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.25),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'E-Rapor',
+                                        style: TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  namaEkskul,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '$totalAnggota Siswa Binaan • Kelola & Input Nilai E-Rapor',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
                         ],
                       ),
                     ),

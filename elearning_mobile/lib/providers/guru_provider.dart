@@ -51,6 +51,16 @@ class GuruProvider with ChangeNotifier {
   bool get hasClockedOutToday => _hasClockedOutToday;
   bool get isAbsentToday => _isAbsentToday;
 
+  bool get isPembimbingEkskul {
+    if (_dashboardData == null) return false;
+    return _dashboardData?['is_pembimbing_ekskul'] == true ||
+        ((_dashboardData?['guided_ekskul_list'] as List?)?.isNotEmpty == true);
+  }
+
+  List<dynamic> get guidedEkskulList {
+    return (_dashboardData?['guided_ekskul_list'] as List?) ?? [];
+  }
+
   Future<void> fetchDashboard(int userId) async {
     _isLoading = true;
     notifyListeners();

@@ -22,6 +22,8 @@ import '../shared/notifications_screen.dart';
 import '../siswa/siswa_forum_screen.dart';
 import '../siswa/siswa_chat_screen.dart';
 import '../shared/edit_profil_screen.dart';
+import 'guru_ekskul_screen.dart';
+import 'guru_cptp_screen.dart';
 import '../../services/attendance_reminder_service.dart';
 
 class GuruMainScreen extends StatefulWidget {
@@ -359,43 +361,64 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaChatScreen()));
             },
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              if (value == 'logout') {
-                _showLogoutConfirmationDialog(context);
-              } else if (value == 'profil') {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
-              } else if (value == 'kartu') {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
-              } else if (value == 'key_mapel') {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruKeyMapelScreen()));
-              } else if (value == 'input_nilai') {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen()));
-              } else if (value == 'input_absensi') {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputAbsensiScreen()));
-              } else if (value == 'recap_absensi') {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruRecapAbsensiScreen()));
-              } else if (value == 'absensi') {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab()));
-              } else if (value == 'library') {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen()));
-              } else if (value == 'game') {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen()));
-              }
+          Consumer<GuruProvider>(
+            builder: (context, guruProvider, _) {
+              final isPembimbing = guruProvider.isPembimbingEkskul;
+              return PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'logout') {
+                    _showLogoutConfirmationDialog(context);
+                  } else if (value == 'ekskul') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruEkskulScreen()));
+                  } else if (value == 'cptp') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruCptpScreen()));
+                  } else if (value == 'profil') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfilScreen()));
+                  } else if (value == 'kartu') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const KartuDigitalScreen()));
+                  } else if (value == 'key_mapel') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruKeyMapelScreen()));
+                  } else if (value == 'input_nilai') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen()));
+                  } else if (value == 'input_absensi') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputAbsensiScreen()));
+                  } else if (value == 'recap_absensi') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruRecapAbsensiScreen()));
+                  } else if (value == 'absensi') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruAbsensiTab()));
+                  } else if (value == 'library') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LibraryScreen()));
+                  } else if (value == 'game') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const EduGameScreen()));
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (isPembimbing)
+                    const PopupMenuItem(
+                      value: 'ekskul',
+                      child: Row(
+                        children: [
+                          Icon(Icons.emoji_events_rounded, size: 20, color: Color(0xFFD97706)),
+                          SizedBox(width: 10),
+                          Text('Bimbingan Ekstrakurikuler'),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem(value: 'cptp', child: Row(children: [Icon(Icons.track_changes_rounded, size: 20, color: Color(0xFF6366F1)), SizedBox(width: 10), Text('CP & TP Mapel')])),
+                  const PopupMenuItem(value: 'profil', child: Row(children: [Icon(Icons.person_outline_rounded, size: 20, color: Color(0xFF64748B)), SizedBox(width: 10), Text('Edit & Update Profil')])),
+                  const PopupMenuItem(value: 'kartu', child: Row(children: [Icon(Icons.badge_outlined, size: 20, color: Color(0xFF3B82F6)), SizedBox(width: 10), Text('Kartu Guru Digital')])),
+                  const PopupMenuItem(value: 'key_mapel', child: Row(children: [Icon(Icons.vpn_key_rounded, size: 20, color: Color(0xFF38BDF8)), SizedBox(width: 10), Text('Kode Key Mapel Virtual')])),
+                  const PopupMenuItem(value: 'input_nilai', child: Row(children: [Icon(Icons.assignment_turned_in_outlined, size: 20, color: Color(0xFF818CF8)), SizedBox(width: 10), Text('Input & Edit Nilai Siswa')])),
+                  const PopupMenuItem(value: 'input_absensi', child: Row(children: [Icon(Icons.how_to_reg_rounded, size: 20, color: Color(0xFF34D399)), SizedBox(width: 10), Text('Input Presensi Manual')])),
+                  const PopupMenuItem(value: 'recap_absensi', child: Row(children: [Icon(Icons.bar_chart_rounded, size: 20, color: Color(0xFF60A5FA)), SizedBox(width: 10), Text('Rekap Presensi Bulanan')])),
+                  const PopupMenuItem(value: 'absensi', child: Row(children: [Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF38BDF8)), SizedBox(width: 10), Text('Jadwal & Absensi Kelas')])),
+                  const PopupMenuItem(value: 'library', child: Row(children: [Icon(Icons.local_library_outlined, size: 20, color: Color(0xFF38BDF8)), SizedBox(width: 10), Text('Perpustakaan Digital')])),
+                  const PopupMenuItem(value: 'game', child: Row(children: [Icon(Icons.sports_esports_outlined, size: 20, color: Color(0xFFC084FC)), SizedBox(width: 10), Text('EduGame & Kuis Interaktif')])),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)), SizedBox(width: 10), Text('Keluar / Logout', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold))])),
+                ],
+              );
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'profil', child: Row(children: [Icon(Icons.person_outline_rounded, size: 20, color: Color(0xFF64748B)), SizedBox(width: 10), Text('Edit & Update Profil')])),
-              const PopupMenuItem(value: 'kartu', child: Row(children: [Icon(Icons.badge_outlined, size: 20, color: Color(0xFF3B82F6)), SizedBox(width: 10), Text('Kartu Guru Digital')])),
-              const PopupMenuItem(value: 'key_mapel', child: Row(children: [Icon(Icons.vpn_key_rounded, size: 20, color: Color(0xFF38BDF8)), SizedBox(width: 10), Text('Kode Key Mapel Virtual')])),
-              const PopupMenuItem(value: 'input_nilai', child: Row(children: [Icon(Icons.assignment_turned_in_outlined, size: 20, color: Color(0xFF818CF8)), SizedBox(width: 10), Text('Input & Edit Nilai Siswa')])),
-              const PopupMenuItem(value: 'input_absensi', child: Row(children: [Icon(Icons.how_to_reg_rounded, size: 20, color: Color(0xFF34D399)), SizedBox(width: 10), Text('Input Presensi Manual')])),
-              const PopupMenuItem(value: 'recap_absensi', child: Row(children: [Icon(Icons.bar_chart_rounded, size: 20, color: Color(0xFF60A5FA)), SizedBox(width: 10), Text('Rekap Presensi Bulanan')])),
-              const PopupMenuItem(value: 'absensi', child: Row(children: [Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF38BDF8)), SizedBox(width: 10), Text('Jadwal & Absensi Kelas')])),
-              const PopupMenuItem(value: 'library', child: Row(children: [Icon(Icons.local_library_outlined, size: 20, color: Color(0xFF38BDF8)), SizedBox(width: 10), Text('Perpustakaan Digital')])),
-              const PopupMenuItem(value: 'game', child: Row(children: [Icon(Icons.sports_esports_outlined, size: 20, color: Color(0xFFC084FC)), SizedBox(width: 10), Text('EduGame & Kuis Interaktif')])),
-              const PopupMenuDivider(),
-              const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout_rounded, size: 20, color: Color(0xFFEF4444)), SizedBox(width: 10), Text('Keluar / Logout', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold))])),
-            ],
           ),
         ],
       ),
