@@ -1297,11 +1297,65 @@ class SiswaController {
                 $cpList = $currModel->getCPList(null, $targetMapelIds);
             }
 
-            // Ambil semua TP
-            $tpList = $currModel->getTPList(null, null, false);
+            // Ambil semua TP dengan multi-tier fallback query
+            $tpList = [];
+            try {
+                $tpList = $currModel->getTPList(null, null, false);
+            } catch (\Throwable $eTp) {
+                $tpList = [];
+            }
+
+            // Kumpulkan semua cp_id dari cpList
+            $cpIds = array_filter(array_map('intval', array_column($cpList, 'id')));
+            $existingCpIdsInTp = [];
+            foreach ($tpList as $t) {
+                if (!empty($t['cp_id'])) {
+                    $existingCpIdsInTp[intval($t['cp_id'])] = true;
+                }
+            }
+
+            $missingCpIds = array_values(array_diff($cpIds, array_keys($existingCpIdsInTp)));
+            if (!empty($missingCpIds)) {
+                try {
+                    $inCl = implode(',', $missingCpIds);
+                    $dbConn = Database::getConnection();
+                    $stmtDirect = $dbConn->query("
+                        SELECT tp.*, 
+                               COALESCE(k.id, 0) as kktp_id, 
+                               COALESCE(k.metode, 'interval_nilai') as kktp_metode, 
+                               COALESCE(k.nilai_minimum, 75.00) as kktp_nilai_min, 
+                               COALESCE(k.target_indikator_count, 0) as kktp_target_ind, 
+                               COALESCE(k.deskripsi_kriteria, '') as kktp_kriteria
+                        FROM tujuan_pembelajaran tp
+                        LEFT JOIN kktp k ON (k.tp_id = tp.id AND (k.status = 'aktif' OR k.status IS NULL))
+                        WHERE tp.cp_id IN ({$inCl})
+                        ORDER BY tp.id ASC
+                    ");
+                    if ($stmtDirect) {
+                        $directTps = $stmtDirect->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($directTps as $dtp) {
+                            $tpList[] = $dtp;
+                        }
+                    }
+                } catch (\Throwable $eDirect) {
+                    try {
+                        $inCl = implode(',', $missingCpIds);
+                        $dbConn = Database::getConnection();
+                        $stmtRaw = $dbConn->query("SELECT * FROM tujuan_pembelajaran WHERE cp_id IN ({$inCl}) ORDER BY id ASC");
+                        if ($stmtRaw) {
+                            $rawTps = $stmtRaw->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($rawTps as $rtp) {
+                                $tpList[] = $rtp;
+                            }
+                        }
+                    } catch (\Throwable $eRaw) {}
+                }
+            }
+
             $tpsByCpId = [];
             foreach ($tpList as $tp) {
-                $cpId = (int)$tp['cp_id'];
+                $cpId = (int)($tp['cp_id'] ?? 0);
+                if ($cpId <= 0) continue;
                 if (!isset($tpsByCpId[$cpId])) {
                     $tpsByCpId[$cpId] = [];
                 }

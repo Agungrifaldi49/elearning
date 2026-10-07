@@ -230,9 +230,28 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
     final kodeKurikulum = _kurikulum['kode']?.toString() ?? 'KMDK';
     final faseKurikulum = _kurikulum['fase']?.toString() ?? 'Fase E (Kelas X)';
 
-    final totalMapel = int.tryParse((_stats['total_mapel'] ?? 0).toString()) ?? 0;
-    final totalCp = int.tryParse((_stats['total_cp'] ?? 0).toString()) ?? 0;
-    final totalTp = int.tryParse((_stats['total_tp'] ?? 0).toString()) ?? 0;
+    int dynamicTotalCp = 0;
+    int dynamicTotalTp = 0;
+    for (var g in _mapelGroups) {
+      if (g is Map) {
+        final cps = (g['cp_list'] is List)
+            ? (g['cp_list'] as List)
+            : ((g['cps'] is List) ? (g['cps'] as List) : []);
+        dynamicTotalCp += cps.length;
+        for (var c in cps) {
+          if (c is Map) {
+            final tps = (c['tp_list'] is List)
+                ? (c['tp_list'] as List)
+                : ((c['tps'] is List) ? (c['tps'] as List) : ((c['tp'] is List) ? (c['tp'] as List) : []));
+            dynamicTotalTp += tps.length;
+          }
+        }
+      }
+    }
+
+    final totalMapel = int.tryParse((_stats['total_mapel'] ?? 0).toString()) ?? _enrolledMapels.length;
+    final totalCp = dynamicTotalCp > 0 ? dynamicTotalCp : (int.tryParse((_stats['total_cp'] ?? 0).toString()) ?? 0);
+    final totalTp = dynamicTotalTp > 0 ? dynamicTotalTp : (int.tryParse((_stats['total_tp'] ?? 0).toString()) ?? 0);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -744,9 +763,22 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
     final namaMapel = group['nama_mapel']?.toString() ?? 'Mata Pelajaran';
     final kodeMapel = group['kode_mapel']?.toString() ?? '';
     final namaGuru = group['nama_guru']?.toString() ?? 'Guru Pengampu';
-    final totalCp = int.tryParse((group['total_cp'] ?? 0).toString()) ?? 0;
-    final totalTp = int.tryParse((group['total_tp'] ?? 0).toString()) ?? 0;
-    final cpList = (group['cp_list'] is List) ? group['cp_list'] as List : [];
+
+    final cpList = (group['cp_list'] is List)
+        ? (group['cp_list'] as List)
+        : ((group['cps'] is List) ? (group['cps'] as List) : ((group['cp'] is List) ? (group['cp'] as List) : []));
+
+    int calculatedTp = 0;
+    for (var c in cpList) {
+      if (c is Map) {
+        final tps = (c['tp_list'] is List)
+            ? (c['tp_list'] as List)
+            : ((c['tps'] is List) ? (c['tps'] as List) : ((c['tp'] is List) ? (c['tp'] as List) : []));
+        calculatedTp += tps.length;
+      }
+    }
+    final totalTp = calculatedTp > 0 ? calculatedTp : (int.tryParse((group['total_tp'] ?? 0).toString()) ?? 0);
+    final totalCp = cpList.isNotEmpty ? cpList.length : (int.tryParse((group['total_cp'] ?? 0).toString()) ?? 0);
     final isExpanded = _expandedMapelIds.contains(mapelId);
 
     return Container(
@@ -923,10 +955,23 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
   }
 
   Widget _buildCpItem(dynamic cp, bool isDark) {
-    final kodeCp = cp['kode_cp']?.toString() ?? 'CP';
-    final elemen = cp['elemen']?.toString() ?? '';
-    final deskripsi = cp['deskripsi']?.toString() ?? '';
-    final tpList = (cp['tp_list'] is List) ? cp['tp_list'] as List : [];
+    if (cp is! Map) return const SizedBox.shrink();
+    final cpMap = Map<String, dynamic>.from(cp);
+
+    final kodeCp = (cpMap['kode_cp'] ?? cpMap['kode'] ?? 'CP').toString();
+    final elemen = (cpMap['elemen'] ?? '').toString();
+    final deskripsi = (cpMap['deskripsi'] ?? '').toString();
+    final fase = (cpMap['fase'] ?? cpMap['nama_fase'] ?? '').toString();
+
+    // Safely extract TP list across all possible response keys
+    List tpList = [];
+    if (cpMap['tp_list'] is List) {
+      tpList = cpMap['tp_list'] as List;
+    } else if (cpMap['tps'] is List) {
+      tpList = cpMap['tps'] as List;
+    } else if (cpMap['tp'] is List) {
+      tpList = cpMap['tp'] as List;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -980,12 +1025,28 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
                             color: isDark ? Colors.white : const Color(0xFF0F172A),
                           ),
                         ),
-                      Text(
-                        '${tpList.length} Butir Tujuan Pembelajaran',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? Colors.white60 : Colors.grey.shade600,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            '${tpList.length} Butir Tujuan Pembelajaran',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isDark ? Colors.white60 : Colors.grey.shade600,
+                            ),
+                          ),
+                          if (fase.isNotEmpty) ...[
+                            const SizedBox(width: 6),
+                            Text('•', style: TextStyle(color: Colors.grey.shade400, fontSize: 10)),
+                            const SizedBox(width: 6),
+                            Text(
+                              fase,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: isDark ? Colors.white54 : Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -1023,41 +1084,104 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
               ),
             ),
 
-          // Child TP Items Section
-          if (tpList.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(height: 1),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Target Tujuan Pembelajaran (TP):',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white70 : const Color(0xFF1E293B),
+          // Child TP Items Section - ALWAYS VISIBLE WITH COUNTER
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(height: 1),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Rincian Tujuan Pembelajaran (TP):',
+                      style: GoogleFonts.outfit(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: tpList.isNotEmpty
+                            ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                            : (isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${tpList.length} Butir TP',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.bold,
+                          color: tpList.isNotEmpty
+                              ? const Color(0xFF059669)
+                              : (isDark ? Colors.white60 : Colors.grey.shade600),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (tpList.isNotEmpty)
+                  ...tpList.map((tp) => _buildTpItem(tp, isDark))
+                else
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 18,
+                          color: isDark ? const Color(0xFF38BDF8) : const Color(0xFF2563EB),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Belum ada butir TP turunan untuk Capaian Pembelajaran ini. Bapak/Ibu guru sedang merumuskan rincian Tujuan Pembelajaran.',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              height: 1.4,
+                              color: isDark ? Colors.white60 : Colors.grey.shade600,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  ...tpList.map((tp) => _buildTpItem(tp, isDark)),
-                ],
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildTpItem(dynamic tp, bool isDark) {
-    final kodeTp = tp['kode_tp']?.toString() ?? 'TP';
-    final materiPokok = tp['materi_pokok']?.toString() ?? '';
-    final deskripsi = tp['deskripsi']?.toString() ?? '';
-    final kktpMetode = tp['kktp_metode']?.toString() ?? 'interval_nilai';
-    final kktpNilaiMin = double.tryParse((tp['kktp_nilai_min'] ?? 75).toString()) ?? 75.0;
-    final kktpTargetInd = int.tryParse((tp['kktp_target_ind'] ?? 0).toString()) ?? 0;
-    final kktpKriteria = tp['kktp_kriteria']?.toString() ?? '';
+    if (tp is! Map) return const SizedBox.shrink();
+    final tpMap = Map<String, dynamic>.from(tp);
+
+    final kodeTp = (tpMap['kode_tp'] ?? tpMap['kode'] ?? 'TP').toString();
+    final materiPokok = (tpMap['materi_pokok'] ?? tpMap['materi'] ?? '').toString();
+    final deskripsi = (tpMap['deskripsi'] != null && tpMap['deskripsi'].toString().trim().isNotEmpty)
+        ? tpMap['deskripsi'].toString()
+        : (tpMap['materi_pokok']?.toString() ?? (tpMap['nama_tp']?.toString() ?? 'Tujuan Pembelajaran'));
+    final kktpMetode = (tpMap['kktp_metode'] ?? tpMap['metode'] ?? 'interval_nilai').toString();
+    final kktpNilaiMin = double.tryParse((tpMap['kktp_nilai_min'] ?? tpMap['nilai_minimum'] ?? 75).toString()) ?? 75.0;
+    final kktpTargetInd = int.tryParse((tpMap['kktp_target_ind'] ?? tpMap['target_indikator_count'] ?? 0).toString()) ?? 0;
+    final kktpKriteria = (tpMap['kktp_kriteria'] ?? tpMap['deskripsi_kriteria'] ?? '').toString();
 
     String kktpLabel;
     Color kktpColor;
@@ -1068,22 +1192,29 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
       kktpLabel = 'Rubrik Min: ${kktpNilaiMin.toInt()}';
       kktpColor = const Color(0xFF06B6D4);
     } else {
-      kktpLabel = 'Batas Tuntas (KKTP): ${kktpNilaiMin.toInt()}';
+      kktpLabel = 'Batas KKTP: ${kktpNilaiMin.toInt()}';
       kktpColor = const Color(0xFF10B981);
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border(
           left: const BorderSide(color: Color(0xFF10B981), width: 3.5),
           top: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
           right: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
           bottom: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1095,16 +1226,16 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                 decoration: BoxDecoration(
                   color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   kodeTp,
                   style: const TextStyle(
                     color: Color(0xFF059669),
-                    fontSize: 10,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.bold,
                     fontFamily: 'monospace',
                   ),
@@ -1112,30 +1243,30 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
               ),
               if (materiPokok.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(5),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     materiPokok,
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white70 : const Color(0xFF334155),
                     ),
                   ),
                 ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                 decoration: BoxDecoration(
                   color: kktpColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(5),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   kktpLabel,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.bold,
                     color: kktpColor,
                   ),
@@ -1144,7 +1275,7 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
             ],
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 7),
 
           // TP Description
           Text(
@@ -1160,10 +1291,10 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
           if (kktpKriteria.isNotEmpty) ...[
             const SizedBox(height: 6),
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1172,7 +1303,7 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Pedoman: $kktpKriteria',
+                      'Pedoman KKTP: $kktpKriteria',
                       style: TextStyle(
                         fontSize: 10,
                         color: isDark ? Colors.white60 : Colors.grey.shade600,

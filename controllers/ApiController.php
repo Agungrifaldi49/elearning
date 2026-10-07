@@ -1004,24 +1004,78 @@ class ApiController {
                         $cpList = $currModel->getCPList(null, $targetMapelIds);
                     }
 
-                    // Ambil TP dan KKTP
-                    $tpList = $currModel->getTPList(null, null, false);
+                    // Ambil TP dan KKTP dengan multi-tier fallback query
+                    $tpList = [];
+                    try {
+                        $tpList = $currModel->getTPList(null, null, false);
+                    } catch (\Throwable $eTp) {
+                        $tpList = [];
+                    }
+
+                    // Kumpulkan semua cp_id dari cpList
+                    $cpIds = array_filter(array_map('intval', array_column($cpList, 'id')));
+
+                    // Cek apakah ada cp_id yang belum terambil oleh getTPList
+                    $existingCpIdsInTp = [];
+                    foreach ($tpList as $t) {
+                        if (!empty($t['cp_id'])) {
+                            $existingCpIdsInTp[intval($t['cp_id'])] = true;
+                        }
+                    }
+
+                    $missingCpIds = array_values(array_diff($cpIds, array_keys($existingCpIdsInTp)));
+                    if (!empty($missingCpIds)) {
+                        try {
+                            $inCl = implode(',', $missingCpIds);
+                            $stmtDirect = $this->db->query("
+                                SELECT tp.*, 
+                                       COALESCE(k.id, 0) as kktp_id, 
+                                       COALESCE(k.metode, 'interval_nilai') as kktp_metode, 
+                                       COALESCE(k.nilai_minimum, 75.00) as kktp_nilai_min, 
+                                       COALESCE(k.target_indikator_count, 0) as kktp_target_ind, 
+                                       COALESCE(k.deskripsi_kriteria, '') as kktp_kriteria
+                                FROM tujuan_pembelajaran tp
+                                LEFT JOIN kktp k ON (k.tp_id = tp.id AND (k.status = 'aktif' OR k.status IS NULL))
+                                WHERE tp.cp_id IN ({$inCl})
+                                ORDER BY tp.id ASC
+                            ");
+                            if ($stmtDirect) {
+                                $directTps = $stmtDirect->fetchAll(PDO::FETCH_ASSOC);
+                                foreach ($directTps as $dtp) {
+                                    $tpList[] = $dtp;
+                                }
+                            }
+                        } catch (\Throwable $eDirect) {
+                            try {
+                                $inCl = implode(',', $missingCpIds);
+                                $stmtRaw = $this->db->query("SELECT * FROM tujuan_pembelajaran WHERE cp_id IN ({$inCl}) ORDER BY id ASC");
+                                if ($stmtRaw) {
+                                    $rawTps = $stmtRaw->fetchAll(PDO::FETCH_ASSOC);
+                                    foreach ($rawTps as $rtp) {
+                                        $tpList[] = $rtp;
+                                    }
+                                }
+                            } catch (\Throwable $eRaw) {}
+                        }
+                    }
+
                     $tpsByCpId = [];
                     foreach ($tpList as $tp) {
-                        $cId = intval($tp['cp_id']);
+                        $cId = intval($tp['cp_id'] ?? 0);
+                        if ($cId <= 0) continue;
                         if (!isset($tpsByCpId[$cId])) {
                             $tpsByCpId[$cId] = [];
                         }
                         $tpsByCpId[$cId][] = [
-                            'id' => intval($tp['id']),
+                            'id' => intval($tp['id'] ?? 0),
                             'cp_id' => $cId,
-                            'kode_tp' => $tp['kode_tp'] ?? '',
-                            'materi_pokok' => $tp['materi_pokok'] ?? '',
-                            'deskripsi' => $tp['deskripsi'] ?? '',
-                            'kktp_metode' => $tp['kktp_metode'] ?? 'interval_nilai',
-                            'kktp_nilai_min' => floatval($tp['kktp_nilai_min'] ?? 75.0),
-                            'kktp_target_ind' => intval($tp['kktp_target_ind'] ?? 0),
-                            'kktp_kriteria' => $tp['kktp_kriteria'] ?? ''
+                            'kode_tp' => $tp['kode_tp'] ?? ($tp['kode'] ?? ('TP-' . $cId . '.' . (count($tpsByCpId[$cId]) + 1))),
+                            'materi_pokok' => $tp['materi_pokok'] ?? ($tp['materi'] ?? ''),
+                            'deskripsi' => $tp['deskripsi'] ?? ($tp['materi_pokok'] ?? ''),
+                            'kktp_metode' => $tp['kktp_metode'] ?? ($tp['metode'] ?? 'interval_nilai'),
+                            'kktp_nilai_min' => floatval($tp['kktp_nilai_min'] ?? ($tp['nilai_minimum'] ?? 75.0)),
+                            'kktp_target_ind' => intval($tp['kktp_target_ind'] ?? ($tp['target_indikator_count'] ?? 0)),
+                            'kktp_kriteria' => $tp['kktp_kriteria'] ?? ($tp['deskripsi_kriteria'] ?? '')
                         ];
                     }
 
@@ -1035,15 +1089,17 @@ class ApiController {
                                 'nama_kelas' => $enrolledMapels[$mId]['nama_kelas'],
                                 'total_cp' => 0,
                                 'total_tp' => 0,
-                                'cp_list' => []
+                                'cp_list' => [],
+                                'cps' => []
                             ];
                         }
                     }
 
                     foreach ($cpList as $cp) {
-                        $mId = intval($cp['mapel_id']);
+                        $mId = intval($cp['mapel_id'] ?? 0);
                         if (isset($mapelGroups[$mId])) {
-                            $childTps = $tpsByCpId[$cp['id']] ?? [];
+                            $cpIdInt = intval($cp['id'] ?? 0);
+                            $childTps = $tpsByCpId[$cpIdInt] ?? ($tpsByCpId[$cp['id']] ?? []);
 
                             if (!empty($searchKeyword)) {
                                 $kw = mb_strtolower($searchKeyword);
@@ -1070,16 +1126,18 @@ class ApiController {
                             }
 
                             $cpData = [
-                                'id' => intval($cp['id']),
+                                'id' => $cpIdInt,
                                 'kode_cp' => $cp['kode_cp'] ?? '',
                                 'elemen' => $cp['elemen'] ?? '',
                                 'deskripsi' => $cp['deskripsi'] ?? '',
                                 'fase' => $cp['nama_fase'] ?? ($cp['kode_fase'] ?? $namaFase),
                                 'total_tp' => count($childTps),
-                                'tp_list' => $childTps
+                                'tp_list' => $childTps,
+                                'tps' => $childTps
                             ];
 
                             $mapelGroups[$mId]['cp_list'][] = $cpData;
+                            $mapelGroups[$mId]['cps'][] = $cpData;
                             $mapelGroups[$mId]['total_cp']++;
                             $mapelGroups[$mId]['total_tp'] += count($childTps);
                             $totalCpCount++;
