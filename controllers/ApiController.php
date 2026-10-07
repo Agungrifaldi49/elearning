@@ -1273,6 +1273,87 @@ class ApiController {
                 ]);
                 break;
 
+            case 'pembayaran':
+            case 'tagihan':
+            case 'spp':
+            case 'slip_pembayaran':
+                require_once ROOT_PATH . 'models/PembayaranModel.php';
+                $pembayaranModel = new PembayaranModel();
+                $siswaId = intval($siswa['id'] ?? 0);
+
+                // Auto-seed sample bills if table is completely empty so student immediately sees realistic portal
+                try {
+                    $pembayaranModel->seedInitialDataIfEmpty();
+                } catch (\Throwable $eSeed) {}
+
+                // Check if specific slip is requested
+                $subAction = strtolower($input['sub_action'] ?? $input['action'] ?? $_GET['sub_action'] ?? $_POST['action'] ?? $endpoint);
+                $riwayatId = intval($_GET['riwayat_id'] ?? $_POST['riwayat_id'] ?? $input['riwayat_id'] ?? $_GET['id'] ?? 0);
+                if (($subAction === 'slip_pembayaran' || $endpoint === 'slip_pembayaran') && $riwayatId > 0) {
+                    $slip = $pembayaranModel->getSlipPembayaran($riwayatId, $siswaId);
+                    if ($slip) {
+                        $this->jsonResponse(true, 'Slip Bukti Pembayaran', $slip);
+                    } else {
+                        $this->jsonResponse(false, 'Slip bukti pembayaran tidak ditemukan.', null, 404);
+                    }
+                    break;
+                }
+
+                $bills = $pembayaranModel->getSiswaBills($siswaId);
+                $summary = $pembayaranModel->getSiswaPaymentSummary($siswaId);
+                $riwayat = $pembayaranModel->getSiswaRiwayatPembayaran($siswaId);
+                $rekeningConfig = $pembayaranModel->getRekeningConfig();
+
+                $unpaidBills = array_values(array_filter($bills, function($b) {
+                    return $b['status'] !== 'lunas';
+                }));
+                $paidBills = array_values(array_filter($bills, function($b) {
+                    return $b['status'] === 'lunas';
+                }));
+
+                $now = time();
+                foreach ($bills as &$b) {
+                    $b['id'] = intval($b['id']);
+                    $b['nominal'] = floatval($b['nominal'] ?? 0);
+                    $b['nominal_terbayar'] = floatval($b['nominal_terbayar'] ?? 0);
+                    $b['sisa_tagihan'] = floatval($b['sisa_tagihan'] ?? 0);
+                    $b['is_due'] = (!empty($b['tanggal_jatuh_tempo']) && strtotime($b['tanggal_jatuh_tempo']) < $now && $b['status'] !== 'lunas');
+                }
+                unset($b);
+
+                foreach ($unpaidBills as &$ub) {
+                    $ub['id'] = intval($ub['id']);
+                    $ub['nominal'] = floatval($ub['nominal'] ?? 0);
+                    $ub['nominal_terbayar'] = floatval($ub['nominal_terbayar'] ?? 0);
+                    $ub['sisa_tagihan'] = floatval($ub['sisa_tagihan'] ?? 0);
+                    $ub['is_due'] = (!empty($ub['tanggal_jatuh_tempo']) && strtotime($ub['tanggal_jatuh_tempo']) < $now);
+                }
+                unset($ub);
+
+                foreach ($riwayat as &$r) {
+                    $r['id'] = intval($r['id']);
+                    $r['nominal_bayar'] = floatval($r['nominal_bayar'] ?? 0);
+                }
+                unset($r);
+
+                $this->jsonResponse(true, 'Data Portal Pembayaran Siswa', [
+                    'siswa' => [
+                        'id' => $siswaId,
+                        'nama_lengkap' => $siswa['nama_lengkap'] ?? '',
+                        'nis' => $siswa['nis'] ?? '',
+                        'nisn' => $siswa['nisn'] ?? '',
+                        'nama_kelas' => $siswa['nama_kelas'] ?? '',
+                        'nama_jurusan' => $siswa['nama_jurusan'] ?? ''
+                    ],
+                    'summary' => $summary,
+                    'unpaid_bills' => $unpaidBills,
+                    'paid_bills' => $paidBills,
+                    'all_bills' => $bills,
+                    'riwayat' => $riwayat,
+                    'rekening_config' => $rekeningConfig
+                ]);
+                break;
+
             case 'tugas':
                 require_once ROOT_PATH . 'models/LearningModel.php';
                 $learningModel = new LearningModel();
@@ -6226,6 +6307,14 @@ class ApiController {
     public function pembayaran($endpoint = 'index') {
         require_once ROOT_PATH . 'models/PembayaranModel.php';
         $pembayaranModel = new PembayaranModel();
+
+        if ($endpoint !== 'sync') {
+            $input = $this->getPostInput();
+            $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? $_GET['siswa_id'] ?? $_POST['siswa_id'] ?? $input['siswa_id'] ?? 0);
+            if ($userId > 0 || AuthHelper::check()) {
+                return $this->siswa('pembayaran');
+            }
+        }
 
         if ($endpoint === 'sync') {
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {

@@ -14,6 +14,7 @@ import 'gabung_kelas_screen.dart';
 import 'learning_path_screen.dart';
 import 'siswa_cptp_screen.dart';
 import 'siswa_ekskul_screen.dart';
+import 'siswa_pembayaran_screen.dart';
 import 'sertifikat_screen.dart';
 import 'siswa_absensi_tab.dart';
 import 'siswa_cbt_tab.dart';
@@ -141,6 +142,12 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
         label: 'Ekstrakurikuler',
         color: const Color(0xFF2563EB),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaEkskulScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.account_balance_wallet_rounded,
+        label: 'Pembayaran / SPP',
+        color: const Color(0xFF0284C7),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaPembayaranScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.check_circle_rounded,
