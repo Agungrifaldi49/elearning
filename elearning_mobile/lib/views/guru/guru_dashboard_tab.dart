@@ -18,6 +18,7 @@ import 'guru_recap_absensi_screen.dart';
 import 'guru_scan_qr_screen.dart';
 import 'guru_presensi_selfie_screen.dart';
 import 'guru_wali_kelas_screen.dart';
+import 'guru_cptp_screen.dart';
 
 class GuruDashboardTab extends StatefulWidget {
   const GuruDashboardTab({super.key});
@@ -89,6 +90,12 @@ class _GuruDashboardTabState extends State<GuruDashboardTab> {
         label: 'Input Nilai',
         color: const Color(0xFF818CF8),
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruInputNilaiScreen())),
+      ),
+      _buildFeatureGridItem(
+        icon: Icons.track_changes_rounded,
+        label: 'CP & TP Mapel',
+        color: const Color(0xFF6366F1),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GuruCptpScreen())),
       ),
       _buildFeatureGridItem(
         icon: Icons.how_to_reg_rounded,

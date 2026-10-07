@@ -2442,7 +2442,13 @@ class ApiController {
     }
 
     public function guru($endpoint = 'dashboard') {
-        $endpoint = strtolower(explode('?', $endpoint)[0]);
+        $endpoint = strtolower(trim(explode('?', $endpoint)[0], '/'));
+        $endpoint = str_replace('-', '_', $endpoint);
+        if (strpos($endpoint, 'guru/') === 0) {
+            $endpoint = substr($endpoint, 5);
+        } elseif (strpos($endpoint, 'guru_') === 0) {
+            $endpoint = substr($endpoint, 5);
+        }
         $input = $this->getPostInput();
         $userId = intval($_GET['user_id'] ?? $_POST['user_id'] ?? $input['user_id'] ?? $_GET['guru_id'] ?? $_POST['guru_id'] ?? $input['guru_id'] ?? 0);
         if ($userId === 0) {
@@ -4818,6 +4824,326 @@ class ApiController {
                         'alpa_hari_ini' => $countAlpaToday,
                         'belum_absen_hari_ini' => $countBelumAbsenToday,
                     ]
+                ]);
+                break;
+
+            case 'cptp':
+            case 'cp_tp':
+            case 'capaian_pembelajaran':
+                require_once ROOT_PATH . 'models/CurriculumModel.php';
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                $currModel = new CurriculumModel();
+                $academicModel = new AcademicModel();
+
+                $input = $this->getPostInput();
+                $action = $input['action'] ?? $_POST['action'] ?? '';
+
+                // Handle CRUD Actions if POST
+                if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($action)) {
+                    if ($action === 'create_cp') {
+                        $kurId = intval($input['kurikulum_id'] ?? $_POST['kurikulum_id'] ?? 0);
+                        $mapelId = intval($input['mapel_id'] ?? $_POST['mapel_id'] ?? 0);
+                        $faseId = !empty($input['fase_id'] ?? $_POST['fase_id']) ? intval($input['fase_id'] ?? $_POST['fase_id']) : null;
+                        $kodeCp = trim($input['kode_cp'] ?? $_POST['kode_cp'] ?? '');
+                        $elemen = trim($input['elemen'] ?? $_POST['elemen'] ?? '');
+                        $deskripsi = trim($input['deskripsi'] ?? $_POST['deskripsi'] ?? '');
+
+                        if ($kurId <= 0 || $mapelId <= 0) {
+                            $this->jsonResponse(false, 'Kurikulum dan Mata Pelajaran wajib dipilih!', null, 400);
+                        }
+
+                        if (empty($kodeCp)) {
+                            $kodeCp = $currModel->generateNextCPCode($kurId, $mapelId);
+                        }
+
+                        $res = $currModel->addCP([
+                            'kurikulum_id' => $kurId,
+                            'mapel_id' => $mapelId,
+                            'fase_id' => $faseId,
+                            'guru_id' => $guruId,
+                            'kode_cp' => $kodeCp,
+                            'elemen' => $elemen,
+                            'deskripsi' => $deskripsi
+                        ]);
+
+                        if ($res['status']) {
+                            $this->jsonResponse(true, $res['message'] ?? 'Capaian Pembelajaran (CP) berhasil ditambahkan!', ['id' => $res['id'] ?? null]);
+                        } else {
+                            $this->jsonResponse(false, $res['message'] ?? 'Gagal menambahkan CP.', null, 400);
+                        }
+                    }
+
+                    if ($action === 'update_cp') {
+                        $id = intval($input['id'] ?? $_POST['id'] ?? 0);
+                        if ($id <= 0) {
+                            $this->jsonResponse(false, 'ID CP tidak valid!', null, 400);
+                        }
+
+                        $kurId = !empty($input['kurikulum_id'] ?? $_POST['kurikulum_id']) ? intval($input['kurikulum_id'] ?? $_POST['kurikulum_id']) : null;
+                        $mapelId = !empty($input['mapel_id'] ?? $_POST['mapel_id']) ? intval($input['mapel_id'] ?? $_POST['mapel_id']) : null;
+                        $faseId = !empty($input['fase_id'] ?? $_POST['fase_id']) ? intval($input['fase_id'] ?? $_POST['fase_id']) : null;
+                        $kodeCp = trim($input['kode_cp'] ?? $_POST['kode_cp'] ?? '');
+                        $elemen = trim($input['elemen'] ?? $_POST['elemen'] ?? '');
+                        $deskripsi = trim($input['deskripsi'] ?? $_POST['deskripsi'] ?? '');
+
+                        $res = $currModel->updateCP($id, [
+                            'kurikulum_id' => $kurId,
+                            'mapel_id' => $mapelId,
+                            'fase_id' => $faseId,
+                            'guru_id' => $guruId,
+                            'kode_cp' => $kodeCp,
+                            'elemen' => $elemen,
+                            'deskripsi' => $deskripsi
+                        ]);
+
+                        if ($res['status']) {
+                            $this->jsonResponse(true, $res['message'] ?? 'Capaian Pembelajaran (CP) berhasil diperbarui!');
+                        } else {
+                            $this->jsonResponse(false, $res['message'] ?? 'Gagal memperbarui CP.', null, 400);
+                        }
+                    }
+
+                    if ($action === 'delete_cp') {
+                        $id = intval($input['id'] ?? $_POST['id'] ?? 0);
+                        if ($id <= 0) {
+                            $this->jsonResponse(false, 'ID CP tidak valid!', null, 400);
+                        }
+                        $res = $currModel->deleteCP($id);
+                        if ($res['status']) {
+                            $this->jsonResponse(true, $res['message'] ?? 'Capaian Pembelajaran (CP) berhasil dihapus!');
+                        } else {
+                            $this->jsonResponse(false, $res['message'] ?? 'Gagal menghapus CP.', null, 400);
+                        }
+                    }
+
+                    if ($action === 'create_tp') {
+                        $cpId = intval($input['cp_id'] ?? $_POST['cp_id'] ?? 0);
+                        $kodeTp = trim($input['kode_tp'] ?? $_POST['kode_tp'] ?? '');
+                        $materiPokok = trim($input['materi_pokok'] ?? $_POST['materi_pokok'] ?? '');
+                        $deskripsi = trim($input['deskripsi'] ?? $_POST['deskripsi'] ?? '');
+                        $urutan = intval($input['urutan'] ?? $_POST['urutan'] ?? 1);
+
+                        if ($cpId <= 0) {
+                            $this->jsonResponse(false, 'Induk CP wajib dipilih!', null, 400);
+                        }
+
+                        if (empty($kodeTp)) {
+                            $kodeTp = $currModel->generateNextTPCode($cpId);
+                        }
+
+                        $res = $currModel->addTP([
+                            'cp_id' => $cpId,
+                            'guru_id' => $guruId,
+                            'kode_tp' => $kodeTp,
+                            'materi_pokok' => $materiPokok,
+                            'deskripsi' => $deskripsi,
+                            'urutan' => $urutan
+                        ]);
+
+                        if ($res['status']) {
+                            $this->jsonResponse(true, $res['message'] ?? 'Tujuan Pembelajaran (TP) berhasil ditambahkan!', ['id' => $res['id'] ?? null]);
+                        } else {
+                            $this->jsonResponse(false, $res['message'] ?? 'Gagal menambahkan TP.', null, 400);
+                        }
+                    }
+
+                    if ($action === 'update_tp') {
+                        $id = intval($input['id'] ?? $_POST['id'] ?? 0);
+                        if ($id <= 0) {
+                            $this->jsonResponse(false, 'ID TP tidak valid!', null, 400);
+                        }
+
+                        $cpId = !empty($input['cp_id'] ?? $_POST['cp_id']) ? intval($input['cp_id'] ?? $_POST['cp_id']) : null;
+                        $kodeTp = trim($input['kode_tp'] ?? $_POST['kode_tp'] ?? '');
+                        $materiPokok = trim($input['materi_pokok'] ?? $_POST['materi_pokok'] ?? '');
+                        $deskripsi = trim($input['deskripsi'] ?? $_POST['deskripsi'] ?? '');
+                        $urutan = intval($input['urutan'] ?? $_POST['urutan'] ?? 1);
+
+                        $res = $currModel->updateTP($id, [
+                            'cp_id' => $cpId,
+                            'guru_id' => $guruId,
+                            'kode_tp' => $kodeTp,
+                            'materi_pokok' => $materiPokok,
+                            'deskripsi' => $deskripsi,
+                            'urutan' => $urutan
+                        ]);
+
+                        if ($res['status']) {
+                            $this->jsonResponse(true, $res['message'] ?? 'Tujuan Pembelajaran (TP) berhasil diperbarui!');
+                        } else {
+                            $this->jsonResponse(false, $res['message'] ?? 'Gagal memperbarui TP.', null, 400);
+                        }
+                    }
+
+                    if ($action === 'delete_tp') {
+                        $id = intval($input['id'] ?? $_POST['id'] ?? 0);
+                        if ($id <= 0) {
+                            $this->jsonResponse(false, 'ID TP tidak valid!', null, 400);
+                        }
+                        $res = $currModel->deleteTP($id);
+                        if ($res['status']) {
+                            $this->jsonResponse(true, $res['message'] ?? 'Tujuan Pembelajaran (TP) berhasil dihapus!');
+                        } else {
+                            $this->jsonResponse(false, $res['message'] ?? 'Gagal menghapus TP.', null, 400);
+                        }
+                    }
+
+                    if ($action === 'get_next_code') {
+                        $type = trim($input['type'] ?? $_POST['type'] ?? 'cp');
+                        if ($type === 'tp') {
+                            $cpId = intval($input['cp_id'] ?? $_POST['cp_id'] ?? 0);
+                            $nextCode = $currModel->generateNextTPCode($cpId);
+                            $this->jsonResponse(true, 'Next TP Code', ['next_code' => $nextCode]);
+                        } else {
+                            $kurId = intval($input['kurikulum_id'] ?? $_POST['kurikulum_id'] ?? 0);
+                            $mapelId = intval($input['mapel_id'] ?? $_POST['mapel_id'] ?? 0);
+                            $nextCode = $currModel->generateNextCPCode($kurId, $mapelId);
+                            $this->jsonResponse(true, 'Next CP Code', ['next_code' => $nextCode]);
+                        }
+                    }
+                }
+
+                // GET Request: Ambil data CP & TP Guru
+                $teacherMapelList = $academicModel->getMapelByGuru($guruId);
+                if (empty($teacherMapelList)) {
+                    $teacherMapelList = $academicModel->getMapel();
+                }
+                $teacherMapelIds = array_column($teacherMapelList, 'id');
+
+                $kurikulumList = $currModel->getAllKurikulum();
+                $allFaseList = $currModel->getAllFase();
+
+                $filterMapelId = isset($_GET['filter_mapel_id']) && $_GET['filter_mapel_id'] !== '' ? intval($_GET['filter_mapel_id']) : (isset($_GET['mapel_id']) && $_GET['mapel_id'] !== '' ? intval($_GET['mapel_id']) : null);
+                $filterKurId = !empty($_GET['filter_kurikulum_id']) ? intval($_GET['filter_kurikulum_id']) : (!empty($_GET['kurikulum_id']) ? intval($_GET['kurikulum_id']) : ($kurikulumList[0]['id'] ?? 1));
+                $filterFaseId = !empty($_GET['filter_fase_id']) ? intval($_GET['filter_fase_id']) : (!empty($_GET['fase_id']) ? intval($_GET['fase_id']) : null);
+                $searchKeyword = strtolower(trim($_GET['q'] ?? ''));
+
+                $effectiveMapelFilter = $filterMapelId ?: ($teacherMapelIds ?: null);
+
+                $cpListRaw = $currModel->getCPList($filterKurId, $effectiveMapelFilter, $filterFaseId);
+                $allTpRaw = $currModel->getTPList(null, null, false);
+
+                // Group TP by cp_id
+                $tpByCp = [];
+                foreach ($allTpRaw as $tp) {
+                    $cpId = intval($tp['cp_id'] ?? 0);
+                    if ($cpId > 0) {
+                        if (!isset($tpByCp[$cpId])) $tpByCp[$cpId] = [];
+                        $tpByCp[$cpId][] = [
+                            'id' => intval($tp['id']),
+                            'cp_id' => $cpId,
+                            'guru_id' => intval($tp['guru_id'] ?? 0),
+                            'nama_guru' => $tp['nama_guru'] ?? '',
+                            'kode_tp' => $tp['kode_tp'] ?? '',
+                            'materi_pokok' => $tp['materi_pokok'] ?? '',
+                            'deskripsi' => $tp['deskripsi'] ?? '',
+                            'urutan' => intval($tp['urutan'] ?? 1),
+                            'kktp_metode' => $tp['kktp_metode'] ?? 'interval_nilai',
+                            'kktp_nilai_min' => floatval($tp['kktp_nilai_min'] ?? 75.0),
+                            'kktp_target_ind' => intval($tp['kktp_target_ind'] ?? 0),
+                            'kktp_kriteria' => $tp['kktp_kriteria'] ?? ''
+                        ];
+                    }
+                }
+
+                $mapelGroups = [];
+                $totalCp = 0;
+                $totalTp = 0;
+
+                $cpByMapel = [];
+                foreach ($cpListRaw as $cp) {
+                    $mId = intval($cp['mapel_id'] ?? 0);
+                    if ($mId > 0) {
+                        if (!isset($cpByMapel[$mId])) $cpByMapel[$mId] = [];
+                        
+                        $cpId = intval($cp['id']);
+                        $tpsForThisCp = $tpByCp[$cpId] ?? [];
+
+                        if (!empty($searchKeyword)) {
+                            $matchCp = str_contains(strtolower($cp['kode_cp'] ?? ''), $searchKeyword)
+                                || str_contains(strtolower($cp['elemen'] ?? ''), $searchKeyword)
+                                || str_contains(strtolower($cp['deskripsi'] ?? ''), $searchKeyword)
+                                || str_contains(strtolower($cp['nama_mapel'] ?? ''), $searchKeyword);
+                            
+                            $matchedTps = array_filter($tpsForThisCp, function($t) use ($searchKeyword) {
+                                return str_contains(strtolower($t['kode_tp'] ?? ''), $searchKeyword)
+                                    || str_contains(strtolower($t['materi_pokok'] ?? ''), $searchKeyword)
+                                    || str_contains(strtolower($t['deskripsi'] ?? ''), $searchKeyword);
+                            });
+
+                            if (!$matchCp && empty($matchedTps)) {
+                                continue;
+                            }
+                            if (!$matchCp && !empty($matchedTps)) {
+                                $tpsForThisCp = array_values($matchedTps);
+                            }
+                        }
+
+                        $cpItem = [
+                            'id' => $cpId,
+                            'kurikulum_id' => intval($cp['kurikulum_id'] ?? 0),
+                            'nama_kurikulum' => $cp['nama_kurikulum'] ?? '',
+                            'kode_kurikulum' => $cp['kode_kurikulum'] ?? '',
+                            'mapel_id' => $mId,
+                            'nama_mapel' => $cp['nama_mapel'] ?? '',
+                            'kode_mapel' => $cp['kode_mapel'] ?? '',
+                            'fase_id' => intval($cp['fase_id'] ?? 0),
+                            'nama_fase' => $cp['nama_fase'] ?? '',
+                            'kode_fase' => $cp['kode_fase'] ?? '',
+                            'guru_id' => intval($cp['guru_id'] ?? 0),
+                            'nama_guru' => $cp['nama_guru'] ?? '',
+                            'kode_cp' => $cp['kode_cp'] ?? '',
+                            'elemen' => $cp['elemen'] ?? '',
+                            'deskripsi' => $cp['deskripsi'] ?? '',
+                            'total_tp' => count($tpsForThisCp),
+                            'tujuan_pembelajaran' => $tpsForThisCp
+                        ];
+
+                        $cpByMapel[$mId][] = $cpItem;
+                        $totalCp++;
+                        $totalTp += count($tpsForThisCp);
+                    }
+                }
+
+                foreach ($teacherMapelList as $mp) {
+                    $mId = intval($mp['id']);
+                    if ($filterMapelId && $filterMapelId > 0 && $mId !== $filterMapelId) {
+                        continue;
+                    }
+                    $itemsCp = $cpByMapel[$mId] ?? [];
+                    if (empty($searchKeyword) || !empty($itemsCp)) {
+                        $mapelGroups[] = [
+                            'mapel_id' => $mId,
+                            'nama_mapel' => $mp['nama_mapel'] ?? 'Mata Pelajaran',
+                            'kode_mapel' => $mp['kode_mapel'] ?? '',
+                            'cp_count' => count($itemsCp),
+                            'tp_count' => array_sum(array_map(function($c) { return $c['total_tp']; }, $itemsCp)),
+                            'cp_list' => $itemsCp
+                        ];
+                    }
+                }
+
+                $this->jsonResponse(true, 'Data CP & TP Tenaga Pendidik', [
+                    'guru' => [
+                        'id' => $guruId,
+                        'nama_lengkap' => $guru['nama_lengkap'] ?? '',
+                        'nip' => $guru['nip'] ?? ''
+                    ],
+                    'filters' => [
+                        'filter_mapel_id' => $filterMapelId,
+                        'filter_kurikulum_id' => $filterKurId,
+                        'filter_fase_id' => $filterFaseId,
+                        'search_query' => $searchKeyword
+                    ],
+                    'stats' => [
+                        'total_mapel' => count($teacherMapelList),
+                        'total_cp' => $totalCp,
+                        'total_tp' => $totalTp
+                    ],
+                    'teacher_mapels' => $teacherMapelList,
+                    'kurikulum_list' => $kurikulumList,
+                    'fase_list' => $allFaseList,
+                    'mapel_groups' => $mapelGroups
                 ]);
                 break;
 

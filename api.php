@@ -104,8 +104,8 @@ if (!method_exists($controller, $method)) {
     }
 }
 
-// If method is 'siswa' or 'kepsek' but param is 'index', attempt fallback to POST/GET sub-action
-if (($method === 'siswa' || $method === 'kepsek') && ($param === 'index' || $param === 'dashboard' || $param === '')) {
+// If method is 'siswa', 'guru', or 'kepsek' but param is 'index', attempt fallback to POST/GET sub-action
+if (($method === 'siswa' || $method === 'kepsek' || $method === 'guru') && ($param === 'index' || $param === 'dashboard' || $param === '')) {
     $subActionCandidate = $_POST['action'] ?? $jsonInput['action'] ?? $_GET['sub_action'] ?? $_GET['endpoint'] ?? $_POST['endpoint'] ?? $jsonInput['endpoint'] ?? '';
     if (!empty($subActionCandidate) && strtolower($subActionCandidate) !== $method) {
         $cleanSub = strtolower(trim(explode('?', $subActionCandidate)[0], '/'));
