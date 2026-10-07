@@ -703,6 +703,14 @@ if (!empty($jadwalList)) {
                             <span class="badge bg-success-subtle text-success rounded-pill px-2.5 py-1"><?= count($quizList) ?></span>
                         </a>
 
+                        <a href="<?= BASE_URL ?>index.php?url=siswa/cptp" class="quick-nav-item">
+                            <span class="d-flex align-items-center gap-2">
+                                <i class="bi bi-diagram-3-fill text-warning fs-5"></i>
+                                <span>Capaian & TP Mapel</span>
+                            </span>
+                            <span class="badge bg-warning-subtle text-warning-emphasis rounded-pill px-2.5 py-1">Target KBM</span>
+                        </a>
+
                         <a href="<?= BASE_URL ?>index.php?url=siswa/panduan" class="quick-nav-item">
                             <span class="d-flex align-items-center gap-2">
                                 <i class="bi bi-question-circle-fill text-info fs-5"></i>

@@ -326,6 +326,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'siswa/learningPath') ?>" href="<?= BASE_URL ?>index.php?url=siswa/learningPath">
                 <i class="bi bi-compass-fill"></i> Learning Path Progress
             </a></li>
+            <li><a class="nav-link <?= (isActive($currentUrl,'siswa/cptp') || isActive($currentUrl,'siswa/capaianPembelajaran')) ? 'active' : '' ?>" href="<?= BASE_URL ?>index.php?url=siswa/cptp">
+                <i class="bi bi-diagram-3-fill text-warning me-1"></i> Capaian & TP Mapel
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'library') ?>" href="<?= BASE_URL ?>index.php?url=library">
                 <i class="bi bi-bookshelf"></i> Perpustakaan Digital
             </a></li>

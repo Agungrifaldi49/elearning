@@ -1231,4 +1231,137 @@ class SiswaController {
 
         require_once ROOT_PATH . 'views/siswa/ekstrakurikuler.php';
     }
+
+    /**
+     * Modul Capaian Pembelajaran (CP) & Tujuan Pembelajaran (TP) untuk Hak Akses Siswa
+     * Menampilkan target kurikulum HANYA untuk mata pelajaran yang telah terdaftar (enrolled).
+     */
+    public function cptp() {
+        $user = AuthHelper::user();
+        $siswa = $this->getSiswaInfo();
+        $siswaId = (int)($siswa['id'] ?? 0);
+        $kelasId = (int)($siswa['kelas_id'] ?? 0);
+
+        $academicModel = new AcademicModel();
+        $currModel = new CurriculumModel();
+
+        // 1. Ambil daftar mata pelajaran yang terdaftar untuk siswa ini
+        $enrolledList = $academicModel->getSiswaEnrolledMapels($siswaId);
+        $enrolledMapels = [];
+        foreach ($enrolledList as $em) {
+            $mId = (int)$em['mapel_id'];
+            if (!isset($enrolledMapels[$mId])) {
+                $enrolledMapels[$mId] = [
+                    'id' => $mId,
+                    'mapel_id' => $mId,
+                    'nama_mapel' => $em['nama_mapel'],
+                    'kode_mapel' => $em['kode_mapel'] ?? '',
+                    'nama_guru' => $em['nama_guru'] ?? 'Guru Pengampu',
+                    'guru_id' => (int)($em['guru_id'] ?? 0),
+                    'nama_kelas' => $em['nama_kelas'] ?? '',
+                    'tingkat' => $em['tingkat'] ?? ''
+                ];
+            }
+        }
+        $enrolledMapelIds = array_keys($enrolledMapels);
+
+        // 2. Info Kurikulum & Rombel Siswa
+        $activeTa = $academicModel->getActiveTahunAjaran();
+        $taId = $activeTa['id'] ?? null;
+        $kurInfo = $currModel->getActiveKurikulumForRombel($kelasId, $taId);
+        $kurikulumId = (int)($kurInfo['kurikulum_id'] ?? 1);
+        $namaKurikulum = $kurInfo['nama_kurikulum'] ?? 'Kurikulum Merdeka SMK';
+        $kodeKurikulum = $kurInfo['kode_kurikulum'] ?? 'KMDK';
+        $faseInfo = $kurInfo['nama_fase'] ?? 'Fase E';
+        $kodeFase = $kurInfo['kode_fase'] ?? 'E';
+
+        // 3. Filter state (pastikan HANYA boleh memilih mapel yang terdaftar)
+        $filterMapelId = isset($_GET['filter_mapel_id']) && $_GET['filter_mapel_id'] !== '' ? (int)$_GET['filter_mapel_id'] : null;
+        if ($filterMapelId !== null && !in_array($filterMapelId, $enrolledMapelIds)) {
+            $filterMapelId = null; // Abaikan jika bukan mapel terdaftar
+        }
+        $searchKeyword = trim($_GET['q'] ?? '');
+
+        // 4. Pengambilan Data CP & TP jika ada mapel terdaftar
+        $mapelGroups = [];
+        $totalCpCount = 0;
+        $totalTpCount = 0;
+
+        if (!empty($enrolledMapelIds)) {
+            $targetMapelIds = $filterMapelId ? [$filterMapelId] : $enrolledMapelIds;
+
+            // Ambil data CP untuk mapel yang terdaftar
+            $cpList = $currModel->getCPList($kurikulumId, $targetMapelIds);
+            if (empty($cpList)) {
+                // Fallback jika guru menyusun di kurikulum default lainnya
+                $cpList = $currModel->getCPList(null, $targetMapelIds);
+            }
+
+            // Ambil semua TP
+            $tpList = $currModel->getTPList(null, null, false);
+            $tpsByCpId = [];
+            foreach ($tpList as $tp) {
+                $cpId = (int)$tp['cp_id'];
+                if (!isset($tpsByCpId[$cpId])) {
+                    $tpsByCpId[$cpId] = [];
+                }
+                $tpsByCpId[$cpId][] = $tp;
+            }
+
+            // Inisialisasi struktur grup mapel
+            foreach ($targetMapelIds as $mId) {
+                if (isset($enrolledMapels[$mId])) {
+                    $mapelGroups[$mId] = [
+                        'mapel' => $enrolledMapels[$mId],
+                        'cps' => []
+                    ];
+                }
+            }
+
+            // Kelompokkan CP dan attach TP
+            foreach ($cpList as $cp) {
+                $mId = (int)$cp['mapel_id'];
+                if (isset($mapelGroups[$mId])) {
+                    $childTps = $tpsByCpId[$cp['id']] ?? [];
+
+                    // Filter pencarian jika ada kata kunci
+                    if (!empty($searchKeyword)) {
+                        $kw = mb_strtolower($searchKeyword);
+                        $matchCp = strpos(mb_strtolower($cp['kode_cp'] ?? ''), $kw) !== false
+                            || strpos(mb_strtolower($cp['elemen'] ?? ''), $kw) !== false
+                            || strpos(mb_strtolower($cp['deskripsi'] ?? ''), $kw) !== false
+                            || strpos(mb_strtolower($cp['nama_mapel'] ?? ''), $kw) !== false;
+
+                        $matchedTps = [];
+                        foreach ($childTps as $tp) {
+                            if (strpos(mb_strtolower($tp['kode_tp'] ?? ''), $kw) !== false
+                                || strpos(mb_strtolower($tp['materi_pokok'] ?? ''), $kw) !== false
+                                || strpos(mb_strtolower($tp['deskripsi'] ?? ''), $kw) !== false) {
+                                $matchedTps[] = $tp;
+                            }
+                        }
+
+                        if (!$matchCp && empty($matchedTps)) {
+                            continue; // lewati CP ini jika tidak ada match sama sekali
+                        }
+
+                        if (!$matchCp && !empty($matchedTps)) {
+                            $childTps = $matchedTps;
+                        }
+                    }
+
+                    $cp['tps'] = $childTps;
+                    $mapelGroups[$mId]['cps'][] = $cp;
+                    $totalCpCount++;
+                    $totalTpCount += count($childTps);
+                }
+            }
+        }
+
+        require_once ROOT_PATH . 'views/siswa/cptp.php';
+    }
+
+    public function capaianPembelajaran() {
+        $this->cptp();
+    }
 }
