@@ -1169,19 +1169,37 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
     );
   }
 
+  String _cleanText(String text) {
+    if (text.isEmpty) return text;
+    return text
+        .replaceAll('&#039;', "'")
+        .replaceAll('&quot;', '"')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&nbsp;', ' ')
+        .trim();
+  }
+
   Widget _buildTpItem(dynamic tp, bool isDark) {
     if (tp is! Map) return const SizedBox.shrink();
     final tpMap = Map<String, dynamic>.from(tp);
 
-    final kodeTp = (tpMap['kode_tp'] ?? tpMap['kode'] ?? 'TP').toString();
-    final materiPokok = (tpMap['materi_pokok'] ?? tpMap['materi'] ?? '').toString();
-    final deskripsi = (tpMap['deskripsi'] != null && tpMap['deskripsi'].toString().trim().isNotEmpty)
+    final rawKode = (tpMap['kode_tp'] ?? tpMap['kode'] ?? 'TP').toString();
+    final kodeTp = _cleanText(rawKode.isNotEmpty ? rawKode : 'TP');
+
+    final rawMateri = (tpMap['materi_pokok'] ?? tpMap['materi'] ?? '').toString();
+    final materiPokok = _cleanText(rawMateri);
+
+    final rawDeskripsi = (tpMap['deskripsi'] != null && tpMap['deskripsi'].toString().trim().isNotEmpty)
         ? tpMap['deskripsi'].toString()
-        : (tpMap['materi_pokok']?.toString() ?? (tpMap['nama_tp']?.toString() ?? 'Tujuan Pembelajaran'));
+        : (rawMateri.isNotEmpty ? rawMateri : (tpMap['nama_tp']?.toString() ?? 'Tujuan Pembelajaran'));
+    final deskripsi = _cleanText(rawDeskripsi);
+
     final kktpMetode = (tpMap['kktp_metode'] ?? tpMap['metode'] ?? 'interval_nilai').toString();
     final kktpNilaiMin = double.tryParse((tpMap['kktp_nilai_min'] ?? tpMap['nilai_minimum'] ?? 75).toString()) ?? 75.0;
     final kktpTargetInd = int.tryParse((tpMap['kktp_target_ind'] ?? tpMap['target_indikator_count'] ?? 0).toString()) ?? 0;
-    final kktpKriteria = (tpMap['kktp_kriteria'] ?? tpMap['deskripsi_kriteria'] ?? '').toString();
+    final kktpKriteria = _cleanText((tpMap['kktp_kriteria'] ?? tpMap['deskripsi_kriteria'] ?? '').toString());
 
     String kktpLabel;
     Color kktpColor;
@@ -1197,124 +1215,146 @@ class _SiswaCptpScreenState extends State<SiswaCptpScreen> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(11),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: const BorderSide(color: Color(0xFF10B981), width: 3.5),
-          top: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-          right: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
-          bottom: BorderSide(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
+            color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top Row: Kode TP + Materi Pokok + KKTP Pill
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Left accent color strip (KKTP color based)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  kodeTp,
-                  style: const TextStyle(
-                    color: Color(0xFF059669),
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'monospace',
-                  ),
-                ),
+                width: 4.5,
+                color: kktpColor,
               ),
-              if (materiPokok.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    materiPokok,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white70 : const Color(0xFF334155),
-                    ),
-                  ),
-                ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-                decoration: BoxDecoration(
-                  color: kktpColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  kktpLabel,
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.bold,
-                    color: kktpColor,
+              // Main card content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top Row: Kode TP + Materi Pokok + KKTP Pill
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 5,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              kodeTp,
+                              style: const TextStyle(
+                                color: Color(0xFF059669),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                          ),
+                          if (materiPokok.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                materiPokok,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                ),
+                              ),
+                            ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                            decoration: BoxDecoration(
+                              color: kktpColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              kktpLabel,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.bold,
+                                color: kktpColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // TP Description
+                      Text(
+                        deskripsi,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.5,
+                          color: isDark ? Colors.white : const Color(0xFF1E293B),
+                        ),
+                      ),
+
+                      // KKTP Details Guide
+                      if (kktpKriteria.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF06B6D4)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Pedoman KKTP: $kktpKriteria',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    height: 1.4,
+                                    color: isDark ? Colors.white60 : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ),
             ],
           ),
-
-          const SizedBox(height: 7),
-
-          // TP Description
-          Text(
-            deskripsi,
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.45,
-              color: isDark ? Colors.white : const Color(0xFF1E293B),
-            ),
-          ),
-
-          // KKTP Details Guide
-          if (kktpKriteria.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF06B6D4)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Pedoman KKTP: $kktpKriteria',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isDark ? Colors.white60 : Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
