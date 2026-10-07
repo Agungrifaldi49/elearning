@@ -937,6 +937,176 @@ class ApiController {
                 ]);
                 break;
 
+            case 'cptp':
+            case 'capaian_pembelajaran':
+            case 'cp_tp':
+                require_once ROOT_PATH . 'models/AcademicModel.php';
+                require_once ROOT_PATH . 'models/CurriculumModel.php';
+                $academicModel = new AcademicModel();
+                $currModel = new CurriculumModel();
+
+                $siswaId = intval($siswa['id'] ?? 0);
+                $kelasId = intval($siswa['kelas_id'] ?? 0);
+
+                // 1. Ambil daftar mata pelajaran terdaftar untuk siswa (Enrolled Only)
+                $enrolledListRaw = [];
+                try {
+                    $enrolledListRaw = $academicModel->getSiswaEnrolledMapels($siswaId);
+                } catch (\Throwable $eEnr) {
+                    $enrolledListRaw = [];
+                }
+
+                $enrolledMapels = [];
+                foreach ($enrolledListRaw as $em) {
+                    $mId = intval($em['mapel_id'] ?? $em['id'] ?? 0);
+                    if ($mId > 0 && !isset($enrolledMapels[$mId])) {
+                        $enrolledMapels[$mId] = [
+                            'id' => $mId,
+                            'mapel_id' => $mId,
+                            'nama_mapel' => $em['nama_mapel'] ?? 'Mata Pelajaran',
+                            'kode_mapel' => $em['kode_mapel'] ?? '',
+                            'nama_guru' => $em['nama_guru'] ?? 'Guru Pengampu',
+                            'guru_id' => intval($em['guru_id'] ?? 0),
+                            'nama_kelas' => $em['nama_kelas'] ?? ($siswa['nama_kelas'] ?? ''),
+                            'tingkat' => $em['tingkat'] ?? ''
+                        ];
+                    }
+                }
+                $enrolledMapelIds = array_keys($enrolledMapels);
+
+                // 2. Info Kurikulum Rombel Siswa
+                $activeTa = $academicModel->getActiveTahunAjaran();
+                $taId = $activeTa['id'] ?? null;
+                $kurInfo = $currModel->getActiveKurikulumForRombel($kelasId, $taId);
+                $kurikulumId = intval($kurInfo['kurikulum_id'] ?? 1);
+                $namaKurikulum = $kurInfo['nama_kurikulum'] ?? 'Kurikulum Merdeka SMK';
+                $kodeKurikulum = $kurInfo['kode_kurikulum'] ?? 'KMDK';
+                $namaFase = $kurInfo['nama_fase'] ?? 'Fase E (Kelas X)';
+                $kodeFase = $kurInfo['kode_fase'] ?? 'E';
+
+                // 3. Filter param mapel & keyword search (Hanya izinkan mapel yang terdaftar)
+                $filterMapelId = isset($_GET['mapel_id']) ? intval($_GET['mapel_id']) : (isset($_POST['mapel_id']) ? intval($_POST['mapel_id']) : null);
+                if ($filterMapelId !== null && $filterMapelId > 0 && !in_array($filterMapelId, $enrolledMapelIds)) {
+                    $filterMapelId = null; // Tolak jika bukan mapel terdaftar
+                }
+                $searchKeyword = trim($_GET['q'] ?? ($_POST['q'] ?? ''));
+
+                $mapelGroups = [];
+                $totalCpCount = 0;
+                $totalTpCount = 0;
+
+                if (!empty($enrolledMapelIds)) {
+                    $targetMapelIds = ($filterMapelId && $filterMapelId > 0) ? [$filterMapelId] : $enrolledMapelIds;
+
+                    // Ambil CP kurikulum
+                    $cpList = $currModel->getCPList($kurikulumId, $targetMapelIds);
+                    if (empty($cpList)) {
+                        $cpList = $currModel->getCPList(null, $targetMapelIds);
+                    }
+
+                    // Ambil TP dan KKTP
+                    $tpList = $currModel->getTPList(null, null, false);
+                    $tpsByCpId = [];
+                    foreach ($tpList as $tp) {
+                        $cId = intval($tp['cp_id']);
+                        if (!isset($tpsByCpId[$cId])) {
+                            $tpsByCpId[$cId] = [];
+                        }
+                        $tpsByCpId[$cId][] = [
+                            'id' => intval($tp['id']),
+                            'cp_id' => $cId,
+                            'kode_tp' => $tp['kode_tp'] ?? '',
+                            'materi_pokok' => $tp['materi_pokok'] ?? '',
+                            'deskripsi' => $tp['deskripsi'] ?? '',
+                            'kktp_metode' => $tp['kktp_metode'] ?? 'interval_nilai',
+                            'kktp_nilai_min' => floatval($tp['kktp_nilai_min'] ?? 75.0),
+                            'kktp_target_ind' => intval($tp['kktp_target_ind'] ?? 0),
+                            'kktp_kriteria' => $tp['kktp_kriteria'] ?? ''
+                        ];
+                    }
+
+                    foreach ($targetMapelIds as $mId) {
+                        if (isset($enrolledMapels[$mId])) {
+                            $mapelGroups[$mId] = [
+                                'mapel_id' => $mId,
+                                'nama_mapel' => $enrolledMapels[$mId]['nama_mapel'],
+                                'kode_mapel' => $enrolledMapels[$mId]['kode_mapel'],
+                                'nama_guru' => $enrolledMapels[$mId]['nama_guru'],
+                                'nama_kelas' => $enrolledMapels[$mId]['nama_kelas'],
+                                'total_cp' => 0,
+                                'total_tp' => 0,
+                                'cp_list' => []
+                            ];
+                        }
+                    }
+
+                    foreach ($cpList as $cp) {
+                        $mId = intval($cp['mapel_id']);
+                        if (isset($mapelGroups[$mId])) {
+                            $childTps = $tpsByCpId[$cp['id']] ?? [];
+
+                            if (!empty($searchKeyword)) {
+                                $kw = mb_strtolower($searchKeyword);
+                                $matchCp = strpos(mb_strtolower($cp['kode_cp'] ?? ''), $kw) !== false
+                                    || strpos(mb_strtolower($cp['elemen'] ?? ''), $kw) !== false
+                                    || strpos(mb_strtolower($cp['deskripsi'] ?? ''), $kw) !== false
+                                    || strpos(mb_strtolower($cp['nama_mapel'] ?? ''), $kw) !== false;
+
+                                $matchedTps = [];
+                                foreach ($childTps as $tpItem) {
+                                    if (strpos(mb_strtolower($tpItem['kode_tp'] ?? ''), $kw) !== false
+                                        || strpos(mb_strtolower($tpItem['materi_pokok'] ?? ''), $kw) !== false
+                                        || strpos(mb_strtolower($tpItem['deskripsi'] ?? ''), $kw) !== false) {
+                                        $matchedTps[] = $tpItem;
+                                    }
+                                }
+
+                                if (!$matchCp && empty($matchedTps)) {
+                                    continue;
+                                }
+                                if (!$matchCp && !empty($matchedTps)) {
+                                    $childTps = $matchedTps;
+                                }
+                            }
+
+                            $cpData = [
+                                'id' => intval($cp['id']),
+                                'kode_cp' => $cp['kode_cp'] ?? '',
+                                'elemen' => $cp['elemen'] ?? '',
+                                'deskripsi' => $cp['deskripsi'] ?? '',
+                                'fase' => $cp['nama_fase'] ?? ($cp['kode_fase'] ?? $namaFase),
+                                'total_tp' => count($childTps),
+                                'tp_list' => $childTps
+                            ];
+
+                            $mapelGroups[$mId]['cp_list'][] = $cpData;
+                            $mapelGroups[$mId]['total_cp']++;
+                            $mapelGroups[$mId]['total_tp'] += count($childTps);
+                            $totalCpCount++;
+                            $totalTpCount += count($childTps);
+                        }
+                    }
+                }
+
+                $this->jsonResponse(true, 'Data Capaian & Tujuan Pembelajaran (CP & TP) Siswa', [
+                    'kurikulum' => [
+                        'id' => $kurikulumId,
+                        'nama' => $namaKurikulum,
+                        'kode' => $kodeKurikulum,
+                        'fase' => $namaFase,
+                        'kode_fase' => $kodeFase
+                    ],
+                    'stats' => [
+                        'total_mapel' => count($enrolledMapelIds),
+                        'total_cp' => $totalCpCount,
+                        'total_tp' => $totalTpCount,
+                        'kktp_standard' => 75
+                    ],
+                    'enrolled_mapels' => array_values($enrolledMapels),
+                    'mapel_groups' => array_values($mapelGroups)
+                ]);
+                break;
+
             case 'tugas':
                 require_once ROOT_PATH . 'models/LearningModel.php';
                 $learningModel = new LearningModel();

@@ -86,7 +86,8 @@ if (!method_exists($controller, $method)) {
     $knownSiswaActions = [
         'request_tugas_susulan', 'request_tugas_permission', 'request_tugas_izin', 'request_tugas', 
         'submit_tugas', 'request_susulan', 'ajukan_susulan', 'quiz_detail', 'submit_quiz', 
-        'quiz_review', 'record_violation', 'checkin_absensi', 'learning_path', 'alur_belajar'
+        'quiz_review', 'record_violation', 'checkin_absensi', 'learning_path', 'alur_belajar',
+        'cptp', 'capaian_pembelajaran', 'cp_tp'
     ];
     if (in_array($method, $knownSiswaActions) || strpos($method, 'siswa_') === 0 || strpos($method, 'request_') === 0) {
         $param = $method;
