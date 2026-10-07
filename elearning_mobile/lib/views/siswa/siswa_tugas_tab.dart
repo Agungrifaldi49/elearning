@@ -865,11 +865,13 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
       return matchesSearch;
     }).toList();
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        _loadTugas();
-      },
-      child: Padding(
+    return Material(
+      color: Colors.transparent,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          _loadTugas();
+        },
+        child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1180,7 +1182,8 @@ class _SiswaTugasTabState extends State<SiswaTugasTab> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildFilterChip(String label, String value) {

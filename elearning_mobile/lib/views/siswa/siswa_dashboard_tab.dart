@@ -658,7 +658,19 @@ class _SiswaDashboardTabState extends State<SiswaDashboardTab> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SiswaTugasTab())),
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => Scaffold(
+                            appBar: AppBar(
+                              title: const Text('Tugas & Penugasan'),
+                              backgroundColor: AppTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                            ),
+                            body: const SiswaTugasTab(),
+                          ),
+                        ),
+                      ),
                       child: const Text('Kerjakan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
                   ],
