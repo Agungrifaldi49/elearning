@@ -1,8 +1,15 @@
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 
@@ -14,7 +21,9 @@ class SertifikatScreen extends StatefulWidget {
 }
 
 class _SertifikatScreenState extends State<SertifikatScreen> {
+  final GlobalKey _certRepaintKey = GlobalKey();
   bool _isLoading = true;
+  bool _isDownloading = false;
   String _errorMessage = '';
   Map<String, dynamic> _certData = {};
   bool _showScoreBreakdown = false;
@@ -59,41 +68,454 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
     }
   }
 
-  Future<void> _openWebCertificate() async {
-    final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
-    final userId = user?.id ?? 0;
-    final webUrl = '${ApiService.serverRootUrl}index.php?url=siswa/sertifikat&user_id=$userId';
-    
-    final uri = Uri.parse(webUrl);
+  String _generateFileName(String ext) {
+    final siswa = _certData['siswa'] as Map? ?? {};
+    final rawNama = (siswa['nama_lengkap'] ?? 'Siswa').toString().trim();
+    final cleanNama = rawNama.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+    final rawNisn = (siswa['nisn'] ?? siswa['nis'] ?? 'SMKMH').toString().trim();
+    final cleanNisn = rawNisn.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+    return 'Sertifikat_${cleanNama}_$cleanNisn.$ext';
+  }
+
+  Future<Uint8List?> _captureCertificateImage() async {
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Buka di browser: $webUrl'),
-              action: SnackBarAction(
-                label: 'Salin',
-                textColor: Colors.amber,
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: webUrl));
-                },
-              ),
-            ),
+      final boundary = _certRepaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return null;
+      final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      return byteData?.buffer.asUint8List();
+    } catch (e) {
+      debugPrint('Error capturing certificate: $e');
+      return null;
+    }
+  }
+
+  Future<Uint8List?> _generatePdfDocument() async {
+    final imageBytes = await _captureCertificateImage();
+    if (imageBytes == null) return null;
+
+    final pdf = pw.Document(
+      title: 'Sertifikat Digital E-Learning',
+      author: 'SMK Muthia Harapan Cicalengka',
+    );
+    final pdfImage = pw.MemoryImage(imageBytes);
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(20),
+        build: (pw.Context context) {
+          return pw.Center(
+            child: pw.Image(pdfImage, fit: pw.BoxFit.contain),
           );
+        },
+      ),
+    );
+
+    return await pdf.save();
+  }
+
+  Future<File?> _saveBytesToDevice(Uint8List bytes, String fileName) async {
+    try {
+      Directory? targetDir;
+      if (Platform.isAndroid) {
+        final downloadDir = Directory('/storage/emulated/0/Download');
+        if (await downloadDir.exists()) {
+          targetDir = downloadDir;
+        } else {
+          targetDir = await getExternalStorageDirectory();
+        }
+      } else if (Platform.isIOS) {
+        targetDir = await getApplicationDocumentsDirectory();
+      } else {
+        targetDir = await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+      }
+
+      targetDir ??= await getApplicationDocumentsDirectory();
+
+      final file = File('${targetDir.path}/$fileName');
+      await file.writeAsBytes(bytes, flush: true);
+      return file;
+    } catch (e) {
+      debugPrint('Error saving file: $e');
+      try {
+        final fallbackDir = await getApplicationDocumentsDirectory();
+        final file = File('${fallbackDir.path}/$fileName');
+        await file.writeAsBytes(bytes, flush: true);
+        return file;
+      } catch (_) {
+        return null;
+      }
+    }
+  }
+
+  Future<void> _downloadCertificatePdf() async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            SizedBox(width: 12),
+            Text('Menyiapkan dan mengunduh berkas PDF sertifikat...'),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFF0F172A),
+      ),
+    );
+
+    try {
+      final pdfBytes = await _generatePdfDocument();
+      if (pdfBytes == null) {
+        throw Exception('Gagal membuat dokumen PDF.');
+      }
+
+      final fileName = _generateFileName('pdf');
+      final file = await _saveBytesToDevice(pdfBytes, fileName);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        if (file != null) {
+          _showDownloadSuccessDialog(
+            title: 'Sertifikat PDF Berhasil Diunduh!',
+            file: file,
+            pdfBytes: pdfBytes,
+            fileName: fileName,
+            isPdf: true,
+          );
+        } else {
+          await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
         }
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal membuka halaman cetak sertifikat'),
+          SnackBar(
+            content: Text('Gagal mengunduh sertifikat: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
     }
+  }
+
+  Future<void> _downloadCertificateImage() async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            ),
+            SizedBox(width: 12),
+            Text('Menyimpan gambar sertifikat HD...'),
+          ],
+        ),
+        duration: Duration(seconds: 2),
+        backgroundColor: Color(0xFF0F172A),
+      ),
+    );
+
+    try {
+      final imgBytes = await _captureCertificateImage();
+      if (imgBytes == null) {
+        throw Exception('Gagal mengambil gambar sertifikat.');
+      }
+
+      final fileName = _generateFileName('png');
+      final file = await _saveBytesToDevice(imgBytes, fileName);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        if (file != null) {
+          _showDownloadSuccessDialog(
+            title: 'Gambar HD Berhasil Disimpan!',
+            file: file,
+            fileName: fileName,
+            isPdf: false,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan gambar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  Future<void> _printCertificate() async {
+    try {
+      final pdfBytes = await _generatePdfDocument();
+      if (pdfBytes != null) {
+        await Printing.layoutPdf(
+          onLayout: (format) async => pdfBytes,
+          name: _generateFileName('pdf'),
+        );
+      }
+    } catch (e) {
+      debugPrint('Print error: $e');
+    }
+  }
+
+  void _showDownloadOptionsSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1E293B)
+              : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Opsi Unduh & Cetak Sertifikat',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Pilih format penyimpanan berkas sertifikat resmi Anda:',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 18),
+
+            // Option 1: Direct Download PDF
+            ListTile(
+              onTap: () {
+                Navigator.pop(ctx);
+                _downloadCertificatePdf();
+              },
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFD97706), size: 24),
+              ),
+              title: const Text('Unduh Berkas PDF Resmi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              subtitle: const Text('Simpan berkas PDF siap cetak langsung ke memori HP', style: TextStyle(fontSize: 11.5)),
+              trailing: const Icon(Icons.download_rounded, color: Color(0xFFD97706)),
+            ),
+
+            const Divider(height: 16),
+
+            // Option 2: Print / Preview System
+            ListTile(
+              onTap: () {
+                Navigator.pop(ctx);
+                _printCertificate();
+              },
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDBEAFE),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.print_rounded, color: Color(0xFF2563EB), size: 24),
+              ),
+              title: const Text('Cetak / Pratinjau Sistem Bawaan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              subtitle: const Text('Buka dialog print bawaan ponsel Android/iOS', style: TextStyle(fontSize: 11.5)),
+              trailing: const Icon(Icons.chevron_right_rounded),
+            ),
+
+            const Divider(height: 16),
+
+            // Option 3: Save as HD Image (PNG)
+            ListTile(
+              onTap: () {
+                Navigator.pop(ctx);
+                _downloadCertificateImage();
+              },
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD1FAE5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.image_rounded, color: Color(0xFF059669), size: 24),
+              ),
+              title: const Text('Simpan Sebagai Gambar HD (PNG)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              subtitle: const Text('Gambar kualitas tinggi (300 DPI) untuk dibagikan ke galeri/media sosial', style: TextStyle(fontSize: 11.5)),
+              trailing: const Icon(Icons.download_rounded, color: Color(0xFF059669)),
+            ),
+
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDownloadSuccessDialog({
+    required String title,
+    required File file,
+    Uint8List? pdfBytes,
+    required String fileName,
+    required bool isPdf,
+  }) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        contentPadding: const EdgeInsets.all(22),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFFD1FAE5),
+              ),
+              child: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 38),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Berkas telah berhasil diunduh dan tersimpan ke penyimpanan perangkat Anda:',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isPdf ? Icons.picture_as_pdf_rounded : Icons.image_rounded,
+                    color: isPdf ? const Color(0xFFDC2626) : const Color(0xFF059669),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      fileName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'monospace'),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Lokasi: ${file.path}',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 18),
+
+            // Open File Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final openResult = await OpenFile.open(file.path);
+                  if (openResult.type != ResultType.done && mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Pemberitahuan: ${openResult.message}')),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.folder_open_rounded, size: 18),
+                label: const Text('Buka Berkas Sekarang', style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+
+            if (isPdf && pdfBytes != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
+                  },
+                  icon: const Icon(Icons.share_rounded, size: 18),
+                  label: const Text('Bagikan / Cetak PDF'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F172A),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 6),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Tutup', style: TextStyle(color: Colors.grey)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _copyCertNumber(String certNumber) {
@@ -294,9 +716,9 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
             onPressed: _fetchCertificateData,
           ),
           IconButton(
-            tooltip: 'Cetak / Unduh PDF',
-            icon: const Icon(Icons.print_rounded),
-            onPressed: _openWebCertificate,
+            tooltip: 'Unduh / Cetak Sertifikat',
+            icon: const Icon(Icons.download_rounded),
+            onPressed: _showDownloadOptionsSheet,
           ),
         ],
       ),
@@ -365,29 +787,32 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
                         const SizedBox(height: 20),
 
                         // 2. Main Luxury Certificate Paper Frame
-                        _buildCertificatePaper(
-                          context: context,
-                          studentName: studentName,
-                          nis: nis,
-                          nisn: nisn,
-                          namaKelas: namaKelas,
-                          namaJurusan: namaJurusan,
-                          schoolName: schoolName,
-                          schoolAlamat: schoolAlamat,
-                          kepalaSekolah: kepalaSekolah,
-                          logoUrl: logoUrl,
-                          certTitle: certTitle,
-                          statement: statement,
-                          nomorSertifikat: nomorSertifikat,
-                          tanggalTerbit: tanggalTerbit,
-                          predikatStr: predikatStr,
-                          presensiLog: presensiLog,
-                          evaluasiLms: evaluasiLms,
-                          predikatGrade: predikatGrade,
-                          gradeColor: gradeColor,
-                          qrUrl: qrUrl,
-                          qrData: qrData,
-                          stats: stats,
+                        RepaintBoundary(
+                          key: _certRepaintKey,
+                          child: _buildCertificatePaper(
+                            context: context,
+                            studentName: studentName,
+                            nis: nis,
+                            nisn: nisn,
+                            namaKelas: namaKelas,
+                            namaJurusan: namaJurusan,
+                            schoolName: schoolName,
+                            schoolAlamat: schoolAlamat,
+                            kepalaSekolah: kepalaSekolah,
+                            logoUrl: logoUrl,
+                            certTitle: certTitle,
+                            statement: statement,
+                            nomorSertifikat: nomorSertifikat,
+                            tanggalTerbit: tanggalTerbit,
+                            predikatStr: predikatStr,
+                            presensiLog: presensiLog,
+                            evaluasiLms: evaluasiLms,
+                            predikatGrade: predikatGrade,
+                            gradeColor: gradeColor,
+                            qrUrl: qrUrl,
+                            qrData: qrData,
+                            stats: stats,
+                          ),
                         ),
                         const SizedBox(height: 20),
 
@@ -479,7 +904,7 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
           ),
           const SizedBox(height: 16),
           InkWell(
-            onTap: _openWebCertificate,
+            onTap: _showDownloadOptionsSheet,
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -497,10 +922,10 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.print_rounded, size: 18, color: Color(0xFF0F172A)),
+                  const Icon(Icons.download_rounded, size: 18, color: Color(0xFF0F172A)),
                   const SizedBox(width: 8),
                   Text(
-                    'Cetak / Simpan PDF Sertifikat',
+                    'Unduh / Cetak PDF Sertifikat',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -1239,9 +1664,15 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
       children: [
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: _openWebCertificate,
-            icon: const Icon(Icons.download_rounded, size: 18),
-            label: const Text('Unduh PDF'),
+            onPressed: _isDownloading ? null : _downloadCertificatePdf,
+            icon: _isDownloading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.download_rounded, size: 18),
+            label: Text(_isDownloading ? 'Mengunduh...' : 'Unduh PDF'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFD97706),
               foregroundColor: Colors.white,
