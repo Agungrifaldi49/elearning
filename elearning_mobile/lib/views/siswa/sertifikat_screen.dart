@@ -84,8 +84,7 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
     required pw.Font bodyFont,
   }) {
     return pw.Container(
-      width: 210,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: pw.BoxDecoration(
         color: const PdfColor.fromInt(0xFFF8FAFC),
         borderRadius: pw.BorderRadius.circular(8),
@@ -95,23 +94,30 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
         mainAxisSize: pw.MainAxisSize.min,
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          pw.Text(
-            title,
-            maxLines: 1,
-            style: pw.TextStyle(
-              font: boldFont,
-              fontSize: 10,
-              fontWeight: pw.FontWeight.bold,
-              color: valueColor,
+          pw.FittedBox(
+            fit: pw.BoxFit.scaleDown,
+            child: pw.Text(
+              title,
+              maxLines: 1,
+              style: pw.TextStyle(
+                font: boldFont,
+                fontSize: 10,
+                fontWeight: pw.FontWeight.bold,
+                color: valueColor,
+              ),
             ),
           ),
           pw.SizedBox(height: 2),
-          pw.Text(
-            subtitle,
-            style: pw.TextStyle(
-              font: bodyFont,
-              fontSize: 7.5,
-              color: const PdfColor.fromInt(0xFF64748B),
+          pw.FittedBox(
+            fit: pw.BoxFit.scaleDown,
+            child: pw.Text(
+              subtitle,
+              maxLines: 1,
+              style: pw.TextStyle(
+                font: bodyFont,
+                fontSize: 7.5,
+                color: const PdfColor.fromInt(0xFF64748B),
+              ),
             ),
           ),
         ],
@@ -191,15 +197,13 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
           margin: const pw.EdgeInsets.all(18),
           build: (pw.Context context) {
             return pw.Container(
-              width: double.infinity,
-              height: double.infinity,
               decoration: pw.BoxDecoration(
                 color: PdfColors.white,
                 border: pw.Border.all(
                   color: const PdfColor.fromInt(0xFFD97706),
                   width: 3.5,
                 ),
-                borderRadius: pw.BorderRadius.circular(12),
+                borderRadius: pw.BorderRadius.circular(14),
               ),
               padding: const pw.EdgeInsets.all(5),
               child: pw.Container(
@@ -208,13 +212,14 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
                     color: const PdfColor.fromInt(0xFFFEF3C7),
                     width: 1.5,
                   ),
-                  borderRadius: pw.BorderRadius.circular(8),
+                  borderRadius: pw.BorderRadius.circular(10),
                 ),
-                padding: const pw.EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    // Header Brand & Logo
+                    // 1. Header Brand & Institutional Logo
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.center,
                       crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -248,14 +253,17 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
                         pw.Column(
                           crossAxisAlignment: pw.CrossAxisAlignment.center,
                           children: [
-                            pw.Text(
-                              schoolName.toUpperCase(),
-                              style: pw.TextStyle(
-                                font: boldFont,
-                                fontSize: 13,
-                                fontWeight: pw.FontWeight.bold,
-                                color: const PdfColor.fromInt(0xFF0F172A),
-                                letterSpacing: 1.2,
+                            pw.FittedBox(
+                              fit: pw.BoxFit.scaleDown,
+                              child: pw.Text(
+                                schoolName.toUpperCase(),
+                                style: pw.TextStyle(
+                                  font: boldFont,
+                                  fontSize: 13,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: const PdfColor.fromInt(0xFF0F172A),
+                                  letterSpacing: 1.2,
+                                ),
                               ),
                             ),
                             pw.SizedBox(height: 2),
@@ -267,21 +275,31 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
                                 color: const PdfColor.fromInt(0xFF64748B),
                               ),
                             ),
+                            pw.SizedBox(height: 1),
+                            pw.Text(
+                              'LEMBAGA PENDIDIKAN KEJURUAN TERAKREDITASI • SISTEM E-LEARNING RESMI',
+                              style: pw.TextStyle(
+                                font: bodyFont,
+                                fontSize: 6.5,
+                                color: const PdfColor.fromInt(0xFF94A3B8),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                           ],
                         ),
                       ],
                     ),
 
-                    // Gold Divider Line
+                    // Gold Divider Accent
                     pw.Container(
-                      margin: const pw.EdgeInsets.symmetric(vertical: 5),
+                      margin: const pw.EdgeInsets.symmetric(vertical: 4),
                       height: 1.2,
                       color: const PdfColor.fromInt(0xFFD97706),
                     ),
 
-                    // Certificate Title Ribbon
+                    // 2. Certificate Title Ribbon
                     pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 26, vertical: 4.5),
                       decoration: pw.BoxDecoration(
                         color: const PdfColor.fromInt(0xFFD97706),
                         borderRadius: pw.BorderRadius.circular(16),
@@ -293,84 +311,95 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
                           fontSize: 10,
                           fontWeight: pw.FontWeight.bold,
                           color: PdfColors.white,
-                          letterSpacing: 1.0,
+                          letterSpacing: 1.1,
                         ),
                       ),
                     ),
-                    pw.SizedBox(height: 6),
 
-                    // Recipient Section
-                    pw.Text(
-                      'Dengan bangga diberikan secara resmi kepada:',
-                      style: pw.TextStyle(
-                        font: bodyFont,
-                        fontSize: 8.5,
-                        color: const PdfColor.fromInt(0xFF64748B),
-                      ),
-                    ),
-                    pw.SizedBox(height: 2),
-                    pw.Text(
-                      studentName,
-                      style: pw.TextStyle(
-                        font: titleFont,
-                        fontSize: 22,
-                        fontWeight: pw.FontWeight.bold,
-                        color: const PdfColor.fromInt(0xFF0F172A),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    pw.Container(
-                      width: 160,
-                      height: 1.2,
-                      color: const PdfColor.fromInt(0xFFD97706),
-                      margin: const pw.EdgeInsets.symmetric(vertical: 3),
-                    ),
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.center,
+                    // 3. Recipient Presentation
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
                       children: [
-                        pw.Container(
-                          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 2.5),
-                          decoration: pw.BoxDecoration(
-                            color: const PdfColor.fromInt(0xFFF1F5F9),
-                            borderRadius: pw.BorderRadius.circular(10),
-                            border: pw.Border.all(color: const PdfColor.fromInt(0xFFCBD5E1), width: 0.8),
+                        pw.Text(
+                          'Dengan bangga dan penuh kehormatan diberikan kepada:',
+                          style: pw.TextStyle(
+                            font: bodyFont,
+                            fontSize: 8.5,
+                            fontStyle: pw.FontStyle.italic,
+                            color: const PdfColor.fromInt(0xFF64748B),
                           ),
-                          child: pw.Text(
-                            'NIS: $nis   |   NISN: $nisn',
-                            style: pw.TextStyle(
-                              font: boldFont,
-                              fontSize: 8,
-                              fontWeight: pw.FontWeight.bold,
-                              color: const PdfColor.fromInt(0xFF0F172A),
+                        ),
+                        pw.SizedBox(height: 3),
+                        pw.Container(
+                          margin: const pw.EdgeInsets.symmetric(horizontal: 20),
+                          child: pw.FittedBox(
+                            fit: pw.BoxFit.scaleDown,
+                            child: pw.Text(
+                              studentName,
+                              maxLines: 1,
+                              style: pw.TextStyle(
+                                font: titleFont,
+                                fontSize: 22,
+                                fontWeight: pw.FontWeight.bold,
+                                color: const PdfColor.fromInt(0xFF0F172A),
+                                letterSpacing: 0.5,
+                              ),
                             ),
                           ),
                         ),
-                        pw.SizedBox(width: 8),
                         pw.Container(
-                          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 2.5),
-                          decoration: pw.BoxDecoration(
-                            color: const PdfColor.fromInt(0xFFEFF6FF),
-                            borderRadius: pw.BorderRadius.circular(10),
-                            border: pw.Border.all(color: const PdfColor.fromInt(0xFFBFDBFE), width: 0.8),
-                          ),
-                          child: pw.Text(
-                            '$namaKelas  -  $namaJurusan',
-                            style: pw.TextStyle(
-                              font: boldFont,
-                              fontSize: 8,
-                              fontWeight: pw.FontWeight.bold,
-                              color: const PdfColor.fromInt(0xFF1D4ED8),
+                          width: 180,
+                          height: 1.2,
+                          color: const PdfColor.fromInt(0xFFD97706),
+                          margin: const pw.EdgeInsets.symmetric(vertical: 3),
+                        ),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.center,
+                          children: [
+                            pw.Container(
+                              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 2.5),
+                              decoration: pw.BoxDecoration(
+                                color: const PdfColor.fromInt(0xFFF1F5F9),
+                                borderRadius: pw.BorderRadius.circular(10),
+                                border: pw.Border.all(color: const PdfColor.fromInt(0xFFCBD5E1), width: 0.8),
+                              ),
+                              child: pw.Text(
+                                'NIS: $nis   •   NISN: $nisn',
+                                style: pw.TextStyle(
+                                  font: boldFont,
+                                  fontSize: 8,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: const PdfColor.fromInt(0xFF0F172A),
+                                ),
+                              ),
                             ),
-                          ),
+                            pw.SizedBox(width: 8),
+                            pw.Container(
+                              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 2.5),
+                              decoration: pw.BoxDecoration(
+                                color: const PdfColor.fromInt(0xFFEFF6FF),
+                                borderRadius: pw.BorderRadius.circular(10),
+                                border: pw.Border.all(color: const PdfColor.fromInt(0xFFBFDBFE), width: 0.8),
+                              ),
+                              child: pw.Text(
+                                '$namaKelas  —  $namaJurusan',
+                                style: pw.TextStyle(
+                                  font: boldFont,
+                                  fontSize: 8,
+                                  fontWeight: pw.FontWeight.bold,
+                                  color: const PdfColor.fromInt(0xFF1D4ED8),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    pw.SizedBox(height: 6),
 
-                    // Statement Box
+                    // 4. Statement Box (Responsive Margin)
                     pw.Container(
-                      width: 640,
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+                      margin: const pw.EdgeInsets.symmetric(horizontal: 24),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 18, vertical: 6),
                       decoration: pw.BoxDecoration(
                         color: const PdfColor.fromInt(0xFFF8FAFC),
                         borderRadius: pw.BorderRadius.circular(8),
@@ -384,45 +413,48 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
                           fontSize: 8,
                           fontStyle: pw.FontStyle.italic,
                           color: const PdfColor.fromInt(0xFF334155),
-                          lineSpacing: 1.3,
+                          lineSpacing: 1.25,
                         ),
                       ),
                     ),
-                    pw.SizedBox(height: 8),
 
-                    // Performance Stats Row
+                    // 5. Academic Performance Stats (Responsive Equal Cards)
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.center,
                       children: [
-                        _buildPdfStatBox(
-                          title: predikatStr,
-                          subtitle: 'Predikat Hasil Belajar',
-                          valueColor: const PdfColor.fromInt(0xFF1D4ED8),
-                          boldFont: boldFont,
-                          bodyFont: bodyFont,
+                        pw.Expanded(
+                          child: _buildPdfStatBox(
+                            title: predikatStr,
+                            subtitle: 'Predikat Hasil Belajar',
+                            valueColor: const PdfColor.fromInt(0xFF1D4ED8),
+                            boldFont: boldFont,
+                            bodyFont: bodyFont,
+                          ),
                         ),
-                        pw.SizedBox(width: 14),
-                        _buildPdfStatBox(
-                          title: presensiLog,
-                          subtitle: 'Kehadiran KBM Real',
-                          valueColor: const PdfColor.fromInt(0xFF16A34A),
-                          boldFont: boldFont,
-                          bodyFont: bodyFont,
+                        pw.SizedBox(width: 12),
+                        pw.Expanded(
+                          child: _buildPdfStatBox(
+                            title: presensiLog,
+                            subtitle: 'Kehadiran KBM Real',
+                            valueColor: const PdfColor.fromInt(0xFF16A34A),
+                            boldFont: boldFont,
+                            bodyFont: bodyFont,
+                          ),
                         ),
-                        pw.SizedBox(width: 14),
-                        _buildPdfStatBox(
-                          title: evaluasiLms,
-                          subtitle: 'Rata-Rata Evaluasi LMS',
-                          valueColor: const PdfColor.fromInt(0xFFD97706),
-                          boldFont: boldFont,
-                          bodyFont: bodyFont,
+                        pw.SizedBox(width: 12),
+                        pw.Expanded(
+                          child: _buildPdfStatBox(
+                            title: evaluasiLms,
+                            subtitle: 'Rata-Rata Evaluasi LMS',
+                            valueColor: const PdfColor.fromInt(0xFFD97706),
+                            boldFont: boldFont,
+                            bodyFont: bodyFont,
+                          ),
                         ),
                       ],
                     ),
 
-                    pw.Spacer(),
-
-                    // Footer Row
+                    // 6. Legal Verification & Endorsement Footer
                     pw.Container(
                       padding: const pw.EdgeInsets.only(top: 6),
                       decoration: const pw.BoxDecoration(
@@ -434,75 +466,81 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: pw.CrossAxisAlignment.end,
                         children: [
-                          // Left: Registration & Issue Date
-                          pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            mainAxisSize: pw.MainAxisSize.min,
-                            children: [
-                              pw.Text(
-                                'Nomor Registrasi Sertifikat:',
-                                style: pw.TextStyle(font: bodyFont, fontSize: 7, color: const PdfColor.fromInt(0xFF64748B)),
-                              ),
-                              pw.SizedBox(height: 1),
-                              pw.Text(
-                                nomorSertifikat,
-                                style: pw.TextStyle(font: boldFont, fontSize: 9, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF0056D3)),
-                              ),
-                              pw.SizedBox(height: 2),
-                              pw.Text(
-                                'Diterbitkan: $tanggalTerbit',
-                                style: pw.TextStyle(font: bodyFont, fontSize: 7, color: const PdfColor.fromInt(0xFF64748B)),
-                              ),
-                              pw.SizedBox(height: 2),
-                              pw.Text(
-                                'Dokumen resmi E-Learning Terverifikasi Digital',
-                                style: pw.TextStyle(font: bodyFont, fontSize: 6.5, fontStyle: pw.FontStyle.italic, color: const PdfColor.fromInt(0xFF94A3B8)),
-                              ),
-                            ],
+                          // Left: Registration Number & Date
+                          pw.Expanded(
+                            flex: 3,
+                            child: pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.start,
+                              mainAxisSize: pw.MainAxisSize.min,
+                              children: [
+                                pw.Text(
+                                  'Nomor Registrasi Sertifikat:',
+                                  style: pw.TextStyle(font: bodyFont, fontSize: 7, color: const PdfColor.fromInt(0xFF64748B)),
+                                ),
+                                pw.SizedBox(height: 1),
+                                pw.Text(
+                                  nomorSertifikat,
+                                  style: pw.TextStyle(font: boldFont, fontSize: 9, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF0056D3)),
+                                ),
+                                pw.SizedBox(height: 2),
+                                pw.Text(
+                                  'Diterbitkan: $tanggalTerbit',
+                                  style: pw.TextStyle(font: bodyFont, fontSize: 7, color: const PdfColor.fromInt(0xFF64748B)),
+                                ),
+                                pw.SizedBox(height: 2),
+                                pw.Text(
+                                  'Dokumen resmi E-Learning Terverifikasi Digital',
+                                  style: pw.TextStyle(font: bodyFont, fontSize: 6.5, fontStyle: pw.FontStyle.italic, color: const PdfColor.fromInt(0xFF94A3B8)),
+                                ),
+                              ],
+                            ),
                           ),
 
                           // Center: QR Code Verification
-                          pw.Column(
-                            mainAxisSize: pw.MainAxisSize.min,
-                            crossAxisAlignment: pw.CrossAxisAlignment.center,
-                            children: [
-                              pw.Container(
-                                padding: const pw.EdgeInsets.all(3),
-                                decoration: pw.BoxDecoration(
-                                  color: PdfColors.white,
-                                  borderRadius: pw.BorderRadius.circular(6),
-                                  border: pw.Border.all(color: const PdfColor.fromInt(0xFF0056D3), width: 1.2),
+                          pw.Expanded(
+                            flex: 2,
+                            child: pw.Column(
+                              mainAxisSize: pw.MainAxisSize.min,
+                              crossAxisAlignment: pw.CrossAxisAlignment.center,
+                              children: [
+                                pw.Container(
+                                  padding: const pw.EdgeInsets.all(3),
+                                  decoration: pw.BoxDecoration(
+                                    color: PdfColors.white,
+                                    borderRadius: pw.BorderRadius.circular(6),
+                                    border: pw.Border.all(color: const PdfColor.fromInt(0xFF0056D3), width: 1.2),
+                                  ),
+                                  child: pw.BarcodeWidget(
+                                    barcode: pw.Barcode.qrCode(),
+                                    data: qrData,
+                                    width: 44,
+                                    height: 44,
+                                    color: const PdfColor.fromInt(0xFF0056D3),
+                                  ),
                                 ),
-                                child: pw.BarcodeWidget(
-                                  barcode: pw.Barcode.qrCode(),
-                                  data: qrData,
-                                  width: 44,
-                                  height: 44,
-                                  color: const PdfColor.fromInt(0xFF0056D3),
+                                pw.SizedBox(height: 2),
+                                pw.Text(
+                                  'Scan Verifikasi QR',
+                                  style: pw.TextStyle(font: boldFont, fontSize: 6.5, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF64748B)),
                                 ),
-                              ),
-                              pw.SizedBox(height: 2),
-                              pw.Text(
-                                'Scan Verifikasi QR',
-                                style: pw.TextStyle(font: boldFont, fontSize: 6.5, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF64748B)),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
 
                           // Right: Principal Signature block
-                          pw.Container(
-                            width: 175,
+                          pw.Expanded(
+                            flex: 3,
                             child: pw.Column(
-                              crossAxisAlignment: pw.CrossAxisAlignment.center,
+                              crossAxisAlignment: pw.CrossAxisAlignment.end,
                               mainAxisSize: pw.MainAxisSize.min,
                               children: [
                                 pw.Text(
                                   'Cicalengka, $tanggalTerbit',
                                   style: pw.TextStyle(font: bodyFont, fontSize: 7.5, color: const PdfColor.fromInt(0xFF64748B)),
                                 ),
-                                pw.SizedBox(height: 22),
+                                pw.SizedBox(height: 20),
                                 pw.Container(
-                                  width: 165,
+                                  width: 160,
                                   decoration: const pw.BoxDecoration(
                                     border: pw.Border(
                                       bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF0F172A), width: 1),
@@ -521,9 +559,13 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
                                   ),
                                 ),
                                 pw.SizedBox(height: 2),
-                                pw.Text(
-                                  'Kepala Sekolah Pengesah',
-                                  style: pw.TextStyle(font: bodyFont, fontSize: 7, color: const PdfColor.fromInt(0xFF64748B)),
+                                pw.Container(
+                                  width: 160,
+                                  alignment: pw.Alignment.center,
+                                  child: pw.Text(
+                                    'Kepala Sekolah Pengesah',
+                                    style: pw.TextStyle(font: bodyFont, fontSize: 7, color: const PdfColor.fromInt(0xFF64748B)),
+                                  ),
                                 ),
                               ],
                             ),
@@ -840,120 +882,125 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         contentPadding: const EdgeInsets.all(22),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFD1FAE5),
-              ),
-              child: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 38),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Berkas telah berhasil diunduh dan tersimpan ke penyimpanan perangkat Anda:',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    isPdf ? Icons.picture_as_pdf_rounded : Icons.image_rounded,
-                    color: isPdf ? const Color(0xFFDC2626) : const Color(0xFF059669),
-                    size: 20,
+        content: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(0xFFD1FAE5),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      fileName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'monospace'),
-                      overflow: TextOverflow.ellipsis,
+                  child: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 38),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Berkas telah berhasil diunduh dan tersimpan ke penyimpanan perangkat Anda:',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isPdf ? Icons.picture_as_pdf_rounded : Icons.image_rounded,
+                        color: isPdf ? const Color(0xFFDC2626) : const Color(0xFF059669),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          fileName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, fontFamily: 'monospace'),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Lokasi: ${file.path}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 18),
+
+                // Open File Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      final openResult = await OpenFile.open(file.path);
+                      if (openResult.type != ResultType.done && mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Pemberitahuan: ${openResult.message}')),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.folder_open_rounded, size: 18),
+                    label: const Text('Buka Berkas Sekarang', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+
+                if (isPdf && pdfBytes != null) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
+                      },
+                      icon: const Icon(Icons.share_rounded, size: 18),
+                      label: const Text('Bagikan / Cetak PDF'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0F172A),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
                     ),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Lokasi: ${file.path}',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 18),
 
-            // Open File Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  final openResult = await OpenFile.open(file.path);
-                  if (openResult.type != ResultType.done && mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Pemberitahuan: ${openResult.message}')),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.folder_open_rounded, size: 18),
-                label: const Text('Buka Berkas Sekarang', style: TextStyle(fontWeight: FontWeight.bold)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0F172A),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                const SizedBox(height: 6),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Tutup', style: TextStyle(color: Colors.grey)),
                 ),
-              ),
+              ],
             ),
-
-            if (isPdf && pdfBytes != null) ...[
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    await Printing.sharePdf(bytes: pdfBytes, filename: fileName);
-                  },
-                  icon: const Icon(Icons.share_rounded, size: 18),
-                  label: const Text('Bagikan / Cetak PDF'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0F172A),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-
-            const SizedBox(height: 6),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Tutup', style: TextStyle(color: Colors.grey)),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1803,26 +1850,30 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
                 child: const Icon(Icons.military_tech_rounded, size: 18, color: Color(0xFFD97706)),
               ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    evaluasiLms,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF92400E),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      evaluasiLms,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF92400E),
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Rata-Rata Evaluasi LMS Riil (Komposit)',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFB45309),
+                    Text(
+                      'Rata-Rata Evaluasi LMS Riil (Komposit)',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFFB45309),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
