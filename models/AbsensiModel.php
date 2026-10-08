@@ -1299,10 +1299,15 @@ class AbsensiModel extends BaseModel {
             }
 
             $jamSekarang = date('H:i');
-            $keteranganPulang = trim($data['keterangan'] ?? '');
-            if ($jamSekarang < $jamPulangMulai && empty($keteranganPulang)) {
-                $keteranganPulang = 'Pulang lebih awal ' . substr($nowTime, 0, 5) . ' WIB (Jadwal kepulangan: ' . $jamPulangMulai . ' WIB)';
+            $jamPulangMulaiClean = substr($jamPulangMulai, 0, 5);
+            if ($jamSekarang < $jamPulangMulaiClean) {
+                return [
+                    'status' => 'error',
+                    'message' => "Belum waktunya untuk presensi pulang! Jam kepulangan dijadwalkan pada pukul {$jamPulangMulaiClean} WIB (Waktu saat ini: {$jamSekarang} WIB). Harap lakukan presensi pulang setelah jam kepulangan tiba sesuai jadwal."
+                ];
             }
+
+            $keteranganPulang = trim($data['keterangan'] ?? '');
 
             if (!empty($keteranganPulang)) {
                 $stmt = $this->db->prepare("

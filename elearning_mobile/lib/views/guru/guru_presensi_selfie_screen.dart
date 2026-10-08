@@ -30,6 +30,7 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
   int _schoolRadius = 150;
   String _jamMasukBatas = '07:30';
   String _jamPulangMulai = '15:00';
+  Map<String, dynamic>? _effectiveJadwal;
 
   // Today's & History Data
   Map<String, dynamic>? _presensiHariIni;
@@ -131,6 +132,10 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
             _schoolRadius = int.tryParse((data['lokasi_sekolah_radius'] ?? _schoolRadius).toString()) ?? _schoolRadius;
             _jamMasukBatas = (data['presensi_jam_masuk_batas'] ?? _jamMasukBatas).toString();
             _jamPulangMulai = (data['presensi_jam_pulang_mulai'] ?? _jamPulangMulai).toString();
+
+            if (data['effective_jadwal'] is Map) {
+              _effectiveJadwal = Map<String, dynamic>.from(data['effective_jadwal']);
+            }
 
             if (data['presensi_hari_ini'] is Map) {
               _presensiHariIni = Map<String, dynamic>.from(data['presensi_hari_ini']);
@@ -283,6 +288,41 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
   }
 
   Future<void> _submitAttendance(String jenis) async {
+    if (jenis == 'masuk' && _sudahMasuk) {
+      _showWarningDialog(
+        title: 'Presensi Masuk Selesai',
+        message: 'Anda sudah melakukan presensi masuk hari ini pada pukul $_jamMasukDisplay WIB.',
+      );
+      return;
+    }
+
+    if (jenis == 'pulang') {
+      if (!_sudahMasuk) {
+        _showWarningDialog(
+          title: 'Presensi Masuk Diperlukan',
+          message: 'Anda belum melakukan presensi masuk hari ini. Harap lakukan presensi masuk terlebih dahulu sebelum presensi pulang.',
+        );
+        return;
+      }
+
+      if (_sudahPulang) {
+        _showWarningDialog(
+          title: 'Presensi Pulang Selesai',
+          message: 'Anda sudah melakukan presensi pulang hari ini pada pukul $_jamPulangDisplay WIB.',
+        );
+        return;
+      }
+
+      if (!_isWaktunyaPulang) {
+        final nowStr = _liveTimeStr.length >= 5 ? _liveTimeStr.substring(0, 5) : DateFormat('HH:mm').format(DateTime.now());
+        _showWarningDialog(
+          title: 'Belum Waktunya Presensi Pulang',
+          message: 'Presensi pulang hanya dapat dilakukan sesuai jadwal kepulangan pada pukul $_jamPulangClean WIB.\n\nWaktu saat ini masih pukul $nowStr WIB ($_sisaWaktuPulangText).\n\nSilakan kembali untuk presensi pulang saat jam kepulangan tiba sesuai jadwal.',
+        );
+        return;
+      }
+    }
+
     if (_selfieBase64 == null) {
       _showWarningDialog(
         title: 'Foto Selfie Diperlukan',
@@ -540,6 +580,63 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
     }
   }
 
+  String get _jamPulangClean {
+    final clean = _jamPulangMulai.trim();
+    if (clean.length >= 5) {
+      return clean.substring(0, 5);
+    }
+    return clean;
+  }
+
+  String get _jamMasukBatasClean {
+    final clean = _jamMasukBatas.trim();
+    if (clean.length >= 5) {
+      return clean.substring(0, 5);
+    }
+    return clean;
+  }
+
+  bool get _isWaktunyaPulang {
+    try {
+      final now = DateTime.now();
+      final currentMinutes = now.hour * 60 + now.minute;
+      final parts = _jamPulangMulai.split(':');
+      if (parts.length >= 2) {
+        final h = int.parse(parts[0].trim());
+        final m = int.parse(parts[1].trim());
+        return currentMinutes >= (h * 60 + m);
+      }
+    } catch (e) {
+      debugPrint('Error calculating _isWaktunyaPulang: $e');
+    }
+    return false;
+  }
+
+  String get _sisaWaktuPulangText {
+    try {
+      final now = DateTime.now();
+      final parts = _jamPulangMulai.split(':');
+      if (parts.length >= 2) {
+        final h = int.parse(parts[0].trim());
+        final m = int.parse(parts[1].trim());
+        final target = DateTime(now.year, now.month, now.day, h, m);
+        final diff = target.difference(now);
+        if (diff.isNegative) return '0 menit';
+        final hours = diff.inHours;
+        final minutes = diff.inMinutes % 60;
+        final seconds = diff.inSeconds % 60;
+        if (hours > 0) {
+          return '$hours jam $minutes mnt lagi';
+        } else if (minutes > 0) {
+          return '$minutes menit lagi';
+        } else {
+          return '$seconds detik lagi';
+        }
+      }
+    } catch (_) {}
+    return '';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -739,6 +836,31 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
               ],
             ),
           ),
+
+          if (_effectiveJadwal != null && _effectiveJadwal!['keterangan_jadwal'] != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.schedule_rounded, color: Colors.white70, size: 13),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      _effectiveJadwal!['keterangan_jadwal'].toString(),
+                      style: const TextStyle(color: Colors.white, fontSize: 10.5),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -832,7 +954,7 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
               Text(
                 _sudahMasuk
                     ? 'Status: ${_presensiHariIni?['status'] ?? 'Hadir'}'
-                    : 'Batas: $_jamMasukBatas WIB',
+                    : 'Batas: $_jamMasukBatasClean WIB',
                 style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -847,7 +969,13 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
             color: isDark ? const Color(0xFF1E293B) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _sudahPulang ? const Color(0xFF3B82F6).withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.2),
+              color: _sudahPulang
+                  ? const Color(0xFF3B82F6).withValues(alpha: 0.4)
+                  : (_sudahMasuk && !_isWaktunyaPulang
+                      ? const Color(0xFFF59E0B).withValues(alpha: 0.35)
+                      : (_sudahMasuk && _isWaktunyaPulang
+                          ? const Color(0xFF10B981).withValues(alpha: 0.35)
+                          : Colors.grey.withValues(alpha: 0.2))),
             ),
             boxShadow: [
               BoxShadow(
@@ -869,13 +997,25 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
-                          color: _sudahPulang ? const Color(0xFFDBEAFE) : const Color(0xFFFEF3C7),
+                          color: _sudahPulang
+                              ? const Color(0xFFDBEAFE)
+                              : (_sudahMasuk
+                                  ? (_isWaktunyaPulang ? const Color(0xFFD1FAE5) : const Color(0xFFFEF3C7))
+                                  : const Color(0xFFF1F5F9)),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          _sudahPulang ? 'Pulang' : 'Belum Pulang',
+                          _sudahPulang
+                              ? 'Pulang'
+                              : (_sudahMasuk
+                                  ? (_isWaktunyaPulang ? 'Bisa Pulang' : 'Menunggu')
+                                  : 'Belum Pulang'),
                           style: TextStyle(
-                            color: _sudahPulang ? const Color(0xFF1E40AF) : const Color(0xFF92400E),
+                            color: _sudahPulang
+                                ? const Color(0xFF1E40AF)
+                                : (_sudahMasuk
+                                    ? (_isWaktunyaPulang ? const Color(0xFF065F46) : const Color(0xFF92400E))
+                                    : Colors.grey.shade700),
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -911,11 +1051,15 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  _sudahPulang ? '$_jamPulangDisplay WIB' : '--:--',
+                  _sudahPulang
+                      ? '$_jamPulangDisplay WIB'
+                      : (_sudahMasuk && !_isWaktunyaPulang ? '$_jamPulangClean WIB' : '--:--'),
                   style: GoogleFonts.outfit(
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
-                    color: _sudahPulang ? const Color(0xFF3B82F6) : Colors.grey,
+                    color: _sudahPulang
+                        ? const Color(0xFF3B82F6)
+                        : (_sudahMasuk && !_isWaktunyaPulang ? const Color(0xFFD97706) : Colors.grey),
                   ),
                 ),
               ),
@@ -923,7 +1067,9 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
               Text(
                 _sudahPulang
                     ? 'Check-out selesai'
-                    : 'Buka: $_jamPulangMulai WIB',
+                    : (_sudahMasuk
+                        ? (_isWaktunyaPulang ? 'Waktu pulang telah tiba' : 'Sisa $_sisaWaktuPulangText')
+                        : 'Buka: $_jamPulangClean WIB'),
                 style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1327,6 +1473,127 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
 
           const SizedBox(height: 16),
 
+          // Banner Panduan Alur Presensi & Status Jam Pulang
+          if (_sudahMasuk && !_sudahPulang) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _isWaktunyaPulang
+                    ? (isDark ? const Color(0xFF064E3B) : const Color(0xFFECFDF5))
+                    : (isDark ? const Color(0xFF78350F) : const Color(0xFFFFFBEB)),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: _isWaktunyaPulang
+                      ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                      : const Color(0xFFF59E0B).withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _isWaktunyaPulang
+                          ? const Color(0xFF10B981).withValues(alpha: 0.2)
+                          : const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                    ),
+                    child: Icon(
+                      _isWaktunyaPulang ? Icons.alarm_on_rounded : Icons.lock_clock_rounded,
+                      color: _isWaktunyaPulang ? const Color(0xFF10B981) : const Color(0xFFD97706),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _isWaktunyaPulang
+                              ? 'Waktu Kepulangan Telah Tiba!'
+                              : 'Presensi Pulang Belum Dibuka',
+                          style: TextStyle(
+                            color: _isWaktunyaPulang
+                                ? (isDark ? const Color(0xFFA7F3D0) : const Color(0xFF065F46))
+                                : (isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E)),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _isWaktunyaPulang
+                              ? 'Silakan ambil foto selfie untuk melakukan presensi kepulangan hari ini.'
+                              : 'Presensi pulang dibuka mulai pukul $_jamPulangClean WIB ($_sisaWaktuPulangText). Wajib mengikuti jadwal sebelum checkout.',
+                          style: TextStyle(
+                            color: _isWaktunyaPulang
+                                ? (isDark ? const Color(0xFF6EE7B7) : const Color(0xFF047857))
+                                : (isDark ? const Color(0xFFFCD34D) : const Color(0xFFB45309)),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (_sudahPulang) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                    ),
+                    child: const Icon(
+                      Icons.verified_rounded,
+                      color: Color(0xFF3B82F6),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Presensi Hari Ini Telah Lengkap',
+                          style: TextStyle(
+                            color: Color(0xFF1E40AF),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Presensi masuk dan presensi pulang Anda telah berhasil tercatat di sistem.',
+                          style: TextStyle(
+                            color: Color(0xFF2563EB),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           // Action Buttons: Presensi Masuk & Presensi Pulang
           LayoutBuilder(
             builder: (context, constraints) {
@@ -1365,12 +1632,25 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                 ),
               );
 
+              final isWaitingPulang = _sudahMasuk && !_sudahPulang && !_isWaktunyaPulang;
+
               final pulangBtn = ElevatedButton(
-                onPressed: (!_sudahMasuk || _sudahPulang || _isSubmitting)
+                onPressed: (_isSubmitting || _sudahPulang || !_sudahMasuk)
                     ? null
-                    : () => _submitAttendance('pulang'),
+                    : () {
+                        if (isWaitingPulang) {
+                          _showWarningDialog(
+                            title: 'Belum Waktunya Presensi Pulang',
+                            message: 'Presensi pulang hanya dapat dilakukan sesuai jadwal kepulangan resmi pada pukul $_jamPulangClean WIB.\n\nWaktu saat ini masih pukul ${_liveTimeStr.length >= 5 ? _liveTimeStr.substring(0, 5) : "--:--"} WIB ($_sisaWaktuPulangText).\n\nSilakan kembali saat jam kepulangan tiba sesuai jadwal.',
+                          );
+                          return;
+                        }
+                        _submitAttendance('pulang');
+                      },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
+                  backgroundColor: isWaitingPulang
+                      ? const Color(0xFFF59E0B)
+                      : const Color(0xFF3B82F6),
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.grey.shade300,
                   disabledForegroundColor: Colors.grey.shade600,
@@ -1383,12 +1663,18 @@ class _GuruPresensiSelfieScreenState extends State<GuruPresensiSelfieScreen> {
                   children: [
                     if (_isSubmitting)
                       const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    else if (isWaitingPulang)
+                      const Icon(Icons.lock_clock_rounded, size: 16)
                     else
                       const Icon(Icons.logout_rounded, size: 16),
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        _sudahPulang ? 'Sudah Pulang' : 'Presensi Pulang',
+                        _sudahPulang
+                            ? 'Sudah Pulang'
+                            : (isWaitingPulang
+                                ? 'Belum Jam Pulang'
+                                : 'Presensi Pulang'),
                         style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

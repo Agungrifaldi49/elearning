@@ -20,6 +20,7 @@ $sudahMasuk = !empty($presensiHariIni['waktu_masuk']) && $presensiHariIni['waktu
 $sudahPulang = !empty($presensiHariIni['waktu_pulang']) && $presensiHariIni['waktu_pulang'] !== '0000-00-00 00:00:00';
 $waktuMasukDisplay = $sudahMasuk ? date('H:i', strtotime($presensiHariIni['waktu_masuk'])) : '';
 $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['waktu_pulang'])) : '';
+$isWaktunyaPulang = date('H:i') >= substr($jamPulangMulai, 0, 5);
 ?>
 
 <!-- Leaflet Map CSS -->
@@ -599,8 +600,8 @@ $waktuPulangDisplay = $sudahPulang ? date('H:i', strtotime($presensiHariIni['wak
                         </button>
                     </div>
                     <div class="col-6">
-                        <button type="button" class="btn btn-primary w-100 btn-presensi-action rounded-3 shadow-sm" id="btnSubmitPulang" <?= (!$sudahMasuk || $sudahPulang) ? 'disabled' : '' ?>>
-                            <i class="bi bi-box-arrow-right me-1"></i> <?= $sudahPulang ? 'Sudah Pulang' : 'Presensi Pulang' ?>
+                        <button type="button" class="btn <?= (!$isWaktunyaPulang && $sudahMasuk && !$sudahPulang) ? 'btn-warning text-dark' : 'btn-primary' ?> w-100 btn-presensi-action rounded-3 shadow-sm" id="btnSubmitPulang" <?= (!$sudahMasuk || $sudahPulang || !$isWaktunyaPulang) ? 'disabled' : '' ?>>
+                            <i class="bi <?= (!$isWaktunyaPulang && $sudahMasuk && !$sudahPulang) ? 'bi-lock-fill' : 'bi-box-arrow-right' ?> me-1"></i> <?= $sudahPulang ? 'Sudah Pulang' : ((!$isWaktunyaPulang && $sudahMasuk) ? 'Belum Jam Pulang (' . substr($jamPulangMulai, 0, 5) . ')' : 'Presensi Pulang') ?>
                         </button>
                     </div>
                 </div>
@@ -1161,20 +1162,14 @@ async function submitPresensi(jenis) {
     if (jenis === 'pulang') {
         const now = new Date();
         const currentHourMin = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-        if (currentHourMin < JAM_PULANG_MULAI && !keteranganVal) {
-            const confirmEarly = await Swal.fire({
-                icon: 'question',
-                title: 'Konfirmasi Pulang Mendahului Jadwal',
-                html: `Jam kepulangan resmi Anda hari ini adalah pukul <b>${JAM_PULANG_MULAI} WIB</b> (Waktu saat ini: <b>${currentHourMin} WIB</b>).<br><br>Apakah Anda yakin ingin melakukan presensi pulang sekarang?<br><small class="text-muted">Disarankan mengisi catatan di kolom keterangan jika ada izin/kepentingan khusus.</small>`,
-                showCancelButton: true,
-                confirmButtonText: 'Ya, Tetap Pulang',
-                cancelButtonText: 'Batal',
-                confirmButtonColor: '#4f46e5',
-                cancelButtonColor: '#64748b'
+        if (currentHourMin < JAM_PULANG_MULAI) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Belum Waktunya Presensi Pulang',
+                html: `Jam kepulangan resmi Anda hari ini dijadwalkan pada pukul <b>${JAM_PULANG_MULAI} WIB</b>.<br>Waktu saat ini masih pukul <b>${currentHourMin} WIB</b>.<br><br><span class="text-danger fw-bold">Presensi pulang tidak dapat dilakukan sebelum jam kepulangan tiba sesuai jadwal.</span>`,
+                confirmButtonColor: '#ef4444'
             });
-            if (!confirmEarly.isConfirmed) {
-                return;
-            }
+            return;
         }
     }
 

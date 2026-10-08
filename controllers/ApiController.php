@@ -4259,6 +4259,10 @@ class ApiController {
                 $riwayatPresensi = $absensiModel->getRiwayatPresensiGuru($guruId, 15);
                 $effectiveJadwal = $absensiModel->getEffectiveJadwalGuru($guruId, $todayDate);
 
+                $jamPulangMulai = $effectiveJadwal['jam_pulang_mulai'] ?? ($settings['presensi_jam_pulang_mulai'] ?? '15:00');
+                $jamSekarang = date('H:i');
+                $isWaktunyaPulang = $jamSekarang >= substr($jamPulangMulai, 0, 5);
+
                 $this->jsonResponse(true, 'Data Geofencing & Presensi Guru', [
                     'guru' => $guru,
                     'lokasi_sekolah_nama' => $settings['lokasi_sekolah_nama'] ?? 'SMK Muthia Harapan Cicalengka',
@@ -4267,11 +4271,13 @@ class ApiController {
                     'lokasi_sekolah_radius' => (int)($settings['lokasi_sekolah_radius'] ?? 150),
                     'presensi_jam_masuk_mulai' => $effectiveJadwal['jam_masuk_mulai'] ?? ($settings['presensi_jam_masuk_mulai'] ?? '06:00'),
                     'presensi_jam_masuk_batas' => $effectiveJadwal['jam_masuk_batas'] ?? ($settings['presensi_jam_masuk_batas'] ?? '07:30'),
-                    'presensi_jam_pulang_mulai' => $effectiveJadwal['jam_pulang_mulai'] ?? ($settings['presensi_jam_pulang_mulai'] ?? '15:00'),
+                    'presensi_jam_pulang_mulai' => $jamPulangMulai,
                     'presensi_mode_jadwal' => $effectiveJadwal['mode'] ?? 'jadwal',
                     'effective_jadwal' => $effectiveJadwal,
                     'presensi_hari_ini' => $presensiHariIni,
-                    'riwayat_presensi' => $riwayatPresensi
+                    'riwayat_presensi' => $riwayatPresensi,
+                    'server_time' => date('H:i:s'),
+                    'is_waktunya_pulang' => $isWaktunyaPulang
                 ]);
                 break;
 
