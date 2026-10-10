@@ -93,7 +93,7 @@
                                 </div>
                                 <h6 class="fw-bold text-dark mb-1">Super Mario Runner</h6>
                                 <small class="text-muted d-block" style="font-size:0.78rem;">
-                                    Karakter berlari & melompati rintangan. Saat stamina habis, jawab kuis untuk isi ulang stamina (Full 100%)!
+                                    Platformer retro arcade! Melompat & double jump, injak jamur Goomba, sundul balok '?' koin, hindari pipa, dan raih Super Star Power saat kuis checkpoint!
                                 </small>
                             </label>
                         </div>

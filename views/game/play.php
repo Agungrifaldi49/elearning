@@ -69,10 +69,28 @@ window.GameEngine = {
         isEnded: false,
         isStarted: false,
         isMarioRunning: false,
-        marioX: 50,
-        marioY: 210,
+        marioX: 90,
+        marioY: 216,
         marioVy: 0,
+        marioGroundY: 260,
         isJumping: false,
+        jumpCount: 0,
+        marioDistance: 0,
+        marioNextCheckpoint: 120,
+        marioSpeed: 4.6,
+        marioInvincibleTimer: 0,
+        marioRunFrame: 0,
+        marioStompCombo: 0,
+        screenShake: 0,
+        marioEntities: {
+            goombas: [],
+            coins: [],
+            blocks: [],
+            pipes: [],
+            flagpole: null,
+            particles: [],
+            popups: []
+        },
         bgOffset: 0,
         flippedCards: [],
         matchedPairs: 0
@@ -135,50 +153,457 @@ window.GameEngine = {
         }
     },
 
-    // 🍄 MODE 1: SUPER MARIO PLATFORM RUNNER ENGINE
+    // 🍄 MODE 1: ENHANCED SUPER MARIO RETRO PLATFORM RUNNER ENGINE
     initMarioCanvas: function() {
         const canvas = document.getElementById('marioCanvas');
         if (!canvas) return;
         this.canvasCtx = canvas.getContext('2d');
 
+        // Keyboard jumping controls (Space, ArrowUp, 'w', 'W')
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' || e.code === 'ArrowUp') {
+            if (this.data.gameType !== 'mario_run') return;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
                 e.preventDefault();
                 this.marioJump();
             }
         });
+
+        // Touch & Mouse click anywhere on the canvas jumps!
+        canvas.addEventListener('pointerdown', (e) => {
+            if (this.data.gameType !== 'mario_run') return;
+            e.preventDefault();
+            this.marioJump();
+        });
+    },
+
+    resetMarioWorld: function() {
+        this.state.marioX = 90;
+        this.state.marioY = 216;
+        this.state.marioVy = 0;
+        this.state.isJumping = false;
+        this.state.jumpCount = 0;
+        this.state.screenShake = 0;
+        this.state.marioRunFrame = 0;
+
+        // Initialize dynamic world entities
+        this.state.marioEntities = {
+            goombas: [
+                { x: 550, y: 230, vx: 1.8, isSquished: false, squishTimer: 0, isBlasted: false, blastedVy: 0 },
+                { x: 920, y: 230, vx: 1.9, isSquished: false, squishTimer: 0, isBlasted: false, blastedVy: 0 }
+            ],
+            coins: [
+                { x: 300, y: 200, collected: false },
+                { x: 340, y: 175, collected: false },
+                { x: 380, y: 165, collected: false },
+                { x: 420, y: 175, collected: false },
+                { x: 460, y: 200, collected: false },
+                { x: 740, y: 185, collected: false },
+                { x: 775, y: 185, collected: false },
+                { x: 810, y: 185, collected: false }
+            ],
+            blocks: [
+                { x: 380, y: 155, hit: false, bumpY: 0 },
+                { x: 775, y: 155, hit: false, bumpY: 0 },
+                { x: 1150, y: 155, hit: false, bumpY: 0 }
+            ],
+            pipes: [
+                { x: 680, y: 216, h: 44, hasPiranha: true, piranhaY: 0 },
+                { x: 1300, y: 216, h: 44, hasPiranha: false, piranhaY: 0 }
+            ],
+            flagpole: null,
+            particles: [],
+            popups: []
+        };
     },
 
     startMarioRun: function() {
         this.state.isMarioRunning = true;
-        this.updateStaminaHUD(100);
+        this.updateStaminaHUD(this.state.stamina || 100);
+
+        if (!this.state.marioEntities || !this.state.marioEntities.goombas || this.state.marioEntities.goombas.length === 0) {
+            this.resetMarioWorld();
+        }
 
         if (this.state.marioLoopInterval) clearInterval(this.state.marioLoopInterval);
 
         this.state.marioLoopInterval = setInterval(() => {
             if (!this.state.isMarioRunning || this.state.isEnded) return;
-
-            this.state.stamina -= 0.35;
-            if (this.state.stamina <= 0) {
-                this.state.stamina = 0;
-                this.triggerMarioQuestionCheckpoint('stamina_empty');
-            }
-
-            this.updateStaminaHUD(this.state.stamina);
+            this.updateMarioPhysics();
             this.drawMarioCanvas();
-        }, 1000 / 30);
+        }, 1000 / 60);
     },
 
     marioJump: function() {
-        if (!this.state.isStarted || this.state.isEnded) return;
+        if (!this.state.isStarted || this.state.isEnded || !this.state.isMarioRunning) return;
         if (!this.state.isJumping) {
             this.state.isJumping = true;
-            this.state.marioVy = -13;
+            this.state.jumpCount = 1;
+            this.state.marioVy = -13.5;
             this.playSound('jump');
+            this.createDust(this.state.marioX + 16, 258, 5);
+        } else if (this.state.jumpCount === 1) {
+            // Exciting mid-air Double Jump!
+            this.state.jumpCount = 2;
+            this.state.marioVy = -11.5;
+            this.playSound('jump');
+            this.addPopup('DOUBLE JUMP! 🦘', this.state.marioX, this.state.marioY - 15, '#00f5d4');
+            this.createDust(this.state.marioX + 16, this.state.marioY + 36, 6);
+        }
+    },
 
-            this.state.coins += 1;
-            this.state.score += 5;
-            this.updateHUD();
+    createDust: function(x, y, count) {
+        if (!this.state.marioEntities) return;
+        for (let i = 0; i < count; i++) {
+            this.state.marioEntities.particles.push({
+                x: x + (Math.random() * 8 - 4),
+                y: y + (Math.random() * 4 - 2),
+                vx: -(Math.random() * 2 + 1),
+                vy: -(Math.random() * 1.5 + 0.3),
+                radius: Math.random() * 3 + 2,
+                color: 'rgba(255, 255, 255, 0.7)',
+                alpha: 0.8,
+                decay: 0.04
+            });
+        }
+    },
+
+    createSparkles: function(x, y, count) {
+        if (!this.state.marioEntities) return;
+        const colors = ['#ffd166', '#ffb703', '#00f5d4', '#ffffff'];
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 3.5 + 1.5;
+            this.state.marioEntities.particles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 1,
+                radius: Math.random() * 3 + 2,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                alpha: 1.0,
+                decay: 0.035
+            });
+        }
+    },
+
+    addPopup: function(text, x, y, color) {
+        if (!this.state.marioEntities) return;
+        this.state.marioEntities.popups.push({
+            text: text,
+            x: x,
+            y: y,
+            vy: -1.6,
+            alpha: 1.0,
+            color: color || '#ffd166'
+        });
+    },
+
+    updateMarioPhysics: function() {
+        const ents = this.state.marioEntities;
+        if (!ents) return;
+
+        // Effective Mario speed (boosted during Star Invincibility)
+        const isStarActive = (this.state.marioInvincibleTimer > 0);
+        const currentSpeed = this.state.marioSpeed + (isStarActive ? 2.5 : 0);
+
+        if (this.state.marioInvincibleTimer > 0) {
+            this.state.marioInvincibleTimer--;
+            if (this.state.marioInvincibleTimer % 4 === 0) {
+                this.createSparkles(this.state.marioX + Math.random() * 28, this.state.marioY + Math.random() * 40, 1);
+            }
+        }
+
+        if (this.state.screenShake > 0) {
+            this.state.screenShake *= 0.86;
+            if (this.state.screenShake < 0.5) this.state.screenShake = 0;
+        }
+
+        // Mario gravity & vertical position
+        this.state.marioY += this.state.marioVy;
+        this.state.marioVy += 0.68;
+
+        // Ground landing check
+        if (this.state.marioY >= 216) {
+            if (this.state.isJumping) {
+                this.createDust(this.state.marioX + 16, 258, 6);
+            }
+            this.state.marioY = 216;
+            this.state.marioVy = 0;
+            this.state.isJumping = false;
+            this.state.jumpCount = 0;
+        }
+
+        // Run stride animation & dust puffs
+        if (!this.state.isJumping) {
+            this.state.marioRunFrame++;
+            if (this.state.marioRunFrame % 8 === 0) {
+                this.createDust(this.state.marioX + 4, 258, 2);
+            }
+        }
+
+        // World background scroll & distance progression
+        this.state.bgOffset += currentSpeed;
+        this.state.marioDistance += (currentSpeed * 0.08);
+
+        // Running energy consumption
+        this.state.stamina -= (isStarActive ? 0.08 : 0.20);
+        if (this.state.stamina <= 0) {
+            this.state.stamina = 0;
+            this.updateStaminaHUD(0);
+            this.triggerMarioQuestionCheckpoint('stamina_empty');
+            return;
+        }
+        this.updateStaminaHUD(this.state.stamina);
+
+        // Spawn flagpole when reaching distance checkpoint
+        if (this.state.marioDistance >= this.state.marioNextCheckpoint && !ents.flagpole) {
+            ents.flagpole = { x: 840, reached: false };
+        }
+
+        // Flagpole checkpoint interaction
+        if (ents.flagpole) {
+            ents.flagpole.x -= currentSpeed;
+            if (!ents.flagpole.reached && ents.flagpole.x <= this.state.marioX + 24) {
+                ents.flagpole.reached = true;
+                this.playSound('powerup');
+                this.addPopup('🏁 CHECKPOINT TERCAPAI!', this.state.marioX, this.state.marioY - 25, '#ffd166');
+                setTimeout(() => {
+                    ents.flagpole = null;
+                    this.state.marioNextCheckpoint += 120;
+                    this.triggerMarioQuestionCheckpoint('checkpoint_reached');
+                }, 400);
+                return;
+            }
+        }
+
+        // Update Goombas
+        for (let i = ents.goombas.length - 1; i >= 0; i--) {
+            const g = ents.goombas[i];
+            if (g.isBlasted) {
+                g.y += g.blastedVy;
+                g.blastedVy += 0.8;
+                g.x += 4;
+            } else if (g.isSquished) {
+                g.squishTimer--;
+                if (g.squishTimer <= 0) {
+                    ents.goombas.splice(i, 1);
+                    continue;
+                }
+            } else {
+                g.x -= (currentSpeed + g.vx);
+
+                // Stomp Detection: Mario lands on Goomba from above
+                const mx = this.state.marioX;
+                const my = this.state.marioY;
+                const marioFeetY = my + 44;
+                const goombaTopY = g.y;
+
+                if (this.state.marioVy > 0 &&
+                    marioFeetY >= goombaTopY && marioFeetY <= goombaTopY + 16 &&
+                    Math.abs((mx + 16) - (g.x + 15)) < 24) {
+                    // Stomp successful!
+                    g.isSquished = true;
+                    g.squishTimer = 26;
+                    this.state.marioVy = -11.8;
+                    this.state.jumpCount = 1;
+                    this.state.score += 50;
+                    this.state.marioStompCombo++;
+                    this.state.coins += 1;
+                    this.playSound('stomp');
+                    this.addPopup('+50 STOMP!', g.x, g.y - 12, '#ffd166');
+                    this.createSparkles(g.x + 15, g.y + 10, 8);
+                    this.updateHUD();
+                } else if (Math.abs((mx + 16) - (g.x + 15)) < 22 && Math.abs((my + 22) - (g.y + 15)) < 24) {
+                    // Horizontal collision with Goomba
+                    if (isStarActive) {
+                        g.isBlasted = true;
+                        g.blastedVy = -12;
+                        this.state.score += 100;
+                        this.playSound('stomp');
+                        this.addPopup('+100 STAR KILL! 🌟', g.x, g.y - 15, '#00f5d4');
+                        this.createSparkles(g.x + 15, g.y + 15, 12);
+                        this.updateHUD();
+                    } else {
+                        // Player takes damage!
+                        this.state.screenShake = 16;
+                        this.playSound('wrong');
+                        this.state.lives--;
+                        this.updateHUD();
+                        g.isBlasted = true;
+                        g.blastedVy = -10;
+                        if (this.state.lives <= 0) {
+                            this.endGame();
+                            return;
+                        } else {
+                            this.triggerMarioQuestionCheckpoint('obstacle_hit');
+                            return;
+                        }
+                    }
+                }
+            }
+
+            if (g.x < -80 || g.y > 400) {
+                ents.goombas.splice(i, 1);
+            }
+        }
+
+        // Spawn new Goombas dynamically
+        if (ents.goombas.length < 2 && Math.random() < 0.02) {
+            const lastG = ents.goombas[ents.goombas.length - 1];
+            const startX = lastG ? Math.max(850, lastG.x + 280) : 850;
+            ents.goombas.push({
+                x: startX,
+                y: 230,
+                vx: Math.random() * 0.8 + 1.2,
+                isSquished: false,
+                squishTimer: 0,
+                isBlasted: false,
+                blastedVy: 0
+            });
+        }
+
+        // Update Mystery '?' Blocks
+        for (let i = ents.blocks.length - 1; i >= 0; i--) {
+            const b = ents.blocks[i];
+            b.x -= currentSpeed;
+
+            if (b.bumpY < 0) {
+                b.bumpY += 1.2;
+                if (b.bumpY > 0) b.bumpY = 0;
+            }
+
+            // Head bump hit detection from underneath
+            const mx = this.state.marioX;
+            const my = this.state.marioY;
+            if (!b.hit && this.state.marioVy < 0 &&
+                Math.abs((mx + 16) - (b.x + 16)) < 24 &&
+                my <= (b.y + 32) && my >= (b.y + 16)) {
+                b.hit = true;
+                b.bumpY = -10;
+                this.state.score += 25;
+                this.state.coins += 1;
+                this.state.stamina = Math.min(100, this.state.stamina + 8);
+                this.playSound('bump');
+                this.playSound('coin');
+                this.addPopup('+25 GOLD COIN! 🪙', b.x, b.y - 15, '#ffd166');
+                this.createSparkles(b.x + 16, b.y, 8);
+                this.updateHUD();
+            }
+
+            if (b.x < -80) {
+                ents.blocks.splice(i, 1);
+            }
+        }
+
+        // Spawn new Mystery Blocks
+        if (ents.blocks.length < 2 && Math.random() < 0.015) {
+            const lastB = ents.blocks[ents.blocks.length - 1];
+            const startX = lastB ? Math.max(860, lastB.x + 320) : 860;
+            ents.blocks.push({
+                x: startX,
+                y: 155,
+                hit: false,
+                bumpY: 0
+            });
+        }
+
+        // Update Airborne Coins
+        for (let i = ents.coins.length - 1; i >= 0; i--) {
+            const c = ents.coins[i];
+            c.x -= currentSpeed;
+
+            if (!c.collected) {
+                const mx = this.state.marioX;
+                const my = this.state.marioY;
+                if (Math.hypot((mx + 16) - (c.x + 9), (my + 22) - (c.y + 12)) < 26) {
+                    c.collected = true;
+                    this.state.coins += 1;
+                    this.state.score += 10;
+                    this.state.stamina = Math.min(100, this.state.stamina + 2);
+                    this.playSound('coin');
+                    this.createSparkles(c.x + 9, c.y + 12, 6);
+                    this.addPopup('+10', c.x, c.y - 8, '#ffd166');
+                    this.updateHUD();
+                }
+            }
+
+            if (c.x < -60 || c.collected) {
+                ents.coins.splice(i, 1);
+            }
+        }
+
+        // Spawn new Coin Arcs
+        if (ents.coins.length < 3 && Math.random() < 0.02) {
+            const baseStartX = 840 + Math.random() * 60;
+            const coinHeights = [200, 175, 165, 175, 200];
+            for (let j = 0; j < coinHeights.length; j++) {
+                ents.coins.push({
+                    x: baseStartX + (j * 38),
+                    y: coinHeights[j],
+                    collected: false
+                });
+            }
+        }
+
+        // Update Pipes
+        for (let i = ents.pipes.length - 1; i >= 0; i--) {
+            const p = ents.pipes[i];
+            p.x -= currentSpeed;
+            if (p.hasPiranha) {
+                p.piranhaY = Math.sin(Date.now() / 450) * 16;
+            }
+
+            // Pipe horizontal collision
+            const mx = this.state.marioX;
+            const my = this.state.marioY;
+            if (mx + 30 >= p.x && mx <= p.x + 44 && my + 44 > p.y + 8) {
+                if (my + 44 <= p.y + 18 && this.state.marioVy >= 0) {
+                    // Standing on top of pipe
+                    this.state.marioY = p.y - 44;
+                    this.state.marioVy = 0;
+                    this.state.isJumping = false;
+                    this.state.jumpCount = 0;
+                } else if (!isStarActive) {
+                    // Bumping against pipe wall: soft knockback
+                    this.state.marioX = Math.max(30, p.x - 32);
+                }
+            }
+
+            if (p.x < -80) {
+                ents.pipes.splice(i, 1);
+            }
+        }
+
+        // Spawn new Warp Pipe
+        if (ents.pipes.length < 1 && Math.random() < 0.01) {
+            ents.pipes.push({
+                x: 900 + Math.random() * 200,
+                y: 216,
+                h: 44,
+                hasPiranha: Math.random() < 0.5,
+                piranhaY: 0
+            });
+        }
+
+        // Update Particles
+        for (let i = ents.particles.length - 1; i >= 0; i--) {
+            const pt = ents.particles[i];
+            pt.x += pt.vx;
+            pt.y += pt.vy;
+            pt.alpha -= pt.decay;
+            if (pt.alpha <= 0) {
+                ents.particles.splice(i, 1);
+            }
+        }
+
+        // Update Floating Popups
+        for (let i = ents.popups.length - 1; i >= 0; i--) {
+            const pp = ents.popups[i];
+            pp.y += pp.vy;
+            pp.alpha -= 0.022;
+            if (pp.alpha <= 0) {
+                ents.popups.splice(i, 1);
+            }
         }
     },
 
@@ -188,85 +613,497 @@ window.GameEngine = {
 
         const w = 800;
         const h = 320;
+        const ents = this.state.marioEntities;
 
+        ctx.save();
+
+        // Screen shake transform
+        if (this.state.screenShake > 0) {
+            const shakeX = (Math.random() - 0.5) * this.state.screenShake;
+            const shakeY = (Math.random() - 0.5) * this.state.screenShake;
+            ctx.translate(shakeX, shakeY);
+        }
+
+        // 1. Sky Gradient
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-        skyGrad.addColorStop(0, '#5c94fc');
-        skyGrad.addColorStop(1, '#89cff0');
+        skyGrad.addColorStop(0, '#3b82f6');
+        skyGrad.addColorStop(0.65, '#60a5fa');
+        skyGrad.addColorStop(1, '#93c5fd');
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, w, h);
 
-        this.state.bgOffset += 2;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        // 2. Sun with Warm Corona
+        ctx.fillStyle = 'rgba(255, 253, 208, 0.4)';
+        ctx.beginPath();
+        ctx.arc(80, 50, 42, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fffbeb';
+        ctx.beginPath();
+        ctx.arc(80, 50, 24, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3. Clouds (Slow parallax: speed * 0.2)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
         for (let i = 0; i < 4; i++) {
-            let cx = ((i * 240) - (this.state.bgOffset * 0.5)) % (w + 100);
-            if (cx < -100) cx += w + 200;
+            let cx = ((i * 260) - (this.state.bgOffset * 0.2)) % (w + 140);
+            if (cx < -120) cx += w + 260;
+            const cy = 40 + (i % 2) * 25;
             ctx.beginPath();
-            ctx.arc(cx, 50, 22, 0, Math.PI * 2);
-            ctx.arc(cx + 20, 45, 28, 0, Math.PI * 2);
-            ctx.arc(cx + 42, 50, 22, 0, Math.PI * 2);
+            ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+            ctx.arc(cx + 18, cy - 6, 26, 0, Math.PI * 2);
+            ctx.arc(cx + 40, cy, 20, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        ctx.fillStyle = '#38b000';
+        // 4. Distant Mountains (Parallax: speed * 0.4)
+        ctx.fillStyle = '#64748b';
         for (let i = 0; i < 3; i++) {
-            let hx = ((i * 350) - (this.state.bgOffset * 0.8)) % (w + 150);
+            let mx = ((i * 380) - (this.state.bgOffset * 0.4)) % (w + 200);
+            if (mx < -200) mx += w + 400;
+            ctx.beginPath();
+            ctx.moveTo(mx, 260);
+            ctx.lineTo(mx + 90, 140);
+            ctx.lineTo(mx + 180, 260);
+            ctx.fill();
+            // Snow peak
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath();
+            ctx.moveTo(mx + 90, 140);
+            ctx.lineTo(mx + 60, 180);
+            ctx.lineTo(mx + 90, 175);
+            ctx.lineTo(mx + 120, 180);
+            ctx.fill();
+            ctx.fillStyle = '#64748b';
+        }
+
+        // 5. Rolling Grassy Hills & Bushes (Parallax: speed * 0.75)
+        ctx.fillStyle = '#22c55e';
+        for (let i = 0; i < 4; i++) {
+            let hx = ((i * 280) - (this.state.bgOffset * 0.75)) % (w + 150);
             if (hx < -150) hx += w + 300;
             ctx.beginPath();
-            ctx.arc(hx, 250, 70, Math.PI, 0);
+            ctx.arc(hx, 270, 75, Math.PI, 0);
+            ctx.fill();
+            // Round bush accents
+            ctx.fillStyle = '#16a34a';
+            ctx.beginPath();
+            ctx.arc(hx + 30, 255, 20, Math.PI, 0);
+            ctx.fill();
+            ctx.fillStyle = '#22c55e';
+        }
+
+        // 6. Checkpoint Flagpole (if spawned)
+        if (ents && ents.flagpole) {
+            const fpx = ents.flagpole.x;
+            // Stone base
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(fpx - 14, 236, 28, 24);
+            ctx.fillStyle = '#166534';
+            ctx.strokeRect(fpx - 14, 236, 28, 24);
+            // Mast
+            ctx.fillStyle = '#f1f5f9';
+            ctx.fillRect(fpx - 3, 70, 6, 166);
+            // Golden finial ball
+            ctx.fillStyle = '#eab308';
+            ctx.beginPath();
+            ctx.arc(fpx, 68, 8, 0, Math.PI * 2);
+            ctx.fill();
+            // Waving Red Mario Flag
+            const wave = Math.sin(Date.now() / 120) * 4;
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.moveTo(fpx + 3, 78);
+            ctx.lineTo(fpx + 45 + wave, 92);
+            ctx.lineTo(fpx + 3, 108);
+            ctx.fill();
+            // White 'M' emblem on flag
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText('M', fpx + 12, 98);
+        }
+
+        // 7. Warp Pipes
+        if (ents && ents.pipes) {
+            ents.pipes.forEach(p => {
+                const px = p.x;
+                const py = p.y;
+                // Piranha Plant
+                if (p.hasPiranha) {
+                    const plantY = py - 18 + Math.max(-14, Math.min(10, p.piranhaY));
+                    ctx.fillStyle = '#ef4444';
+                    ctx.beginPath();
+                    ctx.arc(px + 23, plantY, 12, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(px + 18, plantY - 3, 3, 0, Math.PI * 2);
+                    ctx.arc(px + 27, plantY + 3, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Jaws
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(px + 20, plantY - 2, 7, 4);
+                }
+                // Pipe Collar / Rim
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(px - 3, py, 52, 16);
+                ctx.fillStyle = '#15803d';
+                ctx.fillRect(px + 40, py, 9, 16);
+                ctx.strokeStyle = '#052e16';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(px - 3, py, 52, 16);
+                // Pipe Body
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(px + 2, py + 16, 42, 28);
+                ctx.fillStyle = '#15803d';
+                ctx.fillRect(px + 34, py + 16, 10, 28);
+                ctx.strokeRect(px + 2, py + 16, 42, 28);
+            });
+        }
+
+        // 8. Foreground Ground
+        const groundY = 260;
+        // Grass top turf
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(0, groundY, w, 10);
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(0, groundY + 8, w, 4);
+        // Brick / Earth soil tiles
+        const soilGrad = ctx.createLinearGradient(0, groundY + 12, 0, h);
+        soilGrad.addColorStop(0, '#c2410c');
+        soilGrad.addColorStop(1, '#7c2d12');
+        ctx.fillStyle = soilGrad;
+        ctx.fillRect(0, groundY + 12, w, h - groundY - 12);
+        // Brick pattern overlay
+        ctx.strokeStyle = '#9a3412';
+        ctx.lineWidth = 1.5;
+        const brickW = 32;
+        const brickH = 16;
+        const bOff = (this.state.bgOffset) % brickW;
+        for (let bx = -brickW; bx < w + brickW; bx += brickW) {
+            ctx.strokeRect(bx - bOff, groundY + 12, brickW, brickH);
+            ctx.strokeRect(bx - bOff + (brickW / 2), groundY + 12 + brickH, brickW, brickH);
+            ctx.strokeRect(bx - bOff, groundY + 12 + (brickH * 2), brickW, brickH);
+        }
+
+        // 9. Mystery '?' Blocks
+        if (ents && ents.blocks) {
+            ents.blocks.forEach(b => {
+                const by = b.y + b.bumpY;
+                if (b.hit) {
+                    // Empty hit bronze brick block
+                    ctx.fillStyle = '#78350f';
+                    ctx.fillRect(b.x, by, 32, 32);
+                    ctx.strokeStyle = '#451a03';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(b.x, by, 32, 32);
+                    // Rivets
+                    ctx.fillStyle = '#451a03';
+                    ctx.fillRect(b.x + 3, by + 3, 3, 3);
+                    ctx.fillRect(b.x + 26, by + 3, 3, 3);
+                    ctx.fillRect(b.x + 3, by + 26, 3, 3);
+                    ctx.fillRect(b.x + 26, by + 26, 3, 3);
+                } else {
+                    // Shiny Golden Mystery '?' Block
+                    const bGrad = ctx.createLinearGradient(b.x, by, b.x, by + 32);
+                    bGrad.addColorStop(0, '#fde047');
+                    bGrad.addColorStop(0.5, '#eab308');
+                    bGrad.addColorStop(1, '#ca8a04');
+                    ctx.fillStyle = bGrad;
+                    ctx.fillRect(b.x, by, 32, 32);
+                    ctx.strokeStyle = '#713f12';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(b.x, by, 32, 32);
+                    // Corner rivets
+                    ctx.fillStyle = '#713f12';
+                    ctx.fillRect(b.x + 3, by + 3, 3, 3);
+                    ctx.fillRect(b.x + 26, by + 3, 3, 3);
+                    ctx.fillRect(b.x + 3, by + 26, 3, 3);
+                    ctx.fillRect(b.x + 26, by + 26, 3, 3);
+                    // Animated glowing '?'
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 20px "Courier New", monospace';
+                    ctx.fillText('?', b.x + 10, by + 24);
+                }
+            });
+        }
+
+        // 10. Airborne Coins (Rotating 3D Gold Coins)
+        if (ents && ents.coins) {
+            ents.coins.forEach(c => {
+                if (c.collected) return;
+                const spin = Math.cos(Date.now() / 140);
+                const coinW = Math.max(3, Math.abs(spin) * 14);
+                ctx.save();
+                ctx.translate(c.x + 9, c.y + 12);
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, coinW, 12, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ca8a04';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                // Inner vertical sheen line
+                if (coinW > 6) {
+                    ctx.fillStyle = '#fef08a';
+                    ctx.fillRect(-2, -7, 4, 14);
+                }
+                ctx.restore();
+            });
+        }
+
+        // 11. Goombas (Jamur Musuh)
+        if (ents && ents.goombas) {
+            ents.goombas.forEach(g => {
+                ctx.save();
+                if (g.isBlasted) {
+                    ctx.translate(g.x + 15, g.y + 15);
+                    ctx.rotate(Date.now() / 80);
+                    ctx.translate(-(g.x + 15), -(g.y + 15));
+                }
+
+                if (g.isSquished) {
+                    // Squished Pancake Goomba
+                    ctx.fillStyle = '#78350f';
+                    ctx.beginPath();
+                    ctx.ellipse(g.x + 15, g.y + 24, 18, 6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    // 'X X' Squished Eyes
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 10px sans-serif';
+                    ctx.fillText('x  x', g.x + 8, g.y + 26);
+                } else {
+                    // Mushroom Cap
+                    ctx.fillStyle = '#92400e';
+                    ctx.beginPath();
+                    ctx.moveTo(g.x + 2, g.y + 20);
+                    ctx.bezierCurveTo(g.x + 2, g.y, g.x + 28, g.y, g.x + 28, g.y + 20);
+                    ctx.closePath();
+                    ctx.fill();
+                    // Face
+                    ctx.fillStyle = '#fef3c7';
+                    ctx.beginPath();
+                    ctx.arc(g.x + 15, g.y + 18, 9, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Mean Furrowed Eyebrows
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(g.x + 7, g.y + 12);
+                    ctx.lineTo(g.x + 14, g.y + 15);
+                    ctx.moveTo(g.x + 23, g.y + 12);
+                    ctx.lineTo(g.x + 16, g.y + 15);
+                    ctx.stroke();
+                    // Angry Eyes
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(g.x + 8, g.y + 15, 4, 6);
+                    ctx.fillRect(g.x + 18, g.y + 15, 4, 6);
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(g.x + 10, g.y + 16, 2, 4);
+                    ctx.fillRect(g.x + 18, g.y + 16, 2, 4);
+                    // Fangs
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.moveTo(g.x + 10, g.y + 24);
+                    ctx.lineTo(g.x + 12, g.y + 21);
+                    ctx.lineTo(g.x + 14, g.y + 24);
+                    ctx.moveTo(g.x + 16, g.y + 24);
+                    ctx.lineTo(g.x + 18, g.y + 21);
+                    ctx.lineTo(g.x + 20, g.y + 24);
+                    ctx.fill();
+                    // Waddling Feet
+                    const footSwing = Math.sin(Date.now() / 90) * 4;
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    ctx.ellipse(g.x + 7 + footSwing, g.y + 28, 6, 3, 0, 0, Math.PI * 2);
+                    ctx.ellipse(g.x + 23 - footSwing, g.y + 28, 6, 3, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+        }
+
+        // 12. Mario Character (Pixel-Art Styling & Animation)
+        const mx = this.state.marioX;
+        const my = this.state.marioY;
+        const isStarActive = (this.state.marioInvincibleTimer > 0);
+
+        ctx.save();
+
+        // Star Power Rainbow Aura & Motion Blur
+        if (isStarActive) {
+            const hue = (Date.now() / 4) % 360;
+            ctx.shadowColor = `hsl(${hue}, 100%, 65%)`;
+            ctx.shadowBlur = 18;
+            // Ghost trail after-image
+            ctx.fillStyle = `hsla(${hue}, 100%, 60%, 0.3)`;
+            ctx.fillRect(mx - 8, my, 32, 44);
+        }
+
+        // A. Red Cap
+        ctx.fillStyle = isStarActive ? `hsl(${(Date.now() / 3) % 360}, 100%, 55%)` : '#dc2626';
+        ctx.beginPath();
+        ctx.roundRect(mx + 6, my + 2, 22, 10, [6, 6, 0, 0]);
+        ctx.fill();
+        // Cap Visor
+        ctx.fillRect(mx + 18, my + 8, 12, 4);
+        // White 'M' Emblem
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(mx + 15, my + 6, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#dc2626';
+        ctx.font = 'bold 6px sans-serif';
+        ctx.fillText('M', mx + 13, my + 8);
+
+        // B. Face & Nose
+        ctx.fillStyle = '#fed7aa';
+        ctx.fillRect(mx + 8, my + 12, 16, 12);
+        // Round Nose
+        ctx.beginPath();
+        ctx.arc(mx + 23, my + 17, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        // Hair at back
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(mx + 4, my + 11, 6, 10);
+        // Eye
+        ctx.fillStyle = '#1e3a8a';
+        ctx.fillRect(mx + 18, my + 13, 3, 5);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(mx + 19, my + 13, 1, 2);
+        // Big Black Mustache
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.roundRect(mx + 13, my + 19, 13, 5, [2, 4, 4, 2]);
+        ctx.fill();
+
+        // C. Red Shirt Body
+        ctx.fillStyle = isStarActive ? `hsl(${(Date.now() / 3) % 360}, 100%, 55%)` : '#dc2626';
+        ctx.fillRect(mx + 6, my + 24, 20, 10);
+
+        // D. Blue Denim Dungarees / Overalls
+        ctx.fillStyle = '#1d4ed8';
+        ctx.fillRect(mx + 8, my + 26, 16, 12);
+        // Golden Overall Buttons
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(mx + 10, my + 28, 2, 0, Math.PI * 2);
+        ctx.arc(mx + 18, my + 28, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // E. Hands & Gloved Arms
+        ctx.fillStyle = '#ffffff';
+        if (this.state.isJumping) {
+            // Jumping: Victory Fist raised high in air!
+            ctx.beginPath();
+            ctx.arc(mx + 24, my + 6, 5, 0, Math.PI * 2);
+            ctx.fill();
+            // Trailing back hand
+            ctx.beginPath();
+            ctx.arc(mx + 4, my + 28, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Running: Hands pumping back and forth
+            const armPuff = Math.sin(this.state.marioRunFrame * 0.4) * 5;
+            ctx.beginPath();
+            ctx.arc(mx + 24 + armPuff, my + 28, 4.5, 0, Math.PI * 2);
+            ctx.arc(mx + 4 - armPuff, my + 28, 4.5, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        const groundY = 240;
-        ctx.fillStyle = '#d04648';
-        ctx.fillRect(0, groundY, w, h - groundY);
-        ctx.fillStyle = '#e56b6f';
-        ctx.fillRect(0, groundY, w, 8);
-
-        let boxX = ((w * 0.7) - (this.state.bgOffset % w));
-        if (boxX < -50) boxX += w;
-        ctx.fillStyle = '#ffb703';
-        ctx.fillRect(boxX, 150, 36, 36);
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 20px monospace';
-        ctx.fillText('?', boxX + 12, 175);
-
+        // F. Running Legs & Chunky Boots
+        ctx.fillStyle = '#78350f';
         if (this.state.isJumping) {
-            this.state.marioY += this.state.marioVy;
-            this.state.marioVy += 0.85;
-            if (this.state.marioY >= 210) {
-                this.state.marioY = 210;
-                this.state.isJumping = false;
-                this.state.marioVy = 0;
-            }
+            // Tucked jumping boots
+            ctx.fillRect(mx + 7, my + 38, 9, 6);
+            ctx.fillRect(mx + 18, my + 38, 9, 6);
+        } else {
+            // 3-frame running leg stride
+            const stride = Math.sin(this.state.marioRunFrame * 0.35) * 6;
+            ctx.fillRect(mx + 6 + stride, my + 38, 10, 6);
+            ctx.fillRect(mx + 18 - stride, my + 38, 10, 6);
         }
 
-        const mx = this.state.marioX;
-        const my = this.state.marioY;
+        ctx.restore();
 
-        ctx.fillStyle = '#e63946';
-        ctx.fillRect(mx + 6, my - 30, 20, 8);
-        ctx.fillRect(mx + 8, my - 16, 16, 16);
+        // 13. Particles & Sparkles
+        if (ents && ents.particles) {
+            ents.particles.forEach(pt => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, pt.alpha);
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
 
-        ctx.fillStyle = '#ffb703';
-        ctx.fillRect(mx + 8, my - 22, 16, 8);
+        // 14. Floating Popups (+50 STOMP, +10 COIN, etc.)
+        if (ents && ents.popups) {
+            ents.popups.forEach(pp => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, pp.alpha);
+                ctx.fillStyle = pp.color;
+                ctx.font = 'bold 15px "Segoe UI", sans-serif';
+                ctx.shadowColor = '#000000';
+                ctx.shadowBlur = 6;
+                ctx.fillText(pp.text, pp.x, pp.y);
+                ctx.restore();
+            });
+        }
 
-        ctx.fillStyle = '#1d3557';
-        ctx.fillRect(mx + 6, my - 8, 20, 14);
+        // 15. In-Canvas HUD Elements
+        ctx.save();
+        // Top-left Distance & Stage Pill
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+        ctx.beginPath();
+        ctx.roundRect(16, 14, 175, 28, [14]);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText(`🚩 Jarak: ${Math.round(this.state.marioDistance)}m`, 28, 32);
 
-        ctx.fillStyle = '#4a2810';
-        let legOffset = Math.sin(this.state.bgOffset * 0.2) * 4;
-        ctx.fillRect(mx + 4 + legOffset, my + 6, 10, 6);
-        ctx.fillRect(mx + 16 - legOffset, my + 6, 10, 6);
+        // Center Star Power Status Banner
+        if (isStarActive) {
+            const secLeft = Math.ceil(this.state.marioInvincibleTimer / 60);
+            ctx.fillStyle = 'rgba(234, 179, 8, 0.9)';
+            ctx.beginPath();
+            ctx.roundRect(w / 2 - 100, 14, 200, 28, [14]);
+            ctx.fill();
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`🌟 STAR POWER AKTIF (${secLeft}s)!`, w / 2, 32);
+            ctx.textAlign = 'left';
+        }
+
+        // Top-right Stomp Combo
+        if (this.state.marioStompCombo > 1) {
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
+            ctx.beginPath();
+            ctx.roundRect(w - 180, 14, 164, 28, [14]);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText(`🔥 STOMP x${this.state.marioStompCombo}`, w - 165, 32);
+        }
+        ctx.restore();
+
+        ctx.restore(); // Final restore from screen shake
     },
 
     triggerMarioQuestionCheckpoint: function(reason) {
         if (!this.state.isMarioRunning) return;
         this.state.isMarioRunning = false;
+        clearInterval(this.state.marioLoopInterval);
 
         const quizModalEl = document.getElementById('modalMarioQuiz');
         if (quizModalEl) {
             const modal = new bootstrap.Modal(quizModalEl);
-            this.renderMarioModalQuestion();
+            this.renderMarioModalQuestion(reason);
             modal.show();
         } else {
             const quizBox = document.getElementById('quizBoxContainer');
@@ -275,7 +1112,7 @@ window.GameEngine = {
         }
     },
 
-    renderMarioModalQuestion: function() {
+    renderMarioModalQuestion: function(reason) {
         if (this.state.currentIdx >= this.data.questions.length || this.state.lives <= 0) {
             const modalEl = document.getElementById('modalMarioQuiz');
             if (modalEl) {
@@ -291,7 +1128,16 @@ window.GameEngine = {
         const questionEl = document.getElementById('marioModalQuestion');
         const optionsEl = document.getElementById('marioModalOptions');
 
-        if (counterEl) counterEl.textContent = `Tantangan Kuis Checkpoint #${this.state.currentIdx + 1} dari ${this.data.questions.length}`;
+        let checkpointTitle = `Tantangan Checkpoint #${this.state.currentIdx + 1} dari ${this.data.questions.length}`;
+        if (reason === 'obstacle_hit') {
+            checkpointTitle = `⚠️ RESCUE DARURAT! Jawab Benar Untuk Pulihkan Mario!`;
+        } else if (reason === 'stamina_empty') {
+            checkpointTitle = `⚡ STAMINA HABIS! Jawab Benar Untuk Isi Ulang 100%!`;
+        } else if (reason === 'checkpoint_reached') {
+            checkpointTitle = `🏁 CHECKPOINT GERBANG BINTANG #${this.state.currentIdx + 1}!`;
+        }
+
+        if (counterEl) counterEl.textContent = checkpointTitle;
         if (questionEl) questionEl.textContent = q.pertanyaan;
 
         if (optionsEl) {
@@ -323,27 +1169,32 @@ window.GameEngine = {
 
         if (isCorrect) {
             this.playSound('correct');
+            this.playSound('powerup');
             this.state.combo++;
             if (this.state.combo > this.state.maxCombo) this.state.maxCombo = this.state.combo;
             this.state.correctCount++;
 
+            // Refill stamina 100% full
             this.state.stamina = 100;
             this.updateStaminaHUD(100);
 
-            const pointsGained = (parseInt(q.poin) || 10) + 20;
+            // Grant 7 seconds of invincible Star Power!
+            this.state.marioInvincibleTimer = 60 * 7;
+
+            const pointsGained = (parseInt(q.poin) || 10) + 25;
             this.state.score += pointsGained;
             this.updateHUD();
 
-            this.showFeedback(true, '🎉 JAWABAN BENAR!', '⚡ STAMINA REFILLED 100% FULL! MARIO KEMBALI BERLARI! 🚀');
+            this.showFeedback(true, '🎉 JAWABAN BENAR!', '🌟 SUPER STAR POWER AKTIF! MARIO KEBAL & STAMINA 100% PENUH! 🚀');
         } else {
             this.playSound('wrong');
             this.state.combo = 0;
             this.state.lives--;
-            this.state.stamina = 25;
-            this.updateStaminaHUD(25);
+            this.state.stamina = 35;
+            this.updateStaminaHUD(35);
             this.updateHUD();
 
-            this.showFeedback(false, '❌ JAWABAN SALAH', `Kunci Jawaban: Opsi ${q.kunci_jawaban.toUpperCase()}`);
+            this.showFeedback(false, '❌ JAWABAN KURANG TEPAT', `Kunci Jawaban: Opsi ${(q.kunci_jawaban || 'A').toUpperCase()}`);
         }
 
         setTimeout(() => {
@@ -361,7 +1212,7 @@ window.GameEngine = {
             } else {
                 this.startMarioRun();
             }
-        }, 1500);
+        }, 1400);
     },
 
     // 🎡 MODE 3: SPIN WHEEL QUIZ ENGINE
@@ -561,42 +1412,115 @@ window.GameEngine = {
         const bar = document.getElementById('marioStaminaBar');
         if (bar) {
             bar.style.width = pct + '%';
-            bar.textContent = `⚡ STAMINA ${pct}%`;
+            bar.textContent = `${pct}%`;
             if (pct < 30) {
                 bar.className = 'progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated';
             } else {
                 bar.className = 'progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated';
             }
         }
+
+        const distEl = document.getElementById('marioDistVal');
+        const targetEl = document.getElementById('marioTargetVal');
+        if (distEl) distEl.textContent = Math.round(this.state.marioDistance);
+        if (targetEl) targetEl.textContent = Math.round(this.state.marioNextCheckpoint);
     },
 
-    // Synthetic Sound Effect (Web Audio API)
+    // Synthetic Retro 8-Bit Sound Synthesizer (Web Audio API)
     playSound: function(type) {
         try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const now = ctx.currentTime;
 
-            if (type === 'correct') {
-                osc.frequency.setValueAtTime(523.25, ctx.currentTime);
-                osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.2, ctx.currentTime);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.25);
+            if (type === 'jump') {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.exponentialRampToValueAtTime(520, now + 0.14);
+                gain.gain.setValueAtTime(0.14, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
+                osc.start(now);
+                osc.stop(now + 0.14);
+            } else if (type === 'coin') {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(987.77, now); // B5
+                osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.32);
+                osc.start(now);
+                osc.stop(now + 0.32);
+            } else if (type === 'stomp') {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(45, now + 0.18);
+                gain.gain.setValueAtTime(0.28, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+                osc.start(now);
+                osc.stop(now + 0.18);
+            } else if (type === 'bump') {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.setValueAtTime(80, now + 0.06);
+                gain.gain.setValueAtTime(0.16, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'powerup') {
+                const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99]; // C-E-G-C-E-G Fanfare
+                notes.forEach((freq, idx) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+                    gain.gain.setValueAtTime(0.16, now + idx * 0.07);
+                    gain.gain.linearRampToValueAtTime(0.01, now + (idx + 1) * 0.07);
+                    osc.start(now + idx * 0.07);
+                    osc.stop(now + (idx + 1) * 0.07);
+                });
+            } else if (type === 'correct') {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.1);
+                osc.frequency.setValueAtTime(783.99, now + 0.2);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                osc.start(now);
+                osc.stop(now + 0.35);
             } else if (type === 'wrong') {
-                osc.frequency.setValueAtTime(220, ctx.currentTime);
-                osc.frequency.setValueAtTime(164.81, ctx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.25, ctx.currentTime);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.3);
-            } else if (type === 'jump') {
-                osc.frequency.setValueAtTime(150, ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.15);
-                gain.gain.setValueAtTime(0.15, ctx.currentTime);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.15);
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.setValueAtTime(146.83, now + 0.12);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
             }
         } catch(e) {}
     },
@@ -938,29 +1862,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
             </div>
 
-            <!-- 🍄 MODE 1: SUPER MARIO CANVASES & HUD STAGE (Hidden Initially) -->
+            <!-- 🍄 MODE 1: ENHANCED SUPER MARIO RETRO PLATFORM RUNNER STAGE -->
             <div id="marioStageContainer" class="d-none text-center py-2">
+                <!-- Mario Top HUD Bar -->
                 <div class="row align-items-center g-2 mb-3 px-2">
-                    <div class="col-12 col-md-5">
-                        <div class="progress rounded-pill bg-dark border border-warning shadow-sm" style="height: 24px;">
-                            <div id="marioStaminaBar" class="progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%; font-size:0.85rem;">
-                                ⚡ STAMINA 100%
+                    <div class="col-12 col-md-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="small fw-bold text-warning text-nowrap"><i class="bi bi-lightning-charge-fill"></i> Stamina:</span>
+                            <div class="progress rounded-pill bg-dark border border-warning flex-grow-1 shadow-sm" style="height: 22px;">
+                                <div id="marioStaminaBar" class="progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%; font-size:0.82rem;">
+                                    100%
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3 text-start text-md-center">
-                        <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold fs-6 shadow-sm">
+                    <div class="col-6 col-md-3 text-center">
+                        <span class="badge bg-danger bg-opacity-75 text-white rounded-pill px-3 py-2 fw-bold small shadow-sm border border-danger border-opacity-50">
+                            🚩 Jarak: <span id="marioDistVal">0</span>m / <span id="marioTargetVal">120</span>m
+                        </span>
+                    </div>
+                    <div class="col-6 col-md-2 text-center">
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold small shadow-sm">
                             🪙 <span id="marioCoinVal">0</span> Coins
                         </span>
                     </div>
-                    <div class="col-6 col-md-4 text-end">
-                        <button type="button" class="btn btn-warning rounded-pill px-4 py-2 fw-bold text-dark fs-6 shadow hover-scale" onclick="window.GameEngine.marioJump()">
+                    <div class="col-12 col-md-3 text-end d-flex gap-2 justify-content-end">
+                        <button type="button" id="btnMarioJumpAction" class="btn btn-warning rounded-pill px-4 py-2 fw-bold text-dark fs-6 shadow hover-scale w-100 w-md-auto" onclick="window.GameEngine.marioJump()">
                             🦘 LOMPAT (SPASI)
                         </button>
                     </div>
                 </div>
-                <div class="position-relative overflow-hidden rounded-4 border border-secondary shadow-lg">
-                    <canvas id="marioCanvas" width="800" height="320" class="w-100 h-auto rounded-4" style="background:#5c94fc; max-height:360px;"></canvas>
+
+                <!-- Mario Retro Game Canvas Screen -->
+                <div class="position-relative overflow-hidden rounded-4 border border-warning border-opacity-50 shadow-2xl mx-auto" style="max-width: 960px;">
+                    <canvas id="marioCanvas" width="800" height="320" class="w-100 h-auto rounded-4 d-block" style="background:#3b82f6; max-height:380px; cursor: pointer;"></canvas>
+                    
+                    <!-- Floating Mobile Jump Button Overlay -->
+                    <div class="position-absolute bottom-0 end-0 p-3 d-md-none" style="z-index: 10;">
+                        <button type="button" class="btn btn-warning rounded-circle shadow-lg d-flex align-items-center justify-content-center" style="width: 62px; height: 62px; font-size: 1.5rem;" onclick="window.GameEngine.marioJump()">
+                            🦘
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Instructional Badges & Pro-Tips -->
+                <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 gap-md-3 mt-3 text-white-50 small">
+                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-3 py-2 rounded-pill">
+                        🎮 <strong>Kontrol:</strong> Spasi / Panah Atas / Klik Layar = Lompat (Bisa Double Jump! 🦘)
+                    </span>
+                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-3 py-2 rounded-pill">
+                        🍄 <strong>Injak Jamur Goomba:</strong> Lompat ke atas musuh untuk Stomp +50 Poin & Combo!
+                    </span>
+                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-3 py-2 rounded-pill">
+                        ❓ <strong>Balok Misteri:</strong> Sundul balok <strong>'?'</strong> dari bawah untuk Koin & Star Power!
+                    </span>
                 </div>
             </div>
 
