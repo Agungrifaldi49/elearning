@@ -230,6 +230,8 @@ window.GameEngine = {
         correctCount: 0,
         coins: 0,
         stamina: 100,
+        stageTimeLeft: <?= (int)($game['durasi_per_soal'] ?: 30) ?>,
+        marioDamageCooldown: 0,
         startTime: 0,
         timerInterval: null,
         marioLoopInterval: null,
@@ -398,7 +400,17 @@ window.GameEngine = {
 
     startMarioRun: function() {
         this.state.isMarioRunning = true;
-        this.updateStaminaHUD(this.state.stamina || 100);
+
+        const totalDuration = this.data.timerDuration || 30;
+        if (typeof this.state.stageTimeLeft === 'undefined' || this.state.stageTimeLeft <= 0) {
+            this.state.stageTimeLeft = totalDuration;
+        }
+
+        const curSec = Math.max(0, Math.ceil(this.state.stageTimeLeft));
+        const curPct = Math.max(0, Math.min(100, (this.state.stageTimeLeft / totalDuration) * 100));
+        if (this.updateStageTimerHUD) {
+            this.updateStageTimerHUD(curSec, curPct);
+        }
 
         if (!this.state.marioEntities || !this.state.marioEntities.goombas || this.state.marioEntities.goombas.length === 0) {
             this.resetMarioWorld();
@@ -525,18 +537,28 @@ window.GameEngine = {
         this.state.bgOffset += currentSpeed;
         this.state.marioDistance += (currentSpeed * 0.08);
 
-        // Running energy consumption
-        this.state.stamina -= (isStarActive ? 0.08 : 0.20);
-        if (this.state.stamina <= 0) {
-            this.state.stamina = 0;
-            this.updateStaminaHUD(0);
-            this.triggerMarioQuestionCheckpoint('stamina_empty');
-            return;
+        // Hitung mundur Durasi Timer per Soal (Detik) sesuai pengaturan game
+        const totalDuration = this.data.timerDuration || 30;
+        if (typeof this.state.stageTimeLeft === 'undefined' || this.state.stageTimeLeft <= 0) {
+            this.state.stageTimeLeft = totalDuration;
         }
-        this.updateStaminaHUD(this.state.stamina);
 
-        // Spawn flagpole when reaching distance checkpoint
-        if (this.state.marioDistance >= this.state.marioNextCheckpoint && !ents.flagpole) {
+        // Mario Damage Cooldown Timer (flicker kebal setelah terkena musuh)
+        if (this.state.marioDamageCooldown > 0) {
+            this.state.marioDamageCooldown--;
+        }
+
+        // Kurangi waktu secara presisi 1/60 detik per frame
+        this.state.stageTimeLeft -= (1 / 60);
+        const remSec = Math.max(0, Math.ceil(this.state.stageTimeLeft));
+        const timerPct = Math.max(0, Math.min(100, (this.state.stageTimeLeft / totalDuration) * 100));
+        
+        if (this.updateStageTimerHUD) {
+            this.updateStageTimerHUD(remSec, timerPct);
+        }
+
+        // Munculkan Gerbang Bendera Checkpoint saat waktu tersisa 2.5 detik
+        if (this.state.stageTimeLeft <= 2.5 && !ents.flagpole) {
             ents.flagpole = { x: 840, reached: false };
         }
 
@@ -546,14 +568,22 @@ window.GameEngine = {
             if (!ents.flagpole.reached && ents.flagpole.x <= this.state.marioX + 24) {
                 ents.flagpole.reached = true;
                 this.playSound('powerup');
-                this.addPopup('🏁 CHECKPOINT TERCAPAI!', this.state.marioX, this.state.marioY - 25, '#ffd166');
+                this.addPopup('🏁 GERBANG CHECKPOINT! 🌟', this.state.marioX, this.state.marioY - 25, '#ffd166');
                 setTimeout(() => {
                     ents.flagpole = null;
-                    this.state.marioNextCheckpoint += 120;
                     this.triggerMarioQuestionCheckpoint('checkpoint_reached');
-                }, 400);
+                }, 350);
                 return;
             }
+        }
+
+        // Tepat ketika Durasi Timer per Soal (Detik) HABIS: munculkan tantangan kuis checkpoint!
+        if (this.state.stageTimeLeft <= 0) {
+            this.state.stageTimeLeft = 0;
+            if (this.updateStageTimerHUD) this.updateStageTimerHUD(0, 0);
+            this.playSound('powerup');
+            this.triggerMarioQuestionCheckpoint('checkpoint_reached');
+            return;
         }
 
         // Update Goombas
@@ -604,18 +634,24 @@ window.GameEngine = {
                         this.createSparkles(g.x + 15, g.y + 15, 12);
                         this.updateHUD();
                     } else {
-                        // Player takes damage!
+                        // Jika Mario sedang dalam masa flicker kebal (damage cooldown), abaikan
+                        if (this.state.marioDamageCooldown > 0) {
+                            continue;
+                        }
+
+                        // Player takes damage: kurangi nyawa tapi TETAP LANJUT LARI sampai waktu habis!
+                        this.state.marioDamageCooldown = 90; // 1.5 detik kebal berkedip
                         this.state.screenShake = 16;
-                        this.playSound('wrong');
+                        this.playSound('bump');
                         this.state.lives--;
+                        this.state.combo = 0;
+                        this.addPopup('OUCH! -1 ❤️', this.state.marioX, this.state.marioY - 20, '#ef4444');
                         this.updateHUD();
                         g.isBlasted = true;
                         g.blastedVy = -10;
+
                         if (this.state.lives <= 0) {
                             this.endGame();
-                            return;
-                        } else {
-                            this.triggerMarioQuestionCheckpoint('obstacle_hit');
                             return;
                         }
                     }
@@ -1109,6 +1145,13 @@ window.GameEngine = {
 
         ctx.save();
 
+        // Invulnerability Damage Blink
+        if (this.state.marioDamageCooldown > 0) {
+            if (Math.floor(this.state.marioDamageCooldown / 6) % 2 === 0) {
+                ctx.globalAlpha = 0.35;
+            }
+        }
+
         // Star Power Rainbow Aura & Motion Blur
         if (isStarActive) {
             const hue = (Date.now() / 4) % 360;
@@ -1234,17 +1277,18 @@ window.GameEngine = {
 
         // 15. In-Canvas HUD Elements
         ctx.save();
-        // Top-left Distance & Stage Pill
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+        // Top-left Stage Countdown Timer & Distance
+        const stageRemSec = Math.max(0, Math.ceil(this.state.stageTimeLeft || (this.data.timerDuration || 30)));
+        ctx.fillStyle = stageRemSec <= 5 ? 'rgba(239, 68, 68, 0.88)' : 'rgba(15, 23, 42, 0.82)';
         ctx.beginPath();
-        ctx.roundRect(16, 14, 175, 28, [14]);
+        ctx.roundRect(16, 14, 210, 28, [14]);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = stageRemSec <= 5 ? '#ef4444' : 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = 1.5;
         ctx.stroke();
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 12px sans-serif';
-        ctx.fillText(`🚩 Jarak: ${Math.round(this.state.marioDistance)}m`, 28, 32);
+        ctx.fillText(`⏱️ Gerbang Soal: ${stageRemSec}s (${Math.round(this.state.marioDistance)}m)`, 24, 32);
 
         // Center Star Power Status Banner
         if (isStarActive) {
@@ -1321,17 +1365,11 @@ window.GameEngine = {
         const optionsEl = document.getElementById('marioModalOptions');
 
         let checkpointTitle = `TANTANGAN KUIS CHECKPOINT MARIO`;
-        let subTitle = `🏁 CHECKPOINT GERBANG BINTANG #${this.state.currentIdx + 1} (${this.state.currentIdx + 1}/${this.data.questions.length})`;
+        let subTitle = `🏁 WAKTU HABIS! GERBANG CHECKPOINT #${this.state.currentIdx + 1} (${this.state.currentIdx + 1}/${this.data.questions.length})`;
         
-        if (reason === 'obstacle_hit') {
-            checkpointTitle = `⚠️ RESCUE DARURAT MARIO!`;
-            subTitle = `Tabrakan Musuh! Jawab Benar Untuk Pulihkan Mario & Star Power!`;
-        } else if (reason === 'stamina_empty') {
-            checkpointTitle = `⚡ STAMINA HABIS! ISI ULANG ENERGI!`;
-            subTitle = `Kehabisan Stamina! Jawab Benar Untuk Isi Penuh Stamina 100%!`;
-        } else if (reason === 'checkpoint_reached') {
-            checkpointTitle = `🏁 CHECKPOINT GERBANG BINTANG #${this.state.currentIdx + 1}!`;
-            subTitle = `Pintu Bintang Terbuka! Jawab Benar Untuk Membuka Akses & Bonus Koin!`;
+        if (reason === 'checkpoint_reached') {
+            checkpointTitle = `🏁 GERBANG CHECKPOINT TERCAPAI!`;
+            subTitle = `Waktu stage selesai! Jawab tantangan kuis #${this.state.currentIdx + 1} dari ${this.data.questions.length} untuk melanjutkan petualangan!`;
         }
 
         if (titleEl) titleEl.textContent = checkpointTitle;
@@ -1372,24 +1410,18 @@ window.GameEngine = {
             if (this.state.combo > this.state.maxCombo) this.state.maxCombo = this.state.combo;
             this.state.correctCount++;
 
-            // Refill stamina 100% full
-            this.state.stamina = 100;
-            this.updateStaminaHUD(100);
-
-            // Grant 7 seconds of invincible Star Power!
-            this.state.marioInvincibleTimer = 60 * 7;
+            // Berikan 6 detik Super Star Power kebal & cepat!
+            this.state.marioInvincibleTimer = 60 * 6;
 
             const pointsGained = (parseInt(q.poin) || 10) + 25;
             this.state.score += pointsGained;
             this.updateHUD();
 
-            this.showFeedback(true, '🎉 JAWABAN BENAR!', '🌟 SUPER STAR POWER AKTIF! MARIO KEBAL & STAMINA 100% PENUH! 🚀');
+            this.showFeedback(true, '🎉 JAWABAN BENAR!', '🌟 SUPER STAR POWER AKTIF! KEBAL & BONUS POIN! 🚀');
         } else {
             this.playSound('wrong');
             this.state.combo = 0;
             this.state.lives--;
-            this.state.stamina = 35;
-            this.updateStaminaHUD(35);
             this.updateHUD();
 
             this.showFeedback(false, '❌ JAWABAN KURANG TEPAT', `Kunci Jawaban: Opsi ${(q.kunci_jawaban || 'A').toUpperCase()}`);
@@ -1412,6 +1444,9 @@ window.GameEngine = {
             if (this.state.currentIdx >= this.data.questions.length || this.state.lives <= 0) {
                 this.endGame();
             } else {
+                // Reset waktu stage ke Durasi Timer per Soal untuk soal berikutnya!
+                this.state.stageTimeLeft = this.data.timerDuration || 30;
+                this.state.marioDamageCooldown = 0;
                 this.startMarioRun();
             }
         }, 1400);
@@ -1609,17 +1644,19 @@ window.GameEngine = {
         }
     },
 
-    updateStaminaHUD: function(val) {
-        const pct = Math.max(0, Math.min(100, Math.round(val)));
+    updateStageTimerHUD: function(remSec, pct) {
+        const valPct = Math.max(0, Math.min(100, Math.round(pct)));
         ['marioStaminaBar', 'marioStaminaBarMobile'].forEach(id => {
             const bar = document.getElementById(id);
             if (bar) {
-                bar.style.width = pct + '%';
-                bar.textContent = `${pct}%`;
-                if (pct < 30) {
+                bar.style.width = valPct + '%';
+                bar.textContent = `${remSec}s`;
+                if (remSec <= 5) {
                     bar.className = 'progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated';
-                } else {
+                } else if (remSec <= 10) {
                     bar.className = 'progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated';
+                } else {
+                    bar.className = 'progress-bar bg-info text-dark fw-bold progress-bar-striped progress-bar-animated';
                 }
             }
         });
@@ -1634,6 +1671,12 @@ window.GameEngine = {
             const el = document.getElementById(id);
             if (el) el.textContent = target;
         });
+    },
+
+    updateStaminaHUD: function(val) {
+        const totalDuration = this.data.timerDuration || 30;
+        const remSec = Math.round((val / 100) * totalDuration);
+        this.updateStageTimerHUD(remSec, val);
     },
 
     // Synthetic Retro 8-Bit Sound Synthesizer (Web Audio API)
@@ -2048,9 +2091,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="col-4">
                         <div class="p-2 p-md-3 bg-white bg-opacity-10 rounded-3 rounded-md-4 border border-white border-opacity-10 text-center h-100">
                             <?php if ($gameType === 'mario_run'): ?>
-                                <div class="fs-4 fs-md-3 mb-1">🍄 ⚡</div>
-                                <small class="text-white-50 d-block" style="font-size: 0.68rem;">Stamina</small>
-                                <span class="fw-bold text-warning d-block" style="font-size: 0.75rem;">Isi 100%</span>
+                                <div class="fs-4 fs-md-3 mb-1">🍄 🏃</div>
+                                <small class="text-white-50 d-block" style="font-size: 0.68rem;">Lari Gerbang</small>
+                                <span class="fw-bold text-warning d-block" style="font-size: 0.75rem;">Sesuai Timer</span>
                             <?php elseif ($gameType === 'spin_wheel'): ?>
                                 <div class="fs-4 fs-md-3 mb-1">🎡 🌟</div>
                                 <small class="text-white-50 d-block" style="font-size: 0.68rem;">Roda</small>
@@ -2104,12 +2147,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 </div>
 
-                <!-- 📱 Mobile Compact Sub-Bar: Stamina, Jarak & Koin (Tinggi Hanya ~24px) -->
+                <!-- 📱 Mobile Compact Sub-Bar: Timer Soal, Jarak & Koin (Tinggi Hanya ~24px) -->
                 <div class="d-flex d-md-none justify-content-between align-items-center gap-2 mb-1.5 px-1">
                     <div class="d-flex align-items-center gap-1 flex-grow-1" style="min-width: 105px;">
-                        <span class="text-warning fw-bold" style="font-size: 0.72rem;"><i class="bi bi-lightning-charge-fill"></i></span>
+                        <span class="text-warning fw-bold" style="font-size: 0.72rem;" title="Timer Menuju Gerbang Checkpoint"><i class="bi bi-stopwatch-fill"></i></span>
                         <div class="progress rounded-pill bg-dark border border-warning flex-grow-1 shadow-sm" style="height: 13px;">
-                            <div id="marioStaminaBarMobile" class="progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%; font-size: 0.65rem; line-height: 13px;">100%</div>
+                            <div id="marioStaminaBarMobile" class="progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%; font-size: 0.65rem; line-height: 13px;">--s</div>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-1">
@@ -2126,10 +2169,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="d-none d-md-flex row align-items-center g-2 mb-3 px-2">
                     <div class="col-12 col-md-4">
                         <div class="d-flex align-items-center gap-2">
-                            <span class="small fw-bold text-warning text-nowrap"><i class="bi bi-lightning-charge-fill"></i> Stamina:</span>
+                            <span class="small fw-bold text-warning text-nowrap"><i class="bi bi-stopwatch-fill"></i> Timer Menuju Gerbang:</span>
                             <div class="progress rounded-pill bg-dark border border-warning flex-grow-1 shadow-sm" style="height: 22px;">
                                 <div id="marioStaminaBar" class="progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%; font-size:0.82rem;">
-                                    100%
+                                    --s
                                 </div>
                             </div>
                         </div>
