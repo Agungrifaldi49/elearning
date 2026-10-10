@@ -1518,6 +1518,8 @@ window.GameEngine = {
         if (this.state.racingLoopInterval) clearInterval(this.state.racingLoopInterval);
 
         // Reset racing parameters
+        const totalDuration = this.data.timerDuration || 30;
+        this.state.racingTimeLeft = totalDuration;
         this.state.racingLane = 1;
         this.state.racingCarX = 400;
         this.state.racingTargetX = 400;
@@ -1525,8 +1527,6 @@ window.GameEngine = {
         this.state.racingBaseSpeed = 11;
         this.state.racingBoostTimer = 0;
         this.state.racingDistance = 0;
-        this.state.racingGateStep = 100;
-        this.state.racingNextGateDist = (this.state.currentIdx + 1) * this.state.racingGateStep;
         this.state.racingIsAtGate = false;
         this.state.racingCrashShakeTimer = 0;
         this.state.racingRoadOffset = 0;
@@ -1549,6 +1549,11 @@ window.GameEngine = {
     updateRacingPhysics: function() {
         if (this.state.isEnded) return;
 
+        const totalDuration = this.data.timerDuration || 30;
+        if (typeof this.state.racingTimeLeft === 'undefined' || this.state.racingTimeLeft <= 0) {
+            this.state.racingTimeLeft = totalDuration;
+        }
+
         // Smooth steering interpolation towards target lane X
         this.state.racingCarX += (this.state.racingTargetX - this.state.racingCarX) * 0.18;
 
@@ -1570,21 +1575,17 @@ window.GameEngine = {
 
         this.state.racingSpeed = currentSpeed;
 
-        // Distance progression
+        // Distance progression & countdown timer presisi 1/60 detik per frame
         if (!this.state.racingIsAtGate) {
-            this.state.racingDistance += (currentSpeed * 0.12);
+            this.state.racingDistance += (currentSpeed * 0.15);
             this.state.racingRoadOffset += currentSpeed;
+            this.state.racingTimeLeft -= (1 / 60);
         }
 
-        // Next barrier gate distance
-        const nextGateDist = (this.state.currentIdx + 1) * this.state.racingGateStep;
-        this.state.racingNextGateDist = nextGateDist;
-        const distLeft = nextGateDist - this.state.racingDistance;
-
-        // Cek jika mobil mencapai gerbang penghalang di setiap jarak [X] meter
-        if (distLeft <= 0 && !this.state.racingIsAtGate && this.state.currentIdx < this.data.questions.length) {
+        // Tepat ketika durasi waktu soal per detik HABIS (atau <= 0): munculkan gerbang penghalang!
+        if (this.state.racingTimeLeft <= 0 && !this.state.racingIsAtGate && this.state.currentIdx < this.data.questions.length) {
+            this.state.racingTimeLeft = 0;
             this.state.racingIsAtGate = true;
-            this.state.racingDistance = nextGateDist;
             this.playSound('bump');
             this.openBarrierGateQuestion();
         }
@@ -1793,6 +1794,9 @@ window.GameEngine = {
             const overlay = document.getElementById('racingBarrierOverlay');
             if (overlay) overlay.classList.add('d-none');
 
+            // Reset durasi waktu per soal untuk balapan menuju soal berikutnya!
+            this.state.racingTimeLeft = this.data.timerDuration || 30;
+
             // Karakter lanjut melaju ke soal berikutnya
             this.state.racingIsAtGate = false;
             this.state.currentIdx++;
@@ -1836,11 +1840,11 @@ window.GameEngine = {
     },
 
     updateRacingHUD: function() {
+        const totalDuration = this.data.timerDuration || 30;
         const speedKmh = Math.round(this.state.racingSpeed * 6.5);
         const dist = Math.round(this.state.racingDistance);
-        const targetGate = Math.round(this.state.racingNextGateDist);
-        const prevGate = (this.state.currentIdx) * this.state.racingGateStep;
-        const gateProgress = Math.max(0, Math.min(100, Math.round(((dist - prevGate) / this.state.racingGateStep) * 100)));
+        const remSec = Math.max(0, Math.ceil(this.state.racingTimeLeft || 0));
+        const progressPct = Math.max(0, Math.min(100, Math.round(((totalDuration - (this.state.racingTimeLeft || 0)) / totalDuration) * 100)));
 
         const isBoost = this.state.racingBoostTimer > 0;
 
@@ -1864,8 +1868,15 @@ window.GameEngine = {
         ['racingGateProgressBar', 'racingGateProgressBarMobile'].forEach(id => {
             const bar = document.getElementById(id);
             if (bar) {
-                bar.style.width = gateProgress + '%';
-                bar.textContent = `${dist}m / ${targetGate}m`;
+                bar.style.width = progressPct + '%';
+                bar.textContent = `⏱️ ${remSec}s Menuju Gerbang (${dist}m)`;
+                if (remSec <= 4) {
+                    bar.className = 'progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated';
+                } else if (remSec <= 8) {
+                    bar.className = 'progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated';
+                } else {
+                    bar.className = 'progress-bar bg-info text-dark fw-bold progress-bar-striped progress-bar-animated';
+                }
             }
         });
 
@@ -2041,10 +2052,9 @@ window.GameEngine = {
         }
 
         // 6. GERBANG PENGHALANG (Laser Barrier Gate)
-        const nextGateDist = this.state.racingNextGateDist;
-        const distToGate = Math.max(0, nextGateDist - this.state.racingDistance);
-        if (distToGate <= 75 || this.state.racingIsAtGate) {
-            const gateT = this.state.racingIsAtGate ? 1 : Math.max(0, 1 - (distToGate / 75));
+        const timeLeft = typeof this.state.racingTimeLeft !== 'undefined' ? this.state.racingTimeLeft : 30;
+        if (timeLeft <= 3.5 || this.state.racingIsAtGate) {
+            const gateT = this.state.racingIsAtGate ? 1 : Math.max(0, 1 - (timeLeft / 3.5));
             const gy = 100 + Math.pow(gateT, 1.5) * 140; // Moves down to y = 240
             const gw = 180 + Math.pow(gateT, 1.5) * 440; // Expands across the road
             const gx = 400 - gw * 0.5;
@@ -2074,7 +2084,7 @@ window.GameEngine = {
             ctx.fillStyle = '#ffffff';
             ctx.font = `bold ${Math.max(8, Math.round(11 * gateT))}px sans-serif`;
             ctx.textAlign = 'center';
-            ctx.fillText(`🛑 GERBANG SOAL #${this.state.currentIdx + 1} (${Math.round(distToGate)}m)`, 400, gy - 45);
+            ctx.fillText(`🛑 GERBANG SOAL #${this.state.currentIdx + 1} (⏱️ ${Math.ceil(timeLeft)}s)`, 400, gy - 45);
 
             // Pulsing Red Laser Energy Grid Barrier
             const laserAlpha = 0.5 + Math.sin(Date.now() / 100) * 0.35;
@@ -2234,14 +2244,15 @@ window.GameEngine = {
         }
 
         // 11. IN-CANVAS HUD OVERLAY BADGE
+        const remSecCanvas = Math.max(0, Math.ceil(this.state.racingTimeLeft || 0));
         ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.roundRect(14, 14, 210, 32, 16);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.roundRect(14, 14, 235, 32, 16);
         ctx.fill();
         ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(`🚩 Gerbang: ${Math.round(this.state.racingDistance)}m / ${this.state.racingNextGateDist}m`, 26, 34);
+        ctx.fillText(`⏱️ Gerbang: ${remSecCanvas}s (${Math.round(this.state.racingDistance)}m)`, 24, 34);
 
         if (this.state.racingBoostTimer > 0) {
             ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
@@ -3075,12 +3086,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 </div>
 
-                <!-- 📱 Mobile Compact Sub-Bar: Jarak Menuju Gerbang, Status Nitro & Koin -->
+                <!-- 📱 Mobile Compact Sub-Bar: Timer Menuju Gerbang, Status Nitro & Koin -->
                 <div class="d-flex d-md-none justify-content-between align-items-center gap-2 mb-1.5 px-1">
                     <div class="d-flex align-items-center gap-1 flex-grow-1" style="min-width: 110px;">
-                        <span class="text-danger fw-bold" style="font-size: 0.72rem;"><i class="bi bi-flag-fill"></i></span>
+                        <span class="text-danger fw-bold" style="font-size: 0.72rem;" title="Timer Menuju Gerbang Checkpoint"><i class="bi bi-stopwatch-fill"></i></span>
                         <div class="progress rounded-pill bg-dark border border-danger flex-grow-1 shadow-sm" style="height: 13px;">
-                            <div id="racingGateProgressBarMobile" class="progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; font-size: 0.65rem; line-height: 13px;">0m</div>
+                            <div id="racingGateProgressBarMobile" class="progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; font-size: 0.65rem; line-height: 13px;">--s</div>
                         </div>
                     </div>
                     <div class="d-flex align-items-center gap-1">
@@ -3097,10 +3108,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="d-none d-md-flex row align-items-center g-2 mb-3 px-2">
                     <div class="col-12 col-md-4">
                         <div class="d-flex align-items-center gap-2">
-                            <span class="small fw-bold text-danger text-nowrap"><i class="bi bi-flag-fill"></i> Menuju Gerbang:</span>
+                            <span class="small fw-bold text-danger text-nowrap"><i class="bi bi-stopwatch-fill"></i> Timer Menuju Gerbang:</span>
                             <div class="progress rounded-pill bg-dark border border-danger flex-grow-1 shadow-sm" style="height: 22px;">
                                 <div id="racingGateProgressBar" class="progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; font-size: 0.82rem;">
-                                    0m / 100m
+                                    --s
                                 </div>
                             </div>
                         </div>
