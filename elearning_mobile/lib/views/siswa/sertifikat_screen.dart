@@ -636,7 +636,12 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
             ),
             SizedBox(width: 12),
-            Text('Menyiapkan dan mengunduh berkas PDF Sertifikat Landscape...'),
+            Expanded(
+              child: Text(
+                'Menyiapkan dan mengunduh berkas PDF Sertifikat Landscape...',
+                style: TextStyle(color: Colors.white, fontSize: 13),
+              ),
+            ),
           ],
         ),
         duration: Duration(seconds: 2),
@@ -695,7 +700,12 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
             ),
             SizedBox(width: 12),
-            Text('Menyiapkan gambar sertifikat HD Landscape...'),
+            Expanded(
+              child: Text(
+                'Menyiapkan gambar sertifikat HD Landscape...',
+                style: TextStyle(color: Colors.white, fontSize: 13),
+              ),
+            ),
           ],
         ),
         duration: Duration(seconds: 2),
@@ -1014,7 +1024,12 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
           children: [
             const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
             const SizedBox(width: 8),
-            Text('No. Sertifikat disalin: $certNumber'),
+            Expanded(
+              child: Text(
+                'No. Sertifikat disalin: $certNumber',
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+              ),
+            ),
           ],
         ),
         backgroundColor: const Color(0xFF0F172A),

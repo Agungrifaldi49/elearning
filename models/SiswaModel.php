@@ -6,13 +6,28 @@ require_once ROOT_PATH . 'models/BaseModel.php';
 
 class SiswaModel extends BaseModel {
 
-    public function getAll($kelasId = null, $jurusanId = null, $keyword = null, $jenisKelamin = null) {
+    public static function ensureStatusColumn($db) {
+        static $statusEnsured = false;
+        if ($statusEnsured) return;
+        $statusEnsured = true;
+        try {
+            $cols = $db->query("SHOW COLUMNS FROM siswa LIKE 'status'")->fetchAll();
+            if (empty($cols)) {
+                $db->exec("ALTER TABLE `siswa` ADD COLUMN `status` ENUM('aktif', 'alumni', 'drop') DEFAULT 'aktif' AFTER `alamat`");
+            }
+        } catch (\Throwable $e) {}
+    }
+
+    public function getAll($kelasId = null, $jurusanId = null, $keyword = null, $jenisKelamin = null, $status = null) {
+        self::ensureStatusColumn($this->db);
         $sql = "
             SELECT s.*, 
+                   COALESCE(s.status, 'aktif') as status,
                    COALESCE(k.nama_kelas, 'Belum Diatur') as nama_kelas, 
                    COALESCE(j.nama_jurusan, 'Belum Diatur') as nama_jurusan, 
                    COALESCE(u.username, '-') as username, 
                    COALESCE(u.email, '-') as email, 
+                   COALESCE(u.status, 'active') as user_status,
                    u.avatar 
             FROM siswa s 
             LEFT JOIN users u ON s.user_id = u.id 
@@ -37,6 +52,12 @@ class SiswaModel extends BaseModel {
             $params[] = strtoupper($jenisKelamin);
         }
 
+        if ($status && in_array(strtolower($status), ['aktif', 'alumni', 'drop'])) {
+            $sql .= " AND (s.status = ? OR (? = 'aktif' AND s.status IS NULL))";
+            $params[] = strtolower($status);
+            $params[] = strtolower($status);
+        }
+
         if ($keyword && trim($keyword) !== '') {
             $sql .= " AND (s.nisn LIKE ? OR s.nis LIKE ? OR s.nama_lengkap LIKE ? OR u.username LIKE ? OR u.email LIKE ?)";
             $term = '%' . trim($keyword) . '%';
@@ -54,8 +75,9 @@ class SiswaModel extends BaseModel {
     }
 
     public function getById($id) {
+        self::ensureStatusColumn($this->db);
         $stmt = $this->db->prepare("
-            SELECT s.*, k.nama_kelas, k.tingkat, j.nama_jurusan, u.username, u.email, u.avatar 
+            SELECT s.*, COALESCE(s.status, 'aktif') as status, k.nama_kelas, k.tingkat, j.nama_jurusan, u.username, u.email, COALESCE(u.status, 'active') as user_status, u.avatar 
             FROM siswa s 
             LEFT JOIN users u ON s.user_id = u.id 
             LEFT JOIN kelas k ON s.kelas_id = k.id 
@@ -527,6 +549,8 @@ class SiswaModel extends BaseModel {
             }
         }
 
+        $status = !empty($data['status']) && in_array(strtolower($data['status']), ['aktif', 'alumni', 'drop']) ? strtolower($data['status']) : ($siswa['status'] ?? 'aktif');
+        self::ensureStatusColumn($this->db);
         self::ensureNoOrtuColumn($this->db);
 
         $this->db->beginTransaction();
@@ -534,39 +558,33 @@ class SiswaModel extends BaseModel {
             try {
                 $stmtSiswa = $this->db->prepare("
                     UPDATE siswa 
-                    SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ?, alamat = ? 
+                    SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ?, alamat = ?, status = ? 
                     WHERE id = ?
                 ");
-                $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $noOrtu, $alamat, $id]);
+                $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $noOrtu, $alamat, $status, $id]);
             } catch (\Throwable $eSiswa) {
-                // Self-healing jika kolom no_ortu belum ada di database ini (error 1054)
-                if (strpos($eSiswa->getMessage(), 'no_ortu') !== false || $eSiswa->getCode() == '42S22') {
-                    try {
-                        $this->db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL AFTER `no_telepon`");
-                    } catch (\Throwable $eAlter) {
-                        try {
-                            $this->db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL");
-                        } catch (\Throwable $eIgn) {}
-                    }
+                // Self-healing jika kolom no_ortu atau status belum ada di database ini
+                try {
+                    $this->db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL AFTER `no_telepon`");
+                } catch (\Throwable $eAlter1) {}
+                try {
+                    $this->db->exec("ALTER TABLE `siswa` ADD COLUMN `status` ENUM('aktif', 'alumni', 'drop') DEFAULT 'aktif' AFTER `alamat`");
+                } catch (\Throwable $eAlter2) {}
 
-                    try {
-                        $stmtSiswa = $this->db->prepare("
-                            UPDATE siswa 
-                            SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ?, alamat = ? 
-                            WHERE id = ?
-                        ");
-                        $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $noOrtu, $alamat, $id]);
-                    } catch (\Throwable $eRetry) {
-                        // Fallback update tanpa no_ortu jika DDL dibatasi
-                        $stmtSiswa = $this->db->prepare("
-                            UPDATE siswa 
-                            SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, alamat = ? 
-                            WHERE id = ?
-                        ");
-                        $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $alamat, $id]);
-                    }
-                } else {
-                    throw $eSiswa;
+                try {
+                    $stmtSiswa = $this->db->prepare("
+                        UPDATE siswa 
+                        SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, no_ortu = ?, alamat = ?, status = ? 
+                        WHERE id = ?
+                    ");
+                    $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $noOrtu, $alamat, $status, $id]);
+                } catch (\Throwable $eRetry) {
+                    $stmtSiswa = $this->db->prepare("
+                        UPDATE siswa 
+                        SET nis = ?, nisn = ?, nama_lengkap = ?, kelas_id = ?, jurusan_id = ?, jenis_kelamin = ?, no_telepon = ?, alamat = ? 
+                        WHERE id = ?
+                    ");
+                    $stmtSiswa->execute([$nis, $nisn, $nama, $kelasId, $jurusanId, $jk, $noTelp, $alamat, $id]);
                 }
             }
 
@@ -590,6 +608,11 @@ class SiswaModel extends BaseModel {
                 } else {
                     $stmtUser = $this->db->prepare("UPDATE users SET full_name = ? WHERE id = ?");
                     $stmtUser->execute([$nama, $userId]);
+                }
+
+                if (!empty($data['user_status']) && in_array($data['user_status'], ['active', 'inactive'])) {
+                    $stmtUserStatus = $this->db->prepare("UPDATE users SET status = ? WHERE id = ?");
+                    $stmtUserStatus->execute([$data['user_status'], $userId]);
                 }
 
                 if (!empty($data['password'])) {
@@ -894,6 +917,42 @@ class SiswaModel extends BaseModel {
             $stmt->execute([(int)$newKelasId]);
         }
         return $stmt->rowCount();
+    }
+
+    public function bulkUpdateStatus($siswaIds, $newStatus, $deactivateUser = false, $targetKelasId = null) {
+        if (empty($siswaIds) || !is_array($siswaIds)) return 0;
+        if (!in_array($newStatus, ['aktif', 'alumni', 'drop'])) return 0;
+        self::ensureStatusColumn($this->db);
+        $ids = array_map('intval', $siswaIds);
+        $inClause = implode(',', $ids);
+
+        $this->db->beginTransaction();
+        try {
+            if ($targetKelasId && (int)$targetKelasId > 0) {
+                $sql = "UPDATE siswa SET status = ?, kelas_id = ? WHERE id IN ({$inClause})";
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute([$newStatus, (int)$targetKelasId]);
+            } else {
+                $sql = "UPDATE siswa SET status = ? WHERE id IN ({$inClause})";
+                $stmt = $this->db->prepare($sql);
+                $stmt->execute([$newStatus]);
+            }
+            $affected = $stmt->rowCount();
+
+            if ($deactivateUser) {
+                $userStatus = ($newStatus === 'alumni' || $newStatus === 'drop') ? 'inactive' : 'active';
+                $sqlUser = "UPDATE users SET status = ? WHERE id IN (SELECT user_id FROM siswa WHERE id IN ({$inClause}))";
+                $stmtU = $this->db->prepare($sqlUser);
+                $stmtU->execute([$userStatus]);
+            }
+
+            $this->db->commit();
+            return $affected;
+        } catch (\Throwable $e) {
+            $this->db->rollBack();
+            $this->lastError = $e->getMessage();
+            return 0;
+        }
     }
 
     public function bulkUpdateJurusan($siswaIds, $newJurusanId) {

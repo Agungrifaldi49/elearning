@@ -257,6 +257,8 @@ class AdminController {
                     'kelas_id' => (int)($_POST['kelas_id'] ?? 0),
                     'jurusan_id' => (int)($_POST['jurusan_id'] ?? 0),
                     'jenis_kelamin' => $_POST['jenis_kelamin'] ?? 'L',
+                    'status' => $_POST['status'] ?? 'aktif',
+                    'user_status' => $_POST['user_status'] ?? 'active',
                     'no_telepon' => Security::sanitize($_POST['no_telepon'] ?? ''),
                     'no_ortu' => $noOrtu,
                     'alamat' => Security::sanitize($_POST['alamat'] ?? '')
@@ -287,6 +289,18 @@ class AdminController {
                     FlashHelper::setSuccess("Berhasil mengubah jurusan {$cnt} siswa secara masal.");
                 } else {
                     FlashHelper::setError('Pilih minimal satu siswa dan pilih jurusan tujuan.');
+                }
+            } elseif ($action === 'bulk_update_status') {
+                $selectedSiswa = $_POST['selected_siswa'] ?? [];
+                $targetStatus = $_POST['target_status'] ?? 'alumni';
+                $deactivateUser = !empty($_POST['deactivate_user']);
+                $targetKelasId = !empty($_POST['target_kelas_id']) ? (int)$_POST['target_kelas_id'] : null;
+                if (!empty($selectedSiswa) && in_array($targetStatus, ['aktif', 'alumni', 'drop'])) {
+                    $cnt = $siswaModel->bulkUpdateStatus($selectedSiswa, $targetStatus, $deactivateUser, $targetKelasId);
+                    $statusLabel = $targetStatus === 'alumni' ? 'Alumni / Lulus' : ($targetStatus === 'drop' ? 'Drop Out' : 'Aktif Kembali');
+                    FlashHelper::setSuccess("Berhasil memperbarui status {$cnt} siswa menjadi {$statusLabel}.");
+                } else {
+                    FlashHelper::setError('Pilih minimal satu siswa dan pilih status tujuan yang valid.');
                 }
             } elseif ($action === 'bulk_delete') {
                 $selectedSiswa = $_POST['selected_siswa'] ?? [];
@@ -326,9 +340,10 @@ class AdminController {
         $selectedKelasId = isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] > 0 ? (int)$_GET['kelas_id'] : null;
         $selectedJurusanId = isset($_GET['jurusan_id']) && (int)$_GET['jurusan_id'] > 0 ? (int)$_GET['jurusan_id'] : null;
         $selectedJenisKelamin = isset($_GET['jk']) && in_array(strtoupper($_GET['jk']), ['L', 'P']) ? strtoupper($_GET['jk']) : null;
+        $selectedStatus = isset($_GET['status']) && in_array(strtolower($_GET['status']), ['aktif', 'alumni', 'drop']) ? strtolower($_GET['status']) : null;
         $searchKeyword = isset($_GET['q']) ? Security::sanitize($_GET['q']) : null;
 
-        $siswaList = $siswaModel->getAll($selectedKelasId, $selectedJurusanId, $searchKeyword, $selectedJenisKelamin);
+        $siswaList = $siswaModel->getAll($selectedKelasId, $selectedJurusanId, $searchKeyword, $selectedJenisKelamin, $selectedStatus);
         $kelasList = $academicModel->getKelas();
         $jurusanList = $academicModel->getJurusan();
 

@@ -36,7 +36,7 @@
             <form action="<?= BASE_URL ?>index.php" method="GET" id="autoFilterForm" class="row g-3 align-items-end">
                 <input type="hidden" name="url" value="admin/siswa">
 
-                <div class="col-md-4 col-12">
+                <div class="col-md-3 col-12">
                     <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search text-primary me-1"></i> Cari NISN / NIS / Nama</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
@@ -44,7 +44,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-3 col-6">
+                <div class="col-md-2 col-6">
                     <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-door-open-fill text-info me-1"></i> Filter Kelas</label>
                     <select name="kelas_id" class="form-select rounded-3" onchange="this.form.submit()">
                         <option value="">-- Semua Kelas --</option>
@@ -68,15 +68,25 @@
                     </select>
                 </div>
 
-                <div class="col-md-2 col-12">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-gender-ambiguous text-secondary me-1"></i> Jenis Kelamin</label>
+                <div class="col-md-2 col-6">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-mortarboard-fill text-success me-1"></i> Status</label>
+                    <select name="status" class="form-select rounded-3" onchange="this.form.submit()">
+                        <option value="">-- Semua Status --</option>
+                        <option value="aktif" <?= (isset($_GET['status']) && $_GET['status'] === 'aktif') ? 'selected' : '' ?>>🟢 Siswa Aktif</option>
+                        <option value="alumni" <?= (isset($_GET['status']) && $_GET['status'] === 'alumni') ? 'selected' : '' ?>>🎓 Alumni / Lulus</option>
+                        <option value="drop" <?= (isset($_GET['status']) && $_GET['status'] === 'drop') ? 'selected' : '' ?>>🔴 Drop Out / Keluar</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2 col-6">
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-gender-ambiguous text-secondary me-1"></i> JK</label>
                     <div class="d-flex gap-2">
                         <select name="jk" class="form-select rounded-3" onchange="this.form.submit()">
                             <option value="">-- Semua --</option>
-                            <option value="L" <?= (isset($_GET['jk']) && $_GET['jk'] === 'L') ? 'selected' : '' ?>>Laki-Laki (L)</option>
-                            <option value="P" <?= (isset($_GET['jk']) && $_GET['jk'] === 'P') ? 'selected' : '' ?>>Perempuan (P)</option>
+                            <option value="L" <?= (isset($_GET['jk']) && $_GET['jk'] === 'L') ? 'selected' : '' ?>>L</option>
+                            <option value="P" <?= (isset($_GET['jk']) && $_GET['jk'] === 'P') ? 'selected' : '' ?>>P</option>
                         </select>
-                        <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id']) || !empty($_GET['jk'])): ?>
+                        <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id']) || !empty($_GET['jk']) || !empty($_GET['status'])): ?>
                             <a href="<?= BASE_URL ?>index.php?url=admin/siswa" class="btn btn-outline-secondary rounded-3 px-3" title="Reset Filter">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                             </a>
@@ -111,7 +121,7 @@
         });
         </script>
 
-        <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id']) || !empty($_GET['jk']) || !empty($selectedKelas)): ?>
+        <?php if (!empty($_GET['q']) || !empty($_GET['kelas_id']) || !empty($_GET['jurusan_id']) || !empty($_GET['jk']) || !empty($_GET['status']) || !empty($selectedKelas)): ?>
             <div class="alert alert-primary border-0 rounded-4 shadow-sm mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:38px; height:38px;">
@@ -136,6 +146,9 @@
                                     foreach ($jurusanList as $j) { if ((int)$j['id'] === (int)$_GET['jurusan_id']) { $jurName = $j['nama_jurusan']; break; } }
                                 ?>
                                 Jurusan: <strong><?= htmlspecialchars($jurName) ?></strong> |
+                            <?php endif; ?>
+                            <?php if (!empty($_GET['status'])): ?>
+                                Status: <strong><?= $_GET['status'] === 'alumni' ? '🎓 Alumni / Lulus' : ($_GET['status'] === 'drop' ? '🔴 Drop Out' : '🟢 Siswa Aktif') ?></strong> |
                             <?php endif; ?>
                             <?php if (!empty($_GET['jk'])): ?>
                                 Gender: <strong><?= $_GET['jk'] === 'L' ? 'Laki-Laki' : 'Perempuan' ?></strong> |
@@ -168,6 +181,7 @@
                             <th>Nama Lengkap</th>
                             <th>Kelas</th>
                             <th>Jurusan</th>
+                            <th>Status</th>
                             <th>JK</th>
                             <th>No. Ortu (WA)</th>
                             <th class="text-center" style="width: 220px;">Aksi</th>
@@ -184,6 +198,18 @@
                                 <td class="fw-bold"><?= htmlspecialchars(Security::safeText($s['nama_lengkap'])) ?></td>
                                 <td><span class="badge bg-info text-dark"><?= htmlspecialchars($s['nama_kelas']) ?></span></td>
                                 <td><span class="badge bg-secondary"><?= htmlspecialchars($s['nama_jurusan']) ?></span></td>
+                                <td>
+                                    <?php if (($s['status'] ?? 'aktif') === 'alumni'): ?>
+                                        <span class="badge bg-secondary"><i class="bi bi-mortarboard-fill me-1"></i>Alumni</span>
+                                        <?php if (($s['user_status'] ?? 'active') === 'inactive'): ?>
+                                            <span class="badge bg-light text-muted border d-block mt-1" style="font-size:0.65rem;">Akun Nonaktif</span>
+                                        <?php endif; ?>
+                                    <?php elseif (($s['status'] ?? 'aktif') === 'drop'): ?>
+                                        <span class="badge bg-danger">Drop Out</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle">Aktif</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= $s['jenis_kelamin'] ?></td>
                                 <td>
                                     <?php if (!empty($s['no_ortu'])): ?>
@@ -236,6 +262,9 @@
             </button>
             <button type="button" class="btn btn-info btn-sm text-white fw-bold rounded-3" onclick="openBulkJurusanModal()">
                 <i class="bi bi-journal-bookmark-fill me-1"></i> Ubah Jurusan
+            </button>
+            <button type="button" class="btn btn-success btn-sm text-white fw-bold rounded-3" onclick="openBulkStatusModal()">
+                <i class="bi bi-mortarboard-fill me-1"></i> Set Kelulusan / Alumni
             </button>
             <button type="button" class="btn btn-danger btn-sm fw-bold rounded-3" onclick="confirmBulkDelete()">
                 <i class="bi bi-trash me-1"></i> Hapus Terpilih
@@ -330,6 +359,25 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.show();
     };
 
+    window.openBulkStatusModal = function() {
+        const ids = getSelectedSiswaIds();
+        if (ids.length === 0) return alert('Pilih minimal satu siswa terlebih dahulu.');
+        
+        const container = document.getElementById('bulkStatusIdsContainer');
+        container.innerHTML = '';
+        ids.forEach(id => {
+            const inp = document.createElement('input');
+            inp.type = 'hidden';
+            inp.name = 'selected_siswa[]';
+            inp.value = id;
+            container.appendChild(inp);
+        });
+        document.getElementById('bulkStatusCountText').textContent = ids.length;
+
+        const modal = new bootstrap.Modal(document.getElementById('modalBulkStatus'));
+        modal.show();
+    };
+
     window.confirmBulkDelete = function() {
         const ids = getSelectedSiswaIds();
         if (ids.length === 0) return alert('Pilih minimal satu siswa terlebih dahulu.');
@@ -390,6 +438,66 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-warning px-4 fw-bold">Pindahkan Masal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Bulk Ubah Status / Kelulusan (Alumni) -->
+<div class="modal fade" id="modalBulkStatus" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold modal-title"><i class="bi bi-mortarboard-fill text-success me-2"></i>Kelulusan & Status Siswa Masal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="<?= BASE_URL ?>index.php?url=admin/siswa" method="POST">
+                <div class="modal-body">
+                    <?= Security::csrfField() ?>
+                    <input type="hidden" name="action" value="bulk_update_status">
+                    <input type="hidden" name="redirect_query" value="<?= htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') ?>">
+                    <div id="bulkStatusIdsContainer"></div>
+
+                    <div class="alert alert-info border-0 rounded-3 small">
+                        Anda akan memperbarui status untuk <strong id="bulkStatusCountText">0</strong> siswa terpilih.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Pilih Status Baru</label>
+                        <select name="target_status" class="form-select rounded-3" required>
+                            <option value="alumni" selected>🎓 Alumni / Lulus</option>
+                            <option value="aktif">🟢 Aktif Kembali</option>
+                            <option value="drop">🔴 Drop Out / Mutasi Keluar</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Pindahkan ke Wadah Kelas (Opsional)</label>
+                        <select name="target_kelas_id" class="form-select rounded-3">
+                            <option value="">-- Tetap di Kelas Saat Ini --</option>
+                            <?php foreach ($kelasList as $k): ?>
+                                <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted" style="font-size:0.75rem;">Pilih jika Anda sudah membuat kelas penampung (misal: "Alumni 2026").</small>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" name="deactivate_user" value="1" id="checkDeactivateUser" checked>
+                            <label class="form-check-label small fw-semibold" for="checkDeactivateUser">
+                                Nonaktifkan Akun Login Siswa
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size:0.75rem;">
+                            Jika dicentang, akun login dinonaktifkan (tidak bisa login ke e-learning aktif).
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success px-4 fw-bold">Terapkan Status Masal</button>
                 </div>
             </form>
         </div>
@@ -641,6 +749,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <?php endif; ?>
                             </td>
                         </tr>
+                        <tr>
+                            <td class="text-muted">Status Siswa</td>
+                            <td class="fw-semibold">: 
+                                <?php if (($s['status'] ?? 'aktif') === 'alumni'): ?>
+                                    <span class="badge bg-secondary"><i class="bi bi-mortarboard-fill me-1"></i>Alumni / Lulus</span>
+                                <?php elseif (($s['status'] ?? 'aktif') === 'drop'): ?>
+                                    <span class="badge bg-danger">Drop Out / Keluar</span>
+                                <?php else: ?>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">Aktif</span>
+                                <?php endif; ?>
+                                <span class="badge bg-<?= ($s['user_status'] ?? 'active') === 'active' ? 'success' : 'secondary' ?> ms-1">
+                                    Akun: <?= ($s['user_status'] ?? 'active') === 'active' ? 'Bisa Login' : 'Terkunci' ?>
+                                </span>
+                            </td>
+                        </tr>
                     </table>
                 </div>
                 <div class="modal-footer border-0 pt-0">
@@ -699,6 +822,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <select name="jenis_kelamin" class="form-select">
                                     <option value="L" <?= $s['jenis_kelamin'] === 'L' ? 'selected' : '' ?>>Laki-Laki</option>
                                     <option value="P" <?= $s['jenis_kelamin'] === 'P' ? 'selected' : '' ?>>Perempuan</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Status Siswa</label>
+                                <select name="status" class="form-select">
+                                    <option value="aktif" <?= ($s['status'] ?? 'aktif') === 'aktif' ? 'selected' : '' ?>>🟢 Siswa Aktif</option>
+                                    <option value="alumni" <?= ($s['status'] ?? '') === 'alumni' ? 'selected' : '' ?>>🎓 Alumni / Lulus</option>
+                                    <option value="drop" <?= ($s['status'] ?? '') === 'drop' ? 'selected' : '' ?>>🔴 Drop Out / Keluar</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Status Akun Login</label>
+                                <select name="user_status" class="form-select">
+                                    <option value="active" <?= ($s['user_status'] ?? 'active') === 'active' ? 'selected' : '' ?>>Aktif (Dapat Login)</option>
+                                    <option value="inactive" <?= ($s['user_status'] ?? '') === 'inactive' ? 'selected' : '' ?>>Non-Aktif (Terkunci)</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
