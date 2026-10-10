@@ -788,23 +788,41 @@ class AbsensiModel extends BaseModel {
         $jadwal_id = (int)$jadwal_id;
         $siswa_id = (int)$siswa_id;
 
+        // 1. Cek apakah ada record absensi untuk jadwal_id spesifik ini
         $stmtExist = $this->db->prepare("
-            SELECT id FROM absensi 
-            WHERE siswa_id = ? AND tanggal = ? AND (jadwal_id = ? OR jadwal_id IS NULL)
-            ORDER BY (jadwal_id IS NOT NULL) DESC, id DESC LIMIT 1
+            SELECT id, qr_code, waktu_masuk, waktu_hadir FROM absensi 
+            WHERE siswa_id = ? AND tanggal = ? AND jadwal_id = ?
+            ORDER BY id DESC LIMIT 1
         ");
         $stmtExist->execute([$siswa_id, $tanggal, $jadwal_id]);
-        $exist = $stmtExist->fetch();
+        $exist = $stmtExist->fetch(PDO::FETCH_ASSOC);
 
         $resAtt = false;
         if ($exist) {
-            $stmt = $this->db->prepare("UPDATE absensi SET jadwal_id = ?, status = ?, keterangan = ? WHERE id = ?");
-            $resAtt = $stmt->execute([$jadwal_id, $status, $keterangan, $exist['id']]);
+            $stmt = $this->db->prepare("UPDATE absensi SET status = ?, keterangan = ? WHERE id = ?");
+            $resAtt = $stmt->execute([$status, $keterangan, $exist['id']]);
         } else {
+            // Cek apakah ada record presensi gerbang utama (jadwal_id IS NULL)
+            $stmtGate = $this->db->prepare("
+                SELECT waktu_masuk, waktu_hadir, qr_code FROM absensi 
+                WHERE siswa_id = ? AND tanggal = ? AND (jadwal_id IS NULL OR jadwal_id = 0)
+                ORDER BY id DESC LIMIT 1
+            ");
+            $stmtGate->execute([$siswa_id, $tanggal]);
+            $gateRow = $stmtGate->fetch(PDO::FETCH_ASSOC);
+
             $now = date('Y-m-d H:i:s');
-            $qrCode = "ATT_" . $jadwal_id . "_" . $siswa_id . "_" . date('Ymd');
+            $statusLower = strtolower(trim($status));
+            $isHadir = ($statusLower === 'hadir');
+
+            $waktuMasuk = ($gateRow && $isHadir) ? $gateRow['waktu_masuk'] : $now;
+            $waktuHadir = ($gateRow && $isHadir) ? $gateRow['waktu_hadir'] : $now;
+            $qrCode = ($gateRow && $isHadir && !empty($gateRow['qr_code'])) 
+                ? $gateRow['qr_code'] 
+                : ("ATT_" . $jadwal_id . "_" . $siswa_id . "_" . date('Ymd'));
+
             $stmt = $this->db->prepare("INSERT INTO absensi (jadwal_id, siswa_id, tanggal, waktu_masuk, waktu_hadir, status, qr_code, keterangan) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-            $resAtt = $stmt->execute([$jadwal_id, $siswa_id, $tanggal, $now, $now, $status, $qrCode, $keterangan]);
+            $resAtt = $stmt->execute([$jadwal_id, $siswa_id, $tanggal, $waktuMasuk, $waktuHadir, $status, $qrCode, $keterangan]);
         }
 
         if ($resAtt) {
@@ -839,9 +857,10 @@ class AbsensiModel extends BaseModel {
         $kelasId = null;
         $mapelId = null;
         $guruId = null;
+        $jadwal_id = (int)$jadwal_id;
 
         $stmtJ = $this->db->prepare("SELECT kelas_id, mapel_id, guru_id FROM jadwal WHERE id = ?");
-        $stmtJ->execute([(int)$jadwal_id]);
+        $stmtJ->execute([$jadwal_id]);
         $jData = $stmtJ->fetch();
 
         if ($jData) {
@@ -850,7 +869,7 @@ class AbsensiModel extends BaseModel {
             $guruId = $jData['guru_id'];
         } else {
             $stmtK = $this->db->prepare("SELECT mapel_id, guru_id, kelas_id FROM mapel_enrollment_keys WHERE id = ?");
-            $stmtK->execute([(int)$jadwal_id]);
+            $stmtK->execute([$jadwal_id]);
             $kData = $stmtK->fetch();
             if ($kData) {
                 $kelasId = $kData['kelas_id'];
@@ -864,25 +883,37 @@ class AbsensiModel extends BaseModel {
                 SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, 
                        a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                 FROM siswa s
-                LEFT JOIN absensi a ON s.id = a.siswa_id AND a.tanggal = ?
+                LEFT JOIN absensi a ON a.id = (
+                    SELECT a2.id FROM absensi a2 
+                    WHERE a2.siswa_id = s.id 
+                      AND a2.tanggal = ? 
+                      AND (a2.jadwal_id = ? OR a2.jadwal_id IS NULL OR a2.jadwal_id = 0)
+                    ORDER BY (a2.jadwal_id = ?) DESC, (a2.jadwal_id IS NULL OR a2.jadwal_id = 0) DESC, a2.id DESC 
+                    LIMIT 1
+                )
                 WHERE s.kelas_id = ?
-                GROUP BY s.id
                 ORDER BY s.nama_lengkap ASC
             ");
-            $stmt->execute([$tanggal, $kelasId]);
-            return $stmt->fetchAll();
+            $stmt->execute([$tanggal, $jadwal_id, $jadwal_id, $kelasId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } elseif ($mapelId && $guruId) {
             $stmt = $this->db->prepare("
                 SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, 
                        a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                 FROM siswa s
                 JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id AND sme.mapel_id = ? AND sme.guru_id = ?
-                LEFT JOIN absensi a ON s.id = a.siswa_id AND a.tanggal = ?
-                GROUP BY s.id
+                LEFT JOIN absensi a ON a.id = (
+                    SELECT a2.id FROM absensi a2 
+                    WHERE a2.siswa_id = s.id 
+                      AND a2.tanggal = ? 
+                      AND (a2.jadwal_id = ? OR a2.jadwal_id IS NULL OR a2.jadwal_id = 0)
+                    ORDER BY (a2.jadwal_id = ?) DESC, (a2.jadwal_id IS NULL OR a2.jadwal_id = 0) DESC, a2.id DESC 
+                    LIMIT 1
+                )
                 ORDER BY s.nama_lengkap ASC
             ");
-            $stmt->execute([$mapelId, $guruId, $tanggal]);
-            return $stmt->fetchAll();
+            $stmt->execute([$mapelId, $guruId, $tanggal, $jadwal_id, $jadwal_id]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } else {
             return [];
         }
@@ -1386,9 +1417,10 @@ class AbsensiModel extends BaseModel {
         $siswaList = $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $stmtA = $this->db->prepare("
-            SELECT siswa_id, tanggal, waktu_masuk, waktu_pulang, status
+            SELECT siswa_id, tanggal, waktu_masuk, waktu_pulang, status, jadwal_id, id
             FROM absensi
             WHERE tanggal >= ? AND tanggal <= ?
+            ORDER BY tanggal ASC, (jadwal_id IS NOT NULL) ASC, id ASC
         ");
         $stmtA->execute([$startDate, $endDate]);
         $absensiRows = $stmtA->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -1400,7 +1432,16 @@ class AbsensiModel extends BaseModel {
             if (!isset($absMap[$sId])) {
                 $absMap[$sId] = [];
             }
-            $absMap[$sId][$dayNum] = $row;
+            $prev = $absMap[$sId][$dayNum] ?? null;
+            if (!$prev) {
+                $absMap[$sId][$dayNum] = $row;
+            } else {
+                $newStatus = strtolower($row['status'] ?? 'hadir');
+                $isNonHadir = in_array($newStatus, ['alpa', 'alpha', 'sakit', 'izin']);
+                if ($isNonHadir || !empty($row['jadwal_id'])) {
+                    $absMap[$sId][$dayNum] = $row;
+                }
+            }
         }
 
         $results = [];

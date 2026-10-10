@@ -73,11 +73,28 @@ $activeTabParam = $_GET['tab'] ?? 'siswa';
                     <form action="<?= $formAbsensiUrl ?>&jadwal_id=<?= $selectedJadwal ?>&tanggal=<?= $tanggal ?>&tab=siswa" method="POST">
                         <?= Security::csrfField() ?>
                         <input type="hidden" name="tab" value="siswa">
+                        <input type="hidden" name="jadwal_id" value="<?= $selectedJadwal ?>">
+                        <input type="hidden" name="tanggal" value="<?= htmlspecialchars($tanggal) ?>">
 
-                        <?php if (!empty($recap)): ?>
+                        <?php if (!empty($recap)): 
+                            $countHadir = 0; $countIzin = 0; $countSakit = 0; $countAlpa = 0;
+                            foreach ($recap as $r) {
+                                $stL = strtolower($r['status'] ?? 'hadir');
+                                if ($stL === 'izin') $countIzin++;
+                                elseif ($stL === 'sakit') $countSakit++;
+                                elseif ($stL === 'alpa' || $stL === 'alpha') $countAlpa++;
+                                else $countHadir++;
+                            }
+                        ?>
                             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                                <small class="text-muted fw-semibold">Menampilkan <?= count($recap) ?> siswa terdaftar</small>
-                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold" onclick="setSemuaHadir()">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <small class="text-muted fw-semibold">Total: <?= count($recap) ?> Siswa</small>
+                                    <span class="badge bg-success-subtle text-success border border-success px-2.5 py-1"><i class="bi bi-check-circle-fill me-1"></i>Hadir: <?= $countHadir ?></span>
+                                    <span class="badge bg-info-subtle text-info border border-info px-2.5 py-1"><i class="bi bi-info-circle-fill me-1"></i>Izin: <?= $countIzin ?></span>
+                                    <span class="badge bg-warning-subtle text-dark border border-warning px-2.5 py-1"><i class="bi bi-heart-pulse-fill me-1"></i>Sakit: <?= $countSakit ?></span>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger px-2.5 py-1"><i class="bi bi-x-circle-fill me-1"></i>Alpa: <?= $countAlpa ?></span>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold shadow-xs" onclick="setSemuaHadir()">
                                     <i class="bi bi-check-all me-1"></i> Set Semua Hadir
                                 </button>
                             </div>
@@ -101,8 +118,14 @@ $activeTabParam = $_GET['tab'] ?? 'siswa';
                                         <?php foreach ($recap as $i => $row): 
                                             $isQrScan = !empty($row['qr_code']) && strpos($row['qr_code'], 'QR_') === 0;
                                             $waktuHadirStr = !empty($row['waktu_hadir']) ? date('H:i', strtotime($row['waktu_hadir'])) : '';
-                                            $currentStatus = $row['status'] ?? 'Alpa';
-                                            if (empty($row['status']) && $isQrScan) $currentStatus = 'Hadir';
+                                            
+                                            if (!empty($row['status'])) {
+                                                $currentStatus = $row['status'];
+                                            } elseif ($isQrScan) {
+                                                $currentStatus = 'Hadir';
+                                            } else {
+                                                $currentStatus = 'Hadir';
+                                            }
                                         ?>
                                             <tr class="border-bottom">
                                                 <td><span class="badge bg-secondary rounded-circle py-1 px-2"><?= $i + 1 ?></span></td>
@@ -110,9 +133,15 @@ $activeTabParam = $_GET['tab'] ?? 'siswa';
                                                 <td class="fw-bold text-dark">
                                                     <?= htmlspecialchars($row['nama_lengkap']) ?>
                                                     <?php if ($isQrScan): ?>
-                                                        <span class="badge bg-success-subtle text-success border border-success ms-1 px-2 py-1" style="font-size: 0.7rem;" title="Presensi terikat langsung dari Scan QR Code Digital">
-                                                            <i class="bi bi-qr-code-scan me-1"></i>Scan QR (<?= $waktuHadirStr ?> WIB)
-                                                        </span>
+                                                        <?php if (strtolower($currentStatus) === 'hadir'): ?>
+                                                            <span class="badge bg-success-subtle text-success border border-success ms-1 px-2 py-1" style="font-size: 0.7rem;" title="Presensi terikat langsung dari Scan QR Code Digital Gerbang">
+                                                                <i class="bi bi-qr-code-scan me-1"></i>Scan QR (<?= $waktuHadirStr ?> WIB)
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="badge bg-warning-subtle text-dark border border-warning ms-1 px-2 py-1" style="font-size: 0.7rem;" title="Siswa scan QR di gerbang pada <?= $waktuHadirStr ?> WIB, namun diinput <?= htmlspecialchars($currentStatus) ?> pada jam pelajaran ini">
+                                                                <i class="bi bi-info-circle me-1"></i>Scan Gerbang (<?= $waktuHadirStr ?>) • <?= htmlspecialchars($currentStatus) ?> KBM
+                                                            </span>
+                                                        <?php endif; ?>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td>

@@ -1015,9 +1015,9 @@ class AdminController {
         $absensiModel = new AbsensiModel();
         $academicModel = new AcademicModel();
         $jadwalList = $academicModel->getJadwal();
-        $selectedJadwal = (int)($_GET['jadwal_id'] ?? ($jadwalList[0]['id'] ?? 1));
-        $tanggal = $_GET['tanggal'] ?? date('Y-m-d');
-        $tab = $_GET['tab'] ?? ($_POST['tab'] ?? 'siswa');
+        $selectedJadwal = (int)($_POST['jadwal_id'] ?? ($_GET['jadwal_id'] ?? ($jadwalList[0]['id'] ?? 1)));
+        $tanggal = $_POST['tanggal'] ?? ($_GET['tanggal'] ?? date('Y-m-d'));
+        $tab = $_POST['tab'] ?? ($_GET['tab'] ?? 'siswa');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
