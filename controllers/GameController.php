@@ -73,9 +73,20 @@ class GameController {
 
         $academicModel = new AcademicModel();
         $gameModel = new GameModel();
+        require_once ROOT_PATH . 'models/ExamModel.php';
+        $examModel = new ExamModel();
 
         $mapelList = $academicModel->getMapel();
         $classList = $academicModel->getKelas();
+
+        $guruId = $this->getGuruId($user['id']);
+        $quizList = $examModel->getQuizList(null, $guruId);
+        if (empty($quizList)) {
+            $quizList = $examModel->getQuizList(null, (int)$user['id']);
+        }
+        if (empty($quizList)) {
+            $quizList = $examModel->getQuizList();
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
@@ -114,6 +125,66 @@ class GameController {
                 ];
             }
 
+            // Check if import from Quiz & CBT was selected and no manual questions populated
+            if (empty($soalList) && !empty($_POST['import_quiz_id'])) {
+                $importQuizId = (int)$_POST['import_quiz_id'];
+                if ($importQuizId > 0) {
+                    $quizSoals = $examModel->getSoalByQuiz($importQuizId, false);
+                    foreach ($quizSoals as $qs) {
+                        $jenis = strtolower($qs['jenis_soal'] ?? 'pg');
+                        if ($jenis !== 'pg' && $jenis !== 'tf') continue;
+
+                        $pertanyaan = trim(strip_tags($qs['pertanyaan']));
+                        if (empty($pertanyaan)) $pertanyaan = trim($qs['pertanyaan']);
+
+                        $pilihan = $qs['pilihan'] ?? [];
+                        $opsiA = ''; $opsiB = ''; $opsiC = ''; $opsiD = '';
+                        $kunci = 'a';
+
+                        if ($jenis === 'tf') {
+                            $opsiA = !empty($pilihan[0]['teks_pilihan']) ? trim($pilihan[0]['teks_pilihan']) : 'Benar';
+                            $opsiB = !empty($pilihan[1]['teks_pilihan']) ? trim($pilihan[1]['teks_pilihan']) : 'Salah';
+                            $opsiC = '-';
+                            $opsiD = '-';
+                            $kunci = (!empty($pilihan[1]['is_benar'])) ? 'b' : 'a';
+                        } else {
+                            $correctIndex = 0;
+                            foreach ($pilihan as $idx => $pil) {
+                                if (!empty($pil['is_benar'])) {
+                                    $correctIndex = $idx;
+                                    break;
+                                }
+                            }
+                            if ($correctIndex >= 3 && isset($pilihan[$correctIndex])) {
+                                $temp = $pilihan[3] ?? null;
+                                $pilihan[3] = $pilihan[$correctIndex];
+                                if ($temp) $pilihan[$correctIndex] = $temp;
+                                $correctIndex = 3;
+                            }
+                            $opsiA = trim($pilihan[0]['teks_pilihan'] ?? '');
+                            $opsiB = trim($pilihan[1]['teks_pilihan'] ?? '');
+                            $opsiC = trim($pilihan[2]['teks_pilihan'] ?? '');
+                            $opsiD = trim($pilihan[3]['teks_pilihan'] ?? '');
+                            $kunciMap = [0 => 'a', 1 => 'b', 2 => 'c', 3 => 'd'];
+                            $kunci = $kunciMap[$correctIndex] ?? 'a';
+                        }
+
+                        if (!empty($pertanyaan) && !empty($opsiA) && !empty($opsiB)) {
+                            $soalList[] = [
+                                'pertanyaan' => Security::sanitize($pertanyaan),
+                                'opsi_a' => Security::sanitize($opsiA),
+                                'opsi_b' => Security::sanitize($opsiB),
+                                'opsi_c' => Security::sanitize($opsiC),
+                                'opsi_d' => Security::sanitize($opsiD),
+                                'kunci_jawaban' => $kunci,
+                                'poin' => (int)($qs['bobot'] ?? 10) > 0 ? (int)$qs['bobot'] : 10,
+                                'penjelasan' => ''
+                            ];
+                        }
+                    }
+                }
+            }
+
             // Check if Excel/CSV file was uploaded for questions
             if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] === UPLOAD_ERR_OK) {
                 $excelSoal = $gameModel->parseGameSoalFromExcel($_FILES['file_excel']['tmp_name']);
@@ -123,7 +194,7 @@ class GameController {
             }
 
             if (empty($soalList)) {
-                FlashHelper::setError('Game Edukasi harus memiliki minimal 1 soal pertanyaan. Anda dapat menginput manual atau mengunggah file Excel/CSV template soal.');
+                FlashHelper::setError('Game Edukasi harus memiliki minimal 1 soal pertanyaan. Anda dapat mengambil dari Quiz & Ujian CBT, menginput manual, atau mengunggah file Excel/CSV template soal.');
                 header('Location: ' . BASE_URL . 'index.php?url=game/create');
                 exit();
             }
@@ -139,6 +210,118 @@ class GameController {
         }
 
         require_once ROOT_PATH . 'views/game/create.php';
+    }
+
+    /**
+     * AJAX Endpoint: Ambil Soal dari Quiz & Ujian CBT untuk Game Edukasi Baru
+     */
+    public function getQuizQuestions() {
+        AuthHelper::requireLogin();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $quizId = (int)($_GET['quiz_id'] ?? ($_POST['quiz_id'] ?? 0));
+        if ($quizId <= 0) {
+            echo json_encode(['success' => false, 'message' => 'ID Quiz / Ujian CBT tidak valid.']);
+            exit();
+        }
+
+        require_once ROOT_PATH . 'models/ExamModel.php';
+        $examModel = new ExamModel();
+        $quiz = $examModel->getQuizById($quizId);
+
+        if (!$quiz) {
+            echo json_encode(['success' => false, 'message' => 'Data Quiz / Ujian CBT tidak ditemukan.']);
+            exit();
+        }
+
+        $rawSoal = $examModel->getSoalByQuiz($quizId, false);
+        $formattedSoal = [];
+
+        foreach ($rawSoal as $s) {
+            $jenis = strtolower($s['jenis_soal'] ?? 'pg');
+            if ($jenis !== 'pg' && $jenis !== 'tf') {
+                continue;
+            }
+
+            $pertanyaan = trim(strip_tags($s['pertanyaan']));
+            if (empty($pertanyaan)) {
+                $pertanyaan = trim($s['pertanyaan']);
+            }
+
+            $pilihan = $s['pilihan'] ?? [];
+            $opsiA = '';
+            $opsiB = '';
+            $opsiC = '';
+            $opsiD = '';
+            $kunciJawaban = 'a';
+
+            if ($jenis === 'tf') {
+                $opsiA = !empty($pilihan[0]['teks_pilihan']) ? trim($pilihan[0]['teks_pilihan']) : 'Benar';
+                $opsiB = !empty($pilihan[1]['teks_pilihan']) ? trim($pilihan[1]['teks_pilihan']) : 'Salah';
+                $opsiC = '-';
+                $opsiD = '-';
+                $kunciJawaban = (!empty($pilihan[1]['is_benar'])) ? 'b' : 'a';
+            } else {
+                $correctIndex = 0;
+                foreach ($pilihan as $idx => $pil) {
+                    if (!empty($pil['is_benar'])) {
+                        $correctIndex = $idx;
+                        break;
+                    }
+                }
+
+                if ($correctIndex >= 3 && isset($pilihan[$correctIndex])) {
+                    $temp = $pilihan[3] ?? null;
+                    $pilihan[3] = $pilihan[$correctIndex];
+                    if ($temp) {
+                        $pilihan[$correctIndex] = $temp;
+                    }
+                    $correctIndex = 3;
+                }
+
+                $opsiA = trim($pilihan[0]['teks_pilihan'] ?? '');
+                $opsiB = trim($pilihan[1]['teks_pilihan'] ?? '');
+                $opsiC = trim($pilihan[2]['teks_pilihan'] ?? '');
+                $opsiD = trim($pilihan[3]['teks_pilihan'] ?? '');
+
+                $kunciMap = [0 => 'a', 1 => 'b', 2 => 'c', 3 => 'd'];
+                $kunciJawaban = $kunciMap[$correctIndex] ?? 'a';
+            }
+
+            if (!empty($pertanyaan) && !empty($opsiA) && !empty($opsiB)) {
+                $formattedSoal[] = [
+                    'pertanyaan' => $pertanyaan,
+                    'opsi_a' => $opsiA,
+                    'opsi_b' => $opsiB,
+                    'opsi_c' => $opsiC,
+                    'opsi_d' => $opsiD,
+                    'kunci_jawaban' => $kunciJawaban,
+                    'poin' => (int)($s['bobot'] ?? 10) > 0 ? (int)$s['bobot'] : 10
+                ];
+            }
+        }
+
+        if (empty($formattedSoal)) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Quiz ini tidak memiliki soal Pilihan Ganda atau Benar/Salah yang dapat diimpor.'
+            ]);
+            exit();
+        }
+
+        echo json_encode([
+            'success' => true,
+            'quiz' => [
+                'id' => (int)$quiz['id'],
+                'judul' => $quiz['judul'],
+                'mapel_id' => (int)$quiz['mapel_id'],
+                'kelas_id' => (int)$quiz['kelas_id'],
+                'kategori' => strtoupper($quiz['kategori'] ?? 'KUIS')
+            ],
+            'total' => count($formattedSoal),
+            'soal' => $formattedSoal
+        ]);
+        exit();
     }
 
     public function edit() {
