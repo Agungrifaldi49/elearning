@@ -31,20 +31,32 @@
                     <div class="col-md-4 col-12">
                         <label class="form-label small fw-bold">Mata Pelajaran <span class="text-danger">*</span></label>
                         <select name="mapel_id" class="form-select rounded-3" required>
-                            <option value="">-- Pilih Mata Pelajaran --</option>
-                            <?php foreach ($mapelList as $m): ?>
-                                <option value="<?= $m['id'] ?>" <?= ($m['id'] == $game['mapel_id']) ? 'selected' : '' ?>><?= htmlspecialchars($m['nama_mapel']) ?></option>
-                            <?php endforeach; ?>
+                            <?php if (empty($mapelList)): ?>
+                                <option value="">-- Belum ada Mapel yang Anda ampu --</option>
+                            <?php else: ?>
+                                <option value="">-- Pilih Mata Pelajaran (Yang Anda Ampu) --</option>
+                                <?php foreach ($mapelList as $m): ?>
+                                    <option value="<?= $m['id'] ?>" <?= ($m['id'] == $game['mapel_id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($m['nama_mapel']) ?><?= !empty($m['kode_mapel']) ? ' (' . htmlspecialchars($m['kode_mapel']) . ')' : '' ?><?= !empty($m['nama_jurusan']) ? ' - ' . htmlspecialchars($m['nama_jurusan']) : '' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
+                        <div class="form-text small text-muted"><i class="bi bi-shield-check text-success me-1"></i>Hanya menampilkan mata pelajaran yang Anda ampu.</div>
                     </div>
                     <div class="col-md-4 col-6">
                         <label class="form-label small fw-bold">Kelas Sasaran (Opsional)</label>
                         <select name="kelas_id" class="form-select rounded-3">
-                            <option value="0" <?= (empty($game['kelas_id'])) ? 'selected' : '' ?>>Semua Kelas</option>
-                            <?php foreach ($classList as $k): ?>
-                                <option value="<?= $k['id'] ?>" <?= ($k['id'] == $game['kelas_id']) ? 'selected' : '' ?>><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                            <?php endforeach; ?>
+                            <option value="0" <?= (empty($game['kelas_id'])) ? 'selected' : '' ?>>Semua Kelas yang Anda Ampu</option>
+                            <?php if (!empty($classList)): ?>
+                                <?php foreach ($classList as $k): ?>
+                                    <option value="<?= $k['id'] ?>" <?= ($k['id'] == $game['kelas_id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($k['nama_kelas']) ?><?= !empty($k['nama_jurusan']) ? ' (' . htmlspecialchars($k['nama_jurusan']) . ')' : '' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
+                        <div class="form-text small text-muted"><i class="bi bi-shield-check text-success me-1"></i>Hanya menampilkan rombel / kelas yang Anda ampu.</div>
                     </div>
                     <div class="col-md-4 col-6">
                         <label class="form-label small fw-bold">Durasi Timer per Soal (Detik)</label>

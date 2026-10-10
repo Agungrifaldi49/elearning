@@ -22,6 +22,16 @@
             <form action="<?= BASE_URL ?>index.php?url=game/create" method="POST" enctype="multipart/form-data" id="formCreateGame">
                 <?= Security::csrfField() ?>
 
+                <?php if (empty($mapelList)): ?>
+                    <div class="alert alert-warning border-0 rounded-4 p-3 mb-4 shadow-xs d-flex align-items-center gap-3">
+                        <i class="bi bi-exclamation-triangle-fill text-warning fs-3"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1">Mata Pelajaran Belum Ditemukan</h6>
+                            <small class="text-muted">Akun Anda belum terhubung dengan jadwal mengajar atau mata pelajaran aktif. Silakan hubungi Administrator atau bagian Kurikulum untuk memastikan jadwal mengajar Anda telah diatur.</small>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <div class="row g-3 mb-4">
                     <div class="col-md-8 col-12">
                         <label class="form-label small fw-bold">Judul Game Edukasi <span class="text-danger">*</span></label>
@@ -29,21 +39,31 @@
                     </div>
                     <div class="col-md-4 col-12">
                         <label class="form-label small fw-bold">Mata Pelajaran <span class="text-danger">*</span></label>
-                        <select name="mapel_id" class="form-select rounded-3" required>
-                            <option value="">-- Pilih Mata Pelajaran --</option>
-                            <?php foreach ($mapelList as $m): ?>
-                                <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nama_mapel']) ?></option>
-                            <?php endforeach; ?>
+                        <select name="mapel_id" class="form-select rounded-3" required <?= empty($mapelList) ? 'disabled' : '' ?>>
+                            <?php if (empty($mapelList)): ?>
+                                <option value="">-- Belum ada Mapel yang Anda ampu --</option>
+                            <?php else: ?>
+                                <option value="">-- Pilih Mata Pelajaran (Yang Anda Ampu) --</option>
+                                <?php foreach ($mapelList as $m): ?>
+                                    <option value="<?= $m['id'] ?>">
+                                        <?= htmlspecialchars($m['nama_mapel']) ?><?= !empty($m['kode_mapel']) ? ' (' . htmlspecialchars($m['kode_mapel']) . ')' : '' ?><?= !empty($m['nama_jurusan']) ? ' - ' . htmlspecialchars($m['nama_jurusan']) : '' ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
+                        <div class="form-text small text-muted"><i class="bi bi-shield-check text-success me-1"></i>Hanya menampilkan mata pelajaran yang Anda ampu.</div>
                     </div>
                     <div class="col-md-4 col-6">
                         <label class="form-label small fw-bold">Kelas Sasaran (Opsional)</label>
                         <select name="kelas_id" class="form-select rounded-3">
-                            <option value="0">Semua Kelas</option>
-                            <?php foreach ($classList as $k): ?>
-                                <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                            <?php endforeach; ?>
+                            <option value="0">Semua Kelas yang Anda Ampu</option>
+                            <?php if (!empty($classList)): ?>
+                                <?php foreach ($classList as $k): ?>
+                                    <option value="<?= $k['id'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?><?= !empty($k['nama_jurusan']) ? ' (' . htmlspecialchars($k['nama_jurusan']) . ')' : '' ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
+                        <div class="form-text small text-muted"><i class="bi bi-shield-check text-success me-1"></i>Hanya menampilkan rombel / kelas yang Anda ampu.</div>
                     </div>
                     <div class="col-md-4 col-6">
                         <label class="form-label small fw-bold">Durasi Timer per Soal (Detik)</label>

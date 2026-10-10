@@ -80,12 +80,13 @@ class GameController {
         require_once ROOT_PATH . 'models/ExamModel.php';
         $examModel = new ExamModel();
 
-        $mapelList = $academicModel->getMapel();
-        $classList = $academicModel->getKelas();
-
         $userId = (int)($user['id'] ?? 0);
         $guruId = (int)$this->getGuruId($userId);
         $targetGuruId = $guruId > 0 ? $guruId : $userId;
+
+        // Hanya tampilkan Mata Pelajaran & Rombel/Kelas yang diampu oleh guru yang sedang login
+        $mapelList = $academicModel->getMapelByGuru($targetGuruId);
+        $classList = $academicModel->getKelasByGuru($targetGuruId);
 
         // Hanya tampilkan Quiz & Ujian CBT milik guru yang sedang login (TIDAK BOLEH milik guru lain)
         $quizList = $examModel->getQuizList(null, $targetGuruId);
@@ -97,12 +98,35 @@ class GameController {
                 exit();
             }
 
+            $selectedMapelId = (int)($_POST['mapel_id'] ?? 0);
+            $selectedKelasId = (int)($_POST['kelas_id'] ?? 0);
+
+            // Validasi: pastikan mapel yang dipilih adalah mata pelajaran yang diampu oleh guru ini
+            if (!empty($mapelList)) {
+                $allowedMapelIds = array_map(function($m) { return (int)$m['id']; }, $mapelList);
+                if (!in_array($selectedMapelId, $allowedMapelIds)) {
+                    FlashHelper::setError('Mata pelajaran yang Anda pilih tidak termasuk dalam mata pelajaran yang Anda ampu.');
+                    header('Location: ' . BASE_URL . 'index.php?url=game/create');
+                    exit();
+                }
+            }
+
+            // Validasi: pastikan kelas yang dipilih (jika bukan 0 / Semua Kelas) adalah kelas yang diampu oleh guru ini
+            if ($selectedKelasId > 0 && !empty($classList)) {
+                $allowedKelasIds = array_map(function($k) { return (int)$k['id']; }, $classList);
+                if (!in_array($selectedKelasId, $allowedKelasIds)) {
+                    FlashHelper::setError('Kelas sasaran yang Anda pilih tidak termasuk dalam rombel / kelas yang Anda ampu.');
+                    header('Location: ' . BASE_URL . 'index.php?url=game/create');
+                    exit();
+                }
+            }
+
             $guruId = $this->getGuruId($user['id']);
 
             $gameData = [
                 'guru_id' => $guruId,
-                'mapel_id' => (int)$_POST['mapel_id'],
-                'kelas_id' => (int)($_POST['kelas_id'] ?? 0),
+                'mapel_id' => $selectedMapelId,
+                'kelas_id' => $selectedKelasId,
                 'judul' => Security::sanitize($_POST['judul']),
                 'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? ''),
                 'tipe_game' => Security::sanitize($_POST['tipe_game'] ?? 'quiz_speed'),
@@ -366,16 +390,43 @@ class GameController {
             exit();
         }
 
-        $guruId = $this->getGuruId($user['id']);
-        if ((int)$game['guru_id'] !== (int)$guruId && $roleId !== 1) {
+        $userId = (int)($user['id'] ?? 0);
+        $guruId = (int)$this->getGuruId($userId);
+        $targetGuruId = $guruId > 0 ? $guruId : $userId;
+
+        if ((int)$game['guru_id'] !== (int)$guruId && (int)$game['guru_id'] !== (int)$userId && $roleId !== 1) {
             FlashHelper::setError('Anda hanya dapat mengedit Game Edukasi buatan Anda sendiri.');
             header('Location: ' . BASE_URL . 'index.php?url=game');
             exit();
         }
 
         $academicModel = new AcademicModel();
-        $mapelList = $academicModel->getMapel();
-        $classList = $academicModel->getKelas();
+        // Hanya tampilkan Mata Pelajaran & Kelas yang diampu oleh guru ini
+        $mapelList = $academicModel->getMapelByGuru($targetGuruId);
+        $classList = $academicModel->getKelasByGuru($targetGuruId);
+
+        // Pertahankan mapel dan kelas game saat ini jika ada dalam database
+        if (!empty($game['mapel_id'])) {
+            $hasMapel = false;
+            foreach ($mapelList as $m) {
+                if ((int)$m['id'] === (int)$game['mapel_id']) { $hasMapel = true; break; }
+            }
+            if (!$hasMapel) {
+                $curMapel = $academicModel->getMapelById($game['mapel_id']);
+                if ($curMapel) $mapelList[] = $curMapel;
+            }
+        }
+        if (!empty($game['kelas_id'])) {
+            $hasKelas = false;
+            foreach ($classList as $k) {
+                if ((int)$k['id'] === (int)$game['kelas_id']) { $hasKelas = true; break; }
+            }
+            if (!$hasKelas) {
+                $curKelas = $academicModel->getKelasById($game['kelas_id']);
+                if ($curKelas) $classList[] = $curKelas;
+            }
+        }
+
         $soalList = $gameModel->getGameSoal($id);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -385,9 +436,32 @@ class GameController {
                 exit();
             }
 
+            $selectedMapelId = (int)($_POST['mapel_id'] ?? 0);
+            $selectedKelasId = (int)($_POST['kelas_id'] ?? 0);
+
+            // Validasi: pastikan mapel yang dipilih adalah mata pelajaran yang diampu oleh guru ini
+            if (!empty($mapelList)) {
+                $allowedMapelIds = array_map(function($m) { return (int)$m['id']; }, $mapelList);
+                if (!in_array($selectedMapelId, $allowedMapelIds)) {
+                    FlashHelper::setError('Mata pelajaran yang Anda pilih tidak termasuk dalam mata pelajaran yang Anda ampu.');
+                    header('Location: ' . BASE_URL . 'index.php?url=game/edit&id=' . $id);
+                    exit();
+                }
+            }
+
+            // Validasi: pastikan kelas yang dipilih (jika bukan 0 / Semua Kelas) adalah kelas yang diampu oleh guru ini
+            if ($selectedKelasId > 0 && !empty($classList)) {
+                $allowedKelasIds = array_map(function($k) { return (int)$k['id']; }, $classList);
+                if (!in_array($selectedKelasId, $allowedKelasIds)) {
+                    FlashHelper::setError('Kelas sasaran yang Anda pilih tidak termasuk dalam rombel / kelas yang Anda ampu.');
+                    header('Location: ' . BASE_URL . 'index.php?url=game/edit&id=' . $id);
+                    exit();
+                }
+            }
+
             $gameData = [
-                'mapel_id' => (int)$_POST['mapel_id'],
-                'kelas_id' => (int)($_POST['kelas_id'] ?? 0),
+                'mapel_id' => $selectedMapelId,
+                'kelas_id' => $selectedKelasId,
                 'judul' => Security::sanitize($_POST['judul']),
                 'deskripsi' => Security::sanitize($_POST['deskripsi'] ?? ''),
                 'tipe_game' => Security::sanitize($_POST['tipe_game'] ?? 'mario_run'),

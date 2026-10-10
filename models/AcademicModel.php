@@ -178,22 +178,67 @@ class AcademicModel extends BaseModel {
     public function getMapelByGuru($guru_id) {
         $this->ensureEnrollmentTables();
         $gId = (int)$guru_id;
+        $uId = 0;
+        try {
+            $stmtU = $this->db->prepare("SELECT user_id FROM guru WHERE id = ? LIMIT 1");
+            $stmtU->execute([$gId]);
+            $uId = (int)$stmtU->fetchColumn();
+        } catch (\Throwable $e) {}
+
+        if (!$uId) {
+            try {
+                $stmtG = $this->db->prepare("SELECT id FROM guru WHERE user_id = ? LIMIT 1");
+                $stmtG->execute([$gId]);
+                $uId = (int)$stmtG->fetchColumn();
+            } catch (\Throwable $e) {}
+        }
+
+        $guruIds = array_filter(array_unique([$gId, $uId]));
+        $inGuru = !empty($guruIds) ? implode(',', $guruIds) : "{$gId}";
+
         $sql = "
             SELECT DISTINCT m.*, j.nama_jurusan
             FROM mata_pelajaran m
             LEFT JOIN jurusan j ON m.jurusan_id = j.id
             WHERE m.id IN (
-                SELECT mapel_id FROM jadwal WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
+                SELECT mapel_id FROM jadwal WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
                 UNION
-                SELECT mapel_id FROM materi WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
+                SELECT mapel_id FROM mapel_enrollment_keys WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
                 UNION
-                SELECT mapel_id FROM tugas WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
+                SELECT mapel_id FROM materi WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
                 UNION
-                SELECT mapel_id FROM quiz WHERE guru_id = {$gId} AND mapel_id IS NOT NULL
+                SELECT mapel_id FROM tugas WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
+                UNION
+                SELECT mapel_id FROM quiz WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
+                UNION
+                SELECT mapel_id FROM asesmen WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
+                UNION
+                SELECT mapel_id FROM game_edukasi WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
+                UNION
+                SELECT mapel_id FROM siswa_mapel_enrollment WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
             )
             ORDER BY m.nama_mapel ASC
         ";
-        return $this->db->query($sql)->fetchAll();
+        try {
+            return $this->db->query($sql)->fetchAll();
+        } catch (\Throwable $e) {
+            $fallbackSql = "
+                SELECT DISTINCT m.*, j.nama_jurusan
+                FROM mata_pelajaran m
+                LEFT JOIN jurusan j ON m.jurusan_id = j.id
+                WHERE m.id IN (
+                    SELECT mapel_id FROM jadwal WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
+                    UNION
+                    SELECT mapel_id FROM materi WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
+                    UNION
+                    SELECT mapel_id FROM tugas WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
+                    UNION
+                    SELECT mapel_id FROM quiz WHERE guru_id IN ({$inGuru}) AND mapel_id IS NOT NULL
+                )
+                ORDER BY m.nama_mapel ASC
+            ";
+            return $this->db->query($fallbackSql)->fetchAll();
+        }
     }
 
     public function getKelasByGuru($guru_id) {
@@ -233,6 +278,8 @@ class AcademicModel extends BaseModel {
                 SELECT k2.id FROM quiz q JOIN kelas k2 ON FIND_IN_SET(k2.id, q.kelas_ids) WHERE q.guru_id IN ({$inGuru})
                 UNION
                 SELECT s.kelas_id FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.guru_id IN ({$inGuru}) AND s.kelas_id IS NOT NULL
+                UNION
+                SELECT kelas_id FROM game_edukasi WHERE guru_id IN ({$inGuru}) AND kelas_id IS NOT NULL AND kelas_id > 0
             )
             ORDER BY 
                 CASE 
