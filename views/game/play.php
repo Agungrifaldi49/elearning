@@ -12,22 +12,132 @@ if (!$soalJsonData) $soalJsonData = '[]';
 $gameType = $game['tipe_game'] ?? 'mario_run';
 ?>
 
+<!-- 🎮 RESPONSIVE FULLSCREEN & MOBILE LANDSCAPE STYLING -->
+<style>
+/* Fullscreen Arena Card Styling */
+#gameArenaCard:fullscreen,
+#gameArenaCard:-webkit-full-screen,
+#gameArenaCard:-ms-fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0.85rem !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 100%) !important;
+}
+
+/* Optimasi Khusus Layar Pendek / Mobile Landscape */
+@media (max-height: 560px) {
+    #gameArenaCard {
+        padding: 0.45rem 0.75rem !important;
+        min-height: 100vh !important;
+    }
+    #gameArenaCard .arena-header-bar {
+        margin-bottom: 0.4rem !important;
+        padding-bottom: 0.35rem !important;
+    }
+    #marioStageContainer .row {
+        margin-bottom: 0.3rem !important;
+    }
+    #marioCanvas {
+        max-height: calc(100vh - 125px) !important;
+        border-radius: 12px !important;
+    }
+    .mario-option-btn {
+        padding: 0.45rem 0.65rem !important;
+    }
+    .mario-option-btn span.fs-6 {
+        font-size: 0.85rem !important;
+    }
+}
+
+/* Opsi Jawaban Checkpoint Mario */
+.mario-option-btn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-color: rgba(245, 158, 11, 0.45) !important;
+    background: rgba(30, 41, 59, 0.85) !important;
+}
+.mario-option-btn:hover,
+.mario-option-btn:active {
+    background: rgba(245, 158, 11, 0.25) !important;
+    border-color: #f59e0b !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35) !important;
+}
+
+/* Animasi Rotasi Ponsel */
+.rotate-phone-animation {
+    display: inline-block;
+    animation: rotatePhone 2.2s infinite ease-in-out;
+}
+@keyframes rotatePhone {
+    0%, 20% { transform: rotate(0deg); }
+    50%, 70% { transform: rotate(-90deg); }
+    100% { transform: rotate(0deg); }
+}
+</style>
+
 <!-- Declare Game Engine & Window Helpers BEFORE HTML elements render -->
 <script>
+async function requestMobileLandscapeAndFullscreen() {
+    const arenaCard = document.getElementById('gameArenaCard');
+    if (!arenaCard) return;
+
+    // 1. Fullscreen Request pada kartu game arena
+    try {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            if (arenaCard.requestFullscreen) {
+                await arenaCard.requestFullscreen().catch(() => {});
+            } else if (arenaCard.webkitRequestFullscreen) {
+                await arenaCard.webkitRequestFullscreen();
+            } else if (arenaCard.msRequestFullscreen) {
+                await arenaCard.msRequestFullscreen();
+            }
+        }
+    } catch (err) {
+        console.warn('Fullscreen notice:', err);
+    }
+
+    // 2. Kunci Orientasi ke Landscape (Screen Orientation API)
+    try {
+        if (screen.orientation && screen.orientation.lock) {
+            await screen.orientation.lock('landscape').catch(() => {});
+        } else if (screen.lockOrientation) {
+            screen.lockOrientation('landscape');
+        } else if (screen.webkitLockOrientation) {
+            screen.webkitLockOrientation('landscape');
+        } else if (screen.mozLockOrientation) {
+            screen.mozLockOrientation('landscape');
+        } else if (screen.msLockOrientation) {
+            screen.msLockOrientation('landscape');
+        }
+    } catch (err) {
+        console.warn('Orientation lock notice:', err);
+    }
+
+    if (typeof window.checkDeviceOrientation === 'function') {
+        window.checkDeviceOrientation();
+    }
+}
+window.requestMobileLandscapeAndFullscreen = requestMobileLandscapeAndFullscreen;
+
 function toggleArenaFullscreen() {
     const arenaCard = document.getElementById('gameArenaCard');
     if (!arenaCard) return;
 
-    try {
-        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-            if (arenaCard.requestFullscreen) {
-                arenaCard.requestFullscreen().catch(() => {});
-            } else if (arenaCard.webkitRequestFullscreen) {
-                arenaCard.webkitRequestFullscreen();
-            } else if (arenaCard.msRequestFullscreen) {
-                arenaCard.msRequestFullscreen();
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+        requestMobileLandscapeAndFullscreen();
+    } else {
+        try {
+            if (screen.orientation && screen.orientation.unlock) {
+                screen.orientation.unlock();
             }
-        } else {
+        } catch(e) {}
+        try {
             if (document.exitFullscreen) {
                 document.exitFullscreen().catch(() => {});
             } else if (document.webkitExitFullscreen) {
@@ -35,10 +145,34 @@ function toggleArenaFullscreen() {
             } else if (document.msExitFullscreen) {
                 document.msExitFullscreen();
             }
-        }
-    } catch(e) {}
+        } catch(e) {}
+    }
 }
 window.toggleArenaFullscreen = toggleArenaFullscreen;
+
+function checkDeviceOrientation() {
+    const isMobile = window.innerWidth <= 991 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const promptEl = document.getElementById('rotateDevicePrompt');
+    
+    if (promptEl) {
+        // Tampilkan prompt hanya jika di layar kecil dan orientasi portrait saat game berjalan
+        if (isMobile && isPortrait && window.GameEngine && window.GameEngine.state && window.GameEngine.state.isStarted && !window.GameEngine.state.isEnded) {
+            promptEl.classList.remove('d-none');
+        } else {
+            promptEl.classList.add('d-none');
+        }
+    }
+}
+window.checkDeviceOrientation = checkDeviceOrientation;
+
+window.addEventListener('resize', checkDeviceOrientation);
+window.addEventListener('orientationchange', () => {
+    setTimeout(checkDeviceOrientation, 250);
+});
+if (screen.orientation && screen.orientation.addEventListener) {
+    screen.orientation.addEventListener('change', checkDeviceOrientation);
+}
 
 window.GameEngine = {
     data: {
@@ -100,7 +234,11 @@ window.GameEngine = {
         if (this.state.isStarted) return;
         this.state.isStarted = true;
 
-        window.toggleArenaFullscreen();
+        if (window.requestMobileLandscapeAndFullscreen) {
+            window.requestMobileLandscapeAndFullscreen();
+        } else if (window.toggleArenaFullscreen) {
+            window.toggleArenaFullscreen();
+        }
 
         const overlay = document.getElementById('startScreenOverlay');
         const timerBox = document.getElementById('timerBarContainer');
@@ -1100,20 +1238,31 @@ window.GameEngine = {
         this.state.isMarioRunning = false;
         clearInterval(this.state.marioLoopInterval);
 
-        const quizModalEl = document.getElementById('modalMarioQuiz');
-        if (quizModalEl) {
-            const modal = new bootstrap.Modal(quizModalEl);
-            this.renderMarioModalQuestion(reason);
-            modal.show();
+        // Render konten soal checkpoint
+        this.renderMarioModalQuestion(reason);
+
+        // Tampilkan in-game overlay langsung di dalam arena fullscreen!
+        const overlay = document.getElementById('marioCheckpointOverlay');
+        if (overlay) {
+            overlay.classList.remove('d-none');
         } else {
-            const quizBox = document.getElementById('quizBoxContainer');
-            if (quizBox) quizBox.classList.remove('d-none');
-            this.renderQuestion();
+            const quizModalEl = document.getElementById('modalMarioQuiz');
+            if (quizModalEl) {
+                const modal = new bootstrap.Modal(quizModalEl);
+                modal.show();
+            } else {
+                const quizBox = document.getElementById('quizBoxContainer');
+                if (quizBox) quizBox.classList.remove('d-none');
+                this.renderQuestion();
+            }
         }
     },
 
     renderMarioModalQuestion: function(reason) {
         if (this.state.currentIdx >= this.data.questions.length || this.state.lives <= 0) {
+            const overlay = document.getElementById('marioCheckpointOverlay');
+            if (overlay) overlay.classList.add('d-none');
+
             const modalEl = document.getElementById('modalMarioQuiz');
             if (modalEl) {
                 const instance = bootstrap.Modal.getInstance(modalEl);
@@ -1124,20 +1273,27 @@ window.GameEngine = {
         }
 
         const q = this.data.questions[this.state.currentIdx];
+        const titleEl = document.getElementById('marioModalMainTitle');
         const counterEl = document.getElementById('marioModalCounter');
         const questionEl = document.getElementById('marioModalQuestion');
         const optionsEl = document.getElementById('marioModalOptions');
 
-        let checkpointTitle = `Tantangan Checkpoint #${this.state.currentIdx + 1} dari ${this.data.questions.length}`;
+        let checkpointTitle = `TANTANGAN KUIS CHECKPOINT MARIO`;
+        let subTitle = `🏁 CHECKPOINT GERBANG BINTANG #${this.state.currentIdx + 1} (${this.state.currentIdx + 1}/${this.data.questions.length})`;
+        
         if (reason === 'obstacle_hit') {
-            checkpointTitle = `⚠️ RESCUE DARURAT! Jawab Benar Untuk Pulihkan Mario!`;
+            checkpointTitle = `⚠️ RESCUE DARURAT MARIO!`;
+            subTitle = `Tabrakan Musuh! Jawab Benar Untuk Pulihkan Mario & Star Power!`;
         } else if (reason === 'stamina_empty') {
-            checkpointTitle = `⚡ STAMINA HABIS! Jawab Benar Untuk Isi Ulang 100%!`;
+            checkpointTitle = `⚡ STAMINA HABIS! ISI ULANG ENERGI!`;
+            subTitle = `Kehabisan Stamina! Jawab Benar Untuk Isi Penuh Stamina 100%!`;
         } else if (reason === 'checkpoint_reached') {
             checkpointTitle = `🏁 CHECKPOINT GERBANG BINTANG #${this.state.currentIdx + 1}!`;
+            subTitle = `Pintu Bintang Terbuka! Jawab Benar Untuk Membuka Akses & Bonus Koin!`;
         }
 
-        if (counterEl) counterEl.textContent = checkpointTitle;
+        if (titleEl) titleEl.textContent = checkpointTitle;
+        if (counterEl) counterEl.textContent = subTitle;
         if (questionEl) questionEl.textContent = q.pertanyaan;
 
         if (optionsEl) {
@@ -1147,8 +1303,8 @@ window.GameEngine = {
                 const safeText = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
                 return `
                     <div class="col-12 col-md-6">
-                        <button type="button" class="btn btn-outline-warning w-100 p-3 rounded-4 text-start d-flex align-items-center gap-3 option-btn shadow-sm text-white" onclick="window.GameEngine.submitMarioAnswer('${opt}')">
-                            <span class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold fs-6" style="width: 38px; height: 38px; min-width: 38px;">
+                        <button type="button" class="btn btn-outline-warning w-100 p-2.5 p-md-3 rounded-4 text-start d-flex align-items-center gap-2 gap-md-3 mario-option-btn shadow-sm text-white" onclick="window.GameEngine.submitMarioAnswer('${opt}')">
+                            <span class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center fw-bold fs-6" style="width: 36px; height: 36px; min-width: 36px;">
                                 ${opt.toUpperCase()}
                             </span>
                             <span class="fw-semibold text-white fs-6 flex-grow-1">${safeText}</span>
@@ -1200,6 +1356,10 @@ window.GameEngine = {
         setTimeout(() => {
             this.state.currentIdx++;
             this.state.isAnswered = false;
+
+            // Sembunyikan in-game overlay seketika
+            const overlay = document.getElementById('marioCheckpointOverlay');
+            if (overlay) overlay.classList.add('d-none');
 
             const modalEl = document.getElementById('modalMarioQuiz');
             if (modalEl) {
@@ -1678,33 +1838,27 @@ window.GameEngine = {
         clearInterval(this.state.timerInterval);
         if (this.state.marioLoopInterval) clearInterval(this.state.marioLoopInterval);
 
-        try {
-            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen().catch(() => {});
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                }
-            }
-        } catch(e) {}
-
         const elapsedTime = Math.round((Date.now() - this.state.startTime) / 1000);
         const isPassed = (this.state.score >= this.data.kkm);
 
-        document.getElementById('endScoreVal').textContent = this.state.score;
-        document.getElementById('endComboVal').textContent = `${this.state.maxCombo}x 🔥`;
-        document.getElementById('endCorrectVal').textContent = `${this.state.correctCount} / ${this.data.questions.length}`;
+        const setElemText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+        setElemText('endScoreVal', this.state.score);
+        setElemText('endComboVal', `${this.state.maxCombo}x 🔥`);
+        setElemText('endCorrectVal', `${this.state.correctCount} / ${this.data.questions.length}`);
 
         const statusElem = document.getElementById('endStatusVal');
-        statusElem.textContent = isPassed ? 'LULUS 🎉' : 'TIDAK LULUS ❌';
-        statusElem.className = isPassed ? 'text-success fw-bold' : 'text-danger fw-bold';
+        if (statusElem) {
+            statusElem.textContent = isPassed ? 'LULUS 🎉' : 'TIDAK LULUS ❌';
+            statusElem.className = isPassed ? 'text-success fw-bold' : 'text-danger fw-bold';
+        }
 
         let stars = '⭐';
         if (this.state.score >= this.data.kkm * 1.2) stars = '⭐⭐⭐';
         else if (isPassed) stars = '⭐⭐';
-        document.getElementById('endGameStars').textContent = stars;
+        setElemText('endGameStars', stars);
 
         const formData = new FormData();
         formData.append('game_id', this.data.gameId);
@@ -1721,15 +1875,24 @@ window.GameEngine = {
             body: formData
         }).catch(() => {});
 
-        const modalEl = document.getElementById('modalEndGame');
-        if (modalEl) {
-            const modal = new bootstrap.Modal(modalEl);
-            modal.show();
+        // Tampilkan in-game overlay langsung di dalam arena fullscreen!
+        const endOverlay = document.getElementById('gameEndOverlay');
+        if (endOverlay) {
+            endOverlay.classList.remove('d-none');
+        } else {
+            const modalEl = document.getElementById('modalEndGame');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
         }
     }
 };
 
-window.startGameArena = function() {
+window.startGameArena = async function() {
+    if (window.requestMobileLandscapeAndFullscreen) {
+        await window.requestMobileLandscapeAndFullscreen();
+    }
     if (window.GameEngine) {
         window.GameEngine.startArena();
     }
@@ -1803,6 +1966,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         <small class="text-white-50 me-1">Skor:</small>
                         <span id="currentScore" class="fw-bold text-white fs-5">0</span>
                     </div>
+
+                    <!-- Quick Fullscreen / Landscape Toggle Button -->
+                    <button type="button" class="btn btn-outline-warning rounded-circle p-2 d-inline-flex align-items-center justify-content-center shadow-sm hover-scale text-warning" onclick="window.toggleArenaFullscreen()" title="Layar Penuh / Landscape (Fullscreen 🚀)" style="width: 42px; height: 42px; min-width: 42px;">
+                        <i class="bi bi-arrows-fullscreen fs-6"></i>
+                    </button>
                 </div>
             </div>
 
@@ -1974,74 +2142,87 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h4 id="feedbackTitle" class="fw-bold mb-1"></h4>
                 <p id="feedbackDesc" class="small mb-0"></p>
             </div>
+
+            <!-- 🍄 IN-GAME MARIO QUIZ CHECKPOINT OVERLAY (Tampil Langsung di Fullscreen Tanpa Perlu ESC!) -->
+            <div id="marioCheckpointOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none d-flex flex-column justify-content-center align-items-center p-2 p-md-4" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); z-index: 1060; overflow-y: auto;">
+                <div class="card border-0 rounded-4 shadow-2xl text-white w-100 my-auto" style="max-width: 840px; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 2px solid rgba(245, 158, 11, 0.5) !important;">
+                    <div class="card-header border-0 bg-warning text-dark p-3 rounded-top-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-2">🍄</span>
+                            <div>
+                                <h5 class="fw-bold mb-0 text-dark" id="marioModalMainTitle">TANTANGAN KUIS CHECKPOINT MARIO</h5>
+                                <small class="fw-bold text-dark text-opacity-75 d-block" id="marioModalCounter">Jawab Pertanyaan Untuk Isi Ulang Stamina!</small>
+                            </div>
+                        </div>
+                        <span class="badge bg-dark text-warning px-3 py-1.5 rounded-pill fw-bold small">
+                            ⭐ Checkpoint Arena
+                        </span>
+                    </div>
+                    <div class="card-body p-3 p-md-4 text-center">
+                        <h4 class="fw-bold text-white mb-3 mb-md-4 px-md-2" id="marioModalQuestion" style="line-height: 1.4; font-size: clamp(1.05rem, 2.2vw, 1.35rem);">
+                            Loading Pertanyaan Checkpoint...
+                        </h4>
+
+                        <div class="row g-2 g-md-3 text-start" id="marioModalOptions">
+                            <!-- Options dipasang dinamis oleh GameEngine -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🏆 IN-GAME END GAME OVERLAY (Tampil Langsung di Fullscreen Tanpa ESC!) -->
+            <div id="gameEndOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none d-flex flex-column justify-content-center align-items-center p-3" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(14px); z-index: 1070; overflow-y: auto;">
+                <div class="card border-0 rounded-4 shadow-2xl text-center p-3 p-md-4 w-100 my-auto" style="max-width: 480px; background: #ffffff; color: #1e293b;">
+                    <div class="card-body p-2 p-md-3">
+                        <div id="endGameIcon" class="display-3 mb-1">🏆</div>
+                        <h3 id="endGameTitle" class="fw-bold text-dark mb-1">Permainan Selesai!</h3>
+                        <div id="endGameStars" class="fs-2 text-warning mb-3">⭐⭐⭐</div>
+
+                        <div class="p-3 bg-light rounded-4 mb-3 border text-center">
+                            <div class="row g-2">
+                                <div class="col-6 border-end">
+                                    <small class="text-muted d-block fw-semibold">Skor Akhir</small>
+                                    <span class="fw-bold fs-2 text-primary" id="endScoreVal">0</span>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block fw-semibold">Max Combo</small>
+                                    <span class="fw-bold fs-2 text-warning" id="endComboVal">0x 🔥</span>
+                                </div>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between text-muted small fw-medium">
+                                <span>Total Benar: <strong class="text-dark" id="endCorrectVal">0</strong></span>
+                                <span>Status: <strong id="endStatusVal">LULUS</strong></span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <a href="<?= BASE_URL ?>index.php?url=game/play&id=<?= $game['id'] ?>" class="btn btn-outline-danger rounded-pill w-100 py-2.5 fw-bold">
+                                <i class="bi bi-arrow-repeat me-1"></i> Main Lagi
+                            </a>
+                            <a href="<?= BASE_URL ?>index.php?url=game/leaderboard&id=<?= $game['id'] ?>" class="btn btn-warning rounded-pill w-100 py-2.5 fw-bold shadow">
+                                <i class="bi bi-trophy-fill me-1"></i> Peringkat
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🔄 MOBILE ROTATE DEVICE PROMPT (Petunjuk Otomatis Jika Ponsel Dalam Posisi Portrait) -->
+            <div id="rotateDevicePrompt" class="position-absolute top-0 start-0 w-100 h-100 d-none d-flex flex-column justify-content-center align-items-center p-4 text-center" style="background: rgba(15, 23, 42, 0.97); backdrop-filter: blur(12px); z-index: 1090;">
+                <div class="p-4 rounded-4 border border-warning border-opacity-50 shadow-2xl" style="max-width: 380px; background: rgba(30, 41, 59, 0.95);">
+                    <div class="display-1 mb-3 text-warning rotate-phone-animation">📱</div>
+                    <h4 class="fw-bold text-white mb-2">Putar Layar ke Landscape</h4>
+                    <p class="text-white-50 small mb-4">
+                        Game Super Mario Runner dirancang untuk pengalaman bermain terbaik dalam mode <strong>Landscape (Mendatar)</strong> dan Layar Penuh.
+                    </p>
+                    <button type="button" class="btn btn-warning rounded-pill px-4 py-2.5 fw-bold text-dark w-100 shadow hover-scale" onclick="window.requestMobileLandscapeAndFullscreen()">
+                        <i class="bi bi-arrows-fullscreen me-1"></i> Kunci Landscape & Fullscreen
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </main>
-
-<!-- 🍄 MODAL MARIO QUIZ CHECKPOINT POPUP -->
-<div class="modal fade" id="modalMarioQuiz" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 rounded-4 shadow-lg text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);">
-            <div class="modal-header border-0 bg-warning text-dark p-3.5">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="fs-3">🍄</span>
-                    <div>
-                        <h5 class="modal-title fw-bold mb-0">TANTANGAN KUIS CHECKPOINT MARIO</h5>
-                        <small class="fw-semibold text-muted" id="marioModalCounter">Jawab Pertanyaan Untuk Isi Ulang Stamina!</small>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-body p-4 text-center">
-                <h4 class="fw-bold text-white mb-4 px-md-3" id="marioModalQuestion" style="line-height: 1.4;">
-                    Loading Pertanyaan Checkpoint...
-                </h4>
-
-                <div class="row g-3 text-start" id="marioModalOptions">
-                    <!-- Options -->
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal End Game Victory / Defeat -->
-<div class="modal fade" id="modalEndGame" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow-lg text-center p-4">
-            <div class="modal-body p-3 p-md-4">
-                <div id="endGameIcon" class="display-1 mb-2">🏆</div>
-                <h3 id="endGameTitle" class="fw-bold text-dark mb-1">Permainan Selesai!</h3>
-                <div id="endGameStars" class="fs-2 text-warning mb-3">⭐⭐⭐</div>
-
-                <div class="p-3 bg-light rounded-4 mb-4">
-                    <div class="row g-2 text-center">
-                        <div class="col-6 border-end">
-                            <small class="text-muted d-block">Skor Akhir</small>
-                            <span class="fw-bold fs-3 text-primary" id="endScoreVal">0</span>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block">Max Combo Streak</small>
-                            <span class="fw-bold fs-3 text-warning" id="endComboVal">0x 🔥</span>
-                        </div>
-                    </div>
-                    <hr class="my-2">
-                    <div class="d-flex justify-content-between text-muted small">
-                        <span>Total Benar: <strong class="text-dark" id="endCorrectVal">0</strong></span>
-                        <span>Status: <strong id="endStatusVal">LULUS</strong></span>
-                    </div>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <a href="<?= BASE_URL ?>index.php?url=game/play&id=<?= $game['id'] ?>" class="btn btn-outline-danger rounded-pill w-100 py-2 fw-bold">
-                        <i class="bi bi-arrow-repeat me-1"></i> Main Lagi
-                    </a>
-                    <a href="<?= BASE_URL ?>index.php?url=game/leaderboard&id=<?= $game['id'] ?>" class="btn btn-warning rounded-pill w-100 py-2 fw-bold shadow">
-                        <i class="bi bi-trophy-fill me-1"></i> Peringkat
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <?php require_once ROOT_PATH . 'views/layouts/footer.php'; ?>
