@@ -38,7 +38,7 @@ $gameType = $game['tipe_game'] ?? 'mario_run';
     padding-bottom: 0.35rem !important;
 }
 
-#gameArenaCard:fullscreen .arcade-stage-container {
+#gameArenaCard:fullscreen .arcade-stage-container:not(.d-none) {
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
@@ -46,6 +46,12 @@ $gameType = $game['tipe_game'] ?? 'mario_run';
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
+}
+
+.arcade-stage-container.d-none,
+#gameArenaCard .arcade-stage-container.d-none,
+#gameArenaCard:fullscreen .arcade-stage-container.d-none {
+    display: none !important;
 }
 
 /* ==========================================================
@@ -3137,6 +3143,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
             </div>
 
+            <?php if ($gameType === 'mario_run'): ?>
             <!-- 🍄 MODE 1: ENHANCED SUPER MARIO RETRO PLATFORM RUNNER STAGE -->
             <div id="marioStageContainer" class="arcade-stage-container d-none text-center py-1">
                 <!-- 📱 Mobile Compact Arcade Status Bar 1 (Hanya Tampil di Mobile: Tinggi Hanya ~30px) -->
@@ -3223,6 +3230,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
 
+            <!-- 🍄 IN-GAME MARIO QUIZ CHECKPOINT OVERLAY (Tampil Langsung di Fullscreen Tanpa Perlu ESC!) -->
+            <div id="marioCheckpointOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none d-flex flex-column justify-content-center align-items-center p-2 p-md-4" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); z-index: 1060; overflow-y: auto;">
+                <div class="card border-0 rounded-4 shadow-2xl text-white w-100 my-auto" style="max-width: 840px; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 2px solid rgba(245, 158, 11, 0.5) !important;">
+                    <div class="card-header border-0 bg-warning text-dark p-3 rounded-top-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-2">🍄</span>
+                            <div>
+                                <h5 class="fw-bold mb-0 text-dark" id="marioModalMainTitle">TANTANGAN KUIS CHECKPOINT MARIO</h5>
+                                <small class="fw-bold text-dark text-opacity-75 d-block" id="marioModalCounter">Jawab Pertanyaan Untuk Isi Ulang Stamina!</small>
+                            </div>
+                        </div>
+                        <span class="badge bg-dark text-warning px-3 py-1.5 rounded-pill fw-bold small">
+                            ⭐ Checkpoint Arena
+                        </span>
+                    </div>
+                    <div class="card-body p-3 p-md-4 text-center">
+                        <h4 class="fw-bold text-white mb-3 mb-md-4 px-md-2" id="marioModalQuestion" style="line-height: 1.4; font-size: clamp(1.05rem, 2.2vw, 1.35rem);">
+                            Loading Pertanyaan Checkpoint...
+                        </h4>
+
+                        <div class="row g-2 g-md-3 text-start" id="marioModalOptions">
+                            <!-- Options dipasang dinamis oleh GameEngine -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php elseif ($gameType === 'car_racing'): ?>
             <!-- 🏎️ MODE 5: ENDLESS TURBO CAR RACING RUNNER STAGE -->
             <div id="racingStageContainer" class="arcade-stage-container d-none text-center py-1">
                 <!-- 📱 Mobile Compact Arcade Status Bar (Tinggi Hanya ~30px) -->
@@ -3352,7 +3386,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </span>
                 </div>
             </div>
-
+            <?php elseif ($gameType === 'spin_wheel'): ?>
             <!-- 🎡 MODE 3: SPIN WHEEL STAGE (Hidden Initially) -->
             <div id="spinWheelStageContainer" class="d-none text-center py-2">
                 <div class="mb-3">
@@ -3366,7 +3400,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 </div>
             </div>
-
+            <?php elseif ($gameType === 'memory_match'): ?>
             <!-- 🧩 MODE 4: MEMORY MATCH CARDS STAGE (Hidden Initially) -->
             <div id="memoryStageContainer" class="d-none text-center py-2">
                 <div class="mb-3">
@@ -3377,7 +3411,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <!-- Dynamic Flip Cards -->
                 </div>
             </div>
-
+            <?php else: ?>
             <!-- ⚡ MODE 2: QUIZ SPEED STAGE (Hidden Initially) -->
             <div id="speedStageContainer" class="d-none"></div>
 
@@ -3401,39 +3435,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     <!-- Dynamic Answer Options -->
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Feedback Popup Banner -->
             <div id="feedbackBanner" class="alert position-absolute top-50 start-50 translate-middle shadow-lg rounded-4 text-center p-4 d-none" style="min-width: 290px; max-width: 90%; z-index: 1050; backdrop-filter: blur(8px);">
                 <div id="feedbackIcon" class="display-3 mb-2"></div>
                 <h4 id="feedbackTitle" class="fw-bold mb-1"></h4>
                 <p id="feedbackDesc" class="small mb-0"></p>
-            </div>
-
-            <!-- 🍄 IN-GAME MARIO QUIZ CHECKPOINT OVERLAY (Tampil Langsung di Fullscreen Tanpa Perlu ESC!) -->
-            <div id="marioCheckpointOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none d-flex flex-column justify-content-center align-items-center p-2 p-md-4" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); z-index: 1060; overflow-y: auto;">
-                <div class="card border-0 rounded-4 shadow-2xl text-white w-100 my-auto" style="max-width: 840px; background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 2px solid rgba(245, 158, 11, 0.5) !important;">
-                    <div class="card-header border-0 bg-warning text-dark p-3 rounded-top-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fs-2">🍄</span>
-                            <div>
-                                <h5 class="fw-bold mb-0 text-dark" id="marioModalMainTitle">TANTANGAN KUIS CHECKPOINT MARIO</h5>
-                                <small class="fw-bold text-dark text-opacity-75 d-block" id="marioModalCounter">Jawab Pertanyaan Untuk Isi Ulang Stamina!</small>
-                            </div>
-                        </div>
-                        <span class="badge bg-dark text-warning px-3 py-1.5 rounded-pill fw-bold small">
-                            ⭐ Checkpoint Arena
-                        </span>
-                    </div>
-                    <div class="card-body p-3 p-md-4 text-center">
-                        <h4 class="fw-bold text-white mb-3 mb-md-4 px-md-2" id="marioModalQuestion" style="line-height: 1.4; font-size: clamp(1.05rem, 2.2vw, 1.35rem);">
-                            Loading Pertanyaan Checkpoint...
-                        </h4>
-
-                        <div class="row g-2 g-md-3 text-start" id="marioModalOptions">
-                            <!-- Options dipasang dinamis oleh GameEngine -->
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- 🏆 IN-GAME END GAME OVERLAY (Tampil Langsung di Fullscreen Tanpa ESC!) -->
