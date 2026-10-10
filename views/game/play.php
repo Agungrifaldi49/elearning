@@ -23,32 +23,69 @@ $gameType = $game['tipe_game'] ?? 'mario_run';
     max-height: 100vh !important;
     border-radius: 0 !important;
     margin: 0 !important;
-    padding: 0.85rem !important;
+    padding: 0.65rem 0.85rem !important;
     overflow-y: auto !important;
     display: flex !important;
     flex-direction: column !important;
     background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 100%) !important;
 }
 
-/* Optimasi Khusus Layar Pendek / Mobile Landscape */
-@media (max-height: 560px) {
+/* Optimasi Khusus Mobile (Layar <= 768px) */
+@media (max-width: 768px) {
+    .main-content {
+        padding-top: 0.35rem !important;
+        padding-bottom: 0.5rem !important;
+    }
     #gameArenaCard {
-        padding: 0.45rem 0.75rem !important;
-        min-height: 100vh !important;
+        padding: 0.65rem !important;
+        margin-bottom: 0.75rem !important;
+        min-height: auto !important;
+        border-radius: 1rem !important;
     }
-    #gameArenaCard .arena-header-bar {
-        margin-bottom: 0.4rem !important;
-        padding-bottom: 0.35rem !important;
+    /* Sembunyikan header yang terlalu lebar saat game sudah mulai */
+    #gameArenaCard.game-active #arenaHeaderBar {
+        display: none !important;
     }
-    #marioStageContainer .row {
-        margin-bottom: 0.3rem !important;
+    #topNavGameHeader.game-active {
+        display: none !important;
+    }
+    .arena-header-bar {
+        margin-bottom: 0.65rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    .arena-title-text {
+        font-size: 1.05rem !important;
+    }
+    .arena-sub-info {
+        font-size: 0.75rem !important;
     }
     #marioCanvas {
-        max-height: calc(100vh - 125px) !important;
+        max-height: min(48vh, 310px) !important;
         border-radius: 12px !important;
     }
+}
+
+/* Optimasi Khusus Layar Pendek / Mobile Landscape (Tinggi <= 560px) */
+@media (max-height: 560px) {
+    #topNavGameHeader {
+        display: none !important;
+    }
+    #gameArenaCard {
+        padding: 0.35rem 0.65rem !important;
+        min-height: 100vh !important;
+    }
+    #gameArenaCard #arenaHeaderBar {
+        display: none !important;
+    }
+    #marioStageContainer .row {
+        margin-bottom: 0.25rem !important;
+    }
+    #marioCanvas {
+        max-height: calc(100vh - 85px) !important;
+        border-radius: 10px !important;
+    }
     .mario-option-btn {
-        padding: 0.45rem 0.65rem !important;
+        padding: 0.4rem 0.6rem !important;
     }
     .mario-option-btn span.fs-6 {
         font-size: 0.85rem !important;
@@ -233,6 +270,11 @@ window.GameEngine = {
     startArena: function() {
         if (this.state.isStarted) return;
         this.state.isStarted = true;
+
+        const arenaCard = document.getElementById('gameArenaCard');
+        if (arenaCard) arenaCard.classList.add('game-active');
+        const topNav = document.getElementById('topNavGameHeader');
+        if (topNav) topNav.classList.add('game-active');
 
         if (window.requestMobileLandscapeAndFullscreen) {
             window.requestMobileLandscapeAndFullscreen();
@@ -1569,21 +1611,29 @@ window.GameEngine = {
 
     updateStaminaHUD: function(val) {
         const pct = Math.max(0, Math.min(100, Math.round(val)));
-        const bar = document.getElementById('marioStaminaBar');
-        if (bar) {
-            bar.style.width = pct + '%';
-            bar.textContent = `${pct}%`;
-            if (pct < 30) {
-                bar.className = 'progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated';
-            } else {
-                bar.className = 'progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated';
+        ['marioStaminaBar', 'marioStaminaBarMobile'].forEach(id => {
+            const bar = document.getElementById(id);
+            if (bar) {
+                bar.style.width = pct + '%';
+                bar.textContent = `${pct}%`;
+                if (pct < 30) {
+                    bar.className = 'progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated';
+                } else {
+                    bar.className = 'progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated';
+                }
             }
-        }
+        });
 
-        const distEl = document.getElementById('marioDistVal');
-        const targetEl = document.getElementById('marioTargetVal');
-        if (distEl) distEl.textContent = Math.round(this.state.marioDistance);
-        if (targetEl) targetEl.textContent = Math.round(this.state.marioNextCheckpoint);
+        const dist = Math.round(this.state.marioDistance);
+        const target = Math.round(this.state.marioNextCheckpoint);
+        ['marioDistVal', 'marioDistValMobile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = dist;
+        });
+        ['marioTargetVal', 'marioTargetValMobile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = target;
+        });
     },
 
     // Synthetic Retro 8-Bit Sound Synthesizer (Web Audio API)
@@ -1799,20 +1849,27 @@ window.GameEngine = {
     },
 
     updateHUD: function() {
-        const scoreEl = document.getElementById('currentScore');
-        const comboEl = document.getElementById('comboBadge');
-        const livesEl = document.getElementById('livesContainer');
-        const marioCoinEl = document.getElementById('marioCoinVal');
-
-        if (scoreEl) scoreEl.textContent = this.state.score;
-        if (comboEl) comboEl.textContent = `${this.state.combo}x 🔥`;
-        if (marioCoinEl) marioCoinEl.textContent = this.state.coins;
+        ['currentScore', 'currentScoreMobile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = this.state.score;
+        });
+        ['comboBadge', 'comboBadgeMobile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = `${this.state.combo}x 🔥`;
+        });
+        ['marioCoinVal', 'marioCoinValMobile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = this.state.coins;
+        });
 
         let hearts = '';
         for (let i = 0; i < 3; i++) {
             hearts += (i < this.state.lives) ? '❤️' : '🖤';
         }
-        if (livesEl) livesEl.textContent = hearts;
+        ['livesContainer', 'livesContainerMobile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = hearts;
+        });
     },
 
     showFeedback: function(isSuccess, title, desc) {
@@ -1912,128 +1969,161 @@ document.addEventListener('DOMContentLoaded', function() {
 <main class="main-content px-2 px-md-4 py-3">
     <div class="container-fluid">
         <!-- Top Navigation Bar -->
-        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-            <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold">
+        <div class="d-flex justify-content-between align-items-center mb-2 mb-md-3 flex-wrap gap-2" id="topNavGameHeader">
+            <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-secondary rounded-pill px-3 py-1.5 py-md-2 fw-semibold btn-sm">
                 <i class="bi bi-arrow-left me-1"></i> Keluar Arena Game
             </a>
-            <button type="button" class="btn btn-outline-warning rounded-pill px-4 py-2 fw-bold text-dark shadow-sm hover-scale" onclick="window.toggleArenaFullscreen()" id="btnFullscreenHeader">
-                <i class="bi bi-arrows-fullscreen me-1"></i> Mode Layar Penuh (Fullscreen 🚀)
+            <button type="button" class="btn btn-outline-warning rounded-pill px-3 px-md-4 py-1.5 py-md-2 fw-bold text-dark shadow-sm hover-scale btn-sm" onclick="window.toggleArenaFullscreen()" id="btnFullscreenHeader">
+                <i class="bi bi-arrows-fullscreen me-1"></i> <span class="d-none d-sm-inline">Mode </span>Layar Penuh (🚀)
             </button>
         </div>
 
         <!-- Game Arena Card Container -->
-        <div class="card card-custom p-3 p-md-5 mb-4 shadow-lg border-0 rounded-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); color: white; min-height: 520px;" id="gameArenaCard">
+        <div class="card card-custom p-2 p-sm-3 p-md-4 mb-3 shadow-lg border-0 rounded-4 overflow-hidden position-relative" style="background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%); color: white; min-height: 480px;" id="gameArenaCard">
 
             <!-- Arena Header Bar -->
-            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 pb-3 border-bottom border-secondary border-opacity-50">
+            <div class="arena-header-bar d-flex justify-content-between align-items-center mb-3 mb-md-4 flex-wrap gap-2 gap-md-3 pb-2 pb-md-3 border-bottom border-secondary border-opacity-50" id="arenaHeaderBar">
                 <div>
                     <?php if (strtolower(trim($_SESSION['user']['role_name'] ?? '')) === 'guru'): ?>
-                        <span class="badge bg-warning text-dark px-3 py-1 rounded-pill small mb-1 d-inline-block fw-bold shadow-sm">
-                            <i class="bi bi-eye-fill me-1"></i> Mode Pratinjau Guru (Uji Coba Arena)
+                        <span class="badge bg-warning text-dark px-2.5 py-0.5 rounded-pill small mb-1 d-inline-block fw-bold shadow-sm" style="font-size: 0.72rem;">
+                            <i class="bi bi-eye-fill me-1"></i> Mode Pratinjau Guru
                         </span>
                     <?php endif; ?>
-                    <h4 class="fw-bold mb-0 text-warning d-flex align-items-center gap-2">
+                    <h4 class="fw-bold mb-0 text-warning d-flex align-items-center gap-2 arena-title-text fs-5 fs-md-4">
                         <i class="bi bi-controller text-danger"></i> <?= htmlspecialchars($game['judul']) ?>
                         <?php if ($gameType === 'mario_run'): ?>
-                            <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 fs-6">🍄 Super Mario</span>
+                            <span class="badge bg-danger text-white rounded-pill px-2 py-0.5" style="font-size: 0.75rem;">🍄 Mario Run</span>
                         <?php elseif ($gameType === 'spin_wheel'): ?>
-                            <span class="badge bg-success text-white rounded-pill px-2.5 py-1 fs-6">🎡 Spin Wheel</span>
+                            <span class="badge bg-success text-white rounded-pill px-2 py-0.5" style="font-size: 0.75rem;">🎡 Spin Wheel</span>
                         <?php elseif ($gameType === 'memory_match'): ?>
-                            <span class="badge bg-primary text-white rounded-pill px-2.5 py-1 fs-6">🧩 Memory Match</span>
+                            <span class="badge bg-primary text-white rounded-pill px-2 py-0.5" style="font-size: 0.75rem;">🧩 Memory</span>
                         <?php else: ?>
-                            <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 fs-6">⚡ Quiz Speed</span>
+                            <span class="badge bg-warning text-dark rounded-pill px-2 py-0.5" style="font-size: 0.75rem;">⚡ Speed</span>
                         <?php endif; ?>
                     </h4>
-                    <small class="text-white-50 fs-6"><?= htmlspecialchars($game['nama_mapel']) ?> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong></small>
+                    <small class="text-white-50 arena-sub-info" style="font-size: 0.78rem;"><?= htmlspecialchars($game['nama_mapel']) ?> | KKM: <strong><?= $game['kkm'] ?> Poin</strong></small>
                 </div>
 
                 <!-- HUD Status Badges -->
-                <div class="d-flex align-items-center gap-2 flex-wrap">
+                <div class="d-flex align-items-center gap-1.5 gap-md-2 flex-wrap">
                     <!-- Nyawa / Lives -->
-                    <div class="bg-black bg-opacity-50 px-3 py-2 rounded-pill d-flex align-items-center gap-1 border border-danger border-opacity-50 shadow-sm">
-                        <small class="text-white-50 me-1 d-none d-sm-inline">Nyawa:</small>
-                        <span id="livesContainer" class="fs-5">❤️❤️❤️</span>
+                    <div class="bg-black bg-opacity-50 px-2.5 px-md-3 py-1.5 py-md-2 rounded-pill d-flex align-items-center gap-1 border border-danger border-opacity-50 shadow-sm">
+                        <small class="text-white-50 me-1 d-none d-sm-inline" style="font-size: 0.75rem;">Nyawa:</small>
+                        <span id="livesContainer" class="fs-6 fs-md-5">❤️❤️❤️</span>
                     </div>
 
                     <!-- Combo Streak -->
-                    <div class="bg-black bg-opacity-50 px-3 py-2 rounded-pill d-flex align-items-center gap-1 border border-warning border-opacity-50 shadow-sm">
-                        <small class="text-white-50 me-1 d-none d-sm-inline">Combo:</small>
-                        <span id="comboBadge" class="fw-bold text-warning fs-6">1x 🔥</span>
+                    <div class="bg-black bg-opacity-50 px-2.5 px-md-3 py-1.5 py-md-2 rounded-pill d-flex align-items-center gap-1 border border-warning border-opacity-50 shadow-sm">
+                        <small class="text-white-50 me-1 d-none d-sm-inline" style="font-size: 0.75rem;">Combo:</small>
+                        <span id="comboBadge" class="fw-bold text-warning" style="font-size: 0.8rem;">1x 🔥</span>
                     </div>
 
                     <!-- Score Badge -->
-                    <div class="bg-primary bg-gradient px-3 px-sm-4 py-2 rounded-pill shadow border border-primary border-opacity-50">
-                        <small class="text-white-50 me-1">Skor:</small>
-                        <span id="currentScore" class="fw-bold text-white fs-5">0</span>
+                    <div class="bg-primary bg-gradient px-3 px-md-4 py-1.5 py-md-2 rounded-pill shadow border border-primary border-opacity-50">
+                        <small class="text-white-50 me-1" style="font-size: 0.75rem;">Skor:</small>
+                        <span id="currentScore" class="fw-bold text-white fs-6 fs-md-5">0</span>
                     </div>
 
                     <!-- Quick Fullscreen / Landscape Toggle Button -->
-                    <button type="button" class="btn btn-outline-warning rounded-circle p-2 d-inline-flex align-items-center justify-content-center shadow-sm hover-scale text-warning" onclick="window.toggleArenaFullscreen()" title="Layar Penuh / Landscape (Fullscreen 🚀)" style="width: 42px; height: 42px; min-width: 42px;">
-                        <i class="bi bi-arrows-fullscreen fs-6"></i>
+                    <button type="button" class="btn btn-outline-warning rounded-circle p-1.5 d-inline-flex align-items-center justify-content-center shadow-sm hover-scale text-warning" onclick="window.toggleArenaFullscreen()" title="Layar Penuh / Landscape (Fullscreen 🚀)" style="width: 38px; height: 38px; min-width: 38px;">
+                        <i class="bi bi-arrows-fullscreen" style="font-size: 0.85rem;"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Start Screen Overlay Container (Initial State) -->
-            <div id="startScreenOverlay" class="text-center py-4 px-2">
-                <div class="mb-3">
-                    <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold fs-6 shadow">
+            <div id="startScreenOverlay" class="text-center py-2 py-md-4 px-2">
+                <div class="mb-2 mb-md-3">
+                    <span class="badge bg-warning text-dark px-3 py-1.5 rounded-pill fw-bold small shadow">
                         <i class="bi bi-controller me-1"></i> ARENA KUIS SIAP DIMULAI
                     </span>
                 </div>
-                <h2 class="fw-bold text-white mb-2 display-6"><?= htmlspecialchars($game['judul']) ?></h2>
-                <p class="text-white-50 max-w-xl mx-auto mb-4 fs-6">
+                <h2 class="fw-bold text-white mb-1.5 display-6 fs-3 fs-md-2"><?= htmlspecialchars($game['judul']) ?></h2>
+                <p class="text-white-50 max-w-xl mx-auto mb-3 fs-6" style="font-size: 0.85rem !important;">
                     Mata Pelajaran: <strong><?= htmlspecialchars($game['nama_mapel']) ?></strong> | Target KKM: <strong><?= $game['kkm'] ?> Poin</strong>
                 </p>
 
-                <!-- Game Rules Info Box -->
-                <div class="row g-3 justify-content-center max-w-2xl mx-auto mb-4 text-start">
-                    <div class="col-12 col-md-4">
-                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
+                <!-- Game Rules Info Box (Responsive 3 Columns di Mobile & Desktop) -->
+                <div class="row g-2 g-md-3 justify-content-center max-w-2xl mx-auto mb-3 mb-md-4 text-start">
+                    <div class="col-4">
+                        <div class="p-2 p-md-3 bg-white bg-opacity-10 rounded-3 rounded-md-4 border border-white border-opacity-10 text-center h-100">
                             <?php if ($gameType === 'mario_run'): ?>
-                                <div class="fs-3 mb-1">🍄 ⚡ 100%</div>
-                                <small class="text-white-50 d-block">Aturan Stamina</small>
-                                <span class="fw-bold text-warning">Isi Stamina (Jawaban Benar)</span>
+                                <div class="fs-4 fs-md-3 mb-1">🍄 ⚡</div>
+                                <small class="text-white-50 d-block" style="font-size: 0.68rem;">Stamina</small>
+                                <span class="fw-bold text-warning d-block" style="font-size: 0.75rem;">Isi 100%</span>
                             <?php elseif ($gameType === 'spin_wheel'): ?>
-                                <div class="fs-3 mb-1">🎡 🌟</div>
-                                <small class="text-white-50 d-block">Roda Keberuntungan</small>
-                                <span class="fw-bold text-warning">Spin Wheel Challenge</span>
+                                <div class="fs-4 fs-md-3 mb-1">🎡 🌟</div>
+                                <small class="text-white-50 d-block" style="font-size: 0.68rem;">Roda</small>
+                                <span class="fw-bold text-warning d-block" style="font-size: 0.75rem;">Spin Wheel</span>
                             <?php elseif ($gameType === 'memory_match'): ?>
-                                <div class="fs-3 mb-1">🧩 🎴</div>
-                                <small class="text-white-50 d-block">Pencocokan Kartu</small>
-                                <span class="fw-bold text-warning">Memory Flip Cards</span>
+                                <div class="fs-4 fs-md-3 mb-1">🧩 🎴</div>
+                                <small class="text-white-50 d-block" style="font-size: 0.68rem;">Kartu</small>
+                                <span class="fw-bold text-warning d-block" style="font-size: 0.75rem;">Memory Match</span>
                             <?php else: ?>
-                                <div class="fs-3 mb-1">⚡ ⏱️</div>
-                                <small class="text-white-50 d-block">Kecepatan Kuis</small>
-                                <span class="fw-bold text-warning">Arcade Speed Battle</span>
+                                <div class="fs-4 fs-md-3 mb-1">⚡ ⏱️</div>
+                                <small class="text-white-50 d-block" style="font-size: 0.68rem;">Kecepatan</small>
+                                <span class="fw-bold text-warning d-block" style="font-size: 0.75rem;">Speed Battle</span>
                             <?php endif; ?>
                         </div>
                     </div>
-                    <div class="col-12 col-md-4">
-                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
-                            <div class="fs-3 mb-1">⏱️ <?= $game['durasi_per_soal'] ?>s</div>
-                            <small class="text-white-50 d-block">Timer per Soal</small>
-                            <span class="fw-bold text-warning"><?= $game['durasi_per_soal'] ?> Detik / Soal</span>
+                    <div class="col-4">
+                        <div class="p-2 p-md-3 bg-white bg-opacity-10 rounded-3 rounded-md-4 border border-white border-opacity-10 text-center h-100">
+                            <div class="fs-4 fs-md-3 mb-1">⏱️ <?= $game['durasi_per_soal'] ?>s</div>
+                            <small class="text-white-50 d-block" style="font-size: 0.68rem;">Timer</small>
+                            <span class="fw-bold text-warning d-block" style="font-size: 0.75rem;"><?= $game['durasi_per_soal'] ?> Detik</span>
                         </div>
                     </div>
-                    <div class="col-12 col-md-4">
-                        <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-10 text-center">
-                            <div class="fs-3 mb-1">🔥 5x</div>
-                            <small class="text-white-50 d-block">Pengganda Skor</small>
-                            <span class="fw-bold text-info">Combo Streak Bonus</span>
+                    <div class="col-4">
+                        <div class="p-2 p-md-3 bg-white bg-opacity-10 rounded-3 rounded-md-4 border border-white border-opacity-10 text-center h-100">
+                            <div class="fs-4 fs-md-3 mb-1">🔥 5x</div>
+                            <small class="text-white-50 d-block" style="font-size: 0.68rem;">Bonus</small>
+                            <span class="fw-bold text-info d-block" style="font-size: 0.75rem;">Combo Multi</span>
                         </div>
                     </div>
                 </div>
 
-                <button type="button" class="btn btn-warning btn-lg rounded-pill px-5 py-3 fw-bold shadow-lg text-dark fs-4 hover-scale" id="btnStartGame" onclick="window.startGameArena()">
-                    <i class="bi bi-play-circle-fill me-2 fs-3"></i> MULAI PERMAINAN (FULLSCREEN 🚀)
+                <button type="button" class="btn btn-warning btn-lg rounded-pill px-4 px-md-5 py-2.5 py-md-3 fw-bold shadow-lg text-dark fs-5 fs-md-4 hover-scale" id="btnStartGame" onclick="window.startGameArena()">
+                    <i class="bi bi-play-circle-fill me-2 fs-4"></i> MULAI PERMAINAN (FULLSCREEN 🚀)
                 </button>
             </div>
 
             <!-- 🍄 MODE 1: ENHANCED SUPER MARIO RETRO PLATFORM RUNNER STAGE -->
-            <div id="marioStageContainer" class="d-none text-center py-2">
-                <!-- Mario Top HUD Bar -->
-                <div class="row align-items-center g-2 mb-3 px-2">
+            <div id="marioStageContainer" class="d-none text-center py-1">
+                <!-- 📱 Mobile Compact Arcade Status Bar 1 (Hanya Tampil di Mobile: Tinggi Hanya ~30px) -->
+                <div class="d-flex d-md-none justify-content-between align-items-center mb-1.5 px-2 py-1 rounded-pill bg-black bg-opacity-40 border border-white border-opacity-10 shadow-sm">
+                    <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-light btn-sm rounded-pill px-2 py-0 border-0 text-white-50 d-inline-flex align-items-center gap-1" style="font-size: 0.72rem; height: 24px;">
+                        <i class="bi bi-arrow-left"></i> Keluar
+                    </a>
+                    <div class="d-flex align-items-center gap-1.5">
+                        <span id="livesContainerMobile" class="fs-6" style="line-height: 1;">❤️❤️❤️</span>
+                        <span class="badge bg-primary px-2 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">Skor: <span id="currentScoreMobile">0</span></span>
+                        <span id="comboBadgeMobile" class="badge bg-dark text-warning border border-warning px-1.5 py-0.5 rounded-pill" style="font-size: 0.68rem;">1x 🔥</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-warning rounded-circle p-0 text-warning d-flex align-items-center justify-content-center" onclick="window.toggleArenaFullscreen()" title="Fullscreen" style="width: 26px; height: 26px;">
+                        <i class="bi bi-arrows-fullscreen" style="font-size: 0.72rem;"></i>
+                    </button>
+                </div>
+
+                <!-- 📱 Mobile Compact Sub-Bar: Stamina, Jarak & Koin (Tinggi Hanya ~24px) -->
+                <div class="d-flex d-md-none justify-content-between align-items-center gap-2 mb-1.5 px-1">
+                    <div class="d-flex align-items-center gap-1 flex-grow-1" style="min-width: 105px;">
+                        <span class="text-warning fw-bold" style="font-size: 0.72rem;"><i class="bi bi-lightning-charge-fill"></i></span>
+                        <div class="progress rounded-pill bg-dark border border-warning flex-grow-1 shadow-sm" style="height: 13px;">
+                            <div id="marioStaminaBarMobile" class="progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%; font-size: 0.65rem; line-height: 13px;">100%</div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="badge bg-danger bg-opacity-80 text-white rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.7rem;">
+                            🚩 <span id="marioDistValMobile">0</span>/<span id="marioTargetValMobile">120</span>m
+                        </span>
+                        <span class="badge bg-warning text-dark rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.7rem;">
+                            🪙 <span id="marioCoinValMobile">0</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 💻 Desktop Mario Top HUD Bar (Tampil di Layar Desktop) -->
+                <div class="d-none d-md-flex row align-items-center g-2 mb-3 px-2">
                     <div class="col-12 col-md-4">
                         <div class="d-flex align-items-center gap-2">
                             <span class="small fw-bold text-warning text-nowrap"><i class="bi bi-lightning-charge-fill"></i> Stamina:</span>
@@ -2063,26 +2153,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Mario Retro Game Canvas Screen -->
                 <div class="position-relative overflow-hidden rounded-4 border border-warning border-opacity-50 shadow-2xl mx-auto" style="max-width: 960px;">
-                    <canvas id="marioCanvas" width="800" height="320" class="w-100 h-auto rounded-4 d-block" style="background:#3b82f6; max-height:380px; cursor: pointer;"></canvas>
+                    <canvas id="marioCanvas" width="800" height="320" class="w-100 h-auto rounded-4 d-block" style="background:#3b82f6; cursor: pointer;"></canvas>
                     
                     <!-- Floating Mobile Jump Button Overlay -->
-                    <div class="position-absolute bottom-0 end-0 p-3 d-md-none" style="z-index: 10;">
-                        <button type="button" class="btn btn-warning rounded-circle shadow-lg d-flex align-items-center justify-content-center" style="width: 62px; height: 62px; font-size: 1.5rem;" onclick="window.GameEngine.marioJump()">
+                    <div class="position-absolute bottom-0 end-0 p-2 p-sm-3 d-md-none" style="z-index: 25;">
+                        <button type="button" class="btn btn-warning rounded-circle shadow-2xl d-flex align-items-center justify-content-center" style="width: 58px; height: 58px; font-size: 1.5rem; background: rgba(245, 158, 11, 0.9); backdrop-filter: blur(4px); border: 2px solid #ffffff;" onclick="window.GameEngine.marioJump()" title="Lompat">
                             🦘
                         </button>
                     </div>
                 </div>
 
                 <!-- Instructional Badges & Pro-Tips -->
-                <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 gap-md-3 mt-3 text-white-50 small">
-                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-3 py-2 rounded-pill">
-                        🎮 <strong>Kontrol:</strong> Spasi / Panah Atas / Klik Layar = Lompat (Bisa Double Jump! 🦘)
+                <div class="d-flex flex-wrap align-items-center justify-content-center gap-1.5 gap-md-3 mt-2 text-white-50" style="font-size: 0.74rem;">
+                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-2.5 py-1.5 rounded-pill">
+                        🎮 <strong>Kontrol:</strong> Ketuk Layar / Spasi = Lompat (Double Jump! 🦘)
                     </span>
-                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-3 py-2 rounded-pill">
-                        🍄 <strong>Injak Jamur Goomba:</strong> Lompat ke atas musuh untuk Stomp +50 Poin & Combo!
+                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-2.5 py-1.5 rounded-pill d-none d-sm-inline-block">
+                        🍄 <strong>Injak Goomba:</strong> +50 Poin & Combo!
                     </span>
-                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-3 py-2 rounded-pill">
-                        ❓ <strong>Balok Misteri:</strong> Sundul balok <strong>'?'</strong> dari bawah untuk Koin & Star Power!
+                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-2.5 py-1.5 rounded-pill d-none d-sm-inline-block">
+                        ❓ <strong>Balok '?':</strong> Koin & Star Power!
                     </span>
                 </div>
             </div>
