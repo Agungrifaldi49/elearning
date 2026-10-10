@@ -22,10 +22,11 @@ class _EduGameScreenState extends State<EduGameScreen> {
 
   final List<String> _gameModes = [
     'Semua',
+    'Mario Runner',
+    'Turbo Racing',
     'Kuis Speed',
     'Spin Wheel',
-    'Memory Match',
-    'Mario Runner'
+    'Memory Match'
   ];
 
   @override
@@ -89,14 +90,16 @@ class _EduGameScreenState extends State<EduGameScreen> {
             guru.contains(query);
 
         bool matchesMode = true;
-        if (_selectedMode == 'Kuis Speed') {
+        if (_selectedMode == 'Turbo Racing') {
+          matchesMode = tipe == 'car_racing' || tipe.contains('racing') || tipe.contains('car');
+        } else if (_selectedMode == 'Mario Runner') {
+          matchesMode = tipe == 'mario_run' || tipe == 'runner' || tipe.contains('mario');
+        } else if (_selectedMode == 'Kuis Speed') {
           matchesMode = tipe == 'quiz_speed' || tipe.contains('speed');
         } else if (_selectedMode == 'Spin Wheel') {
           matchesMode = tipe == 'spin_wheel' || tipe.contains('spin') || tipe.contains('wheel');
         } else if (_selectedMode == 'Memory Match') {
           matchesMode = tipe == 'memory_match' || tipe.contains('memory');
-        } else if (_selectedMode == 'Mario Runner') {
-          matchesMode = tipe == 'mario_run' || tipe == 'runner' || tipe.contains('mario');
         }
 
         return matchesSearch && matchesMode;
@@ -106,15 +109,17 @@ class _EduGameScreenState extends State<EduGameScreen> {
 
   String _formatTipeGame(String? tipe) {
     switch (tipe?.toLowerCase()) {
+      case 'car_racing':
+        return 'Turbo Racing 🏎️';
+      case 'mario_run':
+      case 'runner':
+        return 'Mario Runner 🍄';
       case 'quiz_speed':
         return 'Kuis Speed ⚡';
       case 'spin_wheel':
         return 'Spin Wheel 🎡';
       case 'memory_match':
         return 'Memory Match 🧩';
-      case 'mario_run':
-      case 'runner':
-        return 'Runner Quiz 🎮';
       default:
         return 'Kuis Interaktif 🎯';
     }
@@ -122,14 +127,16 @@ class _EduGameScreenState extends State<EduGameScreen> {
 
   IconData _getModeIcon(String mode) {
     switch (mode) {
+      case 'Turbo Racing':
+        return Icons.sports_motorsports_rounded;
+      case 'Mario Runner':
+        return Icons.directions_run_rounded;
       case 'Kuis Speed':
         return Icons.bolt_rounded;
       case 'Spin Wheel':
         return Icons.rotate_right_rounded;
       case 'Memory Match':
         return Icons.extension_rounded;
-      case 'Mario Runner':
-        return Icons.directions_run_rounded;
       case 'Semua':
       default:
         return Icons.grid_view_rounded;
@@ -138,15 +145,17 @@ class _EduGameScreenState extends State<EduGameScreen> {
 
   Color _getTipeColor(String? tipe) {
     switch (tipe?.toLowerCase()) {
-      case 'quiz_speed':
-        return Colors.orange.shade800;
-      case 'spin_wheel':
-        return Colors.purple.shade800;
-      case 'memory_match':
-        return Colors.blue.shade800;
+      case 'car_racing':
+        return Colors.red.shade700;
       case 'mario_run':
       case 'runner':
-        return Colors.green.shade800;
+        return Colors.amber.shade800;
+      case 'quiz_speed':
+        return Colors.blue.shade700;
+      case 'spin_wheel':
+        return Colors.green.shade700;
+      case 'memory_match':
+        return Colors.purple.shade700;
       default:
         return Colors.indigo.shade800;
     }
@@ -467,6 +476,13 @@ class _EduGameScreenState extends State<EduGameScreen> {
                                           ],
                                         ),
                                       ),
+                                      if (game['is_my_game'] == true) ...[
+                                        IconButton(
+                                          icon: Icon(Icons.delete_outline_rounded, color: Colors.red.shade400, size: 20),
+                                          tooltip: 'Hapus Game',
+                                          onPressed: () => _confirmDeleteGame(gameId, judul),
+                                        ),
+                                      ],
                                     ],
                                   ),
 
@@ -529,33 +545,48 @@ class _EduGameScreenState extends State<EduGameScreen> {
 
                                   const SizedBox(height: 14),
 
-                                  // Play Button
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => EduGamePlayScreen(
-                                              gameId: gameId,
-                                              gameDetail: Map<String, dynamic>.from(game),
-                                            ),
-                                          ),
-                                        ).then((_) => _fetchGames());
-                                      },
-                                      icon: const Icon(Icons.play_circle_filled_rounded, size: 20),
-                                      label: const Text('Mainkan Sekarang', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: modeColor,
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12),
+                                  // Play and Leaderboard Buttons Row
+                                  Row(
+                                    children: [
+                                      OutlinedButton.icon(
+                                        onPressed: () => _showLeaderboardSheet(context, gameId, judul, kkm),
+                                        icon: const Icon(Icons.leaderboard_rounded, size: 18),
+                                        label: const Text('Peringkat', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: modeColor,
+                                          side: BorderSide(color: modeColor, width: 1.5),
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                         ),
-                                        elevation: 2,
                                       ),
-                                    ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => EduGamePlayScreen(
+                                                  gameId: gameId,
+                                                  gameDetail: Map<String, dynamic>.from(game),
+                                                ),
+                                              ),
+                                            ).then((_) => _fetchGames());
+                                          },
+                                          icon: const Icon(Icons.play_circle_filled_rounded, size: 20),
+                                          label: const Text('Mainkan Sekarang', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: modeColor,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(vertical: 12),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            elevation: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -563,6 +594,318 @@ class _EduGameScreenState extends State<EduGameScreen> {
                           },
                         ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLeaderboardSheet(BuildContext context, int gameId, String judul, int kkm) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _EduGameLeaderboardSheet(
+        gameId: gameId,
+        judul: judul,
+        kkm: kkm,
+      ),
+    );
+  }
+
+  void _confirmDeleteGame(int gameId, String judul) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.delete_forever_rounded, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Hapus Game Edukasi', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Text('Apakah Anda yakin ingin menghapus "$judul"? Data soal dan riwayat skor pemain akan dihapus.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final user = Provider.of<AuthProvider>(context, listen: false).currentUser;
+              final res = await ApiService.post('game/delete', {
+                'id': gameId.toString(),
+                'user_id': (user?.id ?? 0).toString(),
+              });
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(res['message']?.toString() ?? 'Game berhasil dihapus'),
+                    backgroundColor: res['success'] == true ? AppTheme.primaryColor : Colors.red,
+                  ),
+                );
+                if (res['success'] == true) {
+                  _fetchGames();
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EduGameLeaderboardSheet extends StatefulWidget {
+  final int gameId;
+  final String judul;
+  final int kkm;
+
+  const _EduGameLeaderboardSheet({
+    required this.gameId,
+    required this.judul,
+    required this.kkm,
+  });
+
+  @override
+  State<_EduGameLeaderboardSheet> createState() => _EduGameLeaderboardSheetState();
+}
+
+class _EduGameLeaderboardSheetState extends State<_EduGameLeaderboardSheet> {
+  bool _isLoading = true;
+  List<dynamic> _leaderboard = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLeaderboard();
+  }
+
+  Future<void> _loadLeaderboard() async {
+    final res = await ApiService.get('game/leaderboard', params: {'id': widget.gameId.toString()});
+    if (mounted) {
+      if (res['success'] == true) {
+        final data = res['data'];
+        final lb = (data is List ? data : (data is Map ? (data['leaderboard'] as List?) : [])) ?? [];
+        setState(() {
+          _leaderboard = lb;
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  String _formatTime(dynamic secVal) {
+    final seconds = int.tryParse((secVal ?? 0).toString()) ?? 0;
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    if (m > 0) return '$m m $s s';
+    return '$s Detik';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade400,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Text('🏆', style: TextStyle(fontSize: 22)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Papan Peringkat Top 15',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      Text(
+                        widget.judul,
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'Target KKM: ${widget.kkm} Poin',
+                        style: const TextStyle(fontSize: 11, color: Colors.amber, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: Colors.purple))
+                : _leaderboard.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.military_tech_rounded, size: 64, color: Colors.grey.shade400),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Belum Ada Skor Tercatat',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Jadilah siswa pertama yang menaklukkan game edukasi ini!',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                        itemCount: _leaderboard.length,
+                        itemBuilder: (context, index) {
+                          final item = _leaderboard[index];
+                          final rank = index + 1;
+                          final name = (item['nama_siswa'] ?? 'Siswa').toString();
+                          final className = (item['nama_kelas'] ?? '-').toString();
+                          final score = int.tryParse((item['skor_akhir'] ?? 0).toString()) ?? 0;
+                          final maxCombo = int.tryParse((item['max_combo'] ?? 0).toString()) ?? 0;
+                          final timeStr = _formatTime(item['waktu_selesai']);
+
+                          String medal = '#$rank';
+                          Color rankColor = Colors.grey.shade700;
+                          Color cardBg = isDark ? const Color(0xFF1E293B) : Colors.grey.shade50;
+                          Color borderColor = Colors.grey.shade200;
+
+                          if (rank == 1) {
+                            medal = '🥇';
+                            rankColor = Colors.amber.shade900;
+                            cardBg = Colors.amber.shade50.withValues(alpha: 0.5);
+                            borderColor = Colors.amber.shade300;
+                          } else if (rank == 2) {
+                            medal = '🥈';
+                            rankColor = Colors.blueGrey.shade800;
+                            cardBg = Colors.blueGrey.shade50.withValues(alpha: 0.5);
+                            borderColor = Colors.blueGrey.shade300;
+                          } else if (rank == 3) {
+                            medal = '🥉';
+                            rankColor = Colors.brown.shade800;
+                            cardBg = Colors.brown.shade50.withValues(alpha: 0.4);
+                            borderColor = Colors.brown.shade300;
+                          }
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: borderColor, width: rank <= 3 ? 1.5 : 1.0),
+                            ),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 32,
+                                  child: Text(
+                                    medal,
+                                    style: TextStyle(
+                                      fontSize: rank <= 3 ? 18 : 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: rankColor,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: rank <= 3 ? rankColor.withValues(alpha: 0.15) : Colors.purple.shade50,
+                                  child: Text(
+                                    name.isNotEmpty ? name[0].toUpperCase() : 'S',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: rank <= 3 ? rankColor : Colors.purple.shade800,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        '$className • Waktu: $timeStr • Combo: x$maxCombo',
+                                        style: TextStyle(fontSize: 10.5, color: Colors.grey.shade600),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: rank == 1 ? Colors.amber.shade200 : Colors.purple.shade50,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '$score Poin',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: rank == 1 ? Colors.amber.shade900 : Colors.purple.shade900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),

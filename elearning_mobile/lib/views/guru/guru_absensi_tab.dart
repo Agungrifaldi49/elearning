@@ -88,7 +88,8 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
 
         for (var s in _allStudents) {
           final sid = int.parse((s['siswa_id'] ?? s['id'] ?? 0).toString());
-          final dbStatus = (s['status'] ?? '').toString();
+          var dbStatus = (s['status'] ?? '').toString();
+          if (dbStatus.toLowerCase() == 'alpha') dbStatus = 'Alpa';
           final dbKet = (s['keterangan'] ?? '').toString();
           final isQrScan = (s['qr_code'] != null && s['qr_code'].toString().isNotEmpty);
 
@@ -238,15 +239,17 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
     int hadir = 0, izin = 0, sakit = 0, alpa = 0;
     for (var s in _filteredStudents) {
       final sid = int.parse((s['siswa_id'] ?? s['id'] ?? 0).toString());
-      final st = _records[sid] ?? 'Hadir';
-      if (st.toLowerCase() == 'hadir') {
+      final st = (_records[sid] ?? 'Hadir').toLowerCase();
+      if (st == 'hadir') {
         hadir++;
-      } else if (st.toLowerCase() == 'izin') {
+      } else if (st == 'izin') {
         izin++;
-      } else if (st.toLowerCase() == 'sakit') {
+      } else if (st == 'sakit') {
         sakit++;
-      } else {
+      } else if (st == 'alpa' || st == 'alpha') {
         alpa++;
+      } else {
+        hadir++;
       }
     }
     return {'hadir': hadir, 'izin': izin, 'sakit': sakit, 'alpa': alpa};
@@ -793,11 +796,28 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                                 final waktuHadir = (s['waktu_hadir'] ?? s['waktu_masuk'] ?? '').toString();
                                 final isQrScan = qrCode.isNotEmpty;
                                 final currentStatus = _records[sid] ?? 'Hadir';
+                                final isAbsent = currentStatus.toLowerCase() == 'alpa' ||
+                                    currentStatus.toLowerCase() == 'alpha' ||
+                                    currentStatus.toLowerCase() == 'sakit' ||
+                                    currentStatus.toLowerCase() == 'izin';
+                                final isAlpa = currentStatus.toLowerCase() == 'alpa' || currentStatus.toLowerCase() == 'alpha';
 
                                 return Card(
                                   margin: const EdgeInsets.only(bottom: 8),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                  elevation: 1.5,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    side: BorderSide(
+                                      color: isAlpa
+                                          ? Colors.red.shade300
+                                          : (currentStatus.toLowerCase() == 'sakit'
+                                              ? Colors.orange.shade300
+                                              : (currentStatus.toLowerCase() == 'izin'
+                                                  ? Colors.blue.shade300
+                                                  : Colors.grey.shade200)),
+                                      width: isAbsent ? 1.4 : 1.0,
+                                    ),
+                                  ),
+                                  elevation: isAbsent ? 2.0 : 1.5,
                                   child: Padding(
                                     padding: const EdgeInsets.all(12),
                                     child: Column(
@@ -806,10 +826,19 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                                         Row(
                                           children: [
                                             CircleAvatar(
-                                              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
+                                              backgroundColor: isAlpa
+                                                  ? Colors.red.shade50
+                                                  : (isAbsent
+                                                      ? Colors.orange.shade50
+                                                      : AppTheme.primaryColor.withValues(alpha: 0.15)),
                                               child: Text(
                                                 name.isNotEmpty ? name[0] : 'S',
-                                                style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold),
+                                                style: TextStyle(
+                                                  color: isAlpa
+                                                      ? Colors.red.shade700
+                                                      : (isAbsent ? Colors.orange.shade800 : AppTheme.primaryColor),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
                                             ),
                                             const SizedBox(width: 12),
@@ -829,18 +858,28 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
                                                         Container(
                                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                                           decoration: BoxDecoration(
-                                                            color: Colors.green.shade50,
-                                                            border: Border.all(color: Colors.green.shade300),
+                                                            color: isAbsent ? Colors.amber.shade50 : Colors.green.shade50,
+                                                            border: Border.all(color: isAbsent ? Colors.amber.shade300 : Colors.green.shade300),
                                                             borderRadius: BorderRadius.circular(8),
                                                           ),
                                                           child: Row(
                                                             mainAxisSize: MainAxisSize.min,
                                                             children: [
-                                                              const Icon(Icons.qr_code_scanner, size: 12, color: Colors.green),
+                                                              Icon(
+                                                                Icons.qr_code_scanner,
+                                                                size: 12,
+                                                                color: isAbsent ? Colors.amber.shade800 : Colors.green,
+                                                              ),
                                                               const SizedBox(width: 3),
                                                               Text(
-                                                                waktuHadir.length >= 16 ? waktuHadir.substring(11, 16) : 'Scan QR',
-                                                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                                                                isAbsent
+                                                                    ? (waktuHadir.length >= 16 ? 'Gerbang: ${waktuHadir.substring(11, 16)}' : 'Gerbang ($currentStatus)')
+                                                                    : (waktuHadir.length >= 16 ? waktuHadir.substring(11, 16) : 'Scan QR'),
+                                                                style: TextStyle(
+                                                                  fontSize: 9,
+                                                                  fontWeight: FontWeight.bold,
+                                                                  color: isAbsent ? Colors.amber.shade900 : Colors.green.shade800,
+                                                                ),
                                                               ),
                                                             ],
                                                           ),
@@ -975,7 +1014,9 @@ class _GuruAbsensiTabState extends State<GuruAbsensiTab> {
   }
 
   Widget _buildStatusToggleChip(int sid, String status, Color color, String currentStatus) {
-    final bool isSelected = currentStatus.toLowerCase() == status.toLowerCase();
+    final bool isSelected = currentStatus.toLowerCase() == status.toLowerCase() ||
+        (status.toLowerCase() == 'alpa' && currentStatus.toLowerCase() == 'alpha') ||
+        (status.toLowerCase() == 'alpha' && currentStatus.toLowerCase() == 'alpa');
 
     return Expanded(
       child: InkWell(

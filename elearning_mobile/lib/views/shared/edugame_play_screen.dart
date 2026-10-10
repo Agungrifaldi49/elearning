@@ -37,8 +37,76 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
 
   String? _selectedOption;
   bool _hasAnswered = false;
+  String? _lastFeedbackMessage;
+  bool? _lastAnswerCorrect;
 
   late AnimationController _progressController;
+
+  String get _tipeGame => (widget.gameDetail['tipe_game'] ?? 'quiz_speed').toString().toLowerCase();
+
+  Color get _themeColor {
+    switch (_tipeGame) {
+      case 'car_racing':
+        return const Color(0xFFE11D48); // Rose/Red (Turbo Racing)
+      case 'mario_run':
+        return const Color(0xFFD97706); // Amber/Gold (Mario Runner)
+      case 'spin_wheel':
+        return const Color(0xFF0D9488); // Teal (Spin Wheel)
+      case 'memory_match':
+        return const Color(0xFF7C3AED); // Deep Purple (Memory Match)
+      case 'quiz_speed':
+      default:
+        return const Color(0xFF4F46E5); // Indigo (Speed Battle)
+    }
+  }
+
+  Color get _themeDarkColor {
+    switch (_tipeGame) {
+      case 'car_racing':
+        return const Color(0xFF9F1239);
+      case 'mario_run':
+        return const Color(0xFF92400E);
+      case 'spin_wheel':
+        return const Color(0xFF115E59);
+      case 'memory_match':
+        return const Color(0xFF5B21B6);
+      case 'quiz_speed':
+      default:
+        return const Color(0xFF3730A3);
+    }
+  }
+
+  String get _modeTitle {
+    switch (_tipeGame) {
+      case 'car_racing':
+        return '🏎️ Turbo Car Racing';
+      case 'mario_run':
+        return '🍄 Super Mario Runner';
+      case 'spin_wheel':
+        return '🎡 Spin Wheel Quiz';
+      case 'memory_match':
+        return '🧩 Memory Match';
+      case 'quiz_speed':
+      default:
+        return '⚡ Quiz Speed Battle';
+    }
+  }
+
+  String get _modeBannerDesc {
+    switch (_tipeGame) {
+      case 'car_racing':
+        return 'Jalur Balapan Nitro • Jawab Cepat & Pacu Kecepatan Mobil!';
+      case 'mario_run':
+        return 'Platformer Retro • Taklukkan Rintangan & Kumpulkan Koin!';
+      case 'spin_wheel':
+        return 'Roda Putar Kuis • Raih Poin Maksimal!';
+      case 'memory_match':
+        return 'Kartu Asosiasi Memori • Fokus & Jawab Tepat!';
+      case 'quiz_speed':
+      default:
+        return 'Adu Kecepatan & Ketepatan • Cetak Rekor Skor Tertinggi!';
+    }
+  }
 
   @override
   void initState() {
@@ -106,6 +174,8 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
       _timeRemaining = _questionDuration;
       _selectedOption = null;
       _hasAnswered = false;
+      _lastFeedbackMessage = null;
+      _lastAnswerCorrect = null;
     });
 
     _progressController.stop();
@@ -129,6 +199,8 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
     setState(() {
       _hasAnswered = true;
       _combo = 0;
+      _lastAnswerCorrect = false;
+      _lastFeedbackMessage = '⏰ WAKTU HABIS! Waktu menjawab pertanyaan ini telah habis.';
     });
 
     _progressController.stop();
@@ -153,6 +225,7 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
     setState(() {
       _selectedOption = optionKey;
       _hasAnswered = true;
+      _lastAnswerCorrect = isCorrect;
 
       if (isCorrect) {
         _totalCorrect++;
@@ -160,9 +233,19 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
         if (_combo > _maxCombo) _maxCombo = _combo;
 
         final comboBonus = (_combo > 1) ? (_combo * 2) : 0;
-        _score += questionPoint + comboBonus;
+        final earned = questionPoint + comboBonus;
+        _score += earned;
+
+        if (_tipeGame == 'car_racing') {
+          _lastFeedbackMessage = '🏎️ SPEED BOOST NITRO! +$earned Poin ${_combo > 1 ? "(Combo x$_combo 🔥)" : ""}';
+        } else if (_tipeGame == 'mario_run') {
+          _lastFeedbackMessage = '⭐ SUPER STAR POWER! +$earned Poin ${_combo > 1 ? "(Combo x$_combo 🔥)" : ""}';
+        } else {
+          _lastFeedbackMessage = '✨ JAWABAN TEPAT! +$earned Poin ${_combo > 1 ? "(Combo x$_combo 🔥)" : ""}';
+        }
       } else {
         _combo = 0;
+        _lastFeedbackMessage = '❌ JAWABAN KURANG TEPAT! Terus semangat!';
       }
     });
 
@@ -216,13 +299,13 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
     if (_isLoading) {
       return Scaffold(
         backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        body: const Center(
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: Colors.purple),
-              SizedBox(height: 16),
-              Text(
+              CircularProgressIndicator(color: _themeColor),
+              const SizedBox(height: 16),
+              const Text(
                 'Memuat Arena Game Interaktif...',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
@@ -236,7 +319,7 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
       return Scaffold(
         appBar: AppBar(
           title: Text(widget.gameDetail['judul'] ?? 'Game Edukasi'),
-          backgroundColor: Colors.purple.shade800,
+          backgroundColor: _themeDarkColor,
           foregroundColor: Colors.white,
         ),
         body: Center(
@@ -283,11 +366,19 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          widget.gameDetail['judul'] ?? 'Game Edukasi',
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        title: Column(
+          children: [
+            Text(
+              widget.gameDetail['judul'] ?? 'Game Edukasi',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            Text(
+              _modeTitle,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w400, color: Colors.white70),
+            ),
+          ],
         ),
-        backgroundColor: Colors.purple.shade800,
+        backgroundColor: _themeDarkColor,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -311,92 +402,130 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
                 backgroundColor: Colors.grey.shade300,
                 valueColor: AlwaysStoppedAnimation<Color>(
                   _progressController.value > 0.4
-                      ? Colors.purple.shade600
+                      ? _themeColor
                       : (_progressController.value > 0.2 ? Colors.orange : Colors.red),
                 ),
               );
             },
           ),
 
-          // Header Status Dashboard Row
+          // Header Mode & Dashboard Bar
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-            color: isDark ? const Color(0xFF1E293B) : Colors.purple.shade50,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                    : [_themeColor.withValues(alpha: 0.12), _themeColor.withValues(alpha: 0.04)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border(bottom: BorderSide(color: _themeColor.withValues(alpha: 0.2))),
+            ),
+            child: Column(
               children: [
-                // Soal Counter Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.shade800,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Soal ${_currentIndex + 1} / ${_soalList.length}',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
-                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Soal Counter Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _themeDarkColor,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _themeDarkColor.withValues(alpha: 0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'Soal ${_currentIndex + 1} / ${_soalList.length}',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                    ),
 
-                // Combo Badge
-                if (_combo > 1)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [Colors.orange.shade700, Colors.red.shade700]),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.orange.withValues(alpha: 0.4),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
+                    // Combo Badge
+                    if (_combo > 1)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [Colors.orange.shade700, Colors.red.shade700]),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.orange.withValues(alpha: 0.4),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Text(
+                          '🔥 x$_combo Combo!',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+
+                    // Timer & Score Badge
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _themeColor.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.timer_rounded, color: _themeDarkColor, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${_timeRemaining}s',
+                                style: TextStyle(color: _themeDarkColor, fontWeight: FontWeight.bold, fontSize: 12.5),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.amber.shade400),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.star_rounded, color: Colors.amber.shade900, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$_score Poin',
+                                style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold, fontSize: 12.5),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    child: Text(
-                      '🔥 x$_combo Combo!',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                  ),
-
-                // Timer & Score Badge
+                  ],
+                ),
+                const SizedBox(height: 6),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.purple.shade300),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.timer_rounded, color: Colors.purple, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${_timeRemaining}s',
-                            style: const TextStyle(color: Colors.purple, fontWeight: FontWeight.bold, fontSize: 12.5),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.shade400),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.star_rounded, color: Colors.amber.shade900, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$_score Poin',
-                            style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold, fontSize: 12.5),
-                          ),
-                        ],
+                    Icon(Icons.sports_esports_rounded, size: 14, color: _themeColor),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        _modeBannerDesc,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.grey.shade300 : _themeDarkColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -412,6 +541,47 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Feedback Banner (Speed Boost / Star Power / Correct / Wrong)
+                  if (_hasAnswered && _lastFeedbackMessage != null) ...[
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _lastAnswerCorrect == true ? Colors.green.shade600 : Colors.red.shade600,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (_lastAnswerCorrect == true ? Colors.green : Colors.red).withValues(alpha: 0.35),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _lastAnswerCorrect == true ? Icons.check_circle_rounded : Icons.info_outline_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _lastFeedbackMessage!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   // Question Card
                   Container(
                     width: double.infinity,
@@ -426,7 +596,7 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
                           offset: const Offset(0, 4),
                         ),
                       ],
-                      border: Border.all(color: Colors.purple.shade100),
+                      border: Border.all(color: _themeColor.withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -436,13 +606,18 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: Colors.purple.shade100,
+                                color: _themeColor.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
                                 widget.gameDetail['nama_mapel'] ?? 'Mata Pelajaran',
-                                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.purple.shade900),
+                                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: _themeDarkColor),
                               ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'Poin: ${currentSoal['poin'] ?? 10}',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
                             ),
                           ],
                         ),
@@ -513,14 +688,14 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
                                 decoration: BoxDecoration(
                                   color: isSelected || (_hasAnswered && isCorrect)
                                       ? (isCorrect ? Colors.green : Colors.red)
-                                      : Colors.purple.shade50,
+                                      : _themeColor.withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Text(
                                   key.toUpperCase(),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: isSelected || (_hasAnswered && isCorrect) ? Colors.white : Colors.purple.shade900,
+                                    color: isSelected || (_hasAnswered && isCorrect) ? Colors.white : _themeDarkColor,
                                   ),
                                 ),
                               ),
@@ -595,11 +770,11 @@ class _EduGamePlayScreenState extends State<EduGamePlayScreen> with TickerProvid
       builder: (context) {
         return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.pause_circle_filled_rounded, color: Colors.purple),
-              SizedBox(width: 8),
-              Text('Game Dihentikan'),
+              Icon(Icons.pause_circle_filled_rounded, color: _themeColor),
+              const SizedBox(width: 8),
+              const Text('Game Dihentikan'),
             ],
           ),
           content: const Text('Apakah Anda yakin ingin keluar dari permainan saat ini? Skor Anda belum tersimpan.'),

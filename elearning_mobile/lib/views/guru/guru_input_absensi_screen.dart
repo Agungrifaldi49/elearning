@@ -97,7 +97,8 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
 
       for (var s in sList) {
         final sid = int.parse((s['siswa_id'] ?? 0).toString());
-        final st = (s['status_absensi'] ?? 'Belum Absen').toString();
+        var st = (s['status_absensi'] ?? 'Belum Absen').toString();
+        if (st.toLowerCase() == 'alpha') st = 'Alpa';
         if (_selectedKategori == 'pulang') {
           if (_studentHasMasuk(s)) {
             _absensiMap[sid] = 'Hadir';
@@ -136,7 +137,8 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
             _absensiMap[sid] = '';
           }
         } else {
-          final st = (s['status_absensi'] ?? 'Belum Absen').toString();
+          var st = (s['status_absensi'] ?? 'Belum Absen').toString();
+          if (st.toLowerCase() == 'alpha') st = 'Alpa';
           _absensiMap[sid] = (st != 'Belum Absen') ? st : 'Hadir';
         }
       }
@@ -794,16 +796,21 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
 
                             final hasMasuk = jamMasukStr != 'Belum Absen';
                             final hasPulang = jamPulangStr != 'Belum Pulang';
+                            final isAbsent = _isAbsentStatus(currentStatus);
+                            final isAlpa = currentStatus.toLowerCase() == 'alpa' || currentStatus.toLowerCase() == 'alpha';
+                            final isCardQrGreen = isQrScanned && !isAbsent;
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 10),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: isQrScanned ? Colors.green.shade50.withValues(alpha: 0.4) : Colors.white,
+                                color: isCardQrGreen ? Colors.green.shade50.withValues(alpha: 0.4) : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: isQrScanned ? Colors.green.shade300 : Colors.grey.shade200,
-                                  width: isQrScanned ? 1.5 : 1.0,
+                                  color: isCardQrGreen
+                                      ? Colors.green.shade300
+                                      : (isAbsent ? (isAlpa ? Colors.red.shade300 : Colors.orange.shade300) : Colors.grey.shade200),
+                                  width: (isCardQrGreen || isAbsent) ? 1.5 : 1.0,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
@@ -820,13 +827,19 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                                     children: [
                                       CircleAvatar(
                                         radius: 18,
-                                        backgroundColor: isQrScanned
+                                        backgroundColor: isCardQrGreen
                                             ? Colors.green.shade100
-                                            : AppTheme.primaryColor.withValues(alpha: 0.1),
+                                            : (isAbsent
+                                                ? (isAlpa ? Colors.red.shade50 : Colors.orange.shade50)
+                                                : AppTheme.primaryColor.withValues(alpha: 0.1)),
                                         child: Text(
                                           name.isNotEmpty ? name[0].toUpperCase() : 'S',
                                           style: TextStyle(
-                                            color: isQrScanned ? Colors.green.shade800 : AppTheme.primaryColor,
+                                            color: isCardQrGreen
+                                                ? Colors.green.shade800
+                                                : (isAbsent
+                                                    ? (isAlpa ? Colors.red.shade700 : Colors.orange.shade800)
+                                                    : AppTheme.primaryColor),
                                             fontWeight: FontWeight.bold,
                                             fontSize: 14,
                                           ),
@@ -850,18 +863,29 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                                                   Container(
                                                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                                     decoration: BoxDecoration(
-                                                      color: Colors.green.shade100,
+                                                      color: isAbsent ? Colors.amber.shade50 : Colors.green.shade100,
                                                       borderRadius: BorderRadius.circular(6),
-                                                      border: Border.all(color: Colors.green.shade400, width: 0.8),
+                                                      border: Border.all(
+                                                        color: isAbsent ? Colors.amber.shade400 : Colors.green.shade400,
+                                                        width: 0.8,
+                                                      ),
                                                     ),
                                                     child: Row(
                                                       mainAxisSize: MainAxisSize.min,
                                                       children: [
-                                                        const Icon(Icons.qr_code_2_rounded, size: 12, color: Colors.green),
+                                                        Icon(
+                                                          Icons.qr_code_2_rounded,
+                                                          size: 12,
+                                                          color: isAbsent ? Colors.amber.shade800 : Colors.green,
+                                                        ),
                                                         const SizedBox(width: 3),
                                                         Text(
-                                                          'Scan QR',
-                                                          style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.green.shade900),
+                                                          isAbsent ? 'Gerbang ($currentStatus)' : 'Scan QR',
+                                                          style: TextStyle(
+                                                            fontSize: 9.5,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: isAbsent ? Colors.amber.shade900 : Colors.green.shade900,
+                                                          ),
                                                         ),
                                                       ],
                                                     ),
@@ -1032,7 +1056,7 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                                       ),
                                     ),
                                   ] else ...[
-                                    // Status Radio Segment Buttons (Hadir, Izin, Sakit, Alpha)
+                                    // Status Radio Segment Buttons (Hadir, Izin, Sakit, Alpa)
                                     Row(
                                       children: [
                                         _buildStatusPill(sid, 'Hadir', 'H', Colors.green, currentStatus),
@@ -1041,7 +1065,7 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
                                         const SizedBox(width: 6),
                                         _buildStatusPill(sid, 'Sakit', 'S', Colors.orange, currentStatus),
                                         const SizedBox(width: 6),
-                                        _buildStatusPill(sid, 'Alpha', 'A', Colors.red, currentStatus),
+                                        _buildStatusPill(sid, 'Alpa', 'A', Colors.red, currentStatus),
                                       ],
                                     ),
                                   ],
@@ -1119,7 +1143,9 @@ class _GuruInputAbsensiScreenState extends State<GuruInputAbsensiScreen> {
   }
 
   Widget _buildStatusPill(int sid, String status, String code, Color color, String currentStatus) {
-    final isSelected = currentStatus.toLowerCase() == status.toLowerCase();
+    final isSelected = currentStatus.toLowerCase() == status.toLowerCase() ||
+        (status.toLowerCase() == 'alpa' && currentStatus.toLowerCase() == 'alpha') ||
+        (status.toLowerCase() == 'alpha' && currentStatus.toLowerCase() == 'alpa');
 
     return Expanded(
       child: InkWell(

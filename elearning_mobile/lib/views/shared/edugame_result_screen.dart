@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
-import '../../theme/app_theme.dart';
 import 'edugame_play_screen.dart';
 
 class EduGameResultScreen extends StatefulWidget {
@@ -80,6 +79,74 @@ class _EduGameResultScreenState extends State<EduGameResultScreen> {
     return '$s Detik';
   }
 
+  String get _tipeGame => (widget.gameDetail['tipe_game'] ?? 'quiz_speed').toString().toLowerCase();
+
+  Color get _themeColor {
+    switch (_tipeGame) {
+      case 'car_racing':
+        return const Color(0xFFE11D48);
+      case 'mario_run':
+        return const Color(0xFFD97706);
+      case 'spin_wheel':
+        return const Color(0xFF0D9488);
+      case 'memory_match':
+        return const Color(0xFF7C3AED);
+      case 'quiz_speed':
+      default:
+        return const Color(0xFF4F46E5);
+    }
+  }
+
+  Color get _themeDarkColor {
+    switch (_tipeGame) {
+      case 'car_racing':
+        return const Color(0xFF9F1239);
+      case 'mario_run':
+        return const Color(0xFF92400E);
+      case 'spin_wheel':
+        return const Color(0xFF115E59);
+      case 'memory_match':
+        return const Color(0xFF5B21B6);
+      case 'quiz_speed':
+      default:
+        return const Color(0xFF3730A3);
+    }
+  }
+
+  String get _modeTitle {
+    switch (_tipeGame) {
+      case 'car_racing':
+        return '🏎️ Turbo Car Racing';
+      case 'mario_run':
+        return '🍄 Super Mario Runner';
+      case 'spin_wheel':
+        return '🎡 Spin Wheel Quiz';
+      case 'memory_match':
+        return '🧩 Memory Match';
+      case 'quiz_speed':
+      default:
+        return '⚡ Quiz Speed Battle';
+    }
+  }
+
+  String get _resultHeaderTitle {
+    if (_isPassed) {
+      switch (_tipeGame) {
+        case 'car_racing':
+          return '🏁 FINISH! PODIUM BALAPAN DIRAIH';
+        case 'mario_run':
+          return '🌟 STAGE CLEARED! PETUALANGAN TUNTAS';
+        case 'spin_wheel':
+          return '🎡 JACKPOT KUIS! ANDA LULUS';
+        case 'memory_match':
+          return '🧩 MATCH MASTER! TUNTAS SEMPURNA';
+        default:
+          return '🎉 SELAMAT! ANDA LULUS';
+      }
+    }
+    return '💪 HASIL PERMAINAN & TERUS SEMANGAT';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -87,8 +154,13 @@ class _EduGameResultScreenState extends State<EduGameResultScreen> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Hasil Permainan', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.purple.shade800,
+        title: Column(
+          children: [
+            const Text('Hasil Permainan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(_modeTitle, style: const TextStyle(fontSize: 11, color: Colors.white70)),
+          ],
+        ),
+        backgroundColor: _themeDarkColor,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -105,13 +177,13 @@ class _EduGameResultScreenState extends State<EduGameResultScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: _isPassed
-                      ? [Colors.purple.shade800, Colors.indigo.shade900]
+                      ? [_themeDarkColor, _themeColor]
                       : [Colors.deepOrange.shade800, Colors.red.shade900],
                 ),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: (_isPassed ? Colors.purple : Colors.red).withValues(alpha: 0.3),
+                    color: (_isPassed ? _themeColor : Colors.red).withValues(alpha: 0.35),
                     blurRadius: 12,
                     offset: const Offset(0, 6),
                   ),
@@ -133,8 +205,9 @@ class _EduGameResultScreenState extends State<EduGameResultScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    _isPassed ? '🎉 SELAMAT! ANDA LULUS' : '💪 HASIL PERMAINAN',
-                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    _resultHeaderTitle,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -157,7 +230,7 @@ class _EduGameResultScreenState extends State<EduGameResultScreen> {
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
-                        color: _isPassed ? Colors.purple.shade900 : Colors.red.shade900,
+                        color: _isPassed ? _themeDarkColor : Colors.red.shade900,
                       ),
                     ),
                   ),
@@ -199,12 +272,12 @@ class _EduGameResultScreenState extends State<EduGameResultScreen> {
             const SizedBox(height: 20),
 
             // Leaderboard Title
-            const Row(
+            Row(
               children: [
-                Icon(Icons.leaderboard_rounded, color: Colors.purple, size: 22),
-                SizedBox(width: 8),
-                Text(
-                  '🏆 Papan Peringkat Top 10 Siswa',
+                Icon(Icons.leaderboard_rounded, color: _themeColor, size: 22),
+                const SizedBox(width: 8),
+                const Text(
+                  '🏆 Papan Peringkat Top 15 Siswa',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -292,12 +365,12 @@ class _EduGameResultScreenState extends State<EduGameResultScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.purple.shade50,
+                            color: _themeColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
                             '$score Poin',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.purple.shade900),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: _themeDarkColor),
                           ),
                         ),
                       ],
@@ -341,7 +414,7 @@ class _EduGameResultScreenState extends State<EduGameResultScreen> {
                     icon: const Icon(Icons.replay_rounded),
                     label: const Text('Main Lagi', style: TextStyle(fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
+                      backgroundColor: _themeColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

@@ -6655,6 +6655,24 @@ class ApiController {
                 $this->jsonResponse(true, 'Papan Peringkat Game dari Database', $leaderboard);
                 break;
 
+            case 'delete':
+                if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+                    $this->jsonResponse(false, 'Method Request harus POST', null, 405);
+                }
+                if ($gameId <= 0) {
+                    $this->jsonResponse(false, 'Parameter ID Game tidak valid', null, 400);
+                }
+                $gameDetail = $gameModel->getGameDetail($gameId);
+                if (!$gameDetail) {
+                    $this->jsonResponse(false, 'Game Edukasi tidak ditemukan di database', null, 404);
+                }
+                if ($guruId && (int)$gameDetail['guru_id'] !== (int)$guruId) {
+                    $this->jsonResponse(false, 'Anda hanya dapat menghapus Game Edukasi buatan Anda sendiri', null, 403);
+                }
+                $del = $gameModel->deleteGame($gameId, $guruId, false);
+                $this->jsonResponse($del, $del ? 'Game Edukasi berhasil dihapus!' : 'Gagal menghapus Game Edukasi', null, $del ? 200 : 500);
+                break;
+
             case 'list':
             default:
                 $onlyMyGames = !empty($_GET['my_games']) || !empty($_GET['only_my_games']) || (($_GET['filter'] ?? '') === 'my');
@@ -6672,6 +6690,13 @@ class ApiController {
                         $bestScore = $gameModel->getStudentBestScore($g['id'], $siswaId);
                         $g['my_best_score'] = $bestScore ? intval($bestScore['skor_akhir']) : null;
                         $g['my_status'] = $bestScore ? $bestScore['status_lulus'] : null;
+                    }
+                    unset($g);
+                }
+
+                if ($guruId) {
+                    foreach ($games as &$g) {
+                        $g['is_my_game'] = ((int)$g['guru_id'] === (int)$guruId);
                     }
                     unset($g);
                 }
@@ -6959,5 +6984,6 @@ class ApiController {
         ]);
     }
 }
+
 
 

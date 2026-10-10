@@ -788,6 +788,16 @@ class AbsensiModel extends BaseModel {
         $jadwal_id = (int)$jadwal_id;
         $siswa_id = (int)$siswa_id;
 
+        $statusLower = strtolower(trim($status));
+        if ($statusLower === 'alpha' || $statusLower === 'alpa') {
+            $status = 'Alpa';
+        } else {
+            $status = ucfirst($statusLower);
+        }
+        if (!in_array($status, ['Hadir', 'Izin', 'Sakit', 'Alpa'])) {
+            $status = 'Hadir';
+        }
+
         // 1. Cek apakah ada record absensi untuk jadwal_id spesifik ini
         $stmtExist = $this->db->prepare("
             SELECT id, qr_code, waktu_masuk, waktu_hadir FROM absensi 
@@ -1621,9 +1631,13 @@ class AbsensiModel extends BaseModel {
 
         $stmt = $this->db->prepare("
             SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, k.nama_kelas, j.nama_jurusan,
-                   COALESCE(a.status, 'Belum Absen') as status_absensi,
+                   CASE 
+                       WHEN a.status = 'Alpha' THEN 'Alpa'
+                       ELSE COALESCE(a.status, 'Belum Absen')
+                   END as status_absensi,
                    a.keterangan, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code,
                    CASE 
+                       WHEN a.status IN ('Alpa', 'Alpha', 'Izin', 'Sakit') THEN 0
                        WHEN a.qr_code IS NOT NULL AND (a.qr_code LIKE 'QR_%' OR a.qr_code LIKE 'GURU_%' OR a.qr_code LIKE 'SISWA_%') THEN 1
                        WHEN a.keterangan LIKE '%Scan%' OR a.keterangan LIKE '%Digital%' OR a.keterangan LIKE '%QR%' THEN 1
                        ELSE 0 
@@ -1632,13 +1646,18 @@ class AbsensiModel extends BaseModel {
             JOIN siswa s ON sme.siswa_id = s.id
             LEFT JOIN kelas k ON s.kelas_id = k.id
             LEFT JOIN jurusan j ON s.jurusan_id = j.id
-            LEFT JOIN absensi a ON s.id = a.siswa_id AND a.tanggal = ?
+            LEFT JOIN absensi a ON a.id = (
+                SELECT a2.id FROM absensi a2 
+                WHERE a2.siswa_id = s.id 
+                  AND a2.tanggal = ?
+                ORDER BY (a2.status IN ('Alpa', 'Alpha', 'Sakit', 'Izin')) DESC, a2.id DESC
+                LIMIT 1
+            )
             WHERE sme.mapel_id = ? AND (sme.guru_id = ? OR sme.guru_id IS NULL)
-            GROUP BY s.id
             ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
         ");
         $stmt->execute([$tanggal, $mapelId, $guruId]);
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     public function getPresensiScheduleInfo($guruId, $mapelId, $tanggal = null) {
@@ -1747,8 +1766,13 @@ class AbsensiModel extends BaseModel {
         $mapelId = (int)$mapelId;
         $siswaId = (int)$siswaId;
         $tanggal = Security::sanitize($tanggal ?: date('Y-m-d'));
-        $status = ucfirst(strtolower(trim($status)));
-        if (!in_array($status, ['Hadir', 'Izin', 'Sakit', 'Alpha'])) {
+        $statusLower = strtolower(trim($status));
+        if ($statusLower === 'alpha' || $statusLower === 'alpa') {
+            $status = 'Alpa';
+        } else {
+            $status = ucfirst($statusLower);
+        }
+        if (!in_array($status, ['Hadir', 'Izin', 'Sakit', 'Alpa'])) {
             $status = 'Hadir';
         }
         $kategori = strtolower(trim($kategori));
@@ -1792,11 +1816,11 @@ class AbsensiModel extends BaseModel {
             }
         }
 
-        $stmtExist = $this->db->prepare("SELECT id, waktu_masuk, waktu_pulang, status FROM absensi WHERE siswa_id = ? AND tanggal = ? LIMIT 1");
+        $stmtExist = $this->db->prepare("SELECT id, waktu_masuk, waktu_pulang, status FROM absensi WHERE siswa_id = ? AND tanggal = ? ORDER BY id DESC LIMIT 1");
         $stmtExist->execute([$siswaId, $tanggal]);
         $exist = $stmtExist->fetch(PDO::FETCH_ASSOC);
 
-        $isAbsent = in_array($status, ['Izin', 'Sakit', 'Alpha']);
+        $isAbsent = in_array($status, ['Izin', 'Sakit', 'Alpa']);
         $now = date('Y-m-d H:i:s');
         $resSave = false;
 

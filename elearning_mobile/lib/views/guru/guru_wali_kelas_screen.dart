@@ -198,7 +198,9 @@ class _GuruWaliKelasScreenState extends State<GuruWaliKelasScreen> with SingleTi
     final currentStatus = (absensi['status_hari_ini'] ?? 'Belum Absen').toString();
     final initialKeterangan = (absensi['keterangan'] ?? '').toString();
 
-    String selectedStatus = ['Hadir', 'Izin', 'Sakit', 'Alpa'].contains(currentStatus) ? currentStatus : 'Izin';
+    String selectedStatus = ['Hadir', 'Izin', 'Sakit', 'Alpa'].contains(currentStatus)
+        ? currentStatus
+        : (currentStatus.toLowerCase() == 'alpha' ? 'Alpa' : 'Izin');
     final ketController = TextEditingController(text: initialKeterangan);
 
     showDialog(
