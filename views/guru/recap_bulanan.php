@@ -3,17 +3,27 @@
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
 <?php
-$currentModuleUrl = $_GET['url'] ?? '';
+$currentModuleUrl = strtolower($_GET['url'] ?? '');
 $userRole = strtolower(AuthHelper::user()['role_name'] ?? '');
-$isAdmin = in_array($userRole, ['administrator', 'admin', 'kepala sekolah', 'kepsek']);
 
-$baseUrlRoute = $isAdmin ? BASE_URL . 'index.php?url=admin/recapBulanan' : BASE_URL . 'index.php?url=guru/recapBulanan';
-$exportCsvUrl = $isAdmin ? BASE_URL . 'index.php?url=admin/exportRecapBulananCsv' : BASE_URL . 'index.php?url=guru/exportRecapBulananCsv';
-$exportPdfUrl = $isAdmin ? BASE_URL . 'index.php?url=admin/exportRecapBulananPdf' : BASE_URL . 'index.php?url=guru/exportRecapBulananPdf';
+$isKepsek = in_array($userRole, ['kepala sekolah', 'kepsek']) || str_starts_with($currentModuleUrl, 'kepsek');
+$isAdminOnly = in_array($userRole, ['administrator', 'admin']) && !str_starts_with($currentModuleUrl, 'kepsek');
+$isAdmin = $isAdminOnly || $isKepsek;
+
+$routePrefix = 'guru';
+if (str_starts_with($currentModuleUrl, 'kepsek') || in_array($userRole, ['kepala sekolah', 'kepsek'])) {
+    $routePrefix = 'kepsek';
+} elseif (str_starts_with($currentModuleUrl, 'admin') || in_array($userRole, ['administrator', 'admin'])) {
+    $routePrefix = 'admin';
+}
+
+$baseUrlRoute = BASE_URL . 'index.php?url=' . $routePrefix . '/recapBulanan';
+$exportCsvUrl = BASE_URL . 'index.php?url=' . $routePrefix . '/exportRecapBulananCsv';
+$exportPdfUrl = BASE_URL . 'index.php?url=' . $routePrefix . '/exportRecapBulananPdf';
 
 $bulan = sprintf('%02d', (int)($monthlyRecap['bulan'] ?? date('m')));
 $tahun = (int)($monthlyRecap['tahun'] ?? date('Y'));
-$type = $_GET['type'] ?? 'siswa';
+$type = $_GET['type'] ?? ($type ?? ($isKepsek ? 'guru' : 'siswa'));
 if (!$isAdmin) $type = 'siswa'; // Force teacher to siswa only
 
 $namaBulanList = [
@@ -83,8 +93,8 @@ $avgPersentase = ($totalSubjek > 0) ? round($persentaseSum / $totalSubjek, 1) : 
 
         <!-- Filter Bar Card -->
         <div class="card border-0 rounded-4 shadow-sm p-4 mb-4 bg-white">
-            <form action="<?= $baseUrlRoute ?>" method="GET" class="row g-3 align-items-end">
-                <input type="hidden" name="url" value="<?= $isAdmin ? 'admin/recapBulanan' : 'guru/recapBulanan' ?>">
+            <form action="<?= BASE_URL ?>index.php" method="GET" class="row g-3 align-items-end">
+                <input type="hidden" name="url" value="<?= $routePrefix ?>/recapBulanan">
                 <input type="hidden" name="type" value="<?= htmlspecialchars($type) ?>">
 
                 <div class="col-6 col-md-3">

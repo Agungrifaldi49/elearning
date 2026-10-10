@@ -404,7 +404,7 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'kepsek/presensiGuru') ?>" href="<?= BASE_URL ?>index.php?url=kepsek/presensiGuru">
                 <i class="bi bi-camera-fill text-success"></i> Presensi Selfie Guru Hari Ini
             </a></li>
-            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/recapBulanan') && ($_GET['type'] ?? '') === 'guru' ? 'active' : '' ?>" href="<?= BASE_URL ?>index.php?url=kepsek/recapBulanan&type=guru">
+            <li><a class="nav-link <?= isActive($currentUrl,'kepsek/recapBulanan') && ($_GET['type'] ?? 'guru') === 'guru' ? 'active' : '' ?>" href="<?= BASE_URL ?>index.php?url=kepsek/recapBulanan&type=guru">
                 <i class="bi bi-file-earmark-spreadsheet-fill text-success"></i> Rekap Presensi Bulanan Guru
             </a></li>
 
