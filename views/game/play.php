@@ -266,7 +266,24 @@ window.GameEngine = {
         },
         bgOffset: 0,
         flippedCards: [],
-        matchedPairs: 0
+        matchedPairs: 0,
+        // 🏎️ Turbo Car Racing Runner State
+        racingLoopInterval: null,
+        racingLane: 1, // 0: Kiri (x:250), 1: Tengah (x:400), 2: Kanan (x:550)
+        racingCarX: 400,
+        racingTargetX: 400,
+        racingSpeed: 11,
+        racingBaseSpeed: 11,
+        racingBoostTimer: 0,
+        racingDistance: 0,
+        racingGateStep: 100, // Setiap 100 meter muncul gerbang soal
+        racingNextGateDist: 100,
+        racingIsAtGate: false,
+        racingCrashShakeTimer: 0,
+        racingRoadOffset: 0,
+        racingPickups: [],
+        racingExplosionParticles: [],
+        racingCrashParticles: []
     },
 
     startArena: function() {
@@ -289,6 +306,7 @@ window.GameEngine = {
         const quizBox = document.getElementById('quizBoxContainer');
 
         const marioBox = document.getElementById('marioStageContainer');
+        const racingBox = document.getElementById('racingStageContainer');
         const speedBox = document.getElementById('speedStageContainer');
         const wheelBox = document.getElementById('spinWheelStageContainer');
         const memoryBox = document.getElementById('memoryStageContainer');
@@ -299,6 +317,9 @@ window.GameEngine = {
         if (this.data.gameType === 'mario_run') {
             if (marioBox) marioBox.classList.remove('d-none');
             this.initMarioCanvas();
+        } else if (this.data.gameType === 'car_racing') {
+            if (racingBox) racingBox.classList.remove('d-none');
+            this.initRacingCanvas();
         } else if (this.data.gameType === 'spin_wheel') {
             if (wheelBox) wheelBox.classList.remove('d-none');
             this.initSpinWheelCanvas();
@@ -320,6 +341,8 @@ window.GameEngine = {
             this.state.startTime = Date.now();
             if (this.data.gameType === 'mario_run') {
                 this.startMarioRun();
+            } else if (this.data.gameType === 'car_racing') {
+                this.startRacingGame();
             } else if (this.data.gameType === 'spin_wheel') {
                 this.drawSpinWheel();
             } else if (this.data.gameType === 'memory_match') {
@@ -1452,6 +1475,788 @@ window.GameEngine = {
         }, 1400);
     },
 
+    // 🏎️ MODE 5: ENDLESS TURBO CAR RACING RUNNER ENGINE
+    initRacingCanvas: function() {
+        const canvas = document.getElementById('racingCanvas');
+        if (!canvas) return;
+        this.racingCtx = canvas.getContext('2d');
+
+        // Keyboard steer controls: ArrowLeft, ArrowRight, 'a', 'd', 'A', 'D'
+        window.addEventListener('keydown', (e) => {
+            if (this.data.gameType !== 'car_racing') return;
+            if (e.code === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                e.preventDefault();
+                this.racingSteer(-1);
+            } else if (e.code === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                e.preventDefault();
+                this.racingSteer(1);
+            }
+        });
+
+        // Touch & Pointer click on canvas: Left half steers left, Right half steers right
+        canvas.addEventListener('pointerdown', (e) => {
+            if (this.data.gameType !== 'car_racing') return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            if (clickX < rect.width * 0.5) {
+                this.racingSteer(-1);
+            } else {
+                this.racingSteer(1);
+            }
+        });
+    },
+
+    racingSteer: function(dir) {
+        if (this.state.isEnded) return;
+        this.state.racingLane = Math.max(0, Math.min(2, this.state.racingLane + dir));
+        const laneXMap = [250, 400, 550];
+        this.state.racingTargetX = laneXMap[this.state.racingLane];
+    },
+
+    startRacingGame: function() {
+        if (this.state.racingLoopInterval) clearInterval(this.state.racingLoopInterval);
+
+        // Reset racing parameters
+        this.state.racingLane = 1;
+        this.state.racingCarX = 400;
+        this.state.racingTargetX = 400;
+        this.state.racingSpeed = 11;
+        this.state.racingBaseSpeed = 11;
+        this.state.racingBoostTimer = 0;
+        this.state.racingDistance = 0;
+        this.state.racingGateStep = 100;
+        this.state.racingNextGateDist = (this.state.currentIdx + 1) * this.state.racingGateStep;
+        this.state.racingIsAtGate = false;
+        this.state.racingCrashShakeTimer = 0;
+        this.state.racingRoadOffset = 0;
+        this.state.racingPickups = [];
+        this.state.racingExplosionParticles = [];
+        this.state.racingCrashParticles = [];
+
+        this.updateHUD();
+        this.updateRacingHUD();
+
+        const canvas = document.getElementById('racingCanvas');
+        if (canvas) this.racingCtx = canvas.getContext('2d');
+
+        this.state.racingLoopInterval = setInterval(() => {
+            this.updateRacingPhysics();
+            this.drawRacingCanvas();
+        }, 1000 / 60);
+    },
+
+    updateRacingPhysics: function() {
+        if (this.state.isEnded) return;
+
+        // Smooth steering interpolation towards target lane X
+        this.state.racingCarX += (this.state.racingTargetX - this.state.racingCarX) * 0.18;
+
+        // Speed calculation: Boost active gives 2.2x speed!
+        let currentSpeed = this.state.racingBaseSpeed;
+        if (this.state.racingBoostTimer > 0) {
+            this.state.racingBoostTimer--;
+            currentSpeed = 24; // Dorongan kecepatan nitro!
+            if (this.state.racingBoostTimer % 4 === 0) {
+                this.createNitroFlame(this.state.racingCarX - 16, 310);
+                this.createNitroFlame(this.state.racingCarX + 16, 310);
+            }
+        }
+
+        // If currently stopped at a barrier gate, speed is 0
+        if (this.state.racingIsAtGate) {
+            currentSpeed = 0;
+        }
+
+        this.state.racingSpeed = currentSpeed;
+
+        // Distance progression
+        if (!this.state.racingIsAtGate) {
+            this.state.racingDistance += (currentSpeed * 0.12);
+            this.state.racingRoadOffset += currentSpeed;
+        }
+
+        // Next barrier gate distance
+        const nextGateDist = (this.state.currentIdx + 1) * this.state.racingGateStep;
+        this.state.racingNextGateDist = nextGateDist;
+        const distLeft = nextGateDist - this.state.racingDistance;
+
+        // Cek jika mobil mencapai gerbang penghalang di setiap jarak [X] meter
+        if (distLeft <= 0 && !this.state.racingIsAtGate && this.state.currentIdx < this.data.questions.length) {
+            this.state.racingIsAtGate = true;
+            this.state.racingDistance = nextGateDist;
+            this.playSound('bump');
+            this.openBarrierGateQuestion();
+        }
+
+        // Spawn roadside coins & pickups
+        if (!this.state.racingIsAtGate && Math.random() < 0.04 && this.state.racingPickups.length < 5) {
+            const lane = Math.floor(Math.random() * 3);
+            const isNitro = Math.random() < 0.25;
+            this.state.racingPickups.push({
+                lane: lane,
+                y: 100, // Vanishing point
+                type: isNitro ? 'nitro' : 'coin',
+                collected: false
+            });
+        }
+
+        // Update pickups movement & collision
+        for (let i = this.state.racingPickups.length - 1; i >= 0; i--) {
+            const p = this.state.racingPickups[i];
+            p.y += currentSpeed * 0.7;
+
+            // Collision check with car near y = 275
+            if (!p.collected && p.y >= 250 && p.y <= 295 && p.lane === this.state.racingLane) {
+                p.collected = true;
+                if (p.type === 'coin') {
+                    this.state.coins++;
+                    this.state.score += 15;
+                    this.playSound('coin');
+                    this.updateHUD();
+                } else {
+                    this.state.score += 25;
+                    this.state.racingBoostTimer = Math.max(this.state.racingBoostTimer, 50);
+                    this.playSound('turbo');
+                    this.updateHUD();
+                }
+            }
+
+            if (p.y > 380 || p.collected) {
+                this.state.racingPickups.splice(i, 1);
+            }
+        }
+
+        // Update explosion particles
+        for (let i = this.state.racingExplosionParticles.length - 1; i >= 0; i--) {
+            const pt = this.state.racingExplosionParticles[i];
+            pt.x += pt.vx;
+            pt.y += pt.vy;
+            pt.vy += 0.15; // Gravity
+            pt.alpha -= 0.022;
+            pt.size *= 0.97;
+            if (pt.alpha <= 0) {
+                this.state.racingExplosionParticles.splice(i, 1);
+            }
+        }
+
+        // Update crash particles
+        for (let i = this.state.racingCrashParticles.length - 1; i >= 0; i--) {
+            const cp = this.state.racingCrashParticles[i];
+            cp.x += cp.vx;
+            cp.y += cp.vy;
+            cp.alpha -= 0.03;
+            cp.size *= 0.96;
+            if (cp.alpha <= 0) {
+                this.state.racingCrashParticles.splice(i, 1);
+            }
+        }
+
+        this.updateRacingHUD();
+    },
+
+    createNitroFlame: function(x, y) {
+        if (!this.state.racingCrashParticles) this.state.racingCrashParticles = [];
+        this.state.racingCrashParticles.push({
+            x: x + (Math.random() - 0.5) * 6,
+            y: y,
+            vx: (Math.random() - 0.5) * 2,
+            vy: 4 + Math.random() * 4,
+            size: 8 + Math.random() * 6,
+            color: Math.random() > 0.5 ? '#00f5d4' : '#ff9e00',
+            alpha: 0.9
+        });
+    },
+
+    createBarrierExplosion: function(bx, by) {
+        this.playSound('explosion');
+        this.playSound('powerup');
+        this.state.screenShake = 16;
+        const colors = ['#ff0055', '#ff5400', '#ffd60a', '#00f5d4', '#ffffff', '#7209b7'];
+        for (let i = 0; i < 48; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = 3 + Math.random() * 9;
+            this.state.racingExplosionParticles.push({
+                x: bx + (Math.random() - 0.5) * 40,
+                y: by + (Math.random() - 0.5) * 20,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd - 2,
+                size: 6 + Math.random() * 12,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                alpha: 1.0
+            });
+        }
+    },
+
+    createCrashSparks: function(cx, cy) {
+        this.state.screenShake = 12;
+        for (let i = 0; i < 24; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const spd = 2 + Math.random() * 6;
+            this.state.racingCrashParticles.push({
+                x: cx + (Math.random() - 0.5) * 20,
+                y: cy - 15 + (Math.random() - 0.5) * 10,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd - 1,
+                size: 4 + Math.random() * 8,
+                color: Math.random() > 0.4 ? '#f59e0b' : '#ef4444',
+                alpha: 1.0
+            });
+        }
+    },
+
+    openBarrierGateQuestion: function() {
+        if (this.state.currentIdx >= this.data.questions.length) {
+            this.endGame();
+            return;
+        }
+
+        const q = this.data.questions[this.state.currentIdx];
+        const overlay = document.getElementById('racingBarrierOverlay');
+        const headerEl = document.getElementById('racingBarrierHeader');
+        const questionEl = document.getElementById('racingQuestionText');
+        const crashNotice = document.getElementById('racingCrashNotice');
+
+        if (crashNotice) crashNotice.classList.add('d-none');
+        if (headerEl) headerEl.textContent = `🛑 GERBANG PENGHALANG BALAPAN #${this.state.currentIdx + 1} (${this.state.currentIdx + 1}/${this.data.questions.length})`;
+        if (questionEl) questionEl.textContent = q.pertanyaan;
+
+        this.renderRacingOptions();
+
+        if (overlay) overlay.classList.remove('d-none');
+    },
+
+    renderRacingOptions: function() {
+        const q = this.data.questions[this.state.currentIdx];
+        const optionsContainer = document.getElementById('racingOptionsContainer');
+        if (!optionsContainer || !q) return;
+
+        // Ambil opsi yang tersedia
+        const rawOptions = [
+            { key: 'a', text: q.opsi_a },
+            { key: 'b', text: q.opsi_b },
+            { key: 'c', text: q.opsi_c },
+            { key: 'd', text: q.opsi_d }
+        ].filter(opt => opt.text && String(opt.text).trim() !== '');
+
+        // Acak urutan opsi jawaban (Shuffle Options)
+        for (let i = rawOptions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [rawOptions[i], rawOptions[j]] = [rawOptions[j], rawOptions[i]];
+        }
+
+        optionsContainer.innerHTML = rawOptions.map((opt, idx) => {
+            const safeText = String(opt.text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            return `
+                <div class="col-12 col-md-6">
+                    <button type="button" class="btn btn-outline-warning w-100 p-2.5 p-md-3 rounded-4 text-start d-flex align-items-center gap-2 gap-md-3 shadow-sm text-white hover-scale" onclick="window.GameEngine.submitRacingAnswer('${opt.key}')">
+                        <span class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center fw-bold fs-6" style="width: 36px; height: 36px; min-width: 36px; border: 2px solid #ffffff;">
+                            ${String.fromCharCode(65 + idx)}
+                        </span>
+                        <span class="fw-semibold text-white fs-6 flex-grow-1">${safeText}</span>
+                    </button>
+                </div>
+            `;
+        }).join('');
+    },
+
+    submitRacingAnswer: function(selectedOpt) {
+        if (this.state.isAnswered) return;
+
+        const q = this.data.questions[this.state.currentIdx];
+        const keyAnswer = (q.kunci_jawaban || 'a').toString().trim().toLowerCase();
+        const isCorrect = (selectedOpt.toLowerCase() === keyAnswer);
+
+        if (isCorrect) {
+            // ==============================================================
+            // KETENTUAN 1: JIKA PEMAIN MEMILIH OPSI JAWABAN YANG BENAR
+            // - Poin bertambah +10
+            // - Efek visual ledakan pada gerbang
+            // - Beri karakter dorongan kecepatan (speed boost) selama 2 detik
+            // - Karakter lanjut berlari ke soal berikutnya
+            // ==============================================================
+            this.state.isAnswered = true;
+            this.state.score += (parseInt(q.poin) || 10);
+            this.state.correctCount++;
+            this.state.combo++;
+            if (this.state.combo > this.state.maxCombo) this.state.maxCombo = this.state.combo;
+            this.updateHUD();
+
+            // Efek visual ledakan pada gerbang penghalang
+            this.createBarrierExplosion(400, 230);
+
+            // Beri karakter dorongan kecepatan (speed boost) selama 2 detik (120 frames @ 60 FPS)
+            this.state.racingBoostTimer = 120;
+            this.playSound('turbo');
+
+            // Sembunyikan barrier overlay
+            const overlay = document.getElementById('racingBarrierOverlay');
+            if (overlay) overlay.classList.add('d-none');
+
+            // Karakter lanjut melaju ke soal berikutnya
+            this.state.racingIsAtGate = false;
+            this.state.currentIdx++;
+            this.state.isAnswered = false;
+
+            // Jika semua soal selesai, tamatkan game
+            if (this.state.currentIdx >= this.data.questions.length) {
+                setTimeout(() => { this.endGame(); }, 1200);
+            }
+        } else {
+            // ==============================================================
+            // KETENTUAN 2: JIKA PEMAIN MEMILIH OPSI JAWABAN YANG SALAH
+            // - Karakter memainkan animasi menabrak
+            // - Game berhenti bergerak maju (paused)
+            // - Soal yang sama tetap ditampilkan di layar (opsi jawaban diacak ulang)
+            // - Karakter tidak boleh bergerak maju sampai pemain berhasil memilih jawaban yang benar
+            // ==============================================================
+            this.state.combo = 0;
+            this.updateHUD();
+
+            // Karakter memainkan animasi menabrak
+            this.state.racingCrashShakeTimer = 35;
+            this.createCrashSparks(this.state.racingCarX, 275);
+            this.playSound('wrong');
+            this.playSound('bump');
+
+            // Game berhenti bergerak maju (paused)
+            this.state.racingIsAtGate = true;
+            this.state.racingSpeed = 0;
+            this.state.racingBoostTimer = 0;
+
+            // Tampilkan notifikasi menabrak & acak ulang opsi jawaban
+            const crashNotice = document.getElementById('racingCrashNotice');
+            if (crashNotice) {
+                crashNotice.classList.remove('d-none');
+            }
+
+            // Opsi jawaban diacak ulang (shuffled) dan tetap di layar!
+            this.renderRacingOptions();
+        }
+    },
+
+    updateRacingHUD: function() {
+        const speedKmh = Math.round(this.state.racingSpeed * 6.5);
+        const dist = Math.round(this.state.racingDistance);
+        const targetGate = Math.round(this.state.racingNextGateDist);
+        const prevGate = (this.state.currentIdx) * this.state.racingGateStep;
+        const gateProgress = Math.max(0, Math.min(100, Math.round(((dist - prevGate) / this.state.racingGateStep) * 100)));
+
+        const isBoost = this.state.racingBoostTimer > 0;
+
+        ['racingSpeedVal', 'racingSpeedValMobile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = speedKmh;
+        });
+
+        const boostInd = document.getElementById('racingBoostIndicator');
+        if (boostInd) {
+            if (isBoost) boostInd.classList.remove('d-none');
+            else boostInd.classList.add('d-none');
+        }
+
+        const boostBadgeMobile = document.getElementById('racingBoostBadgeMobile');
+        if (boostBadgeMobile) {
+            boostBadgeMobile.textContent = isBoost ? '🔥 NITRO 2s!' : '🚀 READY';
+            boostBadgeMobile.className = isBoost ? 'badge bg-danger text-white rounded-pill px-2 py-0.5 fw-bold' : 'badge bg-dark text-warning border border-warning rounded-pill px-2 py-0.5 fw-bold';
+        }
+
+        ['racingGateProgressBar', 'racingGateProgressBarMobile'].forEach(id => {
+            const bar = document.getElementById(id);
+            if (bar) {
+                bar.style.width = gateProgress + '%';
+                bar.textContent = `${dist}m / ${targetGate}m`;
+            }
+        });
+
+        ['racingCoinVal', 'racingCoinValMobile'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = this.state.coins;
+        });
+
+        const mobScore = document.getElementById('currentScoreRacingMobile');
+        if (mobScore) mobScore.textContent = this.state.score;
+    },
+
+    drawRacingCanvas: function() {
+        const ctx = this.racingCtx;
+        if (!ctx) return;
+
+        const W = 800;
+        const H = 360;
+
+        // Apply screen shake if active
+        ctx.save();
+        if (this.state.screenShake > 0) {
+            const shake = (Math.random() - 0.5) * this.state.screenShake;
+            ctx.translate(shake, shake);
+            this.state.screenShake--;
+        }
+
+        ctx.clearRect(0, 0, W, H);
+
+        // 1. SKY GRADIENT (Synthwave Cyber Sunset)
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, 100);
+        skyGrad.addColorStop(0, '#090214');
+        skyGrad.addColorStop(0.6, '#3b0764');
+        skyGrad.addColorStop(1, '#be185d');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, W, 100);
+
+        // Neon Sun on the horizon
+        ctx.save();
+        const sunGrad = ctx.createRadialGradient(400, 100, 5, 400, 100, 48);
+        sunGrad.addColorStop(0, '#fef08a');
+        sunGrad.addColorStop(0.5, '#f43f5e');
+        sunGrad.addColorStop(1, 'rgba(244, 63, 94, 0)');
+        ctx.fillStyle = sunGrad;
+        ctx.beginPath();
+        ctx.arc(400, 100, 48, Math.PI, 0, false);
+        ctx.fill();
+        ctx.restore();
+
+        // Distant Cyber City Skyline Silhouettes
+        ctx.fillStyle = '#170c2e';
+        const buildings = [
+            [20, 40, 24], [55, 60, 30], [95, 35, 20], [130, 50, 36], [180, 70, 26],
+            [220, 45, 32], [265, 60, 28], [510, 55, 32], [555, 75, 26], [590, 40, 34],
+            [640, 65, 30], [680, 45, 22], [720, 70, 28], [760, 50, 30]
+        ];
+        buildings.forEach(b => {
+            ctx.fillRect(b[0], 100 - b[1], b[2], b[1]);
+        });
+
+        // 2. ROADSIDE GRASS & HIGHWAY (Pseudo-3D Perspective)
+        const terrainGrad = ctx.createLinearGradient(0, 100, 0, H);
+        terrainGrad.addColorStop(0, '#0f172a');
+        terrainGrad.addColorStop(1, '#020617');
+        ctx.fillStyle = terrainGrad;
+        ctx.fillRect(0, 100, W, H - 100);
+
+        // Highway Asphalt Polygon
+        ctx.beginPath();
+        ctx.moveTo(330, 100);
+        ctx.lineTo(470, 100);
+        ctx.lineTo(740, H);
+        ctx.lineTo(60, H);
+        ctx.closePath();
+        ctx.fillStyle = '#111827';
+        ctx.fill();
+
+        // 3. CURB STRIPES (Bahu jalan bergantian merah-putih)
+        const offset = (this.state.racingRoadOffset || 0) % 40;
+        const numSegments = 16;
+        for (let i = 0; i < numSegments; i++) {
+            const t1 = (i * 2.5 + (offset / 16)) / numSegments;
+            const t2 = ((i + 1) * 2.5 + (offset / 16)) / numSegments;
+            if (t1 > 1) continue;
+
+            const y1 = 100 + Math.pow(t1, 1.8) * 260;
+            const y2 = 100 + Math.pow(Math.min(1, t2), 1.8) * 260;
+
+            const leftX1 = 330 - (330 - 60) * Math.pow(t1, 1.8);
+            const leftX2 = 330 - (330 - 60) * Math.pow(Math.min(1, t2), 1.8);
+
+            const rightX1 = 470 + (740 - 470) * Math.pow(t1, 1.8);
+            const rightX2 = 470 + (740 - 470) * Math.pow(Math.min(1, t2), 1.8);
+
+            const isRed = (i % 2 === 0);
+            ctx.fillStyle = isRed ? '#dc2626' : '#f8fafc';
+
+            // Left curb
+            ctx.beginPath();
+            ctx.moveTo(leftX1, y1);
+            ctx.lineTo(leftX1 - 12 * Math.pow(t1, 1.5), y1);
+            ctx.lineTo(leftX2 - 12 * Math.pow(t2, 1.5), y2);
+            ctx.lineTo(leftX2, y2);
+            ctx.fill();
+
+            // Right curb
+            ctx.beginPath();
+            ctx.moveTo(rightX1, y1);
+            ctx.lineTo(rightX1 + 12 * Math.pow(t1, 1.5), y1);
+            ctx.lineTo(rightX2 + 12 * Math.pow(t2, 1.5), y2);
+            ctx.lineTo(rightX2, y2);
+            ctx.fill();
+        }
+
+        // 4. LANE DIVIDERS (Dashed neon lines for 3 lanes)
+        for (let i = 0; i < 12; i++) {
+            const t = (i * 3 + (offset / 12)) / 12;
+            if (t < 0.05 || t > 0.98) continue;
+            const y = 100 + Math.pow(t, 2) * 255;
+            const h = 8 + Math.pow(t, 2) * 24;
+
+            // Lane 1 divider
+            const leftLaneX = (330 + (470 - 330) * 0.33) + ((60 + (740 - 60) * 0.33) - (330 + (470 - 330) * 0.33)) * Math.pow(t, 2);
+            ctx.fillStyle = '#06b6d4';
+            ctx.fillRect(leftLaneX - 1.5, y, 3 + t * 3, h);
+
+            // Lane 2 divider
+            const rightLaneX = (330 + (470 - 330) * 0.67) + ((60 + (740 - 60) * 0.67) - (330 + (470 - 330) * 0.67)) * Math.pow(t, 2);
+            ctx.fillStyle = '#06b6d4';
+            ctx.fillRect(rightLaneX - 1.5, y, 3 + t * 3, h);
+        }
+
+        // 5. ROAD PICKUPS (Coins & Nitro Cells)
+        if (this.state.racingPickups) {
+            this.state.racingPickups.forEach(p => {
+                const t = Math.max(0, Math.min(1, (p.y - 100) / 260));
+                const laneCenters = [
+                    (330 + (60 - 330) * t) + (140 + (680 - 140) * t) * 0.17,
+                    (330 + (60 - 330) * t) + (140 + (680 - 140) * t) * 0.5,
+                    (330 + (60 - 330) * t) + (140 + (680 - 140) * t) * 0.83
+                ];
+                const px = laneCenters[p.lane];
+                const py = p.y;
+                const size = 10 + t * 18;
+
+                if (p.type === 'coin') {
+                    ctx.save();
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.beginPath();
+                    ctx.arc(px, py, size * 0.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#d97706';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    ctx.fillStyle = '#78350f';
+                    ctx.font = `bold ${Math.round(size * 0.5)}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🪙', px, py);
+                    ctx.restore();
+                } else {
+                    ctx.save();
+                    ctx.fillStyle = '#06b6d4';
+                    ctx.fillRect(px - size * 0.4, py - size * 0.6, size * 0.8, size * 1.2);
+                    ctx.fillStyle = '#fef08a';
+                    ctx.font = `bold ${Math.round(size * 0.5)}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('⚡', px, py);
+                    ctx.restore();
+                }
+            });
+        }
+
+        // 6. GERBANG PENGHALANG (Laser Barrier Gate)
+        const nextGateDist = this.state.racingNextGateDist;
+        const distToGate = Math.max(0, nextGateDist - this.state.racingDistance);
+        if (distToGate <= 75 || this.state.racingIsAtGate) {
+            const gateT = this.state.racingIsAtGate ? 1 : Math.max(0, 1 - (distToGate / 75));
+            const gy = 100 + Math.pow(gateT, 1.5) * 140; // Moves down to y = 240
+            const gw = 180 + Math.pow(gateT, 1.5) * 440; // Expands across the road
+            const gx = 400 - gw * 0.5;
+
+            // Heavy Steel Side Pillars
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(gx - 14, gy - 60, 20, 80);
+            ctx.fillRect(gx + gw - 6, gy - 60, 20, 80);
+
+            // Hazard Stripes on Pillars
+            ctx.fillStyle = '#eab308';
+            ctx.fillRect(gx - 10, gy - 50, 12, 10);
+            ctx.fillRect(gx - 10, gy - 30, 12, 10);
+            ctx.fillRect(gx + gw - 2, gy - 50, 12, 10);
+            ctx.fillRect(gx + gw - 2, gy - 30, 12, 10);
+
+            // Overhead Girder Beam
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(gx - 10, gy - 60, gw + 20, 22);
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(gx - 10, gy - 60, gw + 20, 22);
+
+            // Girder Signboard
+            ctx.fillStyle = '#dc2626';
+            ctx.fillRect(gx + gw * 0.15, gy - 56, gw * 0.7, 14);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `bold ${Math.max(8, Math.round(11 * gateT))}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText(`🛑 GERBANG SOAL #${this.state.currentIdx + 1} (${Math.round(distToGate)}m)`, 400, gy - 45);
+
+            // Pulsing Red Laser Energy Grid Barrier
+            const laserAlpha = 0.5 + Math.sin(Date.now() / 100) * 0.35;
+            ctx.save();
+            ctx.strokeStyle = `rgba(239, 68, 68, ${laserAlpha})`;
+            ctx.lineWidth = 4 * gateT;
+            for (let l = 0; l < 4; l++) {
+                const ly = gy - 36 + l * 12 * gateT;
+                ctx.beginPath();
+                ctx.moveTo(gx, ly);
+                ctx.lineTo(gx + gw, ly);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        // 7. PLAYER RACING CAR
+        let cx = this.state.racingCarX;
+        let cy = 275;
+
+        // Apply crash shake if active
+        if (this.state.racingCrashShakeTimer > 0) {
+            cx += (Math.random() - 0.5) * 14;
+            cy += (Math.random() - 0.5) * 8;
+        }
+
+        // Car Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + 30, 36, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Headlight Beams on Asphalt
+        ctx.save();
+        const beamGrad = ctx.createLinearGradient(cx, cy, cx, cy - 90);
+        beamGrad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
+        beamGrad.addColorStop(1, 'rgba(254, 240, 138, 0)');
+        ctx.fillStyle = beamGrad;
+        ctx.beginPath();
+        ctx.moveTo(cx - 24, cy - 25);
+        ctx.lineTo(cx - 50, cy - 100);
+        ctx.lineTo(cx + 50, cy - 100);
+        ctx.lineTo(cx + 24, cy - 25);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Car Wheels (4 tires)
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(cx - 30, cy - 20, 8, 16); // Front Left
+        ctx.fillRect(cx + 22, cy - 20, 8, 16); // Front Right
+        ctx.fillRect(cx - 32, cy + 10, 9, 20); // Rear Left
+        ctx.fillRect(cx + 23, cy + 10, 9, 20); // Rear Right
+
+        // Main Car Body (Aerodynamic Red Sports Car)
+        const carGrad = ctx.createLinearGradient(cx - 24, cy, cx + 24, cy);
+        carGrad.addColorStop(0, '#991b1b');
+        carGrad.addColorStop(0.5, '#ef4444');
+        carGrad.addColorStop(1, '#991b1b');
+        ctx.fillStyle = carGrad;
+
+        ctx.beginPath();
+        ctx.moveTo(cx - 16, cy - 35); // Nose
+        ctx.lineTo(cx + 16, cy - 35);
+        ctx.lineTo(cx + 24, cy - 10);
+        ctx.lineTo(cx + 26, cy + 26);
+        ctx.lineTo(cx - 26, cy + 26);
+        ctx.lineTo(cx - 24, cy - 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#fca5a5';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Tinted Windshield Glass
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.moveTo(cx - 12, cy - 18);
+        ctx.lineTo(cx + 12, cy - 18);
+        ctx.lineTo(cx + 16, cy - 2);
+        ctx.lineTo(cx - 16, cy - 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Cockpit Roof & Racing Stripe
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(cx - 3, cy - 34, 6, 56);
+
+        // Rear Spoiler Wing
+        ctx.fillStyle = '#020617';
+        ctx.fillRect(cx - 28, cy + 24, 56, 6);
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(cx - 30, cy + 22, 6, 10);
+        ctx.fillRect(cx + 24, cy + 22, 6, 10);
+
+        // Rear LED Lightbar
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(cx - 20, cy + 20, 40, 3);
+
+        // 8. NITRO EXHAUST FLAMES (when boost is active)
+        if (this.state.racingBoostTimer > 0) {
+            ctx.save();
+            const flameLen = 25 + Math.random() * 20;
+            // Left flame
+            const fGrad1 = ctx.createLinearGradient(cx - 14, cy + 28, cx - 14, cy + 28 + flameLen);
+            fGrad1.addColorStop(0, '#ffffff');
+            fGrad1.addColorStop(0.3, '#00f5d4');
+            fGrad1.addColorStop(1, 'rgba(0, 245, 212, 0)');
+            ctx.fillStyle = fGrad1;
+            ctx.beginPath();
+            ctx.moveTo(cx - 18, cy + 28);
+            ctx.lineTo(cx - 10, cy + 28);
+            ctx.lineTo(cx - 14, cy + 28 + flameLen);
+            ctx.fill();
+
+            // Right flame
+            const fGrad2 = ctx.createLinearGradient(cx + 14, cy + 28, cx + 14, cy + 28 + flameLen);
+            fGrad2.addColorStop(0, '#ffffff');
+            fGrad2.addColorStop(0.3, '#00f5d4');
+            fGrad2.addColorStop(1, 'rgba(0, 245, 212, 0)');
+            ctx.fillStyle = fGrad2;
+            ctx.beginPath();
+            ctx.moveTo(cx + 10, cy + 28);
+            ctx.lineTo(cx + 18, cy + 28);
+            ctx.lineTo(cx + 14, cy + 28 + flameLen);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // 9. EXPLOSION PARTICLES (Barrier gate destruction)
+        if (this.state.racingExplosionParticles) {
+            this.state.racingExplosionParticles.forEach(pt => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, pt.alpha);
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, Math.max(1, pt.size), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        // 10. CRASH PARTICLES (Sparks & smoke on collision)
+        if (this.state.racingCrashParticles) {
+            this.state.racingCrashParticles.forEach(cp => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, cp.alpha);
+                ctx.fillStyle = cp.color;
+                ctx.beginPath();
+                ctx.arc(cp.x, cp.y, Math.max(1, cp.size), 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        // 11. IN-CANVAS HUD OVERLAY BADGE
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.roundRect(14, 14, 210, 32, 16);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`🚩 Gerbang: ${Math.round(this.state.racingDistance)}m / ${this.state.racingNextGateDist}m`, 26, 34);
+
+        if (this.state.racingBoostTimer > 0) {
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.85)';
+            ctx.roundRect(W - 200, 14, 186, 32, 16);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`🔥 NITRO BOOST 2s! ⚡`, W - 107, 34);
+        }
+        ctx.restore();
+
+        ctx.restore(); // Restore shake
+    },
+
     // 🎡 MODE 3: SPIN WHEEL QUIZ ENGINE
     initSpinWheelCanvas: function() {
         const canvas = document.getElementById('wheelCanvas');
@@ -1774,6 +2579,30 @@ window.GameEngine = {
                 gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
                 osc.start(now);
                 osc.stop(now + 0.3);
+            } else if (type === 'explosion') {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.45);
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.45);
+                osc.start(now);
+                osc.stop(now + 0.45);
+            } else if (type === 'turbo') {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(780, now + 0.35);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                osc.start(now);
+                osc.stop(now + 0.35);
             }
         } catch(e) {}
     },
@@ -1937,6 +2766,10 @@ window.GameEngine = {
         this.state.isEnded = true;
         clearInterval(this.state.timerInterval);
         if (this.state.marioLoopInterval) clearInterval(this.state.marioLoopInterval);
+        if (this.state.racingLoopInterval) clearInterval(this.state.racingLoopInterval);
+
+        const racingOverlay = document.getElementById('racingBarrierOverlay');
+        if (racingOverlay) racingOverlay.classList.add('d-none');
 
         const elapsedTime = Math.round((Date.now() - this.state.startTime) / 1000);
         const isPassed = (this.state.score >= this.data.kkm);
@@ -2036,6 +2869,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         <i class="bi bi-controller text-danger"></i> <?= htmlspecialchars($game['judul']) ?>
                         <?php if ($gameType === 'mario_run'): ?>
                             <span class="badge bg-danger text-white rounded-pill px-2 py-0.5" style="font-size: 0.75rem;">🍄 Mario Run</span>
+                        <?php elseif ($gameType === 'car_racing'): ?>
+                            <span class="badge bg-danger text-white rounded-pill px-2 py-0.5" style="font-size: 0.75rem;">🏎️ Turbo Racing</span>
                         <?php elseif ($gameType === 'spin_wheel'): ?>
                             <span class="badge bg-success text-white rounded-pill px-2 py-0.5" style="font-size: 0.75rem;">🎡 Spin Wheel</span>
                         <?php elseif ($gameType === 'memory_match'): ?>
@@ -2094,6 +2929,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="fs-4 fs-md-3 mb-1">🍄 🏃</div>
                                 <small class="text-white-50 d-block" style="font-size: 0.68rem;">Lari Gerbang</small>
                                 <span class="fw-bold text-warning d-block" style="font-size: 0.75rem;">Sesuai Timer</span>
+                            <?php elseif ($gameType === 'car_racing'): ?>
+                                <div class="fs-4 fs-md-3 mb-1">🏎️ 💥</div>
+                                <small class="text-white-50 d-block" style="font-size: 0.68rem;">Endless Runner</small>
+                                <span class="fw-bold text-danger d-block" style="font-size: 0.75rem;">Balapan Mobil</span>
                             <?php elseif ($gameType === 'spin_wheel'): ?>
                                 <div class="fs-4 fs-md-3 mb-1">🎡 🌟</div>
                                 <small class="text-white-50 d-block" style="font-size: 0.68rem;">Roda</small>
@@ -2111,16 +2950,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="col-4">
                         <div class="p-2 p-md-3 bg-white bg-opacity-10 rounded-3 rounded-md-4 border border-white border-opacity-10 text-center h-100">
-                            <div class="fs-4 fs-md-3 mb-1">⏱️ <?= $game['durasi_per_soal'] ?>s</div>
-                            <small class="text-white-50 d-block" style="font-size: 0.68rem;">Timer</small>
-                            <span class="fw-bold text-warning d-block" style="font-size: 0.75rem;"><?= $game['durasi_per_soal'] ?> Detik</span>
+                            <div class="fs-4 fs-md-3 mb-1"><?= ($gameType === 'car_racing') ? '🛑 100m' : '⏱️ ' . $game['durasi_per_soal'] . 's' ?></div>
+                            <small class="text-white-50 d-block" style="font-size: 0.68rem;"><?= ($gameType === 'car_racing') ? 'Gerbang Soal' : 'Timer' ?></small>
+                            <span class="fw-bold text-warning d-block" style="font-size: 0.75rem;"><?= ($gameType === 'car_racing') ? 'Tiap 100 Meter' : $game['durasi_per_soal'] . ' Detik' ?></span>
                         </div>
                     </div>
                     <div class="col-4">
                         <div class="p-2 p-md-3 bg-white bg-opacity-10 rounded-3 rounded-md-4 border border-white border-opacity-10 text-center h-100">
-                            <div class="fs-4 fs-md-3 mb-1">🔥 5x</div>
-                            <small class="text-white-50 d-block" style="font-size: 0.68rem;">Bonus</small>
-                            <span class="fw-bold text-info d-block" style="font-size: 0.75rem;">Combo Multi</span>
+                            <div class="fs-4 fs-md-3 mb-1"><?= ($gameType === 'car_racing') ? '⚡ +10' : '🔥 5x' ?></div>
+                            <small class="text-white-50 d-block" style="font-size: 0.68rem;"><?= ($gameType === 'car_racing') ? 'Benar = Boost' : 'Bonus' ?></small>
+                            <span class="fw-bold text-info d-block" style="font-size: 0.75rem;"><?= ($gameType === 'car_racing') ? '2s Speed Boost' : 'Combo Multi' ?></span>
                         </div>
                     </div>
                 </div>
@@ -2216,6 +3055,140 @@ document.addEventListener('DOMContentLoaded', function() {
                     </span>
                     <span class="badge bg-dark bg-opacity-60 border border-secondary px-2.5 py-1.5 rounded-pill d-none d-sm-inline-block">
                         ❓ <strong>Balok '?':</strong> Koin & Star Power!
+                    </span>
+                </div>
+            </div>
+
+            <!-- 🏎️ MODE 5: ENDLESS TURBO CAR RACING RUNNER STAGE -->
+            <div id="racingStageContainer" class="d-none text-center py-1">
+                <!-- 📱 Mobile Compact Arcade Status Bar (Tinggi Hanya ~30px) -->
+                <div class="d-flex d-md-none justify-content-between align-items-center mb-1.5 px-2 py-1 rounded-pill bg-black bg-opacity-40 border border-white border-opacity-10 shadow-sm">
+                    <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-light btn-sm rounded-pill px-2 py-0 border-0 text-white-50 d-inline-flex align-items-center gap-1" style="font-size: 0.72rem; height: 24px;">
+                        <i class="bi bi-arrow-left"></i> Keluar
+                    </a>
+                    <div class="d-flex align-items-center gap-1.5">
+                        <span id="racingSpeedBadgeMobile" class="badge bg-danger px-2 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">⚡ <span id="racingSpeedValMobile">70</span> KM/H</span>
+                        <span class="badge bg-primary px-2 py-1 rounded-pill fw-bold" style="font-size: 0.72rem;">Skor: <span id="currentScoreRacingMobile">0</span></span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-warning rounded-circle p-0 text-warning d-flex align-items-center justify-content-center" onclick="window.toggleArenaFullscreen()" title="Fullscreen" style="width: 26px; height: 26px;">
+                        <i class="bi bi-arrows-fullscreen" style="font-size: 0.72rem;"></i>
+                    </button>
+                </div>
+
+                <!-- 📱 Mobile Compact Sub-Bar: Jarak Menuju Gerbang, Status Nitro & Koin -->
+                <div class="d-flex d-md-none justify-content-between align-items-center gap-2 mb-1.5 px-1">
+                    <div class="d-flex align-items-center gap-1 flex-grow-1" style="min-width: 110px;">
+                        <span class="text-danger fw-bold" style="font-size: 0.72rem;"><i class="bi bi-flag-fill"></i></span>
+                        <div class="progress rounded-pill bg-dark border border-danger flex-grow-1 shadow-sm" style="height: 13px;">
+                            <div id="racingGateProgressBarMobile" class="progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; font-size: 0.65rem; line-height: 13px;">0m</div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="badge bg-dark text-warning border border-warning rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.7rem;" id="racingBoostBadgeMobile">
+                            🚀 READY
+                        </span>
+                        <span class="badge bg-warning text-dark rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.7rem;">
+                            🪙 <span id="racingCoinValMobile">0</span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 💻 Desktop Racing Top HUD Bar -->
+                <div class="d-none d-md-flex row align-items-center g-2 mb-3 px-2">
+                    <div class="col-12 col-md-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="small fw-bold text-danger text-nowrap"><i class="bi bi-flag-fill"></i> Menuju Gerbang:</span>
+                            <div class="progress rounded-pill bg-dark border border-danger flex-grow-1 shadow-sm" style="height: 22px;">
+                                <div id="racingGateProgressBar" class="progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; font-size: 0.82rem;">
+                                    0m / 100m
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3 text-center">
+                        <span class="badge bg-dark text-danger border border-danger rounded-pill px-3 py-2 fw-bold small shadow-sm">
+                            ⚡ Kecepatan: <span id="racingSpeedVal">70</span> KM/H <span id="racingBoostIndicator" class="text-warning ms-1 d-none">🔥 NITRO!</span>
+                        </span>
+                    </div>
+                    <div class="col-6 col-md-2 text-center">
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold small shadow-sm">
+                            🪙 <span id="racingCoinVal">0</span> Koin
+                        </span>
+                    </div>
+                    <div class="col-12 col-md-3 text-end d-flex gap-2 justify-content-end">
+                        <button type="button" class="btn btn-outline-light rounded-pill px-3 py-1.5 fw-bold small" onclick="window.GameEngine.racingSteer(-1)">
+                            ◀ KIRI (A)
+                        </button>
+                        <button type="button" class="btn btn-outline-light rounded-pill px-3 py-1.5 fw-bold small" onclick="window.GameEngine.racingSteer(1)">
+                            KANAN (D) ▶
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 🏎️ Racing Retro/Futuristic Highway Canvas Screen -->
+                <div class="position-relative overflow-hidden rounded-4 border border-danger border-opacity-50 shadow-2xl mx-auto" style="max-width: 960px;">
+                    <canvas id="racingCanvas" width="800" height="360" class="w-100 h-auto rounded-4 d-block" style="background:#090d16; cursor: pointer;"></canvas>
+
+                    <!-- Floating Mobile Steering Buttons Overlay -->
+                    <div class="position-absolute bottom-0 start-0 p-2 p-sm-3 d-md-none" style="z-index: 25;">
+                        <button type="button" class="btn btn-danger rounded-circle shadow-2xl d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; font-size: 1.3rem; background: rgba(220, 38, 38, 0.85); backdrop-filter: blur(4px); border: 2px solid #ffffff;" onclick="window.GameEngine.racingSteer(-1)" title="Belok Kiri">
+                            ◀
+                        </button>
+                    </div>
+                    <div class="position-absolute bottom-0 end-0 p-2 p-sm-3 d-md-none" style="z-index: 25;">
+                        <button type="button" class="btn btn-danger rounded-circle shadow-2xl d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; font-size: 1.3rem; background: rgba(220, 38, 38, 0.85); backdrop-filter: blur(4px); border: 2px solid #ffffff;" onclick="window.GameEngine.racingSteer(1)" title="Belok Kanan">
+                            ▶
+                        </button>
+                    </div>
+
+                    <!-- 🛑 IN-GAME BARRIER QUESTION OVERLAY (Muncul di layar saat mobil mencapai gerbang penghalang) -->
+                    <div id="racingBarrierOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none d-flex flex-column justify-content-center align-items-center p-2 p-md-4" style="background: rgba(10, 15, 29, 0.94); backdrop-filter: blur(8px); z-index: 50; overflow-y: auto;">
+                        <div class="w-100 max-w-2xl bg-black bg-opacity-70 border border-danger border-2 rounded-4 p-3 p-md-4 shadow-2xl text-center position-relative my-auto">
+                            <!-- Gate Alert Header -->
+                            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-secondary border-opacity-50">
+                                <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold fs-6 shadow-sm" id="racingBarrierHeader">
+                                    🛑 GERBANG PENGHALANG BALAPAN #1
+                                </span>
+                                <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 fw-bold small" id="racingBarrierReward">
+                                    🎁 BENAR: LEDAKAN + SPEED BOOST 2 DETIK (+10 POIN)
+                                </span>
+                            </div>
+
+                            <!-- Crash Notice (Ditampilkan jika salah menjawab) -->
+                            <div id="racingCrashNotice" class="alert alert-danger border-2 border-danger py-2 px-3 rounded-3 mb-2 d-none text-start animate__animated animate__shakeX">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fs-4">💥</span>
+                                    <div>
+                                        <strong class="d-block text-danger">MENABRAK GERBANG! Mobil terhenti (PAUSED)!</strong>
+                                        <small class="text-white-50">Opsi jawaban telah diacak ulang. Pilih opsi yang benar untuk menghancurkan gerbang & melaju kencang!</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Question Text -->
+                            <div class="bg-dark bg-opacity-80 p-3 rounded-3 mb-3 border border-secondary border-opacity-30 text-start">
+                                <small class="text-warning fw-bold d-block mb-1">SOAL PERTANYAAN:</small>
+                                <h5 class="fw-bold text-white mb-0" id="racingQuestionText" style="line-height: 1.4;">Pertanyaan...</h5>
+                            </div>
+
+                            <!-- Shuffled Options Container -->
+                            <div class="row g-2 text-start" id="racingOptionsContainer">
+                                <!-- Dynamic Options Buttons -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pro-Tips Bar -->
+                <div class="d-flex flex-wrap align-items-center justify-content-center gap-1.5 gap-md-3 mt-2 text-white-50" style="font-size: 0.74rem;">
+                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-2.5 py-1.5 rounded-pill">
+                        🎮 <strong>Kontrol Mobil:</strong> Tombol Panah Kiri/Kanan / A & D = Steer / Pindah Jalur
+                    </span>
+                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-2.5 py-1.5 rounded-pill">
+                        🛑 <strong>Gerbang Soal:</strong> Hadang tiap 100m. Benar = Gerbang Meledak & Speed Boost 2s (+10 Poin)!
+                    </span>
+                    <span class="badge bg-dark bg-opacity-60 border border-secondary px-2.5 py-1.5 rounded-pill d-none d-sm-inline-block">
+                        💥 <strong>Salah Jawab:</strong> Animasi menabrak, mobil berhenti & opsi diacak ulang sampai benar!
                     </span>
                 </div>
             </div>

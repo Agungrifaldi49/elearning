@@ -84,7 +84,7 @@
                         <i class="bi bi-controller text-danger me-1"></i> Pilih Mode / Tipe Game Edukasi <span class="text-danger">*</span>
                     </label>
                     <div class="row g-3">
-                        <div class="col-12 col-md-6 col-lg-3">
+                        <div class="col-12 col-sm-6 col-lg-4">
                             <input type="radio" class="btn-check" name="tipe_game" id="tipeMario" value="mario_run" <?= ($currentType === 'mario_run' || empty($currentType)) ? 'checked' : '' ?>>
                             <label class="btn btn-outline-warning p-3 w-100 text-start rounded-4 h-100 shadow-xs border-2" for="tipeMario">
                                 <div class="d-flex align-items-center justify-content-between mb-2">
@@ -97,7 +97,20 @@
                                 </small>
                             </label>
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
+                        <div class="col-12 col-sm-6 col-lg-4">
+                            <input type="radio" class="btn-check" name="tipe_game" id="tipeRacing" value="car_racing" <?= ($currentType === 'car_racing') ? 'checked' : '' ?>>
+                            <label class="btn btn-outline-danger p-3 w-100 text-start rounded-4 h-100 shadow-xs border-2" for="tipeRacing">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="fs-2">🏎️</span>
+                                    <span class="badge bg-danger text-white rounded-pill px-2.5 py-1 fw-bold" style="font-size:0.68rem;">🔥 NITRO RACING</span>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-1">Turbo Car Racing (Endless Runner)</h6>
+                                <small class="text-muted d-block" style="font-size:0.78rem;">
+                                    Balapan mobil endless runner! Mobil melaju otomatis & dihadang gerbang soal tiap [X] meter. Benar: gerbang meledak & mobil dapat Speed Boost 2 detik (+10 Poin)! Salah: mobil menabrak & tertahan hingga jawaban benar terpilih.
+                                </small>
+                            </label>
+                        </div>
+                        <div class="col-12 col-sm-6 col-lg-4">
                             <input type="radio" class="btn-check" name="tipe_game" id="tipeSpeed" value="quiz_speed" <?= ($currentType === 'quiz_speed') ? 'checked' : '' ?>>
                             <label class="btn btn-outline-primary p-3 w-100 text-start rounded-4 h-100 shadow-xs border-2" for="tipeSpeed">
                                 <div class="fs-2 mb-2">⚡</div>
@@ -107,7 +120,7 @@
                                 </small>
                             </label>
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
+                        <div class="col-12 col-sm-6 col-lg-6">
                             <input type="radio" class="btn-check" name="tipe_game" id="tipeWheel" value="spin_wheel" <?= ($currentType === 'spin_wheel') ? 'checked' : '' ?>>
                             <label class="btn btn-outline-success p-3 w-100 text-start rounded-4 h-100 shadow-xs border-2" for="tipeWheel">
                                 <div class="fs-2 mb-2">🎡</div>
@@ -117,9 +130,9 @@
                                 </small>
                             </label>
                         </div>
-                        <div class="col-12 col-md-6 col-lg-3">
+                        <div class="col-12 col-sm-6 col-lg-6">
                             <input type="radio" class="btn-check" name="tipe_game" id="tipeMemory" value="memory_match" <?= ($currentType === 'memory_match') ? 'checked' : '' ?>>
-                            <label class="btn btn-outline-danger p-3 w-100 text-start rounded-4 h-100 shadow-xs border-2" for="tipeMemory">
+                            <label class="btn btn-outline-secondary p-3 w-100 text-start rounded-4 h-100 shadow-xs border-2" for="tipeMemory">
                                 <div class="fs-2 mb-2">🧩</div>
                                 <h6 class="fw-bold text-dark mb-1">Memory Match Cards</h6>
                                 <small class="text-muted d-block" style="font-size:0.78rem;">

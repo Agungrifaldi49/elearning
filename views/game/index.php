@@ -130,7 +130,20 @@ foreach ($games as $gm) {
                             <div class="card-body p-4 d-flex flex-column justify-content-between">
                                 <div>
                                     <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
-                                        <h5 class="fw-bold text-dark mb-1 text-lh-sm"><?= htmlspecialchars($g['judul']) ?></h5>
+                                        <div>
+                                            <?php if (($g['tipe_game'] ?? '') === 'car_racing'): ?>
+                                                <span class="badge bg-danger text-white rounded-pill mb-1" style="font-size: 0.68rem;">🏎️ Turbo Racing</span>
+                                            <?php elseif (($g['tipe_game'] ?? '') === 'mario_run'): ?>
+                                                <span class="badge bg-warning text-dark rounded-pill mb-1" style="font-size: 0.68rem;">🍄 Mario Runner</span>
+                                            <?php elseif (($g['tipe_game'] ?? '') === 'spin_wheel'): ?>
+                                                <span class="badge bg-success text-white rounded-pill mb-1" style="font-size: 0.68rem;">🎡 Spin Wheel</span>
+                                            <?php elseif (($g['tipe_game'] ?? '') === 'memory_match'): ?>
+                                                <span class="badge bg-secondary text-white rounded-pill mb-1" style="font-size: 0.68rem;">🧩 Memory Match</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-primary text-white rounded-pill mb-1" style="font-size: 0.68rem;">⚡ Speed Battle</span>
+                                            <?php endif; ?>
+                                            <h5 class="fw-bold text-dark mb-1 text-lh-sm"><?= htmlspecialchars($g['judul']) ?></h5>
+                                        </div>
                                         <?php if (!empty($g['nama_kelas'])): ?>
                                             <span class="badge bg-info-subtle text-dark border border-info-subtle rounded-pill small text-nowrap">
                                                 <?= htmlspecialchars($g['nama_kelas']) ?>
