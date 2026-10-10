@@ -15,8 +15,12 @@ class GameController {
 
     private function getGuruId($userId) {
         $guruModel = new GuruModel();
-        $guru = $guruModel->getByUserId($userId);
-        return $guru ? $guru['id'] : null;
+        $user = AuthHelper::user();
+        $guru = $guruModel->ensureGuruProfile($userId, $user['full_name'] ?? 'Guru Pengajar');
+        if (!$guru) {
+            $guru = $guruModel->getByUserId($userId);
+        }
+        return $guru ? (int)$guru['id'] : 0;
     }
 
     private function getSiswaInfo($userId) {
@@ -79,14 +83,12 @@ class GameController {
         $mapelList = $academicModel->getMapel();
         $classList = $academicModel->getKelas();
 
-        $guruId = $this->getGuruId($user['id']);
-        $quizList = $examModel->getQuizList(null, $guruId);
-        if (empty($quizList)) {
-            $quizList = $examModel->getQuizList(null, (int)$user['id']);
-        }
-        if (empty($quizList)) {
-            $quizList = $examModel->getQuizList();
-        }
+        $userId = (int)($user['id'] ?? 0);
+        $guruId = (int)$this->getGuruId($userId);
+        $targetGuruId = $guruId > 0 ? $guruId : $userId;
+
+        // Hanya tampilkan Quiz & Ujian CBT milik guru yang sedang login (TIDAK BOLEH milik guru lain)
+        $quizList = $examModel->getQuizList(null, $targetGuruId);
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!Security::verifyCsrfToken()) {
@@ -129,10 +131,15 @@ class GameController {
             if (empty($soalList) && !empty($_POST['import_quiz_id'])) {
                 $importQuizId = (int)$_POST['import_quiz_id'];
                 if ($importQuizId > 0) {
-                    $quizSoals = $examModel->getSoalByQuiz($importQuizId, false);
-                    foreach ($quizSoals as $qs) {
-                        $jenis = strtolower($qs['jenis_soal'] ?? 'pg');
-                        if ($jenis !== 'pg' && $jenis !== 'tf') continue;
+                    $targetQuiz = $examModel->getQuizById($importQuizId);
+                    $quizOwnerId = (int)($targetQuiz['guru_id'] ?? 0);
+                    $isOwner = ($targetQuiz && (($guruId > 0 && $quizOwnerId === $guruId) || ($userId > 0 && $quizOwnerId === $userId)));
+
+                    if ($isOwner) {
+                        $quizSoals = $examModel->getSoalByQuiz($importQuizId, false);
+                        foreach ($quizSoals as $qs) {
+                            $jenis = strtolower($qs['jenis_soal'] ?? 'pg');
+                            if ($jenis !== 'pg' && $jenis !== 'tf') continue;
 
                         $pertanyaan = trim(strip_tags($qs['pertanyaan']));
                         if (empty($pertanyaan)) $pertanyaan = trim($qs['pertanyaan']);
@@ -184,6 +191,7 @@ class GameController {
                     }
                 }
             }
+        }
 
             // Check if Excel/CSV file was uploaded for questions
             if (isset($_FILES['file_excel']) && $_FILES['file_excel']['error'] === UPLOAD_ERR_OK) {
@@ -231,6 +239,18 @@ class GameController {
 
         if (!$quiz) {
             echo json_encode(['success' => false, 'message' => 'Data Quiz / Ujian CBT tidak ditemukan.']);
+            exit();
+        }
+
+        // STRICT CHECK: Hanya izinkan jika Quiz milik guru yang sedang login (TIDAK BOLEH milik guru lain)
+        $user = AuthHelper::user();
+        $userId = (int)($user['id'] ?? 0);
+        $guruId = (int)$this->getGuruId($userId);
+        $quizGuruId = (int)($quiz['guru_id'] ?? 0);
+
+        $isOwner = ($guruId > 0 && $quizGuruId === $guruId) || ($userId > 0 && $quizGuruId === $userId);
+        if (!$isOwner) {
+            echo json_encode(['success' => false, 'message' => 'Akses ditolak: Anda hanya dapat mengambil soal dari Quiz & Ujian CBT milik Anda sendiri.']);
             exit();
         }
 

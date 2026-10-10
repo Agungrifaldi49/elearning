@@ -152,12 +152,17 @@
                                         </option>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <option value="" disabled>Belum ada Quiz & Ujian CBT yang dibuat</option>
+                                    <option value="" disabled selected>-- Anda belum memiliki paket Quiz & Ujian CBT --</option>
                                 <?php endif; ?>
                             </select>
+                            <?php if (empty($quizList)): ?>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.78rem;">
+                                    <i class="bi bi-info-circle me-1 text-primary"></i> Anda belum memiliki paket Quiz / Ujian CBT. Silakan buat soal manual di bawah atau gunakan template Excel.
+                                </small>
+                            <?php endif; ?>
                         </div>
                         <div class="col-md-5 col-12 d-flex gap-2">
-                            <button type="button" id="btnLoadQuizSoal" class="btn btn-primary rounded-3 fw-bold px-3 py-2 flex-grow-1 shadow-xs">
+                            <button type="button" id="btnLoadQuizSoal" class="btn btn-primary rounded-3 fw-bold px-3 py-2 flex-grow-1 shadow-xs" <?= empty($quizList) ? 'disabled' : '' ?>>
                                 <i class="bi bi-cloud-arrow-down-fill me-1"></i> Ambil & Terapkan Soal
                             </button>
                             <button type="button" id="btnResetSoal" class="btn btn-outline-secondary rounded-3 px-3 py-2" title="Bersihkan dan Mulai Baru">
