@@ -12,7 +12,7 @@ if (!$soalJsonData) $soalJsonData = '[]';
 $gameType = $game['tipe_game'] ?? 'mario_run';
 ?>
 
-<!-- 🎮 RESPONSIVE FULLSCREEN & MOBILE LANDSCAPE STYLING -->
+<!-- 🎮 RESPONSIVE FULLSCREEN & MULTI-DEVICE SCREEN STYLING -->
 <style>
 /* Fullscreen Arena Card Styling */
 #gameArenaCard:fullscreen,
@@ -23,11 +23,126 @@ $gameType = $game['tipe_game'] ?? 'mario_run';
     max-height: 100vh !important;
     border-radius: 0 !important;
     margin: 0 !important;
-    padding: 0.65rem 0.85rem !important;
+    padding: 0.75rem 1.25rem !important;
     overflow-y: auto !important;
     display: flex !important;
     flex-direction: column !important;
-    background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 100%) !important;
+    justify-content: center !important;
+    align-items: stretch !important;
+    background: radial-gradient(circle at 50% 25%, #1e1b4b 0%, #0a0f1d 100%) !important;
+}
+
+#gameArenaCard:fullscreen .arena-header-bar {
+    flex: 0 0 auto;
+    margin-bottom: 0.5rem !important;
+    padding-bottom: 0.35rem !important;
+}
+
+#gameArenaCard:fullscreen .arcade-stage-container {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+}
+
+/* ==========================================================
+   🎮 RESPONSIVE SCREEN FRAME & DYNAMIC CANVAS AUTO-SCALING
+   (Menyesuaikan Layar Monitor Desktop, Laptop Kecil, & Mobile)
+   ========================================================== */
+.arcade-screen-frame {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.7), 0 0 25px rgba(239, 68, 68, 0.22);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #090d16;
+}
+
+.arcade-screen-frame.racing-frame {
+    max-width: min(1420px, 95vw, calc((100vh - 210px) * (800 / 360)));
+    border: 2px solid rgba(239, 68, 68, 0.65);
+}
+
+.arcade-screen-frame.mario-frame {
+    max-width: min(1380px, 95vw, calc((100vh - 210px) * (800 / 320)));
+    border: 2px solid rgba(245, 158, 11, 0.65);
+    box-shadow: 0 16px 45px rgba(0, 0, 0, 0.7), 0 0 25px rgba(245, 158, 11, 0.22);
+    background: #1e3a8a;
+}
+
+#gameArenaCard:fullscreen .arcade-screen-frame.racing-frame {
+    max-width: min(1520px, 96vw, calc((100vh - 165px) * (800 / 360)));
+}
+
+#gameArenaCard:fullscreen .arcade-screen-frame.mario-frame {
+    max-width: min(1480px, 96vw, calc((100vh - 165px) * (800 / 320)));
+}
+
+#racingCanvas {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 800 / 360;
+    max-height: min(720px, calc(100vh - 210px));
+    object-fit: contain;
+    display: block;
+    cursor: pointer;
+}
+
+#marioCanvas {
+    width: 100% !important;
+    height: auto !important;
+    aspect-ratio: 800 / 320;
+    max-height: min(650px, calc(100vh - 210px));
+    object-fit: contain;
+    display: block;
+    cursor: pointer;
+}
+
+#gameArenaCard:fullscreen #racingCanvas {
+    max-height: calc(100vh - 165px);
+}
+
+#gameArenaCard:fullscreen #marioCanvas {
+    max-height: calc(100vh - 165px);
+}
+
+/* Dedicated Modern Arcade HUD Bar (Desktop & Laptop Display) */
+.arcade-hud-bar {
+    width: 100%;
+    margin: 0 auto 0.75rem auto;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 0.4rem 0.85rem;
+}
+
+#racingStageContainer .arcade-hud-bar {
+    max-width: min(1420px, 95vw, calc((100vh - 210px) * (800 / 360)));
+}
+#marioStageContainer .arcade-hud-bar {
+    max-width: min(1380px, 95vw, calc((100vh - 210px) * (800 / 320)));
+}
+#gameArenaCard:fullscreen #racingStageContainer .arcade-hud-bar {
+    max-width: min(1520px, 96vw, calc((100vh - 165px) * (800 / 360)));
+}
+#gameArenaCard:fullscreen #marioStageContainer .arcade-hud-bar {
+    max-width: min(1480px, 96vw, calc((100vh - 165px) * (800 / 320)));
+}
+
+/* Responsive Footer Badges */
+.arcade-footer-hints {
+    width: 100%;
+    max-width: min(1420px, 95vw);
+    margin: 0.65rem auto 0 auto;
 }
 
 /* Optimasi Khusus Mobile (Layar <= 768px) */
@@ -59,9 +174,20 @@ $gameType = $game['tipe_game'] ?? 'mario_run';
     .arena-sub-info {
         font-size: 0.75rem !important;
     }
+    .arcade-screen-frame {
+        max-width: 100% !important;
+        border-radius: 0.85rem !important;
+    }
+    #racingCanvas {
+        max-height: min(48vh, 320px) !important;
+        border-radius: 0.85rem !important;
+    }
     #marioCanvas {
         max-height: min(48vh, 310px) !important;
-        border-radius: 12px !important;
+        border-radius: 0.85rem !important;
+    }
+    .arcade-hud-bar {
+        display: none !important;
     }
 }
 
@@ -71,18 +197,30 @@ $gameType = $game['tipe_game'] ?? 'mario_run';
         display: none !important;
     }
     #gameArenaCard {
-        padding: 0.35rem 0.65rem !important;
+        padding: 0.35rem 0.5rem !important;
         min-height: 100vh !important;
+        justify-content: center !important;
     }
     #gameArenaCard #arenaHeaderBar {
         display: none !important;
     }
-    #marioStageContainer .row {
-        margin-bottom: 0.25rem !important;
+    .arcade-hud-bar {
+        display: none !important;
+    }
+    .arcade-footer-hints {
+        display: none !important;
+    }
+    .arcade-screen-frame {
+        max-width: min(98vw, calc((100vh - 55px) * (800 / 360))) !important;
+        border-radius: 0.65rem !important;
+    }
+    #racingCanvas {
+        max-height: calc(100vh - 55px) !important;
+        border-radius: 0.65rem !important;
     }
     #marioCanvas {
-        max-height: calc(100vh - 85px) !important;
-        border-radius: 10px !important;
+        max-height: calc(100vh - 55px) !important;
+        border-radius: 0.65rem !important;
     }
     .mario-option-btn {
         padding: 0.4rem 0.6rem !important;
@@ -1865,11 +2003,20 @@ window.GameEngine = {
             boostBadgeMobile.className = isBoost ? 'badge bg-danger text-white rounded-pill px-2 py-0.5 fw-bold' : 'badge bg-dark text-warning border border-warning rounded-pill px-2 py-0.5 fw-bold';
         }
 
+        const timerBadge = document.getElementById('racingTimerCountdownBadge');
+        if (timerBadge) {
+            timerBadge.textContent = remSec + 's';
+        }
+
         ['racingGateProgressBar', 'racingGateProgressBarMobile'].forEach(id => {
             const bar = document.getElementById(id);
             if (bar) {
                 bar.style.width = progressPct + '%';
-                bar.textContent = `⏱️ ${remSec}s Menuju Gerbang (${dist}m)`;
+                if (id === 'racingGateProgressBarMobile') {
+                    bar.textContent = `${remSec}s`;
+                } else {
+                    bar.textContent = `${Math.round(progressPct)}%`;
+                }
                 if (remSec <= 4) {
                     bar.className = 'progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated';
                 } else if (remSec <= 8) {
@@ -2462,11 +2609,21 @@ window.GameEngine = {
 
     updateStageTimerHUD: function(remSec, pct) {
         const valPct = Math.max(0, Math.min(100, Math.round(pct)));
+
+        const marioBadge = document.getElementById('marioTimerCountdownBadge');
+        if (marioBadge) {
+            marioBadge.textContent = remSec + 's';
+        }
+
         ['marioStaminaBar', 'marioStaminaBarMobile'].forEach(id => {
             const bar = document.getElementById(id);
             if (bar) {
                 bar.style.width = valPct + '%';
-                bar.textContent = `${remSec}s`;
+                if (id === 'marioStaminaBarMobile') {
+                    bar.textContent = `${remSec}s`;
+                } else {
+                    bar.textContent = `${valPct}%`;
+                }
                 if (remSec <= 5) {
                     bar.className = 'progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated';
                 } else if (remSec <= 10) {
@@ -2981,7 +3138,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
             <!-- 🍄 MODE 1: ENHANCED SUPER MARIO RETRO PLATFORM RUNNER STAGE -->
-            <div id="marioStageContainer" class="d-none text-center py-1">
+            <div id="marioStageContainer" class="arcade-stage-container d-none text-center py-1">
                 <!-- 📱 Mobile Compact Arcade Status Bar 1 (Hanya Tampil di Mobile: Tinggi Hanya ~30px) -->
                 <div class="d-flex d-md-none justify-content-between align-items-center mb-1.5 px-2 py-1 rounded-pill bg-black bg-opacity-40 border border-white border-opacity-10 shadow-sm">
                     <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-light btn-sm rounded-pill px-2 py-0 border-0 text-white-50 d-inline-flex align-items-center gap-1" style="font-size: 0.72rem; height: 24px;">
@@ -3015,38 +3172,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
 
-                <!-- 💻 Desktop Mario Top HUD Bar (Tampil di Layar Desktop) -->
-                <div class="d-none d-md-flex row align-items-center g-2 mb-3 px-2">
-                    <div class="col-12 col-md-4">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="small fw-bold text-warning text-nowrap"><i class="bi bi-stopwatch-fill"></i> Timer Menuju Gerbang:</span>
-                            <div class="progress rounded-pill bg-dark border border-warning flex-grow-1 shadow-sm" style="height: 22px;">
-                                <div id="marioStaminaBar" class="progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%; font-size:0.82rem;">
-                                    --s
-                                </div>
-                            </div>
+                <!-- 💻 Desktop & Laptop Mario Top HUD Bar -->
+                <div class="arcade-hud-bar d-none d-md-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2" style="min-width: 260px; max-width: 380px; flex: 1 1 280px;">
+                        <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1.5 fw-bold small text-nowrap shadow-sm d-flex align-items-center gap-1">
+                            <i class="bi bi-stopwatch-fill"></i> Gerbang: <span id="marioTimerCountdownBadge">--s</span>
+                        </span>
+                        <div class="progress rounded-pill bg-dark border border-warning border-opacity-50 flex-grow-1 shadow-sm" style="height: 18px;">
+                            <div id="marioStaminaBar" class="progress-bar bg-warning text-dark fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%; font-size: 0.72rem; line-height: 18px;">--s</div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3 text-center">
-                        <span class="badge bg-danger bg-opacity-75 text-white rounded-pill px-3 py-2 fw-bold small shadow-sm border border-danger border-opacity-50">
+                    <div class="d-flex align-items-center gap-2 flex-wrap justify-content-center">
+                        <span class="badge bg-danger bg-opacity-80 text-white rounded-pill px-3 py-1.5 fw-bold small shadow-sm border border-danger border-opacity-50">
                             🚩 Jarak: <span id="marioDistVal">0</span>m / <span id="marioTargetVal">120</span>m
                         </span>
-                    </div>
-                    <div class="col-6 col-md-2 text-center">
-                        <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold small shadow-sm">
-                            🪙 <span id="marioCoinVal">0</span> Coins
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5 fw-bold small shadow-sm">
+                            🪙 <span id="marioCoinVal">0</span> Koin
                         </span>
                     </div>
-                    <div class="col-12 col-md-3 text-end d-flex gap-2 justify-content-end">
-                        <button type="button" id="btnMarioJumpAction" class="btn btn-warning rounded-pill px-4 py-2 fw-bold text-dark fs-6 shadow hover-scale w-100 w-md-auto" onclick="window.GameEngine.marioJump()">
+                    <div class="d-flex align-items-center justify-content-end">
+                        <button type="button" id="btnMarioJumpAction" class="btn btn-warning btn-sm rounded-pill px-4 py-1.5 fw-bold text-dark shadow hover-scale" onclick="window.GameEngine.marioJump()">
                             🦘 LOMPAT (SPASI)
                         </button>
                     </div>
                 </div>
 
-                <!-- Mario Retro Game Canvas Screen -->
-                <div class="position-relative overflow-hidden rounded-4 border border-warning border-opacity-50 shadow-2xl mx-auto" style="max-width: 960px;">
-                    <canvas id="marioCanvas" width="800" height="320" class="w-100 h-auto rounded-4 d-block" style="background:#3b82f6; cursor: pointer;"></canvas>
+                <!-- Mario Retro Game Canvas Screen Frame -->
+                <div class="arcade-screen-frame mario-frame">
+                    <canvas id="marioCanvas" width="800" height="320" style="background:#3b82f6; cursor: pointer;"></canvas>
                     
                     <!-- Floating Mobile Jump Button Overlay -->
                     <div class="position-absolute bottom-0 end-0 p-2 p-sm-3 d-md-none" style="z-index: 25;">
@@ -3057,7 +3210,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
 
                 <!-- Instructional Badges & Pro-Tips -->
-                <div class="d-flex flex-wrap align-items-center justify-content-center gap-1.5 gap-md-3 mt-2 text-white-50" style="font-size: 0.74rem;">
+                <div class="arcade-footer-hints d-flex flex-wrap align-items-center justify-content-center gap-1.5 gap-md-3 text-white-50" style="font-size: 0.74rem;">
                     <span class="badge bg-dark bg-opacity-60 border border-secondary px-2.5 py-1.5 rounded-pill">
                         🎮 <strong>Kontrol:</strong> Ketuk Layar / Spasi = Lompat (Double Jump! 🦘)
                     </span>
@@ -3071,7 +3224,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
 
             <!-- 🏎️ MODE 5: ENDLESS TURBO CAR RACING RUNNER STAGE -->
-            <div id="racingStageContainer" class="d-none text-center py-1">
+            <div id="racingStageContainer" class="arcade-stage-container d-none text-center py-1">
                 <!-- 📱 Mobile Compact Arcade Status Bar (Tinggi Hanya ~30px) -->
                 <div class="d-flex d-md-none justify-content-between align-items-center mb-1.5 px-2 py-1 rounded-pill bg-black bg-opacity-40 border border-white border-opacity-10 shadow-sm">
                     <a href="<?= BASE_URL ?>index.php?url=game" class="btn btn-outline-light btn-sm rounded-pill px-2 py-0 border-0 text-white-50 d-inline-flex align-items-center gap-1" style="font-size: 0.72rem; height: 24px;">
@@ -3104,41 +3257,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
 
-                <!-- 💻 Desktop Racing Top HUD Bar -->
-                <div class="d-none d-md-flex row align-items-center g-2 mb-3 px-2">
-                    <div class="col-12 col-md-4">
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="small fw-bold text-danger text-nowrap"><i class="bi bi-stopwatch-fill"></i> Timer Menuju Gerbang:</span>
-                            <div class="progress rounded-pill bg-dark border border-danger flex-grow-1 shadow-sm" style="height: 22px;">
-                                <div id="racingGateProgressBar" class="progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; font-size: 0.82rem;">
-                                    --s
-                                </div>
-                            </div>
+                <!-- 💻 Desktop & Laptop Racing Top HUD Bar -->
+                <div class="arcade-hud-bar d-none d-md-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2" style="min-width: 260px; max-width: 380px; flex: 1 1 280px;">
+                        <span class="badge bg-danger text-white rounded-pill px-2.5 py-1.5 fw-bold small text-nowrap shadow-sm d-flex align-items-center gap-1">
+                            <i class="bi bi-stopwatch-fill"></i> Gerbang: <span id="racingTimerCountdownBadge">--s</span>
+                        </span>
+                        <div class="progress rounded-pill bg-dark border border-danger border-opacity-50 flex-grow-1 shadow-sm" style="height: 18px;">
+                            <div id="racingGateProgressBar" class="progress-bar bg-danger text-white fw-bold progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%; font-size: 0.72rem; line-height: 18px;"></div>
                         </div>
                     </div>
-                    <div class="col-6 col-md-3 text-center">
-                        <span class="badge bg-dark text-danger border border-danger rounded-pill px-3 py-2 fw-bold small shadow-sm">
+                    <div class="d-flex align-items-center gap-2 flex-wrap justify-content-center">
+                        <span class="badge bg-dark text-danger border border-danger border-opacity-50 rounded-pill px-3 py-1.5 fw-bold small shadow-sm">
                             ⚡ Kecepatan: <span id="racingSpeedVal">70</span> KM/H <span id="racingBoostIndicator" class="text-warning ms-1 d-none">🔥 NITRO!</span>
                         </span>
-                    </div>
-                    <div class="col-6 col-md-2 text-center">
-                        <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold small shadow-sm">
+                        <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5 fw-bold small shadow-sm">
                             🪙 <span id="racingCoinVal">0</span> Koin
                         </span>
                     </div>
-                    <div class="col-12 col-md-3 text-end d-flex gap-2 justify-content-end">
-                        <button type="button" class="btn btn-outline-light rounded-pill px-3 py-1.5 fw-bold small" onclick="window.GameEngine.racingSteer(-1)">
+                    <div class="d-flex align-items-center gap-2 justify-content-end">
+                        <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3 py-1 fw-bold hover-scale" onclick="window.GameEngine.racingSteer(-1)" title="Belok Kiri (Tombol A atau Panah Kiri)">
                             ◀ KIRI (A)
                         </button>
-                        <button type="button" class="btn btn-outline-light rounded-pill px-3 py-1.5 fw-bold small" onclick="window.GameEngine.racingSteer(1)">
+                        <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3 py-1 fw-bold hover-scale" onclick="window.GameEngine.racingSteer(1)" title="Belok Kanan (Tombol D atau Panah Kanan)">
                             KANAN (D) ▶
                         </button>
                     </div>
                 </div>
 
-                <!-- 🏎️ Racing Retro/Futuristic Highway Canvas Screen -->
-                <div class="position-relative overflow-hidden rounded-4 border border-danger border-opacity-50 shadow-2xl mx-auto" style="max-width: 960px;">
-                    <canvas id="racingCanvas" width="800" height="360" class="w-100 h-auto rounded-4 d-block" style="background:#090d16; cursor: pointer;"></canvas>
+                <!-- 🏎️ Racing Retro/Futuristic Highway Canvas Screen Frame -->
+                <div class="arcade-screen-frame racing-frame">
+                    <canvas id="racingCanvas" width="800" height="360" style="background:#090d16; cursor: pointer;"></canvas>
 
                     <!-- Floating Mobile Steering Buttons Overlay -->
                     <div class="position-absolute bottom-0 start-0 p-2 p-sm-3 d-md-none" style="z-index: 25;">
@@ -3154,7 +3303,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     <!-- 🛑 IN-GAME BARRIER QUESTION OVERLAY (Muncul di layar saat mobil mencapai gerbang penghalang) -->
                     <div id="racingBarrierOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-none d-flex flex-column justify-content-center align-items-center p-2 p-md-4" style="background: rgba(10, 15, 29, 0.94); backdrop-filter: blur(8px); z-index: 50; overflow-y: auto;">
-                        <div class="w-100 max-w-2xl bg-black bg-opacity-70 border border-danger border-2 rounded-4 p-3 p-md-4 shadow-2xl text-center position-relative my-auto">
+                        <div class="w-100 max-w-2xl bg-black bg-opacity-70 border border-danger border-2 rounded-4 p-3 p-md-4 shadow-2xl text-center position-relative my-auto" style="max-width: 680px;">
                             <!-- Gate Alert Header -->
                             <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom border-secondary border-opacity-50">
                                 <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-bold fs-6 shadow-sm" id="racingBarrierHeader">
@@ -3191,7 +3340,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
 
                 <!-- Pro-Tips Bar -->
-                <div class="d-flex flex-wrap align-items-center justify-content-center gap-1.5 gap-md-3 mt-2 text-white-50" style="font-size: 0.74rem;">
+                <div class="arcade-footer-hints d-flex flex-wrap align-items-center justify-content-center gap-1.5 gap-md-3 text-white-50" style="font-size: 0.74rem;">
                     <span class="badge bg-dark bg-opacity-60 border border-secondary px-2.5 py-1.5 rounded-pill">
                         🎮 <strong>Kontrol Mobil:</strong> Tombol Panah Kiri/Kanan / A & D = Steer / Pindah Jalur
                     </span>
