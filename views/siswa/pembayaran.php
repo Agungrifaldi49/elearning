@@ -180,10 +180,14 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    overflow: hidden;
+    max-width: 100%;
+    word-break: break-word;
 }
 @media (max-width: 575.98px) {
     .bill-card-item {
-        padding: 1.15rem 1.15rem;
+        padding: 1rem 0.95rem;
+        border-radius: 12px;
     }
 }
 .bill-card-item:hover {
@@ -518,21 +522,21 @@ $persenLunas = min(100, max(0, (float)($summary['persen_lunas'] ?? 0)));
                                 <div class="col-12 col-md-6 col-xl-4 unpaid-bill-card" data-category="<?= $catType ?>" data-title="<?= strtolower(htmlspecialchars($bill['judul'] . ' ' . $bill['kode_tagihan'])) ?>">
                                     <div class="bill-card-item">
                                         <div>
-                                            <!-- Header Item: Kategori & Status Badge -->
-                                            <div class="d-flex justify-content-between align-items-center gap-2 mb-2.5">
-                                                <span class="badge bg-light text-secondary border px-2 py-0.5 rounded font-mono" style="font-size: 0.68rem;">
+                                            <!-- Header Item: Kategori & Status Badge (Ultra Responsive, Anti-Overflow) -->
+                                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1.5 mb-2.5">
+                                                <span class="badge bg-light text-secondary border px-2 py-0.5 rounded font-mono text-truncate" style="font-size: 0.68rem; max-width: calc(100% - 92px);" title="<?= htmlspecialchars($bill['kode_tagihan']) ?>">
                                                     <?= htmlspecialchars($bill['kode_tagihan']) ?>
                                                 </span>
                                                 <?php if ($terbayarSebagian): ?>
-                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.7rem;">
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-0.5 fw-semibold flex-shrink-0 ms-auto" style="font-size: 0.7rem; white-space: nowrap;">
                                                         Sebagian
                                                     </span>
                                                 <?php elseif ($isDue): ?>
-                                                    <span class="badge bg-danger text-white rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.7rem;">
+                                                    <span class="badge bg-danger text-white rounded-pill px-2.5 py-0.5 fw-semibold flex-shrink-0 ms-auto" style="font-size: 0.7rem; white-space: nowrap;">
                                                         Lewat Tempo
                                                     </span>
                                                 <?php else: ?>
-                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.7rem;">
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-0.5 fw-semibold flex-shrink-0 ms-auto" style="font-size: 0.7rem; white-space: nowrap;">
                                                         Belum Lunas
                                                     </span>
                                                 <?php endif; ?>
@@ -610,11 +614,11 @@ $persenLunas = min(100, max(0, (float)($summary['persen_lunas'] ?? 0)));
                                                 <?php endif; ?>
                                             </div>
                                         </div>
-                                        <div class="text-end flex-shrink-0">
+                                        <div class="text-end flex-shrink-0 ms-2">
                                             <div class="fw-bold text-danger currency-num fs-6">
                                                 Rp <?= number_format($bill['sisa_tagihan'], 0, ',', '.') ?>
                                             </div>
-                                            <span class="badge <?= $isDue ? 'bg-danger text-white' : 'bg-secondary-subtle text-secondary' ?> rounded-pill px-2.5 py-0.5" style="font-size: 0.68rem;">
+                                            <span class="badge <?= $isDue ? 'bg-danger text-white' : 'bg-secondary-subtle text-secondary border' ?> rounded-pill px-2.5 py-0.5 flex-shrink-0" style="font-size: 0.68rem; white-space: nowrap;">
                                                 <?= $isDue ? 'Lewat Tempo' : 'Belum Lunas' ?>
                                             </span>
                                         </div>
