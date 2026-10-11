@@ -795,27 +795,32 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-dark">URL Endpoint Jembatan Server Pembayaran <span class="text-danger">*</span></label>
-                        <input type="url" name="server_url" class="form-control rounded-3 font-monospace" placeholder="https://domain-pembayaran.com/api/tagihan.php" value="<?= htmlspecialchars($bridgeConfig['server_url'] ?? '') ?>" required>
-                        <small class="text-muted" style="font-size:0.75rem;">Contoh: <code>https://keuangan.smkmuthiaharapan.sch.id/api/bridge.php</code></small>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold text-dark mb-0">URL Endpoint Jembatan Server Pembayaran <span class="text-danger">*</span></label>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" style="font-size:0.75rem;" onclick="document.querySelector('input[name=server_url]').value='<?= BASE_URL ?>bridge_server_pembayaran.php';">
+                                <i class="bi bi-magic me-1"></i>Gunakan URL Server Ini
+                            </button>
+                        </div>
+                        <input type="url" name="server_url" class="form-control rounded-3 font-monospace" placeholder="https://domain-pembayaran.com/bridge_server_pembayaran.php" value="<?= htmlspecialchars(!empty($bridgeConfig['server_url']) ? $bridgeConfig['server_url'] : BASE_URL . 'bridge_server_pembayaran.php') ?>" required>
+                        <small class="text-muted" style="font-size:0.75rem;">Endpoint jembatan lokal/eksternal. Contoh: <code><?= BASE_URL ?>bridge_server_pembayaran.php</code></small>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-dark">Token Rahasia API (Secret Bearer Token)</label>
                         <div class="input-group">
-                            <input type="password" name="secret_token" id="secretTokenInput" class="form-control rounded-start-3 font-monospace" placeholder="Contoh: SMKMH_PAYMENT_SECRET_KEY_2026" value="<?= htmlspecialchars($bridgeConfig['secret_token'] ?? '') ?>">
+                            <input type="password" name="secret_token" id="secretTokenInput" class="form-control rounded-start-3 font-monospace" placeholder="Contoh: SMKMH_PAYMENT_SECRET_KEY_2026" value="<?= htmlspecialchars(!empty($bridgeConfig['secret_token']) ? $bridgeConfig['secret_token'] : 'SMKMH_PAYMENT_SECRET_KEY_2026') ?>">
                             <button type="button" class="btn btn-outline-secondary rounded-end-3" onclick="toggleTokenVisibility()">
                                 <i class="bi bi-eye" id="toggleTokenIcon"></i>
                             </button>
                         </div>
-                        <small class="text-muted" style="font-size:0.75rem;">Kunci otentikasi rahasia yang sama dengan yang dikonfigurasi di file bridge.</small>
+                        <small class="text-muted" style="font-size:0.75rem;">Kunci otentikasi rahasia bridge (sesuai yang diatur pada file <code>config/tatausaha_api.json</code>).</small>
                     </div>
 
                     <div class="p-3 bg-light rounded-3 border small">
                         <div class="d-flex align-items-center gap-1.5 fw-bold text-dark mb-1">
-                            <i class="bi bi-lightbulb-fill text-warning"></i> Tips Konfigurasi:
+                            <i class="bi bi-lightbulb-fill text-warning"></i> Tips Integrasi API Tata Usaha:
                         </div>
-                        <span class="text-muted">Jika belum memasang file bridge di server pembayaran, silakan buka tab <strong>Panduan Beda Server</strong> untuk menyalin skrip <code>bridge_server_pembayaran.php</code>.</span>
+                        <span class="text-muted">Jembatan ini terhubung ke Server API Tata Usaha (<code>https://apitatausaha.smkmuthiaharapanclk.com</code>). Pastikan email &amp; password akun integrasi telah diisi pada <code>config/tatausaha_api.json</code>.</span>
                     </div>
                 </div>
 
@@ -903,9 +908,9 @@
                 <div class="d-flex align-items-start gap-3 mb-4 pb-3 border-bottom">
                     <div class="badge bg-primary p-2.5 rounded-circle fs-6" style="width:38px; height:38px; display:flex; align-items:center; justify-content:center; flex-shrink: 0;">1</div>
                     <div class="flex-grow-1">
-                        <h6 class="fw-bold text-dark mb-1">Letakkan File Jembatan di Server Pembayaran</h6>
+                        <h6 class="fw-bold text-dark mb-1">Letakkan File Jembatan &amp; Konfigurasi Akun API Tata Usaha</h6>
                         <p class="small text-muted mb-2">
-                            Kami telah menyediakan file skrip jembatan siap pakai bernama <strong><code>bridge_server_pembayaran.php</code></strong>. Unggah file tersebut ke direktori web server aplikasi keuangan Anda (misal: <code>public_html/api/tagihan.php</code>).
+                            Kami telah menyediakan file skrip jembatan siap pakai bernama <strong><code>bridge_server_pembayaran.php</code></strong> yang menghubungkan E-Learning dengan REST API Tata Usaha (<code>https://apitatausaha.smkmuthiaharapanclk.com</code>).
                         </p>
                         
                         <!-- Snippet Code Box -->
@@ -913,12 +918,16 @@
                             <button type="button" class="btn btn-sm btn-outline-light btn-copy-code" onclick="copyCodeSnippet(this)">
                                 <i class="bi bi-clipboard me-1"></i> Salin Konfigurasi
                             </button>
-                            <pre class="mb-0" id="codeBridgeSnippet">// Konfigurasi koneksi database di server pembayaran Anda:
-$db_host = '127.0.0.1';
-$db_name = 'nama_database_keuangan_anda';
-$db_user = 'user_db_anda';
-$db_pass = 'password_db_anda';
-$secret_token = 'SMKMH_PAYMENT_SECRET_KEY_2026';</pre>
+                            <pre class="mb-0" id="codeBridgeSnippet">// Konfigurasi Akun Integrasi di config/tatausaha_api.json:
+{
+    "api_base_url": "https://apitatausaha.smkmuthiaharapanclk.com",
+    "api_email": "akun_tatausaha@smkmuthiaharapanclk.com",
+    "api_password": "password_akun_anda",
+    "bridge_secret_token": "SMKMH_PAYMENT_SECRET_KEY_2026",
+    "timeout_connect": 10,
+    "timeout_response": 30,
+    "verify_ssl": true
+}</pre>
                         </div>
 
                         <a href="<?= BASE_URL ?>bridge_server_pembayaran.php" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3" download>

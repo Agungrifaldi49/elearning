@@ -482,6 +482,7 @@ class PembayaranModel {
             $stmtCheck->execute([$kodeTagihan]);
             $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
+            $tagihanDbId = null;
             if ($existing) {
                 $stmtUp = $this->db->prepare("
                     UPDATE pembayaran_tagihan
@@ -490,6 +491,7 @@ class PembayaranModel {
                 ");
                 $stmtUp->execute([$nominal, $terbayar, $sisa, $status, $ket, $existing['id']]);
                 $syncedCount++;
+                $tagihanDbId = (int)$existing['id'];
             } else {
                 $stmtIn = $this->db->prepare("
                     INSERT INTO pembayaran_tagihan
@@ -498,14 +500,45 @@ class PembayaranModel {
                 ");
                 $stmtIn->execute([$siswaId, $finalNis, $finalNisn, $jenis, $kodeTagihan, $judul, $nominal, $terbayar, $sisa, $periode, $ta, $due, $status, $ket]);
                 $createdCount++;
+                $tagihanDbId = (int)$this->db->lastInsertId();
+            }
+
+            // Sync Riwayat Transaksi jika tersedia dalam payload
+            if ($tagihanDbId && !empty($item['riwayat']) && is_array($item['riwayat'])) {
+                foreach ($item['riwayat'] as $rw) {
+                    $noTrx = trim((string)($rw['nomor_transaksi'] ?? ''));
+                    if (empty($noTrx)) continue;
+
+                    $nomTrx = (float)($rw['nominal_bayar'] ?? 0);
+                    $tglTrx = $rw['tanggal_bayar'] ?? date('Y-m-d H:i:s');
+                    $metodeTrx = $rw['metode_pembayaran'] ?? 'Kasir TU Sekolah';
+                    $channelTrx = $rw['channel'] ?? 'API Tata Usaha';
+                    $statusTrx = in_array($rw['status'] ?? '', ['berhasil', 'pending', 'batal']) ? $rw['status'] : 'berhasil';
+                    $catatanTrx = $rw['catatan'] ?? 'Sinkronisasi dari API Tata Usaha';
+
+                    $stmtCheckTrx = $this->db->prepare("SELECT id FROM pembayaran_riwayat WHERE nomor_transaksi = ? LIMIT 1");
+                    $stmtCheckTrx->execute([$noTrx]);
+                    if (!$stmtCheckTrx->fetch()) {
+                        $stmtInTrx = $this->db->prepare("
+                            INSERT INTO pembayaran_riwayat
+                            (tagihan_id, siswa_id, nomor_transaksi, nominal_bayar, tanggal_bayar, metode_pembayaran, channel, status, catatan)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ");
+                        $stmtInTrx->execute([$tagihanDbId, $siswaId, $noTrx, $nomTrx, $tglTrx, $metodeTrx, $channelTrx, $statusTrx, $catatanTrx]);
+                        $riwayatSyncedCount = ($riwayatSyncedCount ?? 0) + 1;
+                    }
+                }
             }
         }
 
+        $trxMsg = !empty($riwayatSyncedCount) ? ", {$riwayatSyncedCount} riwayat pembayaran dicatat" : "";
+
         return [
             'status' => true,
-            'message' => "Sinkronisasi berhasil: {$syncedCount} diperbarui, {$createdCount} ditambahkan.",
+            'message' => "Sinkronisasi berhasil: {$syncedCount} diperbarui, {$createdCount} ditambahkan{$trxMsg}.",
             'synced' => $syncedCount,
-            'created' => $createdCount
+            'created' => $createdCount,
+            'riwayat' => $riwayatSyncedCount ?? 0
         ];
     }
 
@@ -595,8 +628,9 @@ class PembayaranModel {
         curl_setopt($ch, CURLOPT_URL, $remoteUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 25);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        $isHttps = (stripos($remoteUrl, 'https://') === 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $isHttps);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $isHttps ? 2 : 0);
 
         $headers = [
             'Accept: application/json',
@@ -619,8 +653,10 @@ class PembayaranModel {
         }
 
         if ($httpCode !== 200) {
+            $errJson = json_decode($response, true);
+            $errMsg = !empty($errJson['message']) ? $errJson['message'] : ('Server pembayaran merespon dengan kode HTTP: ' . $httpCode);
             $this->saveBridgeConfig(['server_url' => $remoteUrl, 'secret_token' => $secretToken, 'last_sync' => date('Y-m-d H:i:s'), 'last_status' => 'Gagal HTTP ' . $httpCode]);
-            return ['status' => false, 'message' => 'Server pembayaran merespon dengan kode HTTP: ' . $httpCode];
+            return ['status' => false, 'message' => $errMsg];
         }
 
         $json = json_decode($response, true);

@@ -1,0 +1,11 @@
+{
+    "api_base_url": "https://apitatausaha.smkmuthiaharapanclk.com",
+    "api_email": "tatausaha@smkmuthiaharapanclk.com",
+    "api_password": "",
+    "api_jwt_token": "",
+    "bridge_secret_token": "SMKMH_PAYMENT_SECRET_KEY_2026",
+    "timeout_connect": 10,
+    "timeout_response": 30,
+    "verify_ssl": true,
+    "cache_jwt": true
+}
