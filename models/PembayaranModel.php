@@ -549,10 +549,17 @@ class PembayaranModel {
                     $exId = $chk->fetchColumn();
                     if ($exId) {
                         $stmtUpTagihan->execute([$nominal, $terbayar, $sisaItem, $status, $exId]);
+                        $syncedBillIds[] = $exId;
                     } else {
                         $stmtInTagihan->execute([$siswaId, $nis ?: $nisn, $nisn ?: $nis, $jenis, $kodeTagihan, $judul, $nominal, $terbayar, $sisaItem, $judul, $status]);
+                        $syncedBillIds[] = $this->db->lastInsertId();
                     }
                 } catch (\Throwable $eDb) {}
+            }
+
+            if (!empty($syncedBillIds)) {
+                $inClause = implode(',', array_map('intval', $syncedBillIds));
+                $this->db->exec("DELETE FROM pembayaran_tagihan WHERE siswa_id = {$siswaId} AND id NOT IN ({$inClause})");
             }
         } else {
             // Fallback ke REST API jika portal offline
@@ -907,6 +914,7 @@ class PembayaranModel {
                 $nis = $item['lms_nis'];
                 $nisn = $item['lms_nisn'] ?? $nis;
 
+                $validLmsBillIds = [];
                 foreach ($parsed['bills'] as $b) {
                     $kode = trim($b['kode']);
                     $judul = trim($b['nama']);
@@ -930,9 +938,16 @@ class PembayaranModel {
 
                     if ($existingId) {
                         $stmtUp->execute([$nominal, $terbayar, $sisa, $status, $existingId]);
+                        $validLmsBillIds[] = $existingId;
                     } else {
                         $stmtIn->execute([$siswaId, $nis ?: $nisn, $nisn ?: $nis, $jenis, 'TU-' . $item['tu_id'] . '-' . $kode, $judul, $nominal, $terbayar, $sisa, $judul, $status]);
+                        $validLmsBillIds[] = $this->db->lastInsertId();
                     }
+                }
+
+                if (!empty($validLmsBillIds)) {
+                    $inClause = implode(',', array_map('intval', $validLmsBillIds));
+                    $this->db->exec("DELETE FROM pembayaran_tagihan WHERE siswa_id = {$siswaId} AND id NOT IN ({$inClause})");
                 }
 
                 foreach ($parsed['history'] as $h) {
