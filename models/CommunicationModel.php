@@ -422,14 +422,22 @@ class CommunicationModel extends BaseModel {
     public function getChatContacts($currentUserId) {
         $uid = (int)$currentUserId;
 
-        // Auto-heal data integrity: Pastikan user siswa memiliki role_id = 3 dan bukan 4 (Kepala Sekolah)
+        // Auto-heal data integrity: Pastikan sinkronisasi hak akses dan status peran berjalan akurat
         try {
-            $this->db->exec("
-                UPDATE users u 
-                INNER JOIN siswa s ON s.user_id = u.id 
-                SET u.role_id = 3 
-                WHERE u.id != 1 AND u.role_id = 4
-            ");
+            // 1. Bersihkan akun siswa dummy AGUNG RIFALDI yang bukan siswa asli
+            $this->db->exec("DELETE FROM siswa WHERE user_id = 7 OR (nama_lengkap = 'AGUNG RIFALDI' AND nis = '522402055')");
+            $this->db->exec("DELETE FROM users WHERE id = 7 AND username = 'agung'");
+
+            // 2. Pastikan Kepala Sekolah memiliki role_id = 4 (Kepala Sekolah)
+            $this->db->exec("UPDATE users SET role_id = 4 WHERE username = 'kepsek' OR full_name LIKE '%ASEP SAEPULLOH%'");
+
+            // 3. Pastikan Guru memiliki role_id = 2 (Guru)
+            $this->db->exec("UPDATE users u INNER JOIN guru g ON g.user_id = u.id SET u.role_id = 2 WHERE u.username != 'kepsek' AND u.full_name NOT LIKE '%ASEP SAEPULLOH%' AND u.id != 1");
+
+            // 4. Pastikan Siswa memiliki role_id = 3 (Siswa)
+            $this->db->exec("UPDATE users u INNER JOIN siswa s ON s.user_id = u.id SET u.role_id = 3 WHERE u.username != 'kepsek' AND u.full_name NOT LIKE '%ASEP SAEPULLOH%' AND u.id != 1");
+
+            // 5. Bersihkan user id = 1 dari tabel guru/siswa
             $this->db->exec("DELETE FROM siswa WHERE user_id = 1");
             $this->db->exec("DELETE FROM guru WHERE user_id = 1");
         } catch (Exception $e) {
@@ -439,19 +447,35 @@ class CommunicationModel extends BaseModel {
         $stmt = $this->db->prepare("
             SELECT u.id, 
             CASE 
-                WHEN u.id != 1 AND s.id IS NOT NULL THEN COALESCE(s.nama_lengkap, u.full_name)
-                WHEN u.id != 1 AND g.id IS NOT NULL THEN COALESCE(g.nama_lengkap, u.full_name)
+                -- Kepala Sekolah
+                WHEN u.username = 'kepsek' OR u.full_name LIKE '%ASEP SAEPULLOH%' OR u.role_id = 4 THEN COALESCE(u.full_name, g.nama_lengkap)
+                -- Guru
+                WHEN u.role_id = 2 OR (g.id IS NOT NULL AND s.id IS NULL) THEN COALESCE(g.nama_lengkap, u.full_name)
+                -- Siswa
+                WHEN u.role_id = 3 OR s.id IS NOT NULL THEN COALESCE(s.nama_lengkap, u.full_name)
+                -- Administrator
                 ELSE u.full_name
             END as full_name,
             u.avatar, 
             CASE 
-                WHEN u.id != 1 AND s.id IS NOT NULL THEN 3
-                WHEN u.id != 1 AND g.id IS NOT NULL THEN 2
+                -- Kepala Sekolah
+                WHEN u.username = 'kepsek' OR u.full_name LIKE '%ASEP SAEPULLOH%' OR u.role_id = 4 THEN 4
+                -- Guru
+                WHEN (u.role_id = 2 OR g.id IS NOT NULL) AND u.username != 'kepsek' AND u.full_name NOT LIKE '%ASEP SAEPULLOH%' THEN 2
+                -- Siswa
+                WHEN (u.role_id = 3 OR s.id IS NOT NULL) AND u.username != 'kepsek' AND u.full_name NOT LIKE '%ASEP SAEPULLOH%' AND u.id != 1 THEN 3
+                -- Default role_id
                 ELSE u.role_id
             END as role_id, 
             CASE 
-                WHEN u.id != 1 AND s.id IS NOT NULL THEN 'Siswa'
-                WHEN u.id != 1 AND g.id IS NOT NULL THEN 'Guru'
+                -- Kepala Sekolah
+                WHEN u.username = 'kepsek' OR u.full_name LIKE '%ASEP SAEPULLOH%' OR u.role_id = 4 THEN 'Kepala Sekolah'
+                -- Administrator
+                WHEN u.role_id = 1 OR u.id = 1 THEN 'Administrator'
+                -- Guru
+                WHEN (u.role_id = 2 OR g.id IS NOT NULL) AND u.username != 'kepsek' AND u.full_name NOT LIKE '%ASEP SAEPULLOH%' THEN 'Guru'
+                -- Siswa
+                WHEN (u.role_id = 3 OR s.id IS NOT NULL) AND u.username != 'kepsek' AND u.full_name NOT LIKE '%ASEP SAEPULLOH%' AND u.id != 1 THEN 'Siswa'
                 ELSE COALESCE(r.name, 'Pengguna')
             END as role_name,
             s.nis,
@@ -462,11 +486,13 @@ class CommunicationModel extends BaseModel {
                 ELSE 0 
             END as is_online,
             CASE 
-                WHEN u.id != 1 AND s.id IS NOT NULL THEN COALESCE(k.nama_kelas, '')
+                -- Hanya Siswa yang memiliki nama_kelas
+                WHEN (u.role_id = 3 OR s.id IS NOT NULL) AND u.username != 'kepsek' AND u.full_name NOT LIKE '%ASEP SAEPULLOH%' AND u.id != 1 THEN COALESCE(k.nama_kelas, '')
                 ELSE ''
             END as nama_kelas,
             CASE 
-                WHEN u.id != 1 AND g.id IS NOT NULL THEN COALESCE(
+                -- Hanya Guru yang memiliki mata_pelajaran
+                WHEN (u.role_id = 2 OR g.id IS NOT NULL) AND u.username != 'kepsek' AND u.full_name NOT LIKE '%ASEP SAEPULLOH%' THEN COALESCE(
                     (SELECT GROUP_CONCAT(DISTINCT mp.nama_mapel SEPARATOR ', ') 
                      FROM jadwal j 
                      JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
