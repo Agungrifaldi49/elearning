@@ -2,6 +2,14 @@
 <?php require_once ROOT_PATH . 'views/layouts/navbar.php'; ?>
 <?php require_once ROOT_PATH . 'views/layouts/sidebar.php'; ?>
 
+<?php
+$alumniList = is_array($alumniList ?? null) ? $alumniList : [];
+$kelasList = is_array($kelasList ?? null) ? $kelasList : [];
+$allKelasList = is_array($allKelasList ?? null) ? $allKelasList : $kelasList;
+$jurusanList = is_array($jurusanList ?? null) ? $jurusanList : [];
+$alumniStats = is_array($alumniStats ?? null) ? $alumniStats : ['total' => count($alumniList), 'laki' => 0, 'perempuan' => 0, 'per_jurusan' => []];
+?>
+
 <main class="main-content px-3 px-md-4">
     <div class="container-fluid">
         <!-- Page Header -->

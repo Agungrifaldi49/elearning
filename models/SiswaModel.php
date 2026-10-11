@@ -82,9 +82,14 @@ class SiswaModel extends BaseModel {
         }
 
         $sql .= " ORDER BY s.id DESC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            return [];
+        }
     }
 
     public function getById($id) {

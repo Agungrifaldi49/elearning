@@ -459,6 +459,7 @@ class AdminController {
         $selectedJenisKelamin = isset($_GET['jk']) && in_array(strtoupper($_GET['jk']), ['L', 'P']) ? strtoupper($_GET['jk']) : null;
         $searchKeyword = isset($_GET['q']) ? Security::sanitize($_GET['q']) : null;
 
+        $alumniList = $siswaModel->getAll($selectedKelasId, $selectedJurusanId, $searchKeyword, $selectedJenisKelamin, 'alumni') ?: [];
         $kelasList = $academicModel->getKelas(true); // Khusus rombel aktif untuk penempatan siswa yang diaktifkan kembali
         $allKelasList = $academicModel->getKelas(); // Seluruh kelas untuk filter arsip
         $jurusanList = $academicModel->getJurusan();
