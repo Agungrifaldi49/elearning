@@ -1138,12 +1138,14 @@ class SiswaController {
         $siswa = $this->getSiswaInfo();
         $siswaId = $siswa['id'];
         $nis = $siswa['nis'] ?? null;
+        $nisn = $siswa['nisn'] ?? null;
+        $namaSiswa = $siswa['nama_lengkap'] ?? null;
 
         require_once ROOT_PATH . 'models/PembayaranModel.php';
         $pembayaranModel = new PembayaranModel();
 
-        // Tarik data tagihan & riwayat pembayaran LIVE REALTIME dari API Tata Usaha by NIS
-        $realtimeData = $pembayaranModel->getStudentRealtimeBillsAndHistory($siswaId, $nis);
+        // Tarik data tagihan & riwayat pembayaran LIVE REALTIME dari API Tata Usaha by NIS/NISN/Nama
+        $realtimeData = $pembayaranModel->getStudentRealtimeBillsAndHistory($siswaId, $nis, $nisn, $namaSiswa);
 
         $bills = $realtimeData['bills'];
         $summary = $realtimeData['summary'];

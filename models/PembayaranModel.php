@@ -112,6 +112,7 @@ class PembayaranModel {
 
         return [
             'total_tagihan' => $totalTagihan,
+            'total_nominal_tagihan' => $totalTagihan,
             'total_terbayar' => $totalTerbayar,
             'total_tunggakan' => $totalTunggakan,
             'persen_lunas' => $persenLunas,
@@ -156,7 +157,7 @@ class PembayaranModel {
      * Get All Student Payments for Admin (With Filtering & Search)
      */
     public function getAllStudentPayments($filters = []) {
-        $where = ["1=1"];
+        $where = ["1=1", "s.id NOT IN (1,2,3,4,5,6,8,9,10)", "(s.nis IS NULL OR s.nis NOT LIKE 'TBSM%')"];
         $params = [];
 
         $tipeSiswa = $filters['tipe_siswa'] ?? 'aktif';
@@ -828,30 +829,33 @@ class PembayaranModel {
         }
 
         $tuByNis = [];
+        $tuByNisn = [];
         $tuByName = [];
         foreach ($allTuSiswa as $t) {
             if (!empty($t['nis'])) $tuByNis[trim((string)$t['nis'])] = $t;
-            if (!empty($t['nisn'])) $tuByNis[trim((string)$t['nisn'])] = $t;
+            if (!empty($t['nisn'])) $tuByNisn[trim((string)$t['nisn'])] = $t;
             $tuByName[strtolower(trim((string)$t['nama']))] = $t;
         }
 
-        // 2. Ambil siswa aktif di database lokal
+        // 2. Ambil seluruh siswa resmi di database LMS (Kelas X, XI, XII, dan Alumni)
         $lmsStudents = $this->db->query("
-            SELECT s.id, s.nis, s.nisn, s.nama_lengkap
+            SELECT s.id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas
             FROM siswa s
             LEFT JOIN kelas k ON s.kelas_id = k.id
-            WHERE k.nama_kelas IS NULL OR k.nama_kelas NOT LIKE 'ALUMNI%'
+            WHERE s.id NOT IN (1,2,3,4,5,6,8,9,10) AND (s.nis IS NULL OR s.nis NOT LIKE 'TBSM%')
         ")->fetchAll(PDO::FETCH_ASSOC);
 
         $targetSync = [];
         foreach ($lmsStudents as $ls) {
             $nis = trim((string)$ls['nis']);
+            $nisn = trim((string)$ls['nisn']);
             $namaKey = strtolower(trim((string)$ls['nama_lengkap']));
-            $matchedTu = $tuByNis[$nis] ?? ($tuByName[$namaKey] ?? null);
+            $matchedTu = $tuByNis[$nis] ?? ($tuByNisn[$nisn] ?? ($tuByName[$namaKey] ?? null));
             if ($matchedTu && !empty($matchedTu['id'])) {
                 $targetSync[] = [
                     'lms_id'   => $ls['id'],
                     'lms_nis'  => $ls['nis'],
+                    'lms_nisn' => $ls['nisn'],
                     'lms_nama' => $ls['nama_lengkap'],
                     'tu_id'    => (int)$matchedTu['id']
                 ];
@@ -859,7 +863,7 @@ class PembayaranModel {
         }
 
         if (empty($targetSync)) {
-            return ['status' => false, 'message' => 'Tidak ada siswa aktif yang cocok antara LMS dan server Tata Usaha.'];
+            return ['status' => false, 'message' => 'Tidak ada siswa yang cocok antara LMS dan server Tata Usaha.'];
         }
 
         // 3. Batch paralel multi-cURL per 25 siswa
@@ -901,6 +905,7 @@ class PembayaranModel {
 
                 $siswaId = $item['lms_id'];
                 $nis = $item['lms_nis'];
+                $nisn = $item['lms_nisn'] ?? $nis;
 
                 foreach ($parsed['bills'] as $b) {
                     $kode = trim($b['kode']);
@@ -926,7 +931,7 @@ class PembayaranModel {
                     if ($existingId) {
                         $stmtUp->execute([$nominal, $terbayar, $sisa, $status, $existingId]);
                     } else {
-                        $stmtIn->execute([$siswaId, $nis, $nis, $jenis, 'TU-' . $item['tu_id'] . '-' . $kode, $judul, $nominal, $terbayar, $sisa, $judul, $status]);
+                        $stmtIn->execute([$siswaId, $nis ?: $nisn, $nisn ?: $nis, $jenis, 'TU-' . $item['tu_id'] . '-' . $kode, $judul, $nominal, $terbayar, $sisa, $judul, $status]);
                     }
                 }
 
@@ -1601,3 +1606,4 @@ class PembayaranModel {
         }
     }
 }
+
