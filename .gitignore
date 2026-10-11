@@ -6,3 +6,8 @@ config/firebase_credentials.json.json
 # Logs & Environment
 *.log
 .env
+
+# Bridge Runtime State & Caches
+config/payment_bridge.json
+config/.tu_jwt_cache.json
+scratch/

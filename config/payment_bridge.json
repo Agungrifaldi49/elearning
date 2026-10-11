@@ -1,6 +1,0 @@
-{
-    "server_url": "http:\/\/127.0.0.1:8088\/bridge_server_pembayaran.php",
-    "secret_token": "SMKMH_PAYMENT_SECRET_KEY_2026",
-    "last_sync": "2026-10-11 06:58:38",
-    "last_status": "Gagal HTTP 400"
-}

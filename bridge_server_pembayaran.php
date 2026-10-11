@@ -17,13 +17,19 @@
  * 5. Klik tombol "Tarik & Sinkronkan Sekarang".
  */
 
+// Naikkan batas waktu eksekusi agar pengambilan data massal berjalan lancar
+@set_time_limit(180);
+@ini_set('memory_limit', '256M');
+
 // Buffer output agar tidak ada whitespace atau notice PHP yang merusak JSON
 ob_start();
 
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Authorization, X-API-KEY, Content-Type, Accept');
+if (!headers_sent()) {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Access-Control-Allow-Origin: *');
+    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Authorization, X-API-KEY, Content-Type, Accept');
+}
 
 // Tangani HTTP OPTIONS Preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -37,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $configFile = __DIR__ . '/config/tatausaha_api.json';
 $defaultConfig = [
     'api_base_url'        => 'https://apitatausaha.smkmuthiaharapanclk.com',
-    'api_email'           => 'tatausaha@smkmuthiaharapanclk.com',
+    'api_email'           => 'admin@mhc.com',
     'api_password'        => '',
     'api_jwt_token'       => '',
     'bridge_secret_token' => 'SMKMH_PAYMENT_SECRET_KEY_2026',
@@ -56,7 +62,7 @@ if (file_exists($configFile)) {
     }
 }
 
-// Timpa konfigurasi via Environment Variables jika tersedia di server
+// Timpa konfigurasi via Environment Variables jika tersedia di server hosting
 if (getenv('TU_API_BASE_URL'))    $config['api_base_url'] = getenv('TU_API_BASE_URL');
 if (getenv('TU_API_EMAIL'))       $config['api_email'] = getenv('TU_API_EMAIL');
 if (getenv('TU_API_PASSWORD'))    $config['api_password'] = getenv('TU_API_PASSWORD');
@@ -81,7 +87,7 @@ if (!empty($authHeader) && preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches
     $providedToken = trim($_POST['token']);
 }
 
-// Izinkan ping/health check status bridge tanpa mengekspos data keuangan
+// Izinkan ping status bridge tanpa mengekspos data keuangan
 $action = strtolower(trim($_GET['action'] ?? ($_POST['action'] ?? 'pull')));
 if ($action === 'ping' && empty($providedToken)) {
     sendJsonResponse(true, 'Bridge Server Pembayaran Aktif & Siap Menerima Permintaan', [
@@ -254,12 +260,10 @@ class TataUsahaApiClient {
      * Memperoleh Token JWT yang sah (dari static token, cache, atau via login otomatis)
      */
     public function getValidJwtToken() {
-        // Prioritas 1: Static JWT yang diisi di config jika ada
         if (!empty($this->staticJwt)) {
             return $this->staticJwt;
         }
 
-        // Prioritas 2: Baca dari Cache jika belum kedaluwarsa
         if ($this->cacheJwt && file_exists($this->jwtCacheFile)) {
             $cached = json_decode(@file_get_contents($this->jwtCacheFile), true);
             if (!empty($cached['token']) && !empty($cached['expires_at']) && time() < ($cached['expires_at'] - 60)) {
@@ -267,15 +271,13 @@ class TataUsahaApiClient {
             }
         }
 
-        // Prioritas 3: Login otomatis menggunakan email & password
         if (empty($this->email) || empty($this->password)) {
-            return ''; // Belum dikonfigurasi
+            return '';
         }
 
         $loginRes = $this->login($this->email, $this->password);
         if ($loginRes['status'] && !empty($loginRes['token'])) {
             if ($this->cacheJwt) {
-                // Simpan token dengan masa aktif 3600 detik (1 jam)
                 $expiresAt = time() + (int)($loginRes['expires_in'] ?? 3600);
                 @file_put_contents($this->jwtCacheFile, json_encode([
                     'token'      => $loginRes['token'],
@@ -329,7 +331,6 @@ class TataUsahaApiClient {
             return ['status' => false, 'message' => "Login API Tata Usaha menghasilkan HTTP {$httpCode}: " . ($json['message'] ?? 'Unknown')];
         }
 
-        // Ekstraksi token dari berbagai pola respons umum
         $token = $json['data']['token'] 
               ?? $json['data']['access_token'] 
               ?? $json['token'] 
@@ -351,65 +352,61 @@ class TataUsahaApiClient {
     }
 
     /**
-     * Mengambil seluruh halaman data dengan pagination otomatis (anti-halaman pertama saja)
+     * Mengambil data halaman dengan paginasi berkinerja tinggi (per_page=100)
      */
-    public function fetchAllPages($endpoint, $maxPages = 50) {
+    public function fetchAllPages($endpoint, $maxPages = 20, $perPage = 100) {
         $allRecords = [];
         $page = 1;
-        $separator = (strpos($endpoint, '?') !== false) ? '&' : '?';
+
+        // Tambahkan per_page=100 jika belum ditentukan
+        $cleanEndpoint = $endpoint;
+        if (strpos($cleanEndpoint, 'per_page=') === false) {
+            $cleanEndpoint .= (strpos($cleanEndpoint, '?') !== false ? '&' : '?') . 'per_page=' . $perPage;
+        }
+
+        $separator = (strpos($cleanEndpoint, '?') !== false) ? '&' : '?';
 
         while ($page <= $maxPages) {
-            $pageUrl = $endpoint . $separator . 'page=' . $page;
+            $pageUrl = $cleanEndpoint . $separator . 'page=' . $page;
             $res = $this->request('GET', $pageUrl);
 
             if (!$res['status']) {
-                // Jika halaman pertama error, kembalikan status error
                 if ($page === 1) {
                     return $res;
                 }
-                // Jika halaman lanjutan gagal/404, hentikan pagination
                 break;
             }
 
             $jsonData = $res['data'] ?? [];
             $records = [];
+            $lastPage = null;
 
-            // Pola 1: Laravel / Standard Paginator ($json['data']['data'])
-            if (isset($jsonData['data']['data']) && is_array($jsonData['data']['data'])) {
-                $records = $jsonData['data']['data'];
-                $lastPage = $jsonData['data']['last_page'] ?? null;
-            }
-            // Pola 2: Paginator dengan data di root ($json['data'] array dan meta terpisah)
-            elseif (isset($jsonData['data']) && is_array($jsonData['data'])) {
-                $records = $jsonData['data'];
-                $lastPage = $jsonData['meta']['last_page'] ?? $jsonData['pagination']['total_pages'] ?? null;
-            }
-            // Pola 3: Items wrapper ($json['items'])
-            elseif (isset($jsonData['items']) && is_array($jsonData['items'])) {
+            // Tata Usaha API Paginator: $json['data'] adalah array numerik, dan $json['meta']['last_page']
+            if (isset($jsonData['data']) && is_array($jsonData['data'])) {
+                if (isset($jsonData['data'][0])) {
+                    $records = $jsonData['data'];
+                    $lastPage = $jsonData['meta']['last_page'] ?? null;
+                } elseif (isset($jsonData['data']['data']) && is_array($jsonData['data']['data'])) {
+                    $records = $jsonData['data']['data'];
+                    $lastPage = $jsonData['data']['last_page'] ?? ($jsonData['meta']['last_page'] ?? null);
+                }
+            } elseif (isset($jsonData['items']) && is_array($jsonData['items'])) {
                 $records = $jsonData['items'];
                 $lastPage = $jsonData['total_pages'] ?? null;
-            }
-            // Pola 4: Array langsung
-            elseif (is_array($jsonData) && isset($jsonData[0])) {
+            } elseif (is_array($jsonData) && isset($jsonData[0])) {
                 $records = $jsonData;
                 $lastPage = 1;
             }
 
             if (empty($records)) {
-                break; // Tidak ada data lagi
+                break;
             }
 
             foreach ($records as $item) {
                 $allRecords[] = $item;
             }
 
-            // Cek apakah sudah mencapai halaman terakhir
             if ($lastPage !== null && $page >= (int)$lastPage) {
-                break;
-            }
-
-            // Jika jumlah record sedikit, kemungkinan tidak ada halaman berikutnya
-            if (count($records) < 10 && $lastPage === null) {
                 break;
             }
 
@@ -423,9 +420,6 @@ class TataUsahaApiClient {
         ];
     }
 
-    /**
-     * Terjemahan kode error cURL ke bahasa Indonesia yang ramah pengguna
-     */
     private function translateCurlError($errNo, $rawMsg) {
         switch ($errNo) {
             case CURLE_COULDNT_RESOLVE_HOST:
@@ -447,9 +441,8 @@ class TataUsahaApiClient {
 $apiClient = new TataUsahaApiClient($config);
 
 // ==============================================================================
-// 4. ROUTER AKSI (HEALTH, ME, SUMMARY, TEST_LOGIN, PULL, SYNC_DIRECT)
+// 4. ROUTER AKSI (HEALTH, ME, SUMMARY, TEST_LOGIN, SISWA, PULL)
 // ==============================================================================
-
 switch ($action) {
 
     // --- A. CEK STATUS KESEHATAN API TATA USAHA (/api/health) ---
@@ -477,10 +470,12 @@ switch ($action) {
 
     // --- C. UJI COBA LOGIN API TATA USAHA ---
     case 'test_login':
-        if (empty($config['api_email']) || empty($config['api_password'])) {
+        $email = trim($_POST['email'] ?? ($config['api_email'] ?? ''));
+        $pass  = trim($_POST['password'] ?? ($config['api_password'] ?? ''));
+        if (empty($email) || empty($pass)) {
             sendJsonResponse(false, 'Kredensial email atau password belum diatur pada config/tatausaha_api.json.', null, 400);
         }
-        $loginRes = $apiClient->login($config['api_email'], $config['api_password']);
+        $loginRes = $apiClient->login($email, $pass);
         if ($loginRes['status']) {
             sendJsonResponse(true, 'Login ke API Tata Usaha Berhasil!', [
                 'token_sample' => substr($loginRes['token'], 0, 15) . '...' . substr($loginRes['token'], -10),
@@ -492,15 +487,15 @@ switch ($action) {
         }
         break;
 
-    // --- D. AMBIL RINGKASAN KEUANGAN (/api/dashboard/summary) ---
+    // --- D. AMBIL RINGKASAN KEUANGAN RESMI (/api/dashboard/summary) ---
     case 'summary':
         $sumRes = $apiClient->request('GET', '/api/dashboard/summary');
         sendJsonResponse($sumRes['status'], $sumRes['message'], $sumRes['data'] ?? null, $sumRes['http_code'] ?? 200);
         break;
 
-    // --- E. AMBIL DAFTAR SISWA SAJA (/api/siswa) ---
+    // --- E. AMBIL DAFTAR SISWA RESMI (/api/siswa) ---
     case 'siswa':
-        $siswaRes = $apiClient->fetchAllPages('/api/siswa');
+        $siswaRes = $apiClient->fetchAllPages('/api/siswa?per_page=100', 10);
         sendJsonResponse($siswaRes['status'], 'Data siswa berhasil ditarik', $siswaRes['records'] ?? [], 200);
         break;
 
@@ -515,80 +510,66 @@ switch ($action) {
 // 5. FUNGSI PENGAMBILAN & NORMALISASI DATA KEUANGAN
 // ==============================================================================
 function pullAndNormalizeData(TataUsahaApiClient $apiClient, array $config) {
-    // 1. Cek apakah token JWT tersedia
     $jwtToken = $apiClient->getValidJwtToken();
     if (empty($jwtToken)) {
         sendJsonResponse(false, 'Kredensial API Tata Usaha belum lengkap: silakan masukkan email & password akun integrasi atau JWT token pada config/tatausaha_api.json.', null, 400);
     }
 
-    $normalizedItems = [];
-    $rawBills = [];
-    $rawPayments = [];
-
-    // 2. Ambil data transaksi pembayaran (/api/pembayaran) untuk pencocokan riwayat bayar
-    $trxRes = $apiClient->fetchAllPages('/api/pembayaran');
-    if ($trxRes['status'] && !empty($trxRes['records'])) {
-        $rawPayments = $trxRes['records'];
-    }
-
-    // Kelompokkan pembayaran berdasarkan tagihan_id, kode_tagihan, atau nisn
-    $paymentsByBill = [];
-    foreach ($rawPayments as $p) {
-        $keyBill = $p['kode_tagihan'] ?? ($p['tagihan_id'] ?? ($p['id_tagihan'] ?? null));
-        if ($keyBill !== null) {
-            $paymentsByBill[(string)$keyBill][] = [
-                'nomor_transaksi'   => $p['nomor_transaksi'] ?? ($p['no_transaksi'] ?? ($p['kode_transaksi'] ?? ('TRX-' . ($p['id'] ?? uniqid())))),
-                'nominal_bayar'     => (float)($p['nominal_bayar'] ?? ($p['nominal'] ?? ($p['jumlah_bayar'] ?? 0))),
-                'tanggal_bayar'     => $p['tanggal_bayar'] ?? ($p['tgl_bayar'] ?? ($p['created_at'] ?? date('Y-m-d H:i:s'))),
-                'metode_pembayaran' => $p['metode_pembayaran'] ?? ($p['metode'] ?? 'Kasir TU Sekolah'),
-                'channel'           => $p['channel'] ?? 'Loket Keuangan Tata Usaha',
-                'status'            => normalizeTransactionStatus($p['status'] ?? 'berhasil'),
-                'catatan'           => $p['catatan'] ?? ($p['keterangan'] ?? 'Sinkronisasi dari API Tata Usaha')
-            ];
-        }
-    }
-
-    // 3. Strategi Utama: Ambil daftar tagihan siswa (/api/tagihan-siswa)
-    $billsRes = $apiClient->fetchAllPages('/api/tagihan-siswa');
-    if ($billsRes['status'] && !empty($billsRes['records'])) {
-        $rawBills = $billsRes['records'];
-    }
-
-    // 4. Strategi Cadangan: Jika /api/tagihan-siswa kosong atau 404, coba /api/tagihan master atau /api/siswa
-    if (empty($rawBills)) {
-        // Coba per-siswa: /api/siswa lalu ambil /api/siswa/{id}/tagihan
-        $siswaRes = $apiClient->fetchAllPages('/api/siswa', 20);
-        if ($siswaRes['status'] && !empty($siswaRes['records'])) {
-            foreach ($siswaRes['records'] as $s) {
-                $sid = $s['id'] ?? null;
-                if (!$sid) continue;
-
-                $sBillsRes = $apiClient->request('GET', "/api/siswa/{$sid}/tagihan");
-                if ($sBillsRes['status'] && !empty($sBillsRes['data'])) {
-                    $sList = $sBillsRes['data']['data'] ?? ($sBillsRes['data']['tagihan'] ?? ($sBillsRes['data'] ?? []));
-                    if (is_array($sList)) {
-                        foreach ($sList as $bItem) {
-                            if (is_array($bItem)) {
-                                $bItem['nisn'] = $bItem['nisn'] ?? ($s['nisn'] ?? '');
-                                $bItem['nis']  = $bItem['nis'] ?? ($s['nis'] ?? '');
-                                $rawBills[] = $bItem;
-                            }
-                        }
-                    }
-                }
+    // 1. Ambil seluruh data siswa (/api/siswa) untuk mapping kelas dan identitas akurat
+    $siswaMap = [];
+    $siswaRes = $apiClient->fetchAllPages('/api/siswa?per_page=100', 10);
+    if ($siswaRes['status'] && !empty($siswaRes['records'])) {
+        foreach ($siswaRes['records'] as $st) {
+            $sNis = trim((string)($st['nis'] ?? ''));
+            if (!empty($sNis)) {
+                $siswaMap[$sNis] = [
+                    'nama'       => $st['nama'] ?? '',
+                    'nama_kelas' => $st['nama_kelas'] ?? '',
+                    'angkatan'   => $st['angkatan_nama'] ?? '',
+                    'status'     => $st['status'] ?? 'aktif'
+                ];
             }
         }
     }
 
-    // 5. Jika kedua strategi di atas belum mengembalikan tagihan, coba endpoint master /api/tagihan
-    if (empty($rawBills)) {
-        $masterTagihanRes = $apiClient->fetchAllPages('/api/tagihan');
-        if ($masterTagihanRes['status'] && !empty($masterTagihanRes['records'])) {
-            $rawBills = $masterTagihanRes['records'];
+    // 2. Ambil data riwayat transaksi pembayaran (/api/pembayaran)
+    $rawPayments = [];
+    $paymentsByBill = [];
+    $trxRes = $apiClient->fetchAllPages('/api/pembayaran?per_page=100', 30);
+    if ($trxRes['status'] && !empty($trxRes['records'])) {
+        $rawPayments = $trxRes['records'];
+        foreach ($rawPayments as $p) {
+            $billIdKey = (int)($p['id_tagihan_siswa'] ?? 0);
+            $nisTrx    = trim((string)($p['nis'] ?? ''));
+            $kdTagihan = trim((string)($p['kode_tagihan'] ?? ''));
+
+            $formattedTrx = [
+                'nomor_transaksi'   => $p['kode_pembayaran'] ?? ($p['nomor_transaksi'] ?? ('PAY-' . ($p['id'] ?? uniqid()))),
+                'nominal_bayar'     => (float)($p['jumlah_bayar'] ?? ($p['nominal_bayar'] ?? 0)),
+                'tanggal_bayar'     => !empty($p['tanggal']) ? ($p['tanggal'] . ' 08:00:00') : ($p['created_at'] ?? date('Y-m-d H:i:s')),
+                'metode_pembayaran' => $p['metode'] ?? 'tunai',
+                'channel'           => 'Loket Keuangan Tata Usaha',
+                'status'            => normalizeTransactionStatus($p['status'] ?? 'berhasil'),
+                'catatan'           => $p['keterangan'] ?? 'Pembayaran Loket TU'
+            ];
+
+            // Pasangkan transaksi ke ID tagihan siswa yang spesifik
+            if ($billIdKey > 0) {
+                $paymentsByBill['id_' . $billIdKey][] = $formattedTrx;
+            }
+            if (!empty($nisTrx) && !empty($kdTagihan)) {
+                $paymentsByBill['nis_' . $nisTrx . '_' . $kdTagihan][] = $formattedTrx;
+            }
         }
     }
 
-    // Jika server Tata Usaha memang belum memiliki tagihan apa pun
+    // 3. Ambil data tagihan setiap siswa (/api/tagihan-siswa)
+    $rawBills = [];
+    $billsRes = $apiClient->fetchAllPages('/api/tagihan-siswa?per_page=100', 35);
+    if ($billsRes['status'] && !empty($billsRes['records'])) {
+        $rawBills = $billsRes['records'];
+    }
+
     if (empty($rawBills)) {
         sendJsonResponse(true, 'Koneksi ke API Tata Usaha berhasil, namun belum ada data tagihan yang diterbitkan di server Tata Usaha.', [
             'total_data' => 0,
@@ -596,58 +577,61 @@ function pullAndNormalizeData(TataUsahaApiClient $apiClient, array $config) {
         ]);
     }
 
-    // 6. Normalisasi Seluruh Data Tagihan Sesuai Skema E-Learning
-    foreach ($rawBills as $idx => $b) {
-        $nisn = trim((string)($b['nisn'] ?? ($b['siswa']['nisn'] ?? '')));
-        $nis  = trim((string)($b['nis'] ?? ($b['siswa']['nis'] ?? '')));
+    // 4. Normalisasi data tagihan siswa sesuai format yang diharapkan E-Learning
+    $normalizedItems = [];
+    foreach ($rawBills as $b) {
+        $nis = trim((string)($b['nis'] ?? ''));
+        if (empty($nis)) continue;
 
-        // Lewati jika tidak ada satupun identitas siswa
-        if (empty($nisn) && empty($nis)) {
-            continue;
+        $billId = (int)($b['id'] ?? 0);
+        $masterKode = trim((string)($b['kode_tagihan'] ?? 'TAG'));
+        
+        // Kode unik stabil per tagihan siswa untuk mencegah bentrok UNIQUE KEY
+        $kodeTagihan = 'TU-TAG-' . $billId . '-' . $masterKode;
+
+        $studentInfo = $siswaMap[$nis] ?? [];
+        $namaSiswa   = !empty($studentInfo['nama']) ? $studentInfo['nama'] : trim((string)($b['siswa_nama'] ?? ''));
+        $namaKelas   = !empty($studentInfo['nama_kelas']) ? $studentInfo['nama_kelas'] : '';
+
+        $judul       = trim((string)($b['nama_tagihan'] ?? ($b['judul'] ?? 'Iuran Sekolah')));
+
+        // Klasifikasi Jenis Pembayaran
+        $jenis = 'SPP';
+        if (stripos($judul, 'ujian') !== false || stripos($masterKode, 'ujian') !== false) {
+            $jenis = 'Ujian';
+        } elseif (stripos($judul, 'dsp') !== false || stripos($judul, 'gedung') !== false || stripos($masterKode, 'dsp') !== false) {
+            $jenis = 'DSP';
+        } elseif (stripos($judul, 'spp') === false) {
+            $jenis = 'Iuran Sekolah';
         }
 
-        $idBill      = $b['id'] ?? ($idx + 1);
-        $kodeTagihan = trim((string)($b['kode_tagihan'] ?? ($b['no_tagihan'] ?? ('TU-TAG-' . $idBill))));
-        $judul       = trim((string)($b['judul'] ?? ($b['nama_tagihan'] ?? ($b['jenis_pembayaran'] ?? 'Iuran Sekolah'))));
-        $jenis       = trim((string)($b['jenis_pembayaran'] ?? ($b['kategori'] ?? 'SPP')));
-        $nominal     = (float)($b['nominal'] ?? ($b['total_tagihan'] ?? ($b['jumlah'] ?? 0)));
-        $terbayar    = (float)($b['nominal_terbayar'] ?? ($b['terbayar'] ?? ($b['total_bayar'] ?? 0)));
+        $nominal  = (float)($b['total_tagihan'] ?? ($b['nominal'] ?? 0));
+        $terbayar = (float)($b['total_terbayar'] ?? ($b['nominal_terbayar'] ?? 0));
+        $sisa     = (float)($b['sisa_tagihan'] ?? ($b['sisa'] ?? max(0, $nominal - $terbayar)));
 
-        // Tambahkan riwayat pembayaran yang cocok dengan tagihan ini
+        // Pasangkan riwayat transaksi yang valid milik tagihan siswa ini
         $riwayatList = [];
-        if (isset($paymentsByBill[$kodeTagihan])) {
-            $riwayatList = $paymentsByBill[$kodeTagihan];
-        } elseif (isset($paymentsByBill[(string)$idBill])) {
-            $riwayatList = $paymentsByBill[(string)$idBill];
+        if ($billId > 0 && isset($paymentsByBill['id_' . $billId])) {
+            $riwayatList = $paymentsByBill['id_' . $billId];
+        } elseif (isset($paymentsByBill['nis_' . $nis . '_' . $masterKode])) {
+            $riwayatList = $paymentsByBill['nis_' . $nis . '_' . $masterKode];
         }
 
-        // Jika nominal terbayar di tagihan 0 tapi ada riwayat pembayaran yang berhasil, akumulasikan
-        if ($terbayar <= 0 && !empty($riwayatList)) {
-            foreach ($riwayatList as $rw) {
-                if ($rw['status'] === 'berhasil') {
-                    $terbayar += $rw['nominal_bayar'];
-                }
-            }
-        }
-
-        // Kalkulasi sisa tunggakan dan status pelunasan
-        $sisa = max(0.00, $nominal - $terbayar);
-        if ($sisa <= 0 && $nominal > 0) {
+        // Tentukan status pelunasan
+        $rawStatus = strtolower(trim((string)($b['status'] ?? '')));
+        if ($rawStatus === 'lunas' || $sisa <= 0) {
             $status = 'lunas';
-        } elseif ($terbayar > 0 && $sisa > 0) {
+        } elseif ($rawStatus === 'sebagian' || $terbayar > 0) {
             $status = 'sebagian';
         } else {
             $status = 'belum_lunas';
         }
 
-        $periode     = $b['periode_bulan'] ?? ($b['bulan'] ?? null);
-        $tahunAjaran = $b['tahun_ajaran'] ?? ($b['ta'] ?? '2025/2026');
-        $jatuhTempo  = $b['tanggal_jatuh_tempo'] ?? ($b['jatuh_tempo'] ?? ($b['due_date'] ?? null));
-        $keterangan  = $b['keterangan'] ?? ($b['deskripsi'] ?? 'Sinkronisasi API Tata Usaha SMK Muthia Harapan');
-
         $normalizedItems[] = [
-            'nisn'                => $nisn,
+            'nisn'                => $nis,
             'nis'                 => $nis,
+            'nama_siswa'          => $namaSiswa,
+            'nama_kelas'          => $namaKelas,
             'kode_tagihan'        => $kodeTagihan,
             'judul'               => $judul,
             'jenis_pembayaran'    => $jenis,
@@ -655,33 +639,29 @@ function pullAndNormalizeData(TataUsahaApiClient $apiClient, array $config) {
             'nominal_terbayar'    => $terbayar,
             'sisa_tagihan'        => $sisa,
             'status'              => $status,
-            'periode_bulan'       => $periode,
-            'tahun_ajaran'        => $tahunAjaran,
-            'tanggal_jatuh_tempo' => $jatuhTempo,
-            'keterangan'          => $keterangan,
+            'periode_bulan'       => $judul,
+            'tahun_ajaran'        => '2024/2025',
+            'tanggal_jatuh_tempo' => null,
+            'keterangan'          => 'Tagihan Resmi API Tata Usaha SMK Muthia Harapan',
             'riwayat'             => $riwayatList
         ];
     }
 
-    // 7. Kembalikan Payload Standar yang Siap Diconsume oleh PembayaranModel::pullFromRemoteServer
-    sendJsonResponse(true, 'Data tagihan & pembayaran berhasil disinkronkan dari API Tata Usaha.', [
+    sendJsonResponse(true, 'Data tagihan & pembayaran resmi berhasil diambil dari API Tata Usaha.', [
         'total_data' => count($normalizedItems),
         'data'       => $normalizedItems,
         'meta'       => [
-            'source'         => $config['api_base_url'],
-            'synced_at'      => date('Y-m-d H:i:s'),
-            'total_tagihan'  => count($normalizedItems),
-            'total_transaksi'=> count($rawPayments)
+            'source'          => $config['api_base_url'],
+            'synced_at'       => date('Y-m-d H:i:s'),
+            'total_tagihan'   => count($normalizedItems),
+            'total_transaksi' => count($rawPayments)
         ]
     ]);
 }
 
-/**
- * Normalisasi status transaksi agar sesuai dengan ENUM e-learning
- */
 function normalizeTransactionStatus($rawStatus) {
     $s = strtolower(trim((string)$rawStatus));
-    if (in_array($s, ['berhasil', 'lunas', 'paid', 'success', 'approved'])) {
+    if (in_array($s, ['berhasil', 'lunas', 'paid', 'success', 'approved', 'tunai'])) {
         return 'berhasil';
     }
     if (in_array($s, ['pending', 'menunggu', 'process'])) {
@@ -690,16 +670,14 @@ function normalizeTransactionStatus($rawStatus) {
     return 'batal';
 }
 
-/**
- * Kirim respon JSON terstruktur dan hentikan eksekusi script
- */
 function sendJsonResponse($status, $message, $data = null, $httpCode = 200) {
-    // Bersihkan buffer agar tidak ada output lain
     if (ob_get_length()) {
         ob_clean();
     }
 
-    http_response_code($httpCode);
+    if (!headers_sent()) {
+        http_response_code($httpCode);
+    }
 
     $payload = [
         'status'  => (bool)$status,
@@ -708,7 +686,6 @@ function sendJsonResponse($status, $message, $data = null, $httpCode = 200) {
 
     if ($data !== null) {
         if (is_array($data) && isset($data['data'])) {
-            // Jika data sudah terstruktur dengan key data
             $payload = array_merge($payload, $data);
         } else {
             $payload['data'] = $data;

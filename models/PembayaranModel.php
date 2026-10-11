@@ -449,7 +449,7 @@ class PembayaranModel {
                 continue;
             }
 
-            // Find matching student
+            // Find or Auto-Create matching student
             $siswa = null;
             if (!empty($nisn)) {
                 $stmt = $this->db->prepare("SELECT id, nis, nisn FROM siswa WHERE nisn = ? LIMIT 1");
@@ -461,7 +461,67 @@ class PembayaranModel {
                 $stmt->execute([$nis]);
                 $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
             }
-            if (!$siswa) continue; // Student not found in LMS
+
+            // Jika siswa belum ada di LMS, daftarkan otomatis agar sinkron dengan data resmi API Tata Usaha
+            if (!$siswa) {
+                $studentName = !empty($item['nama_siswa']) ? trim($item['nama_siswa']) : ('Siswa ' . ($nis ?: $nisn));
+                $userLoginKey = !empty($nis) ? $nis : $nisn;
+                if (empty($userLoginKey)) continue;
+
+                // 1. Cari atau buat akun user
+                $userEmail = $userLoginKey . '@siswa.smkmuthiaharapan.sch.id';
+                $stmtUser = $this->db->prepare("SELECT id FROM users WHERE username = ? OR email = ? LIMIT 1");
+                $stmtUser->execute([$userLoginKey, $userEmail]);
+                $uRow = $stmtUser->fetch(PDO::FETCH_ASSOC);
+                if (!$uRow) {
+                    $hashedPwd = password_hash($userLoginKey, PASSWORD_BCRYPT);
+                    $stmtInUser = $this->db->prepare("INSERT INTO users (username, email, password, full_name, role_id, status, created_at) VALUES (?, ?, ?, ?, 4, 'active', NOW())");
+                    $stmtInUser->execute([$userLoginKey, $userEmail, $hashedPwd, $studentName]);
+                    $userId = (int)$this->db->lastInsertId();
+                } else {
+                    $userId = (int)$uRow['id'];
+                }
+
+                // 2. Cocokkan kelas dari nama_kelas jika ada
+                $kelasId = 1;
+                $jurusanId = 1;
+                $targetClass = trim($item['nama_kelas'] ?? '');
+                if (!empty($targetClass)) {
+                    $stmtK = $this->db->prepare("SELECT id, jurusan_id FROM kelas WHERE nama_kelas = ? LIMIT 1");
+                    $stmtK->execute([$targetClass]);
+                    $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
+                    if ($kRow) {
+                        $kelasId = (int)$kRow['id'];
+                        $jurusanId = (int)$kRow['jurusan_id'];
+                    } else {
+                        $isRpl = (stripos($targetClass, 'RPL') !== false || stripos($targetClass, 'PPLG') !== false);
+                        $jurId = $isRpl ? 1 : 4;
+                        try {
+                            $stmtAddK = $this->db->prepare("INSERT INTO kelas (nama_kelas, jurusan_id) VALUES (?, ?)");
+                            $stmtAddK->execute([$targetClass, $jurId]);
+                            $kelasId = (int)$this->db->lastInsertId();
+                            $jurusanId = $jurId;
+                        } catch (\Throwable $exK) {
+                            $kelasId = 1;
+                            $jurusanId = 1;
+                        }
+                    }
+                }
+
+                // 3. Daftarkan siswa ke tabel siswa
+                try {
+                    $stmtInSiswa = $this->db->prepare("
+                        INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, status)
+                        VALUES (?, ?, ?, ?, ?, ?, 'L', 'aktif')
+                    ");
+                    $stmtInSiswa->execute([$userId, $nis ?: $nisn, $nisn ?: $nis, $studentName, $kelasId, $jurusanId]);
+                    $newSiswaId = (int)$this->db->lastInsertId();
+                    $siswa = ['id' => $newSiswaId, 'nis' => $nis ?: $nisn, 'nisn' => $nisn ?: $nis];
+                    $studentsCreatedCount = ($studentsCreatedCount ?? 0) + 1;
+                } catch (\Throwable $exS) {
+                    continue;
+                }
+            }
 
             $siswaId = (int)$siswa['id'];
             $finalNis = $siswa['nis'] ?: $nis;
@@ -531,14 +591,22 @@ class PembayaranModel {
             }
         }
 
-        $trxMsg = !empty($riwayatSyncedCount) ? ", {$riwayatSyncedCount} riwayat pembayaran dicatat" : "";
+        $extraMsgParts = [];
+        if (!empty($studentsCreatedCount)) {
+            $extraMsgParts[] = "{$studentsCreatedCount} siswa baru disinkronkan";
+        }
+        if (!empty($riwayatSyncedCount)) {
+            $extraMsgParts[] = "{$riwayatSyncedCount} transaksi riwayat dicatat";
+        }
+        $extraMsg = !empty($extraMsgParts) ? (" (" . implode(", ", $extraMsgParts) . ")") : "";
 
         return [
             'status' => true,
-            'message' => "Sinkronisasi berhasil: {$syncedCount} diperbarui, {$createdCount} ditambahkan{$trxMsg}.",
+            'message' => "Sinkronisasi berhasil: {$syncedCount} tagihan diperbarui, {$createdCount} tagihan baru ditambahkan{$extraMsg}.",
             'synced' => $syncedCount,
             'created' => $createdCount,
-            'riwayat' => $riwayatSyncedCount ?? 0
+            'riwayat' => $riwayatSyncedCount ?? 0,
+            'siswa_baru' => $studentsCreatedCount ?? 0
         ];
     }
 
@@ -627,7 +695,7 @@ class PembayaranModel {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $remoteUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 25);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 120);
         $isHttps = (stripos($remoteUrl, 'https://') === 0);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $isHttps);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $isHttps ? 2 : 0);
