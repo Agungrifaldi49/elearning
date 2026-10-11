@@ -258,8 +258,8 @@ $totalTunggakanNilai = (float)($summary['total_tunggakan'] ?? 0);
 $persenLunas = min(100, max(0, (float)($summary['persen_lunas'] ?? 0)));
 ?>
 
-<main class="main-content px-2 px-sm-3 portal-pembayaran-wrapper py-2.5 pb-4">
-<div class="container-fluid" style="max-width: 1400px;">
+<main class="main-content px-3 px-md-4 portal-pembayaran-wrapper pb-5">
+<div class="container-fluid">
 
     <!-- FLASH NOTIFICATIONS -->
     <?php if (FlashHelper::hasSuccess()): ?>
