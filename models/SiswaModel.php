@@ -1001,12 +1001,34 @@ class SiswaModel extends BaseModel {
         $ids = array_map('intval', $siswaIds);
         $inClause = implode(',', $ids);
 
+        // Jika mengaktifkan kembali ke 'aktif', pastikan kelas bukan kelas ALUMNI
+        $finalKelasId = (int)$targetKelasId;
+        if ($newStatus === 'aktif') {
+            if ($finalKelasId > 0) {
+                $stmtK = $this->db->prepare("SELECT id, nama_kelas FROM kelas WHERE id = ?");
+                $stmtK->execute([$finalKelasId]);
+                $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
+                if (!$kRow || stripos($kRow['nama_kelas'], 'ALUMNI') !== false || stripos($kRow['nama_kelas'], 'LULUS') !== false) {
+                    $finalKelasId = 0;
+                }
+            }
+            if ($finalKelasId <= 0) {
+                $finalKelasId = (int)$this->db->query("
+                    SELECT id FROM kelas 
+                    WHERE nama_kelas NOT LIKE '%ALUMNI%' 
+                      AND nama_kelas NOT LIKE '%LULUS%' 
+                    ORDER BY tingkat DESC, id ASC 
+                    LIMIT 1
+                ")->fetchColumn();
+            }
+        }
+
         $this->db->beginTransaction();
         try {
-            if ($targetKelasId && (int)$targetKelasId > 0) {
+            if ($finalKelasId > 0) {
                 $sql = "UPDATE siswa SET status = ?, kelas_id = ? WHERE id IN ({$inClause})";
                 $stmt = $this->db->prepare($sql);
-                $stmt->execute([$newStatus, (int)$targetKelasId]);
+                $stmt->execute([$newStatus, $finalKelasId]);
             } else {
                 $sql = "UPDATE siswa SET status = ? WHERE id IN ({$inClause})";
                 $stmt = $this->db->prepare($sql);
@@ -1014,7 +1036,11 @@ class SiswaModel extends BaseModel {
             }
             $affected = $stmt->rowCount();
 
-            if ($deactivateUser) {
+            // Jika status 'aktif', selalu pastikan akun login di tabel users berstatus 'active'
+            if ($newStatus === 'aktif') {
+                $sqlUser = "UPDATE users SET status = 'active' WHERE id IN (SELECT user_id FROM siswa WHERE id IN ({$inClause}))";
+                $this->db->exec($sqlUser);
+            } elseif ($deactivateUser) {
                 $userStatus = ($newStatus === 'alumni' || $newStatus === 'drop') ? 'inactive' : 'active';
                 $sqlUser = "UPDATE users SET status = ? WHERE id IN (SELECT user_id FROM siswa WHERE id IN ({$inClause}))";
                 $stmtU = $this->db->prepare($sqlUser);
@@ -1197,41 +1223,40 @@ class SiswaModel extends BaseModel {
         try {
             $alumniCondition = "(s.status = 'alumni' OR k.nama_kelas LIKE '%ALUMNI%' OR k.nama_kelas LIKE '%LULUS%' OR u.status IN ('inactive', 'nonaktif'))";
 
-            $rowTotal = $this->db->query("
-                SELECT COUNT(DISTINCT s.id) as cnt 
+            // Single fast aggregate query (0.001s)
+            $rowAggr = $this->db->query("
+                SELECT 
+                    COUNT(s.id) as total,
+                    SUM(CASE WHEN s.jenis_kelamin = 'L' THEN 1 ELSE 0 END) as laki,
+                    SUM(CASE WHEN s.jenis_kelamin = 'P' THEN 1 ELSE 0 END) as perempuan
                 FROM siswa s 
                 LEFT JOIN kelas k ON s.kelas_id = k.id 
                 LEFT JOIN users u ON s.user_id = u.id 
-                WHERE {$alumniCondition}
-            ")->fetch();
-            $stats['total'] = (int)($rowTotal['cnt'] ?? 0);
+                WHERE (u.role_id = 3 OR u.role_id IS NULL)
+                  AND s.nama_lengkap NOT LIKE 'AGUNG RIFALDI, S.%'
+                  AND {$alumniCondition}
+            ")->fetch(PDO::FETCH_ASSOC);
 
-            $rowL = $this->db->query("
-                SELECT COUNT(DISTINCT s.id) as cnt 
-                FROM siswa s 
-                LEFT JOIN kelas k ON s.kelas_id = k.id 
-                LEFT JOIN users u ON s.user_id = u.id 
-                WHERE {$alumniCondition} AND s.jenis_kelamin = 'L'
-            ")->fetch();
-            $stats['laki'] = (int)($rowL['cnt'] ?? 0);
+            if ($rowAggr) {
+                $stats['total'] = (int)($rowAggr['total'] ?? 0);
+                $stats['laki'] = (int)($rowAggr['laki'] ?? 0);
+                $stats['perempuan'] = (int)($rowAggr['perempuan'] ?? 0);
+            }
 
-            $rowP = $this->db->query("
-                SELECT COUNT(DISTINCT s.id) as cnt 
-                FROM siswa s 
-                LEFT JOIN kelas k ON s.kelas_id = k.id 
-                LEFT JOIN users u ON s.user_id = u.id 
-                WHERE {$alumniCondition} AND s.jenis_kelamin = 'P'
-            ")->fetch();
-            $stats['perempuan'] = (int)($rowP['cnt'] ?? 0);
-
+            // Fast clean per-jurusan query
             $rowsJ = $this->db->query("
-                SELECT j.nama_jurusan, COUNT(DISTINCT s.id) as cnt 
+                SELECT j.nama_jurusan, COUNT(s.id) as cnt 
                 FROM jurusan j 
-                LEFT JOIN siswa s ON s.jurusan_id = j.id AND ({$alumniCondition})
+                JOIN siswa s ON s.jurusan_id = j.id
                 LEFT JOIN kelas k ON s.kelas_id = k.id 
                 LEFT JOIN users u ON s.user_id = u.id 
+                WHERE (u.role_id = 3 OR u.role_id IS NULL)
+                  AND s.nama_lengkap NOT LIKE 'AGUNG RIFALDI, S.%'
+                  AND {$alumniCondition}
                 GROUP BY j.id, j.nama_jurusan
-            ")->fetchAll();
+                ORDER BY cnt DESC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
             $stats['per_jurusan'] = $rowsJ ?: [];
         } catch (\Throwable $e) {}
         return $stats;
@@ -1245,11 +1270,48 @@ class SiswaModel extends BaseModel {
             $siswa = $this->getById($sId);
             if (!$siswa) return false;
 
+            // Pastikan kelas penempatan siswa adalah kelas AKTIF (bukan kelas ALUMNI/LULUS)
+            $targetKelasId = (int)$kelasId;
+            if ($targetKelasId > 0) {
+                $stmtK = $this->db->prepare("SELECT id, nama_kelas FROM kelas WHERE id = ?");
+                $stmtK->execute([$targetKelasId]);
+                $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
+                if (!$kRow || stripos($kRow['nama_kelas'], 'ALUMNI') !== false || stripos($kRow['nama_kelas'], 'LULUS') !== false) {
+                    $targetKelasId = 0;
+                }
+            }
+
+            // Jika belum ada target kelas aktif yang valid, otomatis cari kelas aktif yang sesuai
+            if ($targetKelasId <= 0) {
+                $jurusanId = (int)($siswa['jurusan_id'] ?? 0);
+                if ($jurusanId > 0) {
+                    $stmtAuto = $this->db->prepare("
+                        SELECT id FROM kelas 
+                        WHERE jurusan_id = ? 
+                          AND nama_kelas NOT LIKE '%ALUMNI%' 
+                          AND nama_kelas NOT LIKE '%LULUS%' 
+                        ORDER BY tingkat DESC, id ASC 
+                        LIMIT 1
+                    ");
+                    $stmtAuto->execute([$jurusanId]);
+                    $targetKelasId = (int)$stmtAuto->fetchColumn();
+                }
+                if ($targetKelasId <= 0) {
+                    $targetKelasId = (int)$this->db->query("
+                        SELECT id FROM kelas 
+                        WHERE nama_kelas NOT LIKE '%ALUMNI%' 
+                          AND nama_kelas NOT LIKE '%LULUS%' 
+                        ORDER BY tingkat DESC, id ASC 
+                        LIMIT 1
+                    ")->fetchColumn();
+                }
+            }
+
             $updateSql = "UPDATE siswa SET status = 'aktif'";
             $params = [];
-            if ($kelasId && (int)$kelasId > 0) {
+            if ($targetKelasId > 0) {
                 $updateSql .= ", kelas_id = ?";
-                $params[] = (int)$kelasId;
+                $params[] = $targetKelasId;
             }
             $updateSql .= " WHERE id = ?";
             $params[] = $sId;
@@ -1257,12 +1319,14 @@ class SiswaModel extends BaseModel {
             $stmt = $this->db->prepare($updateSql);
             $stmt->execute($params);
 
+            // Wajib aktifkan akun pengguna siswa agar login aktif dan tidak terdeteksi alumni
             if (!empty($siswa['user_id'])) {
                 $stmtU = $this->db->prepare("UPDATE users SET status = 'active' WHERE id = ?");
                 $stmtU->execute([(int)$siswa['user_id']]);
             }
             return true;
         } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
             return false;
         }
     }

@@ -124,7 +124,7 @@
                     <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-door-open-fill text-info me-1"></i> Kelas Terakhir</label>
                     <select name="kelas_id" class="form-select rounded-3" onchange="this.form.submit()">
                         <option value="">-- Semua Kelas --</option>
-                        <?php foreach ($kelasList as $kls): ?>
+                        <?php foreach (($allKelasList ?? $kelasList) as $kls): ?>
                             <option value="<?= $kls['id'] ?>" <?= (isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] === (int)$kls['id']) ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($kls['nama_kelas']) ?>
                             </option>
@@ -459,7 +459,7 @@
 <div class="modal fade" id="modalRestoreAlumni" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <form action="<?= BASE_URL ?>index.php?url=admin/alumni" method="POST">
+            <form action="<?= BASE_URL ?>index.php?url=admin/alumni" method="POST" onsubmit="const btn = this.querySelector('button[type=submit]'); if(btn){ btn.disabled = true; btn.innerHTML = '<span class=\'spinner-border spinner-border-sm me-1\'></span> Memproses...'; }">
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="restore">
                 <input type="hidden" name="id" id="restoreId">
@@ -477,12 +477,13 @@
                     <p class="text-muted small mb-4">Siswa ini akan kembali terdaftar pada data siswa aktif e-learning dan akun loginnya akan diaktifkan.</p>
 
                     <div class="text-start">
-                        <label class="form-label small fw-bold text-muted">Pilih Kelas Penempatan Siswa:</label>
-                        <select name="kelas_id" id="restoreKelasId" class="form-select rounded-3">
+                        <label class="form-label small fw-bold text-muted">Pilih Kelas Penempatan Siswa (Kelas Aktif):</label>
+                        <select name="kelas_id" id="restoreKelasId" class="form-select rounded-3" required>
                             <?php foreach ($kelasList as $kls): ?>
                                 <option value="<?= $kls['id'] ?>"><?= htmlspecialchars($kls['nama_kelas']) ?></option>
                             <?php endforeach; ?>
                         </select>
+                        <small class="text-muted d-block mt-1"><i class="bi bi-info-circle me-1"></i>Siswa akan otomatis masuk ke data siswa aktif pada rombel yang dipilih.</small>
                     </div>
                 </div>
                 <div class="modal-footer bg-light border-0">
@@ -504,6 +505,14 @@
             </div>
             <div class="modal-body p-4">
                 <p class="text-muted small mb-3">Tindakan massal ini akan diterapkan pada alumni yang Anda centang pada tabel di halaman ini.</p>
+                <div class="mb-3 text-start">
+                    <label class="form-label small fw-bold text-muted">Kelas Penempatan (Bila Mengaktifkan Siswa Terpilih):</label>
+                    <select id="bulkTargetKelasId" class="form-select rounded-3">
+                        <?php foreach ($kelasList as $kls): ?>
+                            <option value="<?= $kls['id'] ?>"><?= htmlspecialchars($kls['nama_kelas']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <div class="d-grid gap-2">
                     <button type="button" class="btn btn-outline-success p-3 text-start rounded-3" onclick="submitBulkAction('bulk_restore')">
                         <div class="fw-bold"><i class="bi bi-arrow-counterclockwise me-2"></i>Aktifkan Kembali Siswa Terpilih</div>
@@ -623,8 +632,13 @@ function openEditModal(data) {
 function openRestoreModal(id, nama, kelasId) {
     document.getElementById('restoreId').value = id;
     document.getElementById('restoreNama').textContent = nama;
-    if (kelasId) {
-        document.getElementById('restoreKelasId').value = kelasId;
+    const select = document.getElementById('restoreKelasId');
+    if (select) {
+        if (kelasId && select.querySelector('option[value="' + kelasId + '"]')) {
+            select.value = kelasId;
+        } else if (select.options.length > 0) {
+            select.selectedIndex = 0;
+        }
     }
     const modal = new bootstrap.Modal(document.getElementById('modalRestoreAlumni'));
     modal.show();
@@ -647,6 +661,23 @@ function submitBulkAction(action) {
     if (!confirm('Apakah Anda yakin ingin ' + label + '?')) {
         return;
     }
+
+    // Jika bulk_restore, sertakan target kelas aktif penempatan
+    if (action === 'bulk_restore') {
+        const bulkKls = document.getElementById('bulkTargetKelasId');
+        if (bulkKls) {
+            let hiddenKls = document.getElementById('targetKelasIdBulk');
+            if (!hiddenKls) {
+                hiddenKls = document.createElement('input');
+                hiddenKls.type = 'hidden';
+                hiddenKls.id = 'targetKelasIdBulk';
+                hiddenKls.name = 'target_kelas_id';
+                document.getElementById('formTableAlumni').appendChild(hiddenKls);
+            }
+            hiddenKls.value = bulkKls.value;
+        }
+    }
+
     document.getElementById('tableActionInput').value = action;
     document.getElementById('formTableAlumni').submit();
 }
