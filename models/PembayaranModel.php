@@ -790,6 +790,192 @@ class PembayaranModel {
     }
 
     /**
+     * Sinkronisasi Massal Seluruh Siswa Aktif Langsung dari Portal Kasir Live Tata Usaha
+     */
+    public function syncAllStudentsFromLiveTuPortal() {
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
+        $tu = $this->getTuConfigAndToken();
+        if (!$tu) {
+            return ['status' => false, 'message' => 'Konfigurasi atau kredensial API Tata Usaha belum tersedia.'];
+        }
+
+        $baseUrl = $tu['base_url'];
+        $jwt     = $tu['jwt'];
+
+        // 1. Ambil seluruh data siswa dari API TU untuk memetakan TU ID
+        $allTuSiswa = [];
+        for ($p = 1; $p <= 10; $p++) {
+            $ch = curl_init($baseUrl . "/api/siswa?per_page=100&page=" . $p);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $jwt, 'Accept: application/json']);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 4);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            $json = json_decode($res, true);
+            $records = $json['data'] ?? [];
+            if (empty($records)) break;
+            foreach ($records as $r) $allTuSiswa[] = $r;
+            $lastPage = $json['meta']['last_page'] ?? 1;
+            if ($p >= $lastPage) break;
+        }
+
+        if (empty($allTuSiswa)) {
+            return ['status' => false, 'message' => 'Gagal mengambil daftar siswa dari API Tata Usaha.'];
+        }
+
+        $tuByNis = [];
+        $tuByName = [];
+        foreach ($allTuSiswa as $t) {
+            if (!empty($t['nis'])) $tuByNis[trim((string)$t['nis'])] = $t;
+            if (!empty($t['nisn'])) $tuByNis[trim((string)$t['nisn'])] = $t;
+            $tuByName[strtolower(trim((string)$t['nama']))] = $t;
+        }
+
+        // 2. Ambil siswa aktif di database lokal
+        $lmsStudents = $this->db->query("
+            SELECT s.id, s.nis, s.nisn, s.nama_lengkap
+            FROM siswa s
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            WHERE k.nama_kelas IS NULL OR k.nama_kelas NOT LIKE 'ALUMNI%'
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        $targetSync = [];
+        foreach ($lmsStudents as $ls) {
+            $nis = trim((string)$ls['nis']);
+            $namaKey = strtolower(trim((string)$ls['nama_lengkap']));
+            $matchedTu = $tuByNis[$nis] ?? ($tuByName[$namaKey] ?? null);
+            if ($matchedTu && !empty($matchedTu['id'])) {
+                $targetSync[] = [
+                    'lms_id'   => $ls['id'],
+                    'lms_nis'  => $ls['nis'],
+                    'lms_nama' => $ls['nama_lengkap'],
+                    'tu_id'    => (int)$matchedTu['id']
+                ];
+            }
+        }
+
+        if (empty($targetSync)) {
+            return ['status' => false, 'message' => 'Tidak ada siswa aktif yang cocok antara LMS dan server Tata Usaha.'];
+        }
+
+        // 3. Batch paralel multi-cURL per 25 siswa
+        $chunks = array_chunk($targetSync, 25);
+        $stmtUp = $this->db->prepare("UPDATE pembayaran_tagihan SET nominal = ?, nominal_terbayar = ?, sisa_tagihan = ?, status = ?, updated_at = NOW() WHERE id = ?");
+        $stmtIn = $this->db->prepare("INSERT INTO pembayaran_tagihan (siswa_id, nis, nisn, jenis_pembayaran, kode_tagihan, judul, nominal, nominal_terbayar, sisa_tagihan, periode_bulan, tahun_ajaran, status, keterangan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '2024/2025', ?, 'Sinkronisasi Live Tata Usaha')");
+        $stmtInHist = $this->db->prepare("INSERT IGNORE INTO pembayaran_riwayat (tagihan_id, siswa_id, nomor_transaksi, nominal_bayar, tanggal_bayar, metode_pembayaran, channel, status, catatan) VALUES (?, ?, ?, ?, ?, ?, 'Loket Tata Usaha', 'berhasil', 'Loket Kasir Tata Usaha')");
+
+        $syncedStudents = 0;
+        $insertedTrx = 0;
+
+        foreach ($chunks as $chunk) {
+            $mh = curl_multi_init();
+            $handles = [];
+            foreach ($chunk as $idx => $item) {
+                $ch = curl_init("https://tatausaha.smkmuthiaharapanclk.com/?siswa=" . $item['tu_id']);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 4);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+                curl_multi_add_handle($mh, $ch);
+                $handles[$idx] = ['ch' => $ch, 'item' => $item];
+            }
+
+            $running = null;
+            do {
+                curl_multi_exec($mh, $running);
+                curl_multi_select($mh, 0.05);
+            } while ($running > 0);
+
+            foreach ($handles as $hData) {
+                $html = curl_multi_getcontent($hData['ch']);
+                curl_multi_remove_handle($mh, $hData['ch']);
+                curl_close($hData['ch']);
+
+                $item = $hData['item'];
+                $parsed = $this->parseTuPortalHtml($html);
+                if (!$parsed || empty($parsed['bills'])) continue;
+
+                $siswaId = $item['lms_id'];
+                $nis = $item['lms_nis'];
+
+                foreach ($parsed['bills'] as $b) {
+                    $kode = trim($b['kode']);
+                    $judul = trim($b['nama']);
+                    $nominal = (float)$b['nominal'];
+                    $terbayar = (float)$b['terbayar'];
+                    $sisa = (float)$b['sisa'];
+                    $status = $b['status'];
+
+                    $jenis = 'SPP';
+                    if (stripos($judul, 'ujian') !== false || stripos($kode, 'ujian') !== false) {
+                        $jenis = 'Ujian';
+                    } elseif (stripos($judul, 'dsp') !== false || stripos($kode, 'dsp') !== false) {
+                        $jenis = 'DSP';
+                    } elseif (stripos($judul, 'spp') === false) {
+                        $jenis = 'Iuran Sekolah';
+                    }
+
+                    $chk = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE siswa_id = ? AND (kode_tagihan LIKE ? OR judul = ?) LIMIT 1");
+                    $chk->execute([$siswaId, '%' . $kode . '%', $judul]);
+                    $existingId = $chk->fetchColumn();
+
+                    if ($existingId) {
+                        $stmtUp->execute([$nominal, $terbayar, $sisa, $status, $existingId]);
+                    } else {
+                        $stmtIn->execute([$siswaId, $nis, $nis, $jenis, 'TU-' . $item['tu_id'] . '-' . $kode, $judul, $nominal, $terbayar, $sisa, $judul, $status]);
+                    }
+                }
+
+                foreach ($parsed['history'] as $h) {
+                    $trxNo = $h['kode_transaksi'];
+                    $chkH = $this->db->prepare("SELECT id FROM pembayaran_riwayat WHERE nomor_transaksi = ? LIMIT 1");
+                    $chkH->execute([$trxNo]);
+                    if (!$chkH->fetchColumn()) {
+                        $chkTag = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE siswa_id = ? AND judul LIKE ? LIMIT 1");
+                        $chkTag->execute([$siswaId, '%' . $h['tagihan'] . '%']);
+                        $tagId = $chkTag->fetchColumn();
+                        if (!$tagId) {
+                            $chkTagFallback = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE siswa_id = ? LIMIT 1");
+                            $chkTagFallback->execute([$siswaId]);
+                            $tagId = $chkTagFallback->fetchColumn() ?: 0;
+                        }
+
+                        $tglStr = $h['tanggal'];
+                        $tglBayar = date('Y-m-d H:i:s');
+                        if (preg_match('/(\d{2})\/(\d{2})\/(\d{4})/', $tglStr, $tm)) {
+                            $tglBayar = "{$tm[3]}-{$tm[2]}-{$tm[1]} 08:00:00";
+                        }
+
+                        $stmtInHist->execute([
+                            $tagId,
+                            $siswaId,
+                            $trxNo,
+                            $h['nominal'],
+                            $tglBayar,
+                            strtolower($h['metode'])
+                        ]);
+                        $insertedTrx++;
+                    }
+                }
+
+                $syncedStudents++;
+            }
+            curl_multi_close($mh);
+        }
+
+        return [
+            'status'          => true,
+            'message'         => "Sinkronisasi Live Berhasil: {$syncedStudents} siswa berhasil diselaraskan langsung dengan sistem kasir Tata Usaha ({$insertedTrx} transaksi kasir baru dicatat).",
+            'synced_students' => $syncedStudents,
+            'inserted_trx'    => $insertedTrx
+        ];
+    }
+
+    /**
      * Get Admin Global Financial Summary (Realtime Live Prioritized)
      */
     public function getAdminGlobalStats() {

@@ -2399,7 +2399,14 @@ class AdminController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $action = $_POST['action'] ?? '';
 
-            if ($action === 'remote_pull') {
+            if ($action === 'sync_live_tu') {
+                $res = $pembayaranModel->syncAllStudentsFromLiveTuPortal();
+                if ($res['status']) {
+                    FlashHelper::setSuccess($res['message']);
+                } else {
+                    FlashHelper::setError($res['message']);
+                }
+            } elseif ($action === 'remote_pull') {
                 $url = trim($_POST['server_url'] ?? '');
                 $token = trim($_POST['secret_token'] ?? '');
                 $res = $pembayaranModel->pullFromRemoteServer($url, $token);
@@ -2502,6 +2509,16 @@ class AdminController {
             'summary' => $liveSummary ?: $pembayaranModel->getAdminGlobalStats(),
             'time'    => date('H:i:s')
         ]);
+        exit();
+    }
+
+    public function pembayaranSyncAllAjax() {
+        header('Content-Type: application/json');
+        require_once ROOT_PATH . 'models/PembayaranModel.php';
+        $pembayaranModel = new PembayaranModel();
+
+        $res = $pembayaranModel->syncAllStudentsFromLiveTuPortal();
+        echo json_encode($res);
         exit();
     }
 

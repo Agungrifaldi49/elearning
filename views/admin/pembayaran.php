@@ -378,10 +378,13 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-sm btn-success text-white rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-xs" id="btnLiveSync" onclick="refreshLiveSummary(this)">
-                    <i class="bi bi-arrow-repeat" id="iconLiveSync"></i>
-                    <span id="textLiveSync">Sinkronkan Realtime Sekarang</span>
-                </button>
+                <form method="POST" action="<?= BASE_URL ?>index.php?url=admin/syncPembayaran" class="d-inline" id="formSyncLiveTu">
+                    <input type="hidden" name="action" value="sync_live_tu">
+                    <button type="submit" class="btn btn-sm btn-success text-white rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-xs" id="btnSyncLiveKasir" title="Sinkronkan seluruh saldo dan transaksi kasir live Tata Usaha">
+                        <i class="bi bi-arrow-repeat" id="iconSyncLiveKasir"></i>
+                        <span id="textSyncLiveKasir">Sinkronkan Live Kasir TU</span>
+                    </button>
+                </form>
                 <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-xs" data-bs-toggle="modal" data-bs-target="#modalTarikData">
                     <i class="bi bi-cloud-arrow-down-fill"></i>
                     <span>Tarik Data Penuh</span>
@@ -1241,6 +1244,16 @@ document.getElementById('formTarikData')?.addEventListener('submit', function() 
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menghubungi Server Pembayaran...';
     }
+});
+
+// Loading state on form Sync Live TU submission
+document.getElementById('formSyncLiveTu')?.addEventListener('submit', function() {
+    const btn = document.getElementById('btnSyncLiveKasir');
+    const icon = document.getElementById('iconSyncLiveKasir');
+    const text = document.getElementById('textSyncLiveKasir');
+    if (btn) btn.disabled = true;
+    if (icon) icon.classList.add('spin-fast');
+    if (text) text.innerText = 'Menyinkronkan Live Kasir TU (Mohon Tunggu)...';
 });
 
 // Realtime Live Sync Summary via AJAX
