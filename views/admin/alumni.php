@@ -240,9 +240,14 @@ $alumniStats = is_array($alumniStats ?? null) ? $alumniStats : ['total' => count
                                         <td class="text-center fw-bold text-muted"><?= $no++ ?></td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
-                                                <img src="<?= BASE_URL ?>assets/images/avatars/<?= htmlspecialchars($a['avatar'] ?: 'default_avatar.png') ?>" 
-                                                     class="rounded-circle border" style="width: 38px; height: 38px; object-fit: cover;" 
-                                                     onerror="this.src='<?= BASE_URL ?>assets/images/avatars/default_avatar.png'">
+                                                <?php
+                                                $inisial = strtoupper(substr(trim($a['nama_lengkap']), 0, 1) ?: 'A');
+                                                $isP = ($a['jenis_kelamin'] ?? 'L') === 'P';
+                                                $chipColor = $isP ? 'bg-danger text-white' : 'bg-primary text-white';
+                                                ?>
+                                                <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold shadow-xs <?= $chipColor ?>" style="width: 36px; height: 36px; font-size: 0.85rem; flex-shrink: 0;">
+                                                    <?= $inisial ?>
+                                                </div>
                                                 <div>
                                                     <div class="fw-bold text-dark"><?= htmlspecialchars($a['nama_lengkap']) ?></div>
                                                     <small class="text-muted"><i class="bi bi-person me-1"></i><?= htmlspecialchars($a['username']) ?></small>
@@ -317,7 +322,11 @@ $alumniStats = is_array($alumniStats ?? null) ? $alumniStats : ['total' => count
             <div class="modal-body p-4">
                 <div class="row g-4 align-items-center">
                     <div class="col-md-4 text-center border-end">
-                        <img id="detailAvatar" src="" class="rounded-circle border shadow-sm mb-3" style="width: 110px; height: 110px; object-fit: cover;">
+                        <div class="d-flex justify-content-center mb-3">
+                            <div id="detailAvatarBadge" class="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm text-white fs-1" style="width: 100px; height: 100px; background: linear-gradient(135deg, #0d6efd, #0dcaf0);">
+                                <span id="detailAvatarInitial">A</span>
+                            </div>
+                        </div>
                         <h6 class="fw-bold mb-1" id="detailNama">-</h6>
                         <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 rounded-pill mb-2">Alumni / Lulus</span>
                         <div class="text-muted small" id="detailUsername">-</div>
@@ -602,9 +611,18 @@ function openDetailModal(data) {
     document.getElementById('detailEmail').textContent = data.email || '-';
     document.getElementById('detailAlamat').textContent = data.alamat || 'Alamat belum diatur.';
     
-    const avatarImg = document.getElementById('detailAvatar');
-    const avatarSrc = data.avatar ? ('<?= BASE_URL ?>assets/images/avatars/' + data.avatar) : '<?= BASE_URL ?>assets/images/avatars/default_avatar.png';
-    avatarImg.src = avatarSrc;
+    const nama = (data.nama_lengkap || 'A').trim();
+    const inisial = nama.charAt(0).toUpperCase() || 'A';
+    const initialEl = document.getElementById('detailAvatarInitial');
+    const badgeEl = document.getElementById('detailAvatarBadge');
+    if (initialEl) initialEl.textContent = inisial;
+    if (badgeEl) {
+        if (data.jenis_kelamin === 'P') {
+            badgeEl.style.background = 'linear-gradient(135deg, #e83e8c, #dc3545)';
+        } else {
+            badgeEl.style.background = 'linear-gradient(135deg, #0d6efd, #0dcaf0)';
+        }
+    }
 
     const modal = new bootstrap.Modal(document.getElementById('modalDetailAlumni'));
     modal.show();
