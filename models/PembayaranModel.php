@@ -682,6 +682,7 @@ class PembayaranModel {
         $persenLunas = $totNom > 0 ? round(($totBayar / $totNom) * 100, 1) : 100;
 
         $summary = [
+            'total_tagihan'         => $totNom,
             'total_nominal_tagihan' => $totNom,
             'total_terbayar'        => $totBayar,
             'total_tunggakan'       => $totSisa,
