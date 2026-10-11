@@ -20,10 +20,46 @@ class ReportModel extends BaseModel {
             }
         };
 
+        // Hitung khusus Siswa Aktif KBM (mengecualikan alumni, kelas ALUMNI/LULUS, dan user nonaktif)
+        $totalSiswaAktif = $count("
+            SELECT COUNT(*) 
+            FROM siswa s
+            LEFT JOIN users u ON s.user_id = u.id
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            WHERE (u.role_id = 3 OR u.role_id IS NULL)
+              AND (u.role_id NOT IN (1, 2, 4) OR u.role_id IS NULL)
+              AND s.nama_lengkap NOT LIKE 'AGUNG RIFALDI, S.%'
+              AND (s.status = 'aktif' OR s.status IS NULL)
+              AND (u.status = 'active' OR u.status IS NULL)
+              AND (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)
+        ");
+
+        $totalAlumni = $count("
+            SELECT COUNT(*) 
+            FROM siswa s
+            LEFT JOIN users u ON s.user_id = u.id
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            WHERE (u.role_id = 3 OR u.role_id IS NULL)
+              AND (u.role_id NOT IN (1, 2, 4) OR u.role_id IS NULL)
+              AND s.nama_lengkap NOT LIKE 'AGUNG RIFALDI, S.%'
+              AND (s.status = 'alumni' 
+                OR k.nama_kelas LIKE '%ALUMNI%' 
+                OR k.nama_kelas LIKE '%LULUS%' 
+                OR u.status IN ('inactive', 'nonaktif'))
+        ");
+
+        $totalKelasAktif = $count("
+            SELECT COUNT(*) 
+            FROM kelas 
+            WHERE (nama_kelas NOT LIKE '%ALUMNI%' AND nama_kelas NOT LIKE '%LULUS%')
+        ");
+
         return [
             'total_guru' => $count("SELECT COUNT(*) FROM guru"),
-            'total_siswa' => $count("SELECT COUNT(*) FROM siswa"),
-            'total_kelas' => $count("SELECT COUNT(*) FROM kelas"),
+            'total_siswa' => $totalSiswaAktif, // Hanya siswa aktif
+            'total_siswa_aktif' => $totalSiswaAktif,
+            'total_alumni' => $totalAlumni,
+            'total_kelas' => $totalKelasAktif,
             'total_materi' => $count("SELECT COUNT(*) FROM materi"),
             'total_tugas' => $count("SELECT COUNT(*) FROM tugas"),
             'total_quiz' => $count("SELECT COUNT(*) FROM quiz"),
@@ -45,16 +81,16 @@ class ReportModel extends BaseModel {
         };
 
         $totalGuru = $count("SELECT COUNT(*) FROM guru");
-        $totalSiswa = $count("SELECT COUNT(*) FROM siswa");
-        $totalKelas = $count("SELECT COUNT(*) FROM kelas");
-        $totalMapel = $count("SELECT COUNT(*) FROM mata_pelajaran");
-        $totalMateri = $count("SELECT COUNT(*) FROM materi");
-        $totalTugas = $count("SELECT COUNT(*) FROM tugas");
-        $totalQuiz = $count("SELECT COUNT(*) FROM quiz");
-
-        $totalGuru = $count("SELECT COUNT(*) FROM guru");
-        $totalSiswa = $count("SELECT COUNT(*) FROM siswa");
-        $totalKelas = $count("SELECT COUNT(*) FROM kelas");
+        $totalSiswa = $count("
+            SELECT COUNT(*) 
+            FROM siswa s
+            LEFT JOIN users u ON s.user_id = u.id
+            LEFT JOIN kelas k ON s.kelas_id = k.id
+            WHERE (s.status = 'aktif' OR s.status IS NULL)
+              AND (u.status = 'active' OR u.status IS NULL)
+              AND (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)
+        ");
+        $totalKelas = $count("SELECT COUNT(*) FROM kelas WHERE (nama_kelas NOT LIKE '%ALUMNI%' AND nama_kelas NOT LIKE '%LULUS%')");
         $totalMapel = $count("SELECT COUNT(*) FROM mata_pelajaran");
         $totalMateri = $count("SELECT COUNT(*) FROM materi");
         $totalTugas = $count("SELECT COUNT(*) FROM tugas");
@@ -83,6 +119,11 @@ class ReportModel extends BaseModel {
             SELECT j.nama_jurusan, COUNT(s.id) as total_siswa
             FROM jurusan j
             LEFT JOIN siswa s ON s.jurusan_id = j.id
+              AND (s.status = 'aktif' OR s.status IS NULL)
+              AND (s.kelas_id NOT IN (SELECT id FROM kelas WHERE nama_kelas LIKE '%ALUMNI%' OR nama_kelas LIKE '%LULUS%') OR s.kelas_id IS NULL)
+            LEFT JOIN users u ON s.user_id = u.id 
+              AND (u.status = 'active' OR u.status IS NULL)
+              AND (u.role_id = 3 OR u.role_id IS NULL)
             GROUP BY j.id, j.nama_jurusan
             ORDER BY total_siswa DESC
         ")->fetchAll();

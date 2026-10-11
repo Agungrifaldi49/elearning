@@ -39,9 +39,16 @@
             </div>
             <div class="col-12 col-sm-6 col-xl-3">
                 <div class="stat-card bg-success shadow-sm h-100 p-4 rounded-4 position-relative overflow-hidden">
-                    <div class="fw-bold small text-uppercase opacity-75">Total Siswa Terdaftar</div>
-                    <div class="display-6 fw-bold my-1"><?= (int)($stats['total_siswa'] ?? 0) ?></div>
-                    <small class="d-flex align-items-center gap-1"><i class="bi bi-person-check-fill"></i> Siswa Aktif KBM</small>
+                    <div class="fw-bold small text-uppercase opacity-75">Total Siswa Aktif</div>
+                    <div class="display-6 fw-bold my-1"><?= (int)($stats['total_siswa_aktif'] ?? $stats['total_siswa'] ?? 0) ?></div>
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 mt-1">
+                        <small class="d-flex align-items-center gap-1"><i class="bi bi-person-check-fill"></i> Siswa Aktif KBM</small>
+                        <?php if (!empty($stats['total_alumni'])): ?>
+                            <a href="<?= BASE_URL ?>index.php?url=admin/alumni" class="badge bg-white text-success text-decoration-none fw-bold shadow-xs">
+                                <i class="bi bi-mortarboard-fill me-1"></i><?= (int)$stats['total_alumni'] ?> Alumni
+                            </a>
+                        <?php endif; ?>
+                    </div>
                     <i class="bi bi-people-fill icon opacity-25" style="position:absolute; right:15px; bottom:15px; font-size:3.5rem;"></i>
                 </div>
             </div>
