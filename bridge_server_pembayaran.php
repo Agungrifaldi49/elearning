@@ -549,7 +549,61 @@ switch ($action) {
         sendJsonResponse($siswaRes['status'], 'Data siswa berhasil ditarik', $siswaRes['records'] ?? [], 200);
         break;
 
-    // --- F. AKSI UTAMA: TARIK DAN NORMALISASI DATA TAGIHAN UNTUK LMS (DEFAULT / PULL) ---
+    // --- F. TARIK REALTIME DATA PER SISWA TERTENTU (/api/siswa/{id}/tagihan & /api/siswa/{id}/riwayat-bayar) ---
+    case 'student':
+        $nis = trim($_GET['nis'] ?? ($_POST['nis'] ?? ''));
+        if (empty($nis)) {
+            sendJsonResponse(false, 'Parameter NIS siswa wajib diisi.', null, 400);
+        }
+        $token = $apiClient->getValidJwtToken();
+        $searchRes = $apiClient->request('GET', '/api/siswa?q=' . urlencode($nis), null, $token);
+        $stuData = null;
+        if ($searchRes['status'] && !empty($searchRes['data'])) {
+            $records = is_array($searchRes['data']) && isset($searchRes['data']['data']) ? $searchRes['data']['data'] : $searchRes['data'];
+            if (is_array($records)) {
+                foreach ($records as $item) {
+                    if (trim((string)($item['nis'] ?? '')) === $nis) {
+                        $stuData = $item;
+                        break;
+                    }
+                }
+                if (!$stuData && !empty($records[0])) {
+                    $stuData = $records[0];
+                }
+            }
+        }
+        if (!$stuData || empty($stuData['id'])) {
+            sendJsonResponse(false, "Siswa dengan NIS {$nis} tidak ditemukan di server Tata Usaha.", null, 404);
+        }
+        $tuId = (int)$stuData['id'];
+        $billsRes = $apiClient->request('GET', "/api/siswa/{$tuId}/tagihan", null, $token);
+        $historyRes = $apiClient->request('GET', "/api/siswa/{$tuId}/riwayat-bayar", null, $token);
+        sendJsonResponse(true, "Data tagihan dan riwayat siswa NIS {$nis} realtime dari API Tata Usaha", [
+            'siswa'   => $stuData,
+            'tagihan' => $billsRes['data'] ?? [],
+            'riwayat' => $historyRes['data'] ?? []
+        ]);
+        break;
+
+    // --- G. WEBHOOK LISTENER INSTAN DARI SISTEM TATA USAHA ---
+    case 'webhook':
+        $rawPayload = file_get_contents('php://input');
+        $payload = json_decode($rawPayload, true) ?: $_POST;
+        // Simpan log event webhook untuk audit trail
+        $logDir = __DIR__ . '/config';
+        if (is_dir($logDir)) {
+            @file_put_contents($logDir . '/webhook_log.json', json_encode([
+                'received_at' => date('Y-m-d H:i:s'),
+                'payload'     => $payload
+            ], JSON_PRETTY_PRINT));
+        }
+        sendJsonResponse(true, 'Webhook event pembayaran berhasil diterima dan dicatat.', [
+            'status'     => 'processed',
+            'event_time' => date('Y-m-d H:i:s')
+        ]);
+        break;
+
+    // --- H. AKSI UTAMA: TARIK DAN NORMALISASI DATA TAGIHAN UNTUK LMS (DEFAULT / PULL) ---
     case 'pull':
     default:
         pullAndNormalizeData($apiClient, $config);

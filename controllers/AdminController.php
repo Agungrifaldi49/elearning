@@ -2374,10 +2374,11 @@ class AdminController {
         $academicModel = new AcademicModel();
 
         $filters = [
-            'kelas_id' => $_GET['kelas_id'] ?? '',
+            'tipe_siswa' => $_GET['tipe_siswa'] ?? 'aktif',
+            'kelas_id'   => $_GET['kelas_id'] ?? '',
             'jurusan_id' => $_GET['jurusan_id'] ?? '',
-            'status' => $_GET['status'] ?? '',
-            'search' => $_GET['search'] ?? ''
+            'status'     => $_GET['status'] ?? '',
+            'search'     => $_GET['search'] ?? ''
         ];
 
         $globalStats = $pembayaranModel->getAdminGlobalStats();
@@ -2483,15 +2484,23 @@ class AdminController {
             exit();
         }
 
-        $bills = $pembayaranModel->getSiswaBills($siswaId);
-        $history = $pembayaranModel->getSiswaRiwayatPembayaran($siswaId);
-        $summary = $pembayaranModel->getSiswaPaymentSummary($siswaId);
+        // Ambil data LIVE REALTIME langsung dari API Tata Usaha
+        $realtimeResult = $pembayaranModel->getStudentRealtimeBillsAndHistory($siswaId);
 
+        echo json_encode($realtimeResult);
+        exit();
+    }
+
+    public function pembayaranRealtimeSyncAjax() {
+        header('Content-Type: application/json');
+        require_once ROOT_PATH . 'models/PembayaranModel.php';
+        $pembayaranModel = new PembayaranModel();
+
+        $liveSummary = $pembayaranModel->getLiveTuSummary();
         echo json_encode([
-            'status' => true,
-            'summary' => $summary,
-            'bills' => $bills,
-            'history' => $history
+            'status'  => true,
+            'summary' => $liveSummary ?: $pembayaranModel->getAdminGlobalStats(),
+            'time'    => date('H:i:s')
         ]);
         exit();
     }

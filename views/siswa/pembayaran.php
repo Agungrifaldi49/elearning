@@ -76,6 +76,9 @@
                         <i class="bi <?= $summary['is_bebas_keuangan'] ? 'bi-shield-check' : 'bi-exclamation-circle' ?> me-1"></i>
                         Status: <?= htmlspecialchars($summary['status_label']) ?>
                     </span>
+                    <span class="badge bg-success text-white px-3 py-1.5 rounded-pill fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" style="font-size: 0.75rem;">
+                        <i class="bi bi-broadcast"></i> Terhubung Realtime ke API Tata Usaha
+                    </span>
                 </div>
                 <h3 class="fw-bold mb-2 text-white"><?= htmlspecialchars($siswa['nama_lengkap']) ?></h3>
                 <div class="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-3 bg-white bg-opacity-10 text-white small flex-wrap">

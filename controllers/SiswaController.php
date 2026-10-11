@@ -1137,14 +1137,19 @@ class SiswaController {
         $user = AuthHelper::user();
         $siswa = $this->getSiswaInfo();
         $siswaId = $siswa['id'];
+        $nis = $siswa['nis'] ?? null;
 
         require_once ROOT_PATH . 'models/PembayaranModel.php';
         $pembayaranModel = new PembayaranModel();
 
-        $bills = $pembayaranModel->getSiswaBills($siswaId);
-        $summary = $pembayaranModel->getSiswaPaymentSummary($siswaId);
-        $riwayat = $pembayaranModel->getSiswaRiwayatPembayaran($siswaId);
+        // Tarik data tagihan & riwayat pembayaran LIVE REALTIME dari API Tata Usaha by NIS
+        $realtimeData = $pembayaranModel->getStudentRealtimeBillsAndHistory($siswaId, $nis);
+
+        $bills = $realtimeData['bills'];
+        $summary = $realtimeData['summary'];
+        $riwayat = $realtimeData['history'];
         $rekeningConfig = $pembayaranModel->getRekeningConfig();
+        $isRealtimeLive = !empty($realtimeData['is_realtime']);
 
         $unpaidBills = array_values(array_filter($bills, function($b) {
             return $b['status'] !== 'lunas';

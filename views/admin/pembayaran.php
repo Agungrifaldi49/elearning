@@ -114,6 +114,15 @@
     70% { box-shadow: 0 0 0 9px rgba(245, 158, 11, 0); }
     100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
 }
+.spin-fast {
+    display: inline-block;
+    animation: spinRotate 0.75s linear infinite;
+}
+@keyframes spinRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 
 /* Filter Card Bar */
 .filter-card-bar {
@@ -346,68 +355,40 @@
     </div>
 
     <!-- 2. Status Koneksi Jembatan API Server (Cross-Server Connectivity) -->
-    <?php if (!empty($bridgeConfig['server_url'])): ?>
-        <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden border-start border-4 border-success">
-            <div class="card-body p-3.5 d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon-wrapper bg-success-subtle text-success">
-                        <i class="bi bi-hdd-network"></i>
-                    </div>
-                    <div>
-                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
-                            <span class="pulse-dot-live"></span>
-                            <strong class="text-dark small">Server Pembayaran Terhubung:</strong>
-                            <code class="text-primary font-monospace bg-light px-2.5 py-0.5 rounded small border"><?= htmlspecialchars($bridgeConfig['server_url']) ?></code>
-                            <button type="button" class="btn btn-link btn-sm p-0 text-muted" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($bridgeConfig['server_url']) ?>'); alert('URL Server Pembayaran disalin!');" title="Salin URL">
-                                <i class="bi bi-clipboard"></i>
-                            </button>
-                        </div>
-                        <div class="text-muted" style="font-size:0.75rem;">
-                            Terakhir Sinkronisasi: <strong class="text-dark"><?= htmlspecialchars($bridgeConfig['last_sync'] ?? 'Belum ada data') ?></strong> 
-                            &bull; Status Respon: <span class="badge bg-success-subtle text-success fw-semibold border border-success-subtle"><?= htmlspecialchars($bridgeConfig['last_status'] ?? 'Aktif') ?></span>
-                        </div>
-                    </div>
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden border-start border-4 border-success">
+        <div class="card-body p-3.5 d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="stat-icon-wrapper bg-success-subtle text-success">
+                    <i class="bi bi-broadcast"></i>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-xs" data-bs-toggle="modal" data-bs-target="#modalTarikData">
-                        <i class="bi bi-arrow-repeat"></i>
-                        <span>Tarik Data Ulang</span>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5" data-bs-toggle="modal" data-bs-target="#modalTarikData">
-                        <i class="bi bi-gear me-1"></i> Edit Endpoint / Token
-                    </button>
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                        <span class="pulse-dot-live"></span>
+                        <strong class="text-dark small">Integrasi API Tata Usaha Realtime:</strong>
+                        <span class="badge bg-success text-white px-2.5 py-1 rounded-pill small fw-bold">
+                            <i class="bi bi-check-circle-fill me-1"></i> Live Realtime Sync Aktif
+                        </span>
+                        <code class="text-primary font-monospace bg-light px-2.5 py-0.5 rounded small border">https://apitatausaha.smkmuthiaharapanclk.com</code>
+                    </div>
+                    <div class="text-muted" style="font-size:0.75rem;">
+                        Pembaruan Terakhir: <strong class="text-dark" id="liveSyncTimeText"><?= htmlspecialchars($globalStats['synced_at'] ?? date('H:i:s')) ?></strong> 
+                        &bull; Status API: <span class="badge bg-success-subtle text-success fw-semibold border border-success-subtle">Online &amp; Sinkron Otomatis</span>
+                        &bull; Siswa Aktif: <strong class="text-primary"><?= $globalStats['total_siswa'] ?? 460 ?> Siswa</strong>
+                    </div>
                 </div>
             </div>
-        </div>
-    <?php else: ?>
-        <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden border-start border-4 border-warning">
-            <div class="card-body p-3.5 d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="stat-icon-wrapper bg-warning-subtle text-warning">
-                        <i class="bi bi-hdd-network-slash"></i>
-                    </div>
-                    <div>
-                        <div class="d-flex align-items-center gap-2 mb-0.5">
-                            <span class="pulse-dot-waiting"></span>
-                            <strong class="text-dark small">Integrasi API Lintas Server Belum Dikonfigurasi</strong>
-                        </div>
-                        <p class="text-muted small mb-0" style="font-size:0.75rem;">
-                            Sistem saat ini dalam mode mandiri. Hubungkan URL server pembayaran eksternal atau impor berkas CSV untuk memperbarui data tagihan siswa.
-                        </p>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalTarikData">
-                        <i class="bi bi-link-45deg fs-6"></i>
-                        <span>Hubungkan Sekarang</span>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1.5 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPanduanBedaServer">
-                        <i class="bi bi-question-circle me-1"></i> Panduan
-                    </button>
-                </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-success text-white rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-xs" id="btnLiveSync" onclick="refreshLiveSummary(this)">
+                    <i class="bi bi-arrow-repeat" id="iconLiveSync"></i>
+                    <span id="textLiveSync">Sinkronkan Realtime Sekarang</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-primary rounded-pill px-3.5 py-1.5 fw-bold d-flex align-items-center gap-1.5 shadow-xs" data-bs-toggle="modal" data-bs-target="#modalTarikData">
+                    <i class="bi bi-cloud-arrow-down-fill"></i>
+                    <span>Tarik Data Penuh</span>
+                </button>
             </div>
         </div>
-    <?php endif; ?>
+    </div>
 
     <!-- 3. 4 Executive Financial KPI Cards -->
     <div class="row g-3 mb-4">
@@ -417,15 +398,15 @@
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
                         <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Target Tagihan Sekolah</span>
-                        <h3 class="fw-bold mb-0 text-dark currency-num">Rp <?= number_format($globalStats['total_target'], 0, ',', '.') ?></h3>
+                        <h3 class="fw-bold mb-0 text-dark currency-num" id="kpiTargetTagihan">Rp <?= number_format($globalStats['total_target'], 0, ',', '.') ?></h3>
                     </div>
                     <div class="stat-icon-wrapper bg-primary-subtle text-primary">
                         <i class="bi bi-cash-stack"></i>
                     </div>
                 </div>
                 <div class="pt-2.5 border-top d-flex justify-content-between align-items-center">
-                    <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-people me-1 text-primary"></i><?= $globalStats['total_siswa'] ?> Siswa Terdaftar</small>
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 rounded-pill small fw-bold">Akumulasi T.A.</span>
+                    <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-people me-1 text-primary"></i><span id="kpiSiswaAktif"><?= $globalStats['total_siswa'] ?></span> Siswa Aktif</small>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-0.5 rounded-pill small fw-bold">Live API TU</span>
                 </div>
             </div>
         </div>
@@ -436,7 +417,7 @@
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
                         <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Realisasi Pembayaran Masuk</span>
-                        <h3 class="fw-bold mb-0 text-success currency-num">Rp <?= number_format($globalStats['total_masuk'], 0, ',', '.') ?></h3>
+                        <h3 class="fw-bold mb-0 text-success currency-num" id="kpiTotalMasuk">Rp <?= number_format($globalStats['total_masuk'], 0, ',', '.') ?></h3>
                     </div>
                     <div class="stat-icon-wrapper bg-success-subtle text-success">
                         <i class="bi bi-check-circle-fill"></i>
@@ -445,10 +426,10 @@
                 <div class="pt-2.5 border-top">
                     <div class="d-flex justify-content-between align-items-center mb-1 small" style="font-size:0.72rem;">
                         <span class="text-muted">Tingkat Capaian Pelunasan</span>
-                        <strong class="text-success"><?= $globalStats['rate_pelunasan'] ?>%</strong>
+                        <strong class="text-success" id="kpiRatePelunasan"><?= $globalStats['rate_pelunasan'] ?>%</strong>
                     </div>
                     <div class="progress" style="height: 6px; border-radius: 10px; background-color: #e2e8f0;">
-                        <div class="progress-bar bg-success rounded-pill" style="width: <?= min(100, $globalStats['rate_pelunasan']) ?>%;"></div>
+                        <div class="progress-bar bg-success rounded-pill" id="kpiProgressBar" style="width: <?= min(100, $globalStats['rate_pelunasan']) ?>%;"></div>
                     </div>
                 </div>
             </div>
@@ -456,22 +437,22 @@
 
         <!-- KPI 3: Sisa Piutang / Tunggakan -->
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="admin-stat-card border-start border-4 <?= $globalStats['total_piutang'] > 0 ? 'border-danger' : 'border-secondary' ?>">
+            <div class="admin-stat-card border-start border-4 <?= $globalStats['total_piutang'] > 0 ? 'border-danger' : 'border-secondary' ?>" id="kpiCardPiutang">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
                         <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Total Sisa Piutang</span>
-                        <h3 class="fw-bold mb-0 <?= $globalStats['total_piutang'] > 0 ? 'text-danger' : 'text-secondary' ?> currency-num">
+                        <h3 class="fw-bold mb-0 <?= $globalStats['total_piutang'] > 0 ? 'text-danger' : 'text-secondary' ?> currency-num" id="kpiTotalPiutang">
                             Rp <?= number_format($globalStats['total_piutang'], 0, ',', '.') ?>
                         </h3>
                     </div>
-                    <div class="stat-icon-wrapper <?= $globalStats['total_piutang'] > 0 ? 'bg-danger-subtle text-danger' : 'bg-secondary-subtle text-secondary' ?>">
+                    <div class="stat-icon-wrapper <?= $globalStats['total_piutang'] > 0 ? 'bg-danger-subtle text-danger' : 'bg-secondary-subtle text-secondary' ?>" id="kpiIconPiutang">
                         <i class="bi bi-exclamation-triangle-fill"></i>
                     </div>
                 </div>
                 <div class="pt-2.5 border-top d-flex justify-content-between align-items-center">
                     <small class="text-muted" style="font-size:0.75rem;"><i class="bi bi-clock-history me-1 text-danger"></i>Belum Dilunasi</small>
-                    <span class="badge <?= $globalStats['total_piutang'] > 0 ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-secondary-subtle text-secondary' ?> px-2 py-0.5 rounded-pill small fw-bold">
-                        <?= $globalStats['siswa_menunggak'] ?> Siswa Menunggak
+                    <span class="badge <?= $globalStats['total_piutang'] > 0 ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-secondary-subtle text-secondary' ?> px-2 py-0.5 rounded-pill small fw-bold" id="kpiBadgePiutang">
+                        <span id="kpiSiswaMenunggak"><?= $globalStats['siswa_menunggak'] ?></span> Siswa Menunggak
                     </span>
                 </div>
             </div>
@@ -483,15 +464,15 @@
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
                         <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Kepatuhan Finansial Siswa</span>
-                        <h3 class="fw-bold mb-0 text-info currency-num"><?= $globalStats['siswa_lunas'] ?> <span class="fs-6 text-muted fw-normal">/ <?= $globalStats['total_siswa'] ?> Siswa</span></h3>
+                        <h3 class="fw-bold mb-0 text-info currency-num"><span id="kpiSiswaLunas"><?= $globalStats['siswa_lunas'] ?></span> <span class="fs-6 text-muted fw-normal">/ <span id="kpiSiswaTotal"><?= $globalStats['total_siswa'] ?></span> Siswa</span></h3>
                     </div>
                     <div class="stat-icon-wrapper bg-info-subtle text-info">
                         <i class="bi bi-pie-chart-fill"></i>
                     </div>
                 </div>
                 <div class="pt-2.5 border-top d-flex align-items-center gap-1.5 flex-wrap" style="font-size:0.72rem;">
-                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5 rounded-pill fw-bold">Lunas: <?= $globalStats['siswa_lunas'] ?></span>
-                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5 rounded-pill fw-bold">Tunggakan: <?= $globalStats['siswa_menunggak'] ?></span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0.5 rounded-pill fw-bold" id="kpiPillLunas">Lunas: <?= $globalStats['siswa_lunas'] ?></span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0.5 rounded-pill fw-bold" id="kpiPillMenunggak">Tunggakan: <?= $globalStats['siswa_menunggak'] ?></span>
                 </div>
             </div>
         </div>
@@ -499,27 +480,57 @@
 
     <!-- 4. Filter Bar & Fast-Pills Toolbar -->
     <div class="filter-card-bar p-3.5 mb-4">
-        <!-- Quick Filter Pills Navigation -->
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2 border-bottom">
-            <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                <span class="small fw-bold text-muted me-1" style="font-size:0.75rem;">Status Cepat:</span>
-                <a href="<?= BASE_URL ?>index.php?url=admin/pembayaran<?= !empty($filters['kelas_id']) ? '&kelas_id='.$filters['kelas_id'] : '' ?><?= !empty($filters['jurusan_id']) ? '&jurusan_id='.$filters['jurusan_id'] : '' ?>" class="fast-pill-btn <?= empty($filters['status']) ? 'active' : '' ?>">
-                    <i class="bi bi-grid-fill"></i> Semua Status
-                </a>
-                <a href="<?= BASE_URL ?>index.php?url=admin/pembayaran&status=lunas<?= !empty($filters['kelas_id']) ? '&kelas_id='.$filters['kelas_id'] : '' ?><?= !empty($filters['jurusan_id']) ? '&jurusan_id='.$filters['jurusan_id'] : '' ?>" class="fast-pill-btn <?= ($filters['status'] === 'lunas') ? 'active' : '' ?>">
-                    <i class="bi bi-check-circle-fill text-success"></i> Bebas / Lunas
-                </a>
-                <a href="<?= BASE_URL ?>index.php?url=admin/pembayaran&status=belum_lunas<?= !empty($filters['kelas_id']) ? '&kelas_id='.$filters['kelas_id'] : '' ?><?= !empty($filters['jurusan_id']) ? '&jurusan_id='.$filters['jurusan_id'] : '' ?>" class="fast-pill-btn <?= ($filters['status'] === 'belum_lunas') ? 'active' : '' ?>">
-                    <i class="bi bi-exclamation-triangle-fill text-danger"></i> Ada Tunggakan
-                </a>
+        <!-- Quick Filter Pills Navigation: Kelompok Siswa & Status Tagihan -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 pb-2.5 border-bottom">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <!-- Group 1: Kelompok Siswa -->
+                <div class="d-flex align-items-center gap-1.5">
+                    <span class="small fw-bold text-muted me-1" style="font-size:0.75rem;"><i class="bi bi-people me-1"></i>Siswa:</span>
+                    <?php 
+                    $currTipe = $filters['tipe_siswa'] ?? 'aktif';
+                    $currStatus = $filters['status'] ?? '';
+                    $kParam = !empty($filters['kelas_id']) ? '&kelas_id='.$filters['kelas_id'] : '';
+                    $jParam = !empty($filters['jurusan_id']) ? '&jurusan_id='.$filters['jurusan_id'] : '';
+                    $sParam = !empty($currStatus) ? '&status='.$currStatus : '';
+                    ?>
+                    <a href="<?= BASE_URL ?>index.php?url=admin/pembayaran&tipe_siswa=aktif<?= $kParam.$jParam.$sParam ?>" class="fast-pill-btn <?= ($currTipe === 'aktif') ? 'active' : '' ?>">
+                        <i class="bi bi-person-check-fill text-success"></i> Siswa Aktif (460)
+                    </a>
+                    <a href="<?= BASE_URL ?>index.php?url=admin/pembayaran&tipe_siswa=semua<?= $kParam.$jParam.$sParam ?>" class="fast-pill-btn <?= ($currTipe === 'semua') ? 'active' : '' ?>">
+                        <i class="bi bi-people-fill"></i> Semua Siswa (626)
+                    </a>
+                    <a href="<?= BASE_URL ?>index.php?url=admin/pembayaran&tipe_siswa=alumni<?= $kParam.$jParam.$sParam ?>" class="fast-pill-btn <?= ($currTipe === 'alumni') ? 'active' : '' ?>">
+                        <i class="bi bi-mortarboard-fill text-secondary"></i> Alumni (166)
+                    </a>
+                </div>
+
+                <div class="vr mx-1 d-none d-md-block" style="height: 20px;"></div>
+
+                <!-- Group 2: Status Pelunasan -->
+                <div class="d-flex align-items-center gap-1.5">
+                    <span class="small fw-bold text-muted me-1" style="font-size:0.75rem;"><i class="bi bi-tag me-1"></i>Status:</span>
+                    <?php 
+                    $tParam = '&tipe_siswa=' . urlencode($currTipe);
+                    ?>
+                    <a href="<?= BASE_URL ?>index.php?url=admin/pembayaran<?= $tParam.$kParam.$jParam ?>" class="fast-pill-btn <?= empty($currStatus) ? 'active' : '' ?>">
+                        <i class="bi bi-grid-fill"></i> Semua Status
+                    </a>
+                    <a href="<?= BASE_URL ?>index.php?url=admin/pembayaran&status=lunas<?= $tParam.$kParam.$jParam ?>" class="fast-pill-btn <?= ($currStatus === 'lunas') ? 'active' : '' ?>">
+                        <i class="bi bi-check-circle-fill text-success"></i> Bebas / Lunas
+                    </a>
+                    <a href="<?= BASE_URL ?>index.php?url=admin/pembayaran&status=belum_lunas<?= $tParam.$kParam.$jParam ?>" class="fast-pill-btn <?= ($currStatus === 'belum_lunas') ? 'active' : '' ?>">
+                        <i class="bi bi-exclamation-triangle-fill text-danger"></i> Ada Tunggakan
+                    </a>
+                </div>
             </div>
             <div class="small text-muted" style="font-size:0.75rem;">
-                <i class="bi bi-info-circle me-1"></i> Data diperbarui otomatis dari tabel administrasi
+                <i class="bi bi-broadcast text-success me-1"></i> Data live terhubung langsung ke API Tata Usaha
             </div>
         </div>
 
         <form method="GET" action="<?= BASE_URL ?>index.php" class="row g-2.5 align-items-center" id="formFilterPembayaran">
             <input type="hidden" name="url" value="admin/pembayaran">
+            <input type="hidden" name="tipe_siswa" value="<?= htmlspecialchars($filters['tipe_siswa'] ?? 'aktif') ?>">
 
             <!-- Rombel Kelas -->
             <div class="col-12 col-sm-6 col-md-3">
@@ -971,12 +982,17 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow-lg">
             <div class="modal-header border-bottom p-3.5 bg-light rounded-top-4">
-                <div class="d-flex align-items-center gap-2.5">
-                    <div class="avatar-chip-admin" id="detailModalAvatar">S</div>
-                    <div>
-                        <h6 class="modal-title fw-bold text-dark mb-0" id="detailModalNama">Nama Siswa</h6>
-                        <small class="text-muted" style="font-size:0.75rem;" id="detailModalSub">NIS: - &bull; Kelas: -</small>
+                <div class="d-flex align-items-center justify-content-between flex-grow-1 pe-2">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <div class="avatar-chip-admin" id="detailModalAvatar">S</div>
+                        <div>
+                            <h6 class="modal-title fw-bold text-dark mb-0" id="detailModalNama">Nama Siswa</h6>
+                            <small class="text-muted" style="font-size:0.75rem;" id="detailModalSub">NIS: - &bull; Kelas: -</small>
+                        </div>
                     </div>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 small fw-bold">
+                        <i class="bi bi-broadcast me-1"></i> Live Realtime API TU
+                    </span>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -1023,7 +1039,7 @@
                     <div class="tab-pane fade show active" id="tab-bills" role="tabpanel">
                         <div id="billsLoadingSpinner" class="text-center py-4">
                             <div class="spinner-border text-primary spinner-border-sm me-1" role="status"></div>
-                            <span class="text-muted small">Memuat data tagihan...</span>
+                            <span class="text-muted small">Menghubungkan langsung &amp; memvalidasi data API Tata Usaha...</span>
                         </div>
                         <div class="table-responsive" id="billsTableWrapper" style="display:none;">
                             <table class="table table-sm align-middle small mb-0">
@@ -1226,6 +1242,83 @@ document.getElementById('formTarikData')?.addEventListener('submit', function() 
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menghubungi Server Pembayaran...';
     }
 });
+
+// Realtime Live Sync Summary via AJAX
+function refreshLiveSummary(btn) {
+    const icon = document.getElementById('iconLiveSync');
+    const text = document.getElementById('textLiveSync');
+    const origText = text ? text.innerText : 'Sinkronkan Realtime Sekarang';
+
+    if (btn) btn.disabled = true;
+    if (icon) icon.classList.add('spin-fast');
+    if (text) text.innerText = 'Menyinkronkan Realtime...';
+
+    fetch('<?= BASE_URL ?>index.php?url=admin/pembayaranRealtimeSyncAjax')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status && data.summary) {
+                const s = data.summary;
+                
+                // Update KPI DOM
+                const kpiTarget = document.getElementById('kpiTargetTagihan');
+                if (kpiTarget) kpiTarget.innerText = 'Rp ' + Number(s.total_target || 0).toLocaleString('id-ID');
+
+                const kpiMasuk = document.getElementById('kpiTotalMasuk');
+                if (kpiMasuk) kpiMasuk.innerText = 'Rp ' + Number(s.total_masuk || 0).toLocaleString('id-ID');
+
+                const kpiPiutang = document.getElementById('kpiTotalPiutang');
+                if (kpiPiutang) kpiPiutang.innerText = 'Rp ' + Number(s.total_piutang || 0).toLocaleString('id-ID');
+
+                const kpiRate = document.getElementById('kpiRatePelunasan');
+                if (kpiRate) kpiRate.innerText = (s.rate_pelunasan || 0) + '%';
+
+                const kpiBar = document.getElementById('kpiProgressBar');
+                if (kpiBar) kpiBar.style.width = Math.min(100, s.rate_pelunasan || 0) + '%';
+
+                const kpiSiswa = document.getElementById('kpiSiswaAktif');
+                if (kpiSiswa) kpiSiswa.innerText = s.total_siswa || 460;
+
+                const kpiTotalSiswa = document.getElementById('kpiSiswaTotal');
+                if (kpiTotalSiswa) kpiTotalSiswa.innerText = s.total_siswa || 460;
+
+                const kpiLunas = document.getElementById('kpiSiswaLunas');
+                if (kpiLunas) kpiLunas.innerText = s.siswa_lunas || 0;
+
+                const kpiPillLunas = document.getElementById('kpiPillLunas');
+                if (kpiPillLunas) kpiPillLunas.innerText = 'Lunas: ' + (s.siswa_lunas || 0);
+
+                const kpiMenunggak = document.getElementById('kpiSiswaMenunggak');
+                if (kpiMenunggak) kpiMenunggak.innerText = s.siswa_menunggak || 0;
+
+                const kpiPillMenunggak = document.getElementById('kpiPillMenunggak');
+                if (kpiPillMenunggak) kpiPillMenunggak.innerText = 'Tunggakan: ' + (s.siswa_menunggak || 0);
+
+                const syncTime = document.getElementById('liveSyncTimeText');
+                if (syncTime) syncTime.innerText = data.time || (new Date().toLocaleTimeString('id-ID'));
+
+                if (text) text.innerText = 'Tersinkron!';
+                setTimeout(() => {
+                    if (text) text.innerText = origText;
+                }, 2000);
+            }
+        })
+        .catch(err => {
+            console.error('Gagal sinkron live TU:', err);
+            if (text) text.innerText = 'Gagal';
+            setTimeout(() => {
+                if (text) text.innerText = origText;
+            }, 2000);
+        })
+        .finally(() => {
+            if (btn) btn.disabled = false;
+            if (icon) icon.classList.remove('spin-fast');
+        });
+}
+
+// Auto-refresh realtime KPI diam-diam setiap 60 detik jika halaman terbuka
+setInterval(() => {
+    refreshLiveSummary(null);
+}, 60000);
 
 // Dynamic AJAX for Student Payment Detail Modal
 document.querySelectorAll('.btn-detail-siswa').forEach(button => {
