@@ -551,34 +551,42 @@ switch ($action) {
 
     // --- F. TARIK REALTIME DATA PER SISWA TERTENTU (/api/siswa/{id}/tagihan & /api/siswa/{id}/riwayat-bayar) ---
     case 'student':
-        $nis = trim($_GET['nis'] ?? ($_POST['nis'] ?? ''));
-        if (empty($nis)) {
-            sendJsonResponse(false, 'Parameter NIS siswa wajib diisi.', null, 400);
+        $nis  = trim($_GET['nis'] ?? ($_POST['nis'] ?? ''));
+        $nisn = trim($_GET['nisn'] ?? ($_POST['nisn'] ?? ''));
+        $nama = trim($_GET['nama'] ?? ($_POST['nama'] ?? ''));
+        if (empty($nis) && empty($nisn) && empty($nama)) {
+            sendJsonResponse(false, 'Parameter NIS, NISN, atau Nama siswa wajib diisi.', null, 400);
         }
         $token = $apiClient->getValidJwtToken();
-        $searchRes = $apiClient->request('GET', '/api/siswa?q=' . urlencode($nis), null, $token);
+        $keysToTry = array_unique(array_filter([$nis, $nisn, $nama]));
         $stuData = null;
-        if ($searchRes['status'] && !empty($searchRes['data'])) {
-            $records = is_array($searchRes['data']) && isset($searchRes['data']['data']) ? $searchRes['data']['data'] : $searchRes['data'];
-            if (is_array($records)) {
-                foreach ($records as $item) {
-                    if (trim((string)($item['nis'] ?? '')) === $nis) {
-                        $stuData = $item;
+        foreach ($keysToTry as $k) {
+            $searchRes = $apiClient->request('GET', '/api/siswa?q=' . urlencode($k), null, $token);
+            if ($searchRes['status'] && !empty($searchRes['data'])) {
+                $records = is_array($searchRes['data']) && isset($searchRes['data']['data']) ? $searchRes['data']['data'] : $searchRes['data'];
+                if (is_array($records)) {
+                    foreach ($records as $item) {
+                        $rNis = trim((string)($item['nis'] ?? ''));
+                        $rNama = strtolower(trim((string)($item['nama'] ?? '')));
+                        if (($nis !== '' && $rNis === $nis) || ($nisn !== '' && $rNis === $nisn) || (!empty($nama) && stripos($rNama, strtolower($nama)) !== false)) {
+                            $stuData = $item;
+                            break 2;
+                        }
+                    }
+                    if (!$stuData && !empty($records[0])) {
+                        $stuData = $records[0];
                         break;
                     }
-                }
-                if (!$stuData && !empty($records[0])) {
-                    $stuData = $records[0];
                 }
             }
         }
         if (!$stuData || empty($stuData['id'])) {
-            sendJsonResponse(false, "Siswa dengan NIS {$nis} tidak ditemukan di server Tata Usaha.", null, 404);
+            sendJsonResponse(false, "Siswa dengan identitas '{$nis}{$nisn}{$nama}' tidak ditemukan di server Tata Usaha.", null, 404);
         }
         $tuId = (int)$stuData['id'];
         $billsRes = $apiClient->request('GET', "/api/siswa/{$tuId}/tagihan", null, $token);
         $historyRes = $apiClient->request('GET', "/api/siswa/{$tuId}/riwayat-bayar", null, $token);
-        sendJsonResponse(true, "Data tagihan dan riwayat siswa NIS {$nis} realtime dari API Tata Usaha", [
+        sendJsonResponse(true, "Data tagihan dan riwayat siswa realtime dari API Tata Usaha", [
             'siswa'   => $stuData,
             'tagihan' => $billsRes['data'] ?? [],
             'riwayat' => $historyRes['data'] ?? []

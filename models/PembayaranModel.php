@@ -78,7 +78,7 @@ class PembayaranModel {
                 COUNT(*) as total_item_tagihan,
                 SUM(nominal) as total_nominal_tagihan,
                 SUM(nominal_terbayar) as total_terbayar,
-                SUM(sisa_tagihan) as total_tunggakan,
+                GREATEST(0, SUM(nominal) - SUM(nominal_terbayar)) as total_tunggakan,
                 SUM(CASE WHEN status = 'lunas' THEN 1 ELSE 0 END) as count_lunas,
                 SUM(CASE WHEN status != 'lunas' THEN 1 ELSE 0 END) as count_belum_lunas
             FROM pembayaran_tagihan
@@ -209,7 +209,7 @@ class PembayaranModel {
                 SELECT siswa_id,
                        SUM(nominal) as total_nominal_tagihan,
                        SUM(nominal_terbayar) as total_terbayar,
-                       SUM(sisa_tagihan) as total_tunggakan,
+                       GREATEST(0, SUM(nominal) - SUM(nominal_terbayar)) as total_tunggakan,
                        SUM(CASE WHEN status != 'lunas' THEN 1 ELSE 0 END) as count_belum_lunas,
                        SUM(CASE WHEN status = 'lunas' THEN 1 ELSE 0 END) as count_lunas,
                        COUNT(*) as total_item_tagihan
@@ -349,30 +349,20 @@ class PembayaranModel {
 
     /**
      * Ambil data tagihan & riwayat pembayaran siswa LANGSUNG SECARA LIVE REALTIME dari API Tata Usaha
+     * Menggunakan Smart 3-Tier Resolver (NIS, NISN, Nama Lengkap) untuk mengatasi data TU yang kadang berisi NIS atau NISN
      */
     public function getStudentRealtimeBillsAndHistory($siswaId, $nis = null, $nisn = null) {
         $siswaId = (int)$siswaId;
         $namaSiswa = '';
-        if (empty($nis)) {
+        if (empty($nis) || empty($nisn)) {
             $stmtS = $this->db->prepare("SELECT id, nis, nisn, nama_lengkap FROM siswa WHERE id = ? LIMIT 1");
             $stmtS->execute([$siswaId]);
             $sRow = $stmtS->fetch(PDO::FETCH_ASSOC);
             if ($sRow) {
-                $nis = $sRow['nis'];
-                $nisn = $sRow['nisn'];
+                if (empty($nis)) $nis = $sRow['nis'];
+                if (empty($nisn)) $nisn = $sRow['nisn'];
                 $namaSiswa = $sRow['nama_lengkap'];
             }
-        }
-
-        $lookupKey = !empty($nis) ? $nis : (!empty($nisn) ? $nisn : $namaSiswa);
-        if (empty($lookupKey)) {
-            return [
-                'status'      => true,
-                'is_realtime' => false,
-                'summary'     => $this->getSiswaPaymentSummary($siswaId, $nis, $nisn),
-                'bills'       => $this->getSiswaBills($siswaId, $nis, $nisn),
-                'history'     => $this->getSiswaRiwayatPembayaran($siswaId, $nis, $nisn)
-            ];
         }
 
         // Panggil live endpoint API Tata Usaha
@@ -390,18 +380,54 @@ class PembayaranModel {
         $baseUrl = $tu['base_url'];
         $jwt     = $tu['jwt'];
 
-        // Cari ID siswa di TU
-        $ch = curl_init($baseUrl . '/api/siswa?q=' . urlencode($lookupKey));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $jwt, 'Accept: application/json']);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 6);
-        $resSiswa = json_decode(curl_exec($ch), true);
-        curl_close($ch);
+        // Smart 3-Tier Search: Coba cari dengan NIS, jika tidak ketemu coba NISN, lalu coba Nama Lengkap
+        $keysToTry = array_unique(array_filter([
+            trim((string)$nis),
+            trim((string)$nisn),
+            trim((string)$namaSiswa)
+        ]));
 
-        $tuSiswaList = $resSiswa['data']['data'] ?? ($resSiswa['data'] ?? []);
-        if (empty($tuSiswaList)) {
+        $tuId = null;
+        $foundTuStudent = null;
+
+        foreach ($keysToTry as $searchKey) {
+            $ch = curl_init($baseUrl . '/api/siswa?q=' . urlencode($searchKey));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $jwt, 'Accept: application/json']);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+            $rawSiswa = curl_exec($ch);
+            curl_close($ch);
+
+            $resSiswa = json_decode($rawSiswa, true);
+            $records = is_array($resSiswa['data'] ?? null) && isset($resSiswa['data']['data']) 
+                ? $resSiswa['data']['data'] 
+                : ($resSiswa['data'] ?? []);
+
+            if (!empty($records) && is_array($records)) {
+                // Cari record terbaik yang paling cocok
+                foreach ($records as $rec) {
+                    $rNis = trim((string)($rec['nis'] ?? ''));
+                    $rNama = strtolower(trim((string)($rec['nama'] ?? '')));
+                    if (($nis !== '' && $rNis === $nis) || 
+                        ($nisn !== '' && $rNis === $nisn) || 
+                        (!empty($namaSiswa) && stripos($rNama, strtolower(trim($namaSiswa))) !== false)) {
+                        $foundTuStudent = $rec;
+                        $tuId = (int)$rec['id'];
+                        break 2;
+                    }
+                }
+                // Jika tidak ada kecocokan mutlak tapi ada record, ambil yang pertama
+                if (!$foundTuStudent && !empty($records[0]['id'])) {
+                    $foundTuStudent = $records[0];
+                    $tuId = (int)$records[0]['id'];
+                    break;
+                }
+            }
+        }
+
+        if (!$tuId) {
             return [
                 'status'      => true,
                 'is_realtime' => false,
@@ -411,9 +437,7 @@ class PembayaranModel {
             ];
         }
 
-        $tuId = (int)$tuSiswaList[0]['id'];
-
-        // Ambil tagihan & riwayat bayar secara paralel (kecepatan < 0.4 detik)
+        // Ambil tagihan & riwayat bayar secara paralel (< 0.4 detik)
         $mh = curl_multi_init();
         $chBills = curl_init($baseUrl . "/api/siswa/$tuId/tagihan");
         $chHistory = curl_init($baseUrl . "/api/siswa/$tuId/riwayat-bayar");
@@ -442,14 +466,18 @@ class PembayaranModel {
         curl_close($chHistory);
         curl_multi_close($mh);
 
-        $tuBills = $rawBills['data'] ?? [];
-        $tuHistory = $rawHistory['data'] ?? [];
+        $tuBills = is_array($rawBills['data'] ?? null) && isset($rawBills['data']['data']) 
+            ? $rawBills['data']['data'] 
+            : ($rawBills['data'] ?? []);
+
+        $tuHistory = is_array($rawHistory['data'] ?? null) && isset($rawHistory['data']['data']) 
+            ? $rawHistory['data']['data'] 
+            : ($rawHistory['data'] ?? []);
 
         // Normalisasi data tagihan & auto-update ke database lokal
         $normalizedBills = [];
         $totNom = 0;
         $totBayar = 0;
-        $totSisa = 0;
         $countLunas = 0;
         $countBelum = 0;
 
@@ -469,24 +497,28 @@ class PembayaranModel {
             $masterKode = trim((string)($tb['kode_tagihan'] ?? 'TAG'));
             $kodeTagihan = 'TU-TAG-' . $billId . '-' . $masterKode;
 
-            $judul = trim((string)($tb['nama_tagihan'] ?? 'Iuran Sekolah'));
-            $nominal = (float)($tb['total_tagihan'] ?? ($tb['nominal'] ?? 0));
-            $terbayar = (float)($tb['total_terbayar'] ?? 0);
-            $sisa = (float)($tb['sisa_tagihan'] ?? ($tb['sisa'] ?? max(0, $nominal - $terbayar)));
+            $judul    = trim((string)($tb['nama_tagihan'] ?? 'Iuran Sekolah'));
+            $nominal  = (float)($tb['total_tagihan'] ?? ($tb['nominal'] ?? ($tb['jumlah'] ?? 0)));
+            $terbayar = (float)($tb['total_terbayar'] ?? ($tb['nominal_terbayar'] ?? 0));
+            
+            // Sisa per item tagihan (positif untuk tampilan baris)
+            $sisaItem = (float)($tb['sisa_tagihan'] ?? ($tb['sisa'] ?? max(0, $nominal - $terbayar)));
+            if ($sisaItem < 0) $sisaItem = 0; // proteksi tampilan baris agar tidak minus
 
             $st = strtolower(trim((string)($tb['status'] ?? '')));
-            $status = ($st === 'lunas' || $sisa <= 0) ? 'lunas' : (($st === 'sebagian' || $terbayar > 0) ? 'sebagian' : 'belum_lunas');
+            $status = ($st === 'lunas' || $sisaItem <= 0 || $terbayar >= $nominal) ? 'lunas' : (($st === 'sebagian' || $terbayar > 0) ? 'sebagian' : 'belum_lunas');
 
             $jenis = 'SPP';
             if (stripos($judul, 'ujian') !== false || stripos($masterKode, 'ujian') !== false) {
                 $jenis = 'Ujian';
-            } elseif (stripos($judul, 'dsp') !== false) {
+            } elseif (stripos($judul, 'dsp') !== false || stripos($masterKode, 'dsp') !== false) {
                 $jenis = 'DSP';
+            } elseif (stripos($judul, 'prak') !== false || stripos($masterKode, 'prak') !== false) {
+                $jenis = 'Praktikum';
             }
 
-            $totNom += $nominal;
+            $totNom   += $nominal;
             $totBayar += $terbayar;
-            $totSisa += $sisa;
             if ($status === 'lunas') $countLunas++; else $countBelum++;
 
             $normalizedBills[] = [
@@ -496,7 +528,7 @@ class PembayaranModel {
                 'jenis_pembayaran'    => $jenis,
                 'nominal'             => $nominal,
                 'nominal_terbayar'    => $terbayar,
-                'sisa_tagihan'        => $sisa,
+                'sisa_tagihan'        => $sisaItem,
                 'status'              => $status,
                 'periode_bulan'       => $judul,
                 'tanggal_jatuh_tempo' => null
@@ -508,9 +540,9 @@ class PembayaranModel {
                 $chk->execute([$kodeTagihan]);
                 $exId = $chk->fetchColumn();
                 if ($exId) {
-                    $stmtUpTagihan->execute([$nominal, $terbayar, $sisa, $status, $exId]);
+                    $stmtUpTagihan->execute([$nominal, $terbayar, $sisaItem, $status, $exId]);
                 } else {
-                    $stmtInTagihan->execute([$siswaId, $lookupKey, $lookupKey, $jenis, $kodeTagihan, $judul, $nominal, $terbayar, $sisa, $judul, $status]);
+                    $stmtInTagihan->execute([$siswaId, $nis ?: $nisn, $nisn ?: $nis, $jenis, $kodeTagihan, $judul, $nominal, $terbayar, $sisaItem, $judul, $status]);
                 }
             } catch (\Throwable $eDb) {}
         }
@@ -539,7 +571,10 @@ class PembayaranModel {
             ];
         }
 
+        // Kalkulasi Total Sisa Tunggakan secara global konsisten (Nominal - Terbayar)
+        $totSisa = max(0, $totNom - $totBayar);
         $persenLunas = $totNom > 0 ? round(($totBayar / $totNom) * 100, 1) : 100;
+
         $summary = [
             'total_nominal_tagihan' => $totNom,
             'total_terbayar'        => $totBayar,
