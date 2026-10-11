@@ -41,9 +41,24 @@ document.addEventListener('DOMContentLoaded', function () {
         $.fn.dataTable.ext.errMode = 'none';
         $('.datatable').each(function() {
             var customLength = parseInt($(this).data('page-length')) || 20;
+            var orderCol = $(this).data('order-col');
+            var orderDir = $(this).data('order-dir') || 'asc';
+            var orderNone = $(this).data('order-none');
+            var orderConfig = undefined;
+
+            if (orderNone) {
+                orderConfig = [];
+            } else if (orderCol !== undefined && orderCol !== null && orderCol !== '') {
+                orderConfig = [[parseInt(orderCol), orderDir]];
+            }
+
             $(this).DataTable({
                 responsive: true,
                 pageLength: customLength,
+                order: orderConfig,
+                columnDefs: [
+                    { orderable: false, targets: 'no-sort' }
+                ],
                 lengthMenu: [
                     [10, 20, 25, 50, 100, -1],
                     [10, 20, 25, 50, 100, "Semua"]

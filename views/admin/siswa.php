@@ -162,10 +162,10 @@
         <!-- Table Data Siswa with Multi-Select Checkboxes -->
         <div class="card card-custom p-4 shadow-sm border-0 rounded-4">
             <div class="table-responsive">
-                <table class="table table-hover align-middle datatable" id="tableSiswa" data-page-length="20">
+                <table class="table table-hover align-middle datatable" id="tableSiswa" data-page-length="20" data-order-col="3" data-order-dir="asc">
                     <thead class="table-light">
                         <tr>
-                            <th style="width: 40px;" class="text-center">
+                            <th style="width: 40px;" class="text-center no-sort" data-orderable="false">
                                 <input type="checkbox" class="form-check-input" id="selectAllSiswa" title="Pilih Semua Siswa">
                             </th>
                             <th style="width: 50px;">No</th>
@@ -176,7 +176,7 @@
                             <th>Status</th>
                             <th>JK</th>
                             <th>No. Ortu (WA)</th>
-                            <th class="text-center" style="width: 220px;">Aksi</th>
+                            <th class="text-center no-sort" style="width: 220px;" data-orderable="false">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>

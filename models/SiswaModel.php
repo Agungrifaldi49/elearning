@@ -81,7 +81,7 @@ class SiswaModel extends BaseModel {
             $params[] = $term;
         }
 
-        $sql .= " ORDER BY s.id DESC";
+        $sql .= " ORDER BY s.nama_lengkap ASC, s.id ASC";
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
