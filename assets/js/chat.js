@@ -352,8 +352,74 @@ const ChatApp = {
                         statusBadge.innerHTML = '<i class="bi bi-circle-fill text-danger me-1" style="font-size:0.45rem;"></i>Off';
                     }
                 }
+
+                // Dynamic Role & Contextual Subtitle Sync
+                const rLower = (c.role_name || '').toLowerCase();
+                const kLower = (c.nama_kelas || '').toLowerCase();
+                const mLower = (c.mata_pelajaran || '').toLowerCase();
+
+                itemElem.setAttribute('data-name', (c.full_name || '').toLowerCase());
+                itemElem.setAttribute('data-role', rLower);
+                itemElem.setAttribute('data-kelas', kLower);
+                itemElem.setAttribute('data-mapel', mLower);
+
+                const roleBadgeElem = itemElem.querySelector('.contact-role-badge');
+                if (roleBadgeElem && c.role_name) {
+                    roleBadgeElem.textContent = c.role_name;
+                    let rStyle = 'badge bg-secondary text-white fw-semibold contact-role-badge';
+                    if (rLower === 'guru') rStyle = 'badge bg-primary-subtle text-primary border border-primary-subtle fw-semibold contact-role-badge';
+                    else if (rLower === 'siswa') rStyle = 'badge bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold contact-role-badge';
+                    else if (rLower === 'kepala sekolah') rStyle = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-semibold contact-role-badge';
+                    else if (rLower === 'administrator') rStyle = 'badge bg-dark text-white fw-semibold contact-role-badge';
+                    roleBadgeElem.className = rStyle;
+                }
+
+                const subBox = itemElem.querySelector('.contact-subtitle-box');
+                if (subBox) {
+                    if (c.nama_kelas) {
+                        subBox.innerHTML = `<div class="mb-1"><span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.68rem;"><i class="bi bi-mortarboard me-1"></i>${c.nama_kelas}</span></div>`;
+                    } else if (c.mata_pelajaran) {
+                        subBox.innerHTML = `<div class="mb-1 text-truncate"><span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:0.68rem;"><i class="bi bi-journal-bookmark me-1"></i>${c.mata_pelajaran}</span></div>`;
+                    } else {
+                        subBox.innerHTML = '';
+                    }
+                }
+
+                // Sync Active Chat Header if current chat is with this user
+                if (this.state.activeWithId === parseInt(c.id, 10)) {
+                    const actName = document.querySelector('.active-contact-fullname');
+                    if (actName && c.full_name) actName.textContent = c.full_name;
+
+                    const actRoleBadge = document.getElementById('activeContactRoleBadge');
+                    if (actRoleBadge && c.role_name) {
+                        actRoleBadge.textContent = c.role_name;
+                        let aStyle = 'badge bg-secondary text-white';
+                        if (rLower === 'guru') aStyle = 'badge bg-primary-subtle text-primary border border-primary-subtle';
+                        else if (rLower === 'siswa') aStyle = 'badge bg-info-subtle text-info-emphasis border border-info-subtle';
+                        else if (rLower === 'kepala sekolah') aStyle = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+                        else if (rLower === 'administrator') aStyle = 'badge bg-dark text-white';
+                        actRoleBadge.className = aStyle;
+                    }
+
+                    const actInfoCont = document.getElementById('activeContactInfoContainer');
+                    if (actInfoCont) {
+                        if (c.nama_kelas) {
+                            actInfoCont.innerHTML = `<span class="badge bg-light text-dark border" style="font-size:0.68rem;"><i class="bi bi-mortarboard me-1 text-primary"></i>${c.nama_kelas}</span>`;
+                        } else if (c.mata_pelajaran) {
+                            actInfoCont.innerHTML = `<span class="badge bg-light text-dark border text-truncate" style="font-size:0.68rem; max-width:200px;"><i class="bi bi-book me-1 text-primary"></i>${c.mata_pelajaran}</span>`;
+                        } else {
+                            actInfoCont.innerHTML = '';
+                        }
+                    }
+                }
             }
         });
+
+        // Trigger filter re-calculation to keep counts in sync
+        const filterRoleElem = document.getElementById('filterRole');
+        if (filterRoleElem && filterRoleElem.value) {
+            filterRoleElem.dispatchEvent(new Event('change'));
+        }
     },
 
     // --- REALTIME MESSAGE SENDING ---

@@ -160,16 +160,18 @@
                                                  elseif ($roleLower === 'kepala sekolah') $roleBadgeStyle = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
                                                  elseif ($roleLower === 'administrator') $roleBadgeStyle = 'bg-dark text-white';
                                                  ?>
-                                                 <span class="badge <?= $roleBadgeStyle ?> fw-semibold" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
+                                                 <span class="badge <?= $roleBadgeStyle ?> fw-semibold contact-role-badge" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
                                              </div>
                                         </div>
 
                                         <!-- Contextual Subtitle: Kelas for Siswa, Mapel for Guru -->
-                                        <?php if (!empty($kelasName)): ?>
-                                            <div class="mb-1"><span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.68rem;"><i class="bi bi-mortarboard me-1"></i><?= $kelasName ?></span></div>
-                                        <?php elseif (!empty($mapelName)): ?>
-                                            <div class="mb-1 text-truncate"><span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:0.68rem;"><i class="bi bi-journal-bookmark me-1"></i><?= $mapelName ?></span></div>
-                                        <?php endif; ?>
+                                        <div class="contact-subtitle-box">
+                                            <?php if (!empty($kelasName)): ?>
+                                                <div class="mb-1"><span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.68rem;"><i class="bi bi-mortarboard me-1"></i><?= $kelasName ?></span></div>
+                                            <?php elseif (!empty($mapelName)): ?>
+                                                <div class="mb-1 text-truncate"><span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:0.68rem;"><i class="bi bi-journal-bookmark me-1"></i><?= $mapelName ?></span></div>
+                                            <?php endif; ?>
+                                        </div>
 
                                         <div class="d-flex justify-content-between align-items-center">
                                             <small class="text-muted text-truncate d-block" style="font-size:0.75rem;">
@@ -207,16 +209,16 @@
                                 </button>
                                 <div class="position-relative flex-shrink-0">
                                     <?php if ($actHasAvatar): ?>
-                                        <img src="<?= $actAvatarSrc ?>" alt="Avatar" class="rounded-circle object-fit-cover shadow-sm" style="width:42px; height:42px;">
+                                        <img src="<?= $actAvatarSrc ?>" alt="Avatar" class="rounded-circle object-fit-cover shadow-sm active-contact-avatar" style="width:42px; height:42px;">
                                     <?php else: ?>
-                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width:42px; height:42px;">
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold shadow-sm active-contact-avatar-placeholder" style="width:42px; height:42px;">
                                             <?= strtoupper(substr($activeContactInfo['full_name'], 0, 1)) ?>
                                         </div>
                                     <?php endif; ?>
                                     <span class="position-absolute bottom-0 end-0 p-1 border border-2 border-white rounded-circle active-status-dot <?= $actIsOnline ? 'bg-success' : 'bg-danger' ?>" style="width:12px; height:12px;"></span>
                                 </div>
                                 <div>
-                                    <h6 class="fw-bold mb-0 text-dark"><?= htmlspecialchars($activeContactInfo['full_name']) ?></h6>
+                                    <h6 class="fw-bold mb-0 text-dark active-contact-fullname"><?= htmlspecialchars($activeContactInfo['full_name']) ?></h6>
                                     <div class="d-flex align-items-center gap-2 small mt-1">
                                         <?php
                                         $actRoleLower = strtolower($activeContactInfo['role_name'] ?? '');
@@ -226,12 +228,14 @@
                                         elseif ($actRoleLower === 'kepala sekolah') $actRoleBadge = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
                                         elseif ($actRoleLower === 'administrator') $actRoleBadge = 'bg-dark text-white';
                                         ?>
-                                        <span class="badge <?= $actRoleBadge ?>" style="font-size:0.68rem;"><?= htmlspecialchars($activeContactInfo['role_name']) ?></span>
-                                        <?php if (!empty($activeContactInfo['nama_kelas'])): ?>
-                                            <span class="badge bg-light text-dark border" style="font-size:0.68rem;"><i class="bi bi-mortarboard me-1 text-primary"></i><?= htmlspecialchars($activeContactInfo['nama_kelas']) ?></span>
-                                        <?php elseif (!empty($activeContactInfo['mata_pelajaran'])): ?>
-                                            <span class="badge bg-light text-dark border text-truncate" style="font-size:0.68rem; max-width:200px;"><i class="bi bi-book me-1 text-primary"></i><?= htmlspecialchars($activeContactInfo['mata_pelajaran']) ?></span>
-                                        <?php endif; ?>
+                                        <span id="activeContactRoleBadge" class="badge <?= $actRoleBadge ?>" style="font-size:0.68rem;"><?= htmlspecialchars($activeContactInfo['role_name']) ?></span>
+                                        <span id="activeContactInfoContainer">
+                                            <?php if (!empty($activeContactInfo['nama_kelas'])): ?>
+                                                <span class="badge bg-light text-dark border" style="font-size:0.68rem;"><i class="bi bi-mortarboard me-1 text-primary"></i><?= htmlspecialchars($activeContactInfo['nama_kelas']) ?></span>
+                                            <?php elseif (!empty($activeContactInfo['mata_pelajaran'])): ?>
+                                                <span class="badge bg-light text-dark border text-truncate" style="font-size:0.68rem; max-width:200px;"><i class="bi bi-book me-1 text-primary"></i><?= htmlspecialchars($activeContactInfo['mata_pelajaran']) ?></span>
+                                            <?php endif; ?>
+                                        </span>
                                     </div>
                                 </div>
                             </div>
