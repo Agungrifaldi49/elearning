@@ -61,8 +61,8 @@ class AuthController {
                         if ($password === 'admin123' || $password === 'admin') {
                             $isPasswordCorrect = true;
                         }
-                    } elseif (in_array($user['username'], ['guru', 'guru2', 'agung', 'agg023']) && password_verify('guru123', $storedHash)) {
-                        if (in_array($password, ['guru123', 'guru', 'agung', 'agung123', 'agg023'])) {
+                    } elseif (in_array($user['username'], ['guru', 'guru2', 'agg023']) && password_verify('guru123', $storedHash)) {
+                        if (in_array($password, ['guru123', 'guru', 'agg023'])) {
                             $isPasswordCorrect = true;
                         }
                     } elseif ($user['username'] === 'kepsek' && password_verify('kepsek123', $storedHash)) {

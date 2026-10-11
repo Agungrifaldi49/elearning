@@ -13,10 +13,9 @@ class UserModel extends BaseModel {
             FROM users u
             JOIN roles r ON u.role_id = r.id
             WHERE u.username = ? OR u.email = ?
-               OR (LOWER(?) = 'agung' AND u.username = 'agg023')
             LIMIT 1
         ");
-        $stmt->execute([$cleanUser, $cleanUser, $cleanUser]);
+        $stmt->execute([$cleanUser, $cleanUser]);
         return $stmt->fetch();
     }
 
