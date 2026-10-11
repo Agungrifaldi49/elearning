@@ -42,7 +42,8 @@ class AcademicModel extends BaseModel {
     }
 
     // --- KELAS ---
-    public function getKelas() {
+    public function getKelas($excludeAlumni = false) {
+        $where = $excludeAlumni ? "WHERE (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%')" : "";
         return $this->db->query("
             SELECT k.*, 
                    COALESCE(k.nama_kelas, '') as nama_rombel,
@@ -51,6 +52,7 @@ class AcademicModel extends BaseModel {
             FROM kelas k 
             LEFT JOIN jurusan j ON k.jurusan_id = j.id 
             LEFT JOIN guru g ON k.wali_kelas_id = g.id
+            {$where}
             ORDER BY 
                 CASE 
                     WHEN k.tingkat IN ('X', '10') THEN 1
@@ -281,6 +283,7 @@ class AcademicModel extends BaseModel {
                 UNION
                 SELECT kelas_id FROM game_edukasi WHERE guru_id IN ({$inGuru}) AND kelas_id IS NOT NULL AND kelas_id > 0
             )
+            AND (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%')
             ORDER BY 
                 CASE 
                     WHEN k.tingkat IN ('X', '10') THEN 1

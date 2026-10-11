@@ -56,9 +56,19 @@ class SiswaModel extends BaseModel {
         }
 
         if ($status && in_array(strtolower($status), ['aktif', 'alumni', 'drop'])) {
-            $sql .= " AND (s.status = ? OR (? = 'aktif' AND s.status IS NULL))";
-            $params[] = strtolower($status);
-            $params[] = strtolower($status);
+            $stLower = strtolower($status);
+            if ($stLower === 'aktif') {
+                $sql .= " AND (s.status = 'aktif' OR s.status IS NULL) 
+                          AND (u.status = 'active' OR u.status IS NULL) 
+                          AND (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)";
+            } elseif ($stLower === 'alumni') {
+                $sql .= " AND (s.status = 'alumni' 
+                              OR k.nama_kelas LIKE '%ALUMNI%' 
+                              OR k.nama_kelas LIKE '%LULUS%' 
+                              OR u.status IN ('inactive', 'nonaktif'))";
+            } elseif ($stLower === 'drop') {
+                $sql .= " AND (s.status = 'drop' OR u.status = 'blocked')";
+            }
         }
 
         if ($keyword && trim($keyword) !== '') {
@@ -1185,19 +1195,41 @@ class SiswaModel extends BaseModel {
             'per_jurusan' => []
         ];
         try {
-            $rowTotal = $this->db->query("SELECT COUNT(*) as cnt FROM siswa WHERE status = 'alumni'")->fetch();
+            $alumniCondition = "(s.status = 'alumni' OR k.nama_kelas LIKE '%ALUMNI%' OR k.nama_kelas LIKE '%LULUS%' OR u.status IN ('inactive', 'nonaktif'))";
+
+            $rowTotal = $this->db->query("
+                SELECT COUNT(DISTINCT s.id) as cnt 
+                FROM siswa s 
+                LEFT JOIN kelas k ON s.kelas_id = k.id 
+                LEFT JOIN users u ON s.user_id = u.id 
+                WHERE {$alumniCondition}
+            ")->fetch();
             $stats['total'] = (int)($rowTotal['cnt'] ?? 0);
 
-            $rowL = $this->db->query("SELECT COUNT(*) as cnt FROM siswa WHERE status = 'alumni' AND jenis_kelamin = 'L'")->fetch();
+            $rowL = $this->db->query("
+                SELECT COUNT(DISTINCT s.id) as cnt 
+                FROM siswa s 
+                LEFT JOIN kelas k ON s.kelas_id = k.id 
+                LEFT JOIN users u ON s.user_id = u.id 
+                WHERE {$alumniCondition} AND s.jenis_kelamin = 'L'
+            ")->fetch();
             $stats['laki'] = (int)($rowL['cnt'] ?? 0);
 
-            $rowP = $this->db->query("SELECT COUNT(*) as cnt FROM siswa WHERE status = 'alumni' AND jenis_kelamin = 'P'")->fetch();
+            $rowP = $this->db->query("
+                SELECT COUNT(DISTINCT s.id) as cnt 
+                FROM siswa s 
+                LEFT JOIN kelas k ON s.kelas_id = k.id 
+                LEFT JOIN users u ON s.user_id = u.id 
+                WHERE {$alumniCondition} AND s.jenis_kelamin = 'P'
+            ")->fetch();
             $stats['perempuan'] = (int)($rowP['cnt'] ?? 0);
 
             $rowsJ = $this->db->query("
-                SELECT j.nama_jurusan, COUNT(s.id) as cnt 
+                SELECT j.nama_jurusan, COUNT(DISTINCT s.id) as cnt 
                 FROM jurusan j 
-                LEFT JOIN siswa s ON s.jurusan_id = j.id AND s.status = 'alumni'
+                LEFT JOIN siswa s ON s.jurusan_id = j.id AND ({$alumniCondition})
+                LEFT JOIN kelas k ON s.kelas_id = k.id 
+                LEFT JOIN users u ON s.user_id = u.id 
                 GROUP BY j.id, j.nama_jurusan
             ")->fetchAll();
             $stats['per_jurusan'] = $rowsJ ?: [];

@@ -1372,7 +1372,7 @@ class GuruController {
         $type = 'siswa';
         
         if ($isAdmin) {
-            $kelasList = $academicModel->getKelas();
+            $kelasList = $academicModel->getKelas(true);
             $targetKelas = $kelasId;
             $queryGuruId = null;
         } else {

@@ -1228,7 +1228,7 @@ class AdminController {
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
         $type = $_GET['type'] ?? 'siswa';
         
-        $kelasList = $academicModel->getKelas();
+        $kelasList = $academicModel->getKelas(true);
         
         if ($type === 'guru') {
             $monthlyRecap = $absensiModel->getMonthlyRecapGuru($bulan, $tahun);

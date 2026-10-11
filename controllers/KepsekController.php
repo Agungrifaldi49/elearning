@@ -229,7 +229,7 @@ class KepsekController {
         $kelasId = (int)($_GET['kelas_id'] ?? 0);
         $type = $_GET['type'] ?? 'guru';
 
-        $kelasList = $academicModel->getKelas();
+        $kelasList = $academicModel->getKelas(true);
 
         if ($type === 'guru') {
             $monthlyRecap = $absensiModel->getMonthlyRecapGuru($bulan, $tahun);

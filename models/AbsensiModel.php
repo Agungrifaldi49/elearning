@@ -123,8 +123,13 @@ class AbsensiModel extends BaseModel {
                        s.nama_lengkap, s.nis, s.nisn, k.nama_kelas
                 FROM absensi a
                 JOIN siswa s ON a.siswa_id = s.id
+                LEFT JOIN users u ON s.user_id = u.id
                 LEFT JOIN kelas k ON s.kelas_id = k.id
-                WHERE a.tanggal = ? AND (
+                WHERE a.tanggal = ? 
+                  AND (s.status = 'aktif' OR s.status IS NULL)
+                  AND (u.status = 'active' OR u.status IS NULL)
+                  AND (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)
+                  AND (
                     a.guru_id = ? 
                     OR s.kelas_id IN (SELECT kelas_id FROM jadwal WHERE guru_id = ?)
                     OR s.kelas_id IN (SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id = ?)
@@ -405,8 +410,12 @@ class AbsensiModel extends BaseModel {
                        s.nama_lengkap, s.nis, s.nisn, k.nama_kelas
                 FROM absensi a
                 JOIN siswa s ON a.siswa_id = s.id
+                LEFT JOIN users u ON s.user_id = u.id
                 LEFT JOIN kelas k ON s.kelas_id = k.id
                 WHERE a.tanggal = ?
+                  AND (s.status = 'aktif' OR s.status IS NULL)
+                  AND (u.status = 'active' OR u.status IS NULL)
+                  AND (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)
             ");
             $stmtS->execute([$today]);
             $sLogs = $stmtS->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -616,8 +625,9 @@ class AbsensiModel extends BaseModel {
             // Otherwise, search for Siswa
             $numericId = ctype_digit($cleanId) ? (int)$cleanId : -1;
             $stmtS = $this->db->prepare("
-                SELECT s.*, k.nama_kelas, j.nama_jurusan 
+                SELECT s.*, k.nama_kelas, j.nama_jurusan, u.status as user_status
                 FROM siswa s 
+                LEFT JOIN users u ON s.user_id = u.id
                 LEFT JOIN kelas k ON s.kelas_id = k.id 
                 LEFT JOIN jurusan j ON s.jurusan_id = j.id 
                 WHERE s.nisn = ? OR s.nis = ? OR s.id = ? OR s.nama_lengkap LIKE ?
@@ -628,6 +638,19 @@ class AbsensiModel extends BaseModel {
 
             if (!$siswa) {
                 return ['success' => false, 'message' => "Siswa / Guru dengan NISN/NIS/NIP '$cleanId' tidak ditemukan di sistem."];
+            }
+
+            // Tolak presensi jika siswa berstatus alumni atau akun nonaktif
+            $isAlumni = ($siswa['status'] === 'alumni') 
+                || in_array(strtolower($siswa['user_status'] ?? ''), ['inactive', 'nonaktif'])
+                || (stripos($siswa['nama_kelas'] ?? '', 'ALUMNI') !== false)
+                || (stripos($siswa['nama_kelas'] ?? '', 'LULUS') !== false);
+
+            if ($isAlumni) {
+                return [
+                    'success' => false, 
+                    'message' => "Akses Ditolak! Siswa {$siswa['nama_lengkap']} sudah berstatus ALUMNI / Nonaktif dan tidak tercatat dalam presensi siswa aktif."
+                ];
             }
 
             $today = date('Y-m-d');
@@ -893,6 +916,8 @@ class AbsensiModel extends BaseModel {
                 SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, 
                        a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                 FROM siswa s
+                LEFT JOIN users u ON s.user_id = u.id
+                LEFT JOIN kelas k ON s.kelas_id = k.id
                 LEFT JOIN absensi a ON a.id = (
                     SELECT a2.id FROM absensi a2 
                     WHERE a2.siswa_id = s.id 
@@ -902,6 +927,9 @@ class AbsensiModel extends BaseModel {
                     LIMIT 1
                 )
                 WHERE s.kelas_id = ?
+                  AND (s.status = 'aktif' OR s.status IS NULL)
+                  AND (u.status = 'active' OR u.status IS NULL)
+                  AND (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)
                 ORDER BY s.nama_lengkap ASC
             ");
             $stmt->execute([$tanggal, $jadwal_id, $jadwal_id, $kelasId]);
@@ -911,6 +939,8 @@ class AbsensiModel extends BaseModel {
                 SELECT s.id as siswa_id, s.nama_lengkap, s.nis, s.nisn, 
                        a.status, a.keterangan, a.created_at, a.waktu_hadir, a.waktu_masuk, a.waktu_pulang, a.qr_code
                 FROM siswa s
+                LEFT JOIN users u ON s.user_id = u.id
+                LEFT JOIN kelas k ON s.kelas_id = k.id
                 JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id AND sme.mapel_id = ? AND sme.guru_id = ?
                 LEFT JOIN absensi a ON a.id = (
                     SELECT a2.id FROM absensi a2 
@@ -920,6 +950,9 @@ class AbsensiModel extends BaseModel {
                     ORDER BY (a2.jadwal_id = ?) DESC, (a2.jadwal_id IS NULL OR a2.jadwal_id = 0) DESC, a2.id DESC 
                     LIMIT 1
                 )
+                WHERE (s.status = 'aktif' OR s.status IS NULL)
+                  AND (u.status = 'active' OR u.status IS NULL)
+                  AND (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)
                 ORDER BY s.nama_lengkap ASC
             ");
             $stmt->execute([$mapelId, $guruId, $tanggal, $jadwal_id, $jadwal_id]);
@@ -1389,17 +1422,22 @@ class AbsensiModel extends BaseModel {
         $endDate = "$tahun-$bulan-" . sprintf('%02d', $numDays);
 
         $params = [];
-        $whereSql = "";
+        $whereConds = [
+            "(s.status = 'aktif' OR s.status IS NULL)",
+            "(u.status = 'active' OR u.status IS NULL)",
+            "(k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)"
+        ];
+
         if (is_array($kelasId) && !empty($kelasId)) {
             $kelasIdInts = array_map('intval', $kelasId);
             $inClause = implode(',', $kelasIdInts);
-            $whereSql = " WHERE s.kelas_id IN ({$inClause}) ";
+            $whereConds[] = "s.kelas_id IN ({$inClause})";
         } elseif (is_numeric($kelasId) && (int)$kelasId > 0) {
-            $whereSql = " WHERE s.kelas_id = ? ";
+            $whereConds[] = "s.kelas_id = ?";
             $params[] = (int)$kelasId;
         } elseif ($guruId && (int)$guruId > 0) {
             $gId = (int)$guruId;
-            $whereSql = " WHERE s.kelas_id IN (
+            $whereConds[] = "s.kelas_id IN (
                 SELECT id FROM kelas WHERE wali_kelas_id = {$gId}
                 UNION
                 SELECT kelas_id FROM mapel_enrollment_keys WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
@@ -1413,12 +1451,15 @@ class AbsensiModel extends BaseModel {
                 SELECT kelas_id FROM live_class WHERE guru_id = {$gId} AND kelas_id IS NOT NULL
                 UNION
                 SELECT s.kelas_id FROM siswa_mapel_enrollment sme JOIN siswa s ON sme.siswa_id = s.id WHERE sme.guru_id = {$gId} AND s.kelas_id IS NOT NULL
-            ) ";
+            )";
         }
+
+        $whereSql = " WHERE " . implode(" AND ", $whereConds);
 
         $stmtS = $this->db->prepare("
             SELECT s.id as siswa_id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas
             FROM siswa s
+            LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN kelas k ON s.kelas_id = k.id
             {$whereSql}
             ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
@@ -1644,6 +1685,7 @@ class AbsensiModel extends BaseModel {
                    END as is_qr_scanned
             FROM siswa_mapel_enrollment sme
             JOIN siswa s ON sme.siswa_id = s.id
+            LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN kelas k ON s.kelas_id = k.id
             LEFT JOIN jurusan j ON s.jurusan_id = j.id
             LEFT JOIN absensi a ON a.id = (
@@ -1654,6 +1696,9 @@ class AbsensiModel extends BaseModel {
                 LIMIT 1
             )
             WHERE sme.mapel_id = ? AND (sme.guru_id = ? OR sme.guru_id IS NULL)
+              AND (s.status = 'aktif' OR s.status IS NULL)
+              AND (u.status = 'active' OR u.status IS NULL)
+              AND (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)
             ORDER BY k.nama_kelas ASC, s.nama_lengkap ASC
         ");
         $stmt->execute([$tanggal, $mapelId, $guruId]);
@@ -1921,6 +1966,17 @@ class AbsensiModel extends BaseModel {
             $params[] = $kelasId;
         }
 
+        $whereConds = [
+            "(s.status = 'aktif' OR s.status IS NULL)",
+            "(u.status = 'active' OR u.status IS NULL)",
+            "(k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)"
+        ];
+
+        if ($kelasId > 0) {
+            $whereConds[] = "s.kelas_id = ?";
+            $params[] = $kelasId;
+        }
+
         if ($mapelId > 0) {
             $whereConds[] = "(sme.mapel_id = ? OR s.id IN (SELECT DISTINCT siswa_id FROM absensi WHERE tanggal >= ? AND tanggal <= ?))";
             $params[] = $mapelId;
@@ -1928,14 +1984,12 @@ class AbsensiModel extends BaseModel {
             $params[] = $endDate;
         }
 
-        $whereSql = "";
-        if (!empty($whereConds)) {
-            $whereSql = " WHERE " . implode(" AND ", $whereConds);
-        }
+        $whereSql = " WHERE " . implode(" AND ", $whereConds);
 
         $stmtS = $this->db->prepare("
             SELECT DISTINCT s.id as siswa_id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas, j.nama_jurusan
             FROM siswa s
+            LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN kelas k ON s.kelas_id = k.id
             LEFT JOIN jurusan j ON s.jurusan_id = j.id
             LEFT JOIN siswa_mapel_enrollment sme ON s.id = sme.siswa_id
@@ -1948,14 +2002,20 @@ class AbsensiModel extends BaseModel {
         // Fallback: If mapel filter returns empty, show all students in class/school
         if (empty($siswaList)) {
             $fallbackParams = [];
-            $fallbackWhere = "";
+            $fbConds = [
+                "(s.status = 'aktif' OR s.status IS NULL)",
+                "(u.status = 'active' OR u.status IS NULL)",
+                "(k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL)"
+            ];
             if ($kelasId > 0) {
-                $fallbackWhere = " WHERE s.kelas_id = ? ";
+                $fbConds[] = "s.kelas_id = ?";
                 $fallbackParams[] = $kelasId;
             }
+            $fallbackWhere = " WHERE " . implode(" AND ", $fbConds);
             $stmtFB = $this->db->prepare("
                 SELECT DISTINCT s.id as siswa_id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas, j.nama_jurusan
                 FROM siswa s
+                LEFT JOIN users u ON s.user_id = u.id
                 LEFT JOIN kelas k ON s.kelas_id = k.id
                 LEFT JOIN jurusan j ON s.jurusan_id = j.id
                 {$fallbackWhere}

@@ -162,9 +162,9 @@ class PembayaranModel {
 
         $tipeSiswa = $filters['tipe_siswa'] ?? 'aktif';
         if ($tipeSiswa === 'aktif') {
-            $where[] = "(k.nama_kelas IS NULL OR k.nama_kelas NOT LIKE 'ALUMNI%')";
+            $where[] = "((s.status = 'aktif' OR s.status IS NULL) AND (u.status = 'active' OR u.status IS NULL) AND (k.nama_kelas NOT LIKE '%ALUMNI%' AND k.nama_kelas NOT LIKE '%LULUS%' OR k.nama_kelas IS NULL))";
         } elseif ($tipeSiswa === 'alumni') {
-            $where[] = "k.nama_kelas LIKE 'ALUMNI%'";
+            $where[] = "(s.status = 'alumni' OR k.nama_kelas LIKE '%ALUMNI%' OR k.nama_kelas LIKE '%LULUS%' OR u.status IN ('inactive', 'nonaktif'))";
         }
 
         if (!empty($filters['kelas_id'])) {
