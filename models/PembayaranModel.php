@@ -876,8 +876,21 @@ class PembayaranModel {
 
         // 3. Batch paralel multi-cURL per 25 siswa
         $chunks = array_chunk($targetSync, 25);
-        $stmtUp = $this->db->prepare("UPDATE pembayaran_tagihan SET nominal = ?, nominal_terbayar = ?, sisa_tagihan = ?, status = ?, updated_at = NOW() WHERE id = ?");
-        $stmtIn = $this->db->prepare("INSERT INTO pembayaran_tagihan (siswa_id, nis, nisn, jenis_pembayaran, kode_tagihan, judul, nominal, nominal_terbayar, sisa_tagihan, periode_bulan, tahun_ajaran, status, keterangan) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '2024/2025', ?, 'Sinkronisasi Live Tata Usaha')");
+        $stmtUp = $this->db->prepare("UPDATE pembayaran_tagihan SET siswa_id = ?, nominal = ?, nominal_terbayar = ?, sisa_tagihan = ?, status = ?, updated_at = NOW() WHERE id = ?");
+        $stmtIn = $this->db->prepare("
+            INSERT INTO pembayaran_tagihan 
+            (siswa_id, nis, nisn, jenis_pembayaran, kode_tagihan, judul, nominal, nominal_terbayar, sisa_tagihan, periode_bulan, tahun_ajaran, status, keterangan) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '2024/2025', ?, 'Sinkronisasi Live Tata Usaha')
+            ON DUPLICATE KEY UPDATE 
+                siswa_id = VALUES(siswa_id),
+                nis = VALUES(nis),
+                nisn = VALUES(nisn),
+                nominal = VALUES(nominal),
+                nominal_terbayar = VALUES(nominal_terbayar),
+                sisa_tagihan = VALUES(sisa_tagihan),
+                status = VALUES(status),
+                updated_at = NOW()
+        ");
         $stmtInHist = $this->db->prepare("INSERT IGNORE INTO pembayaran_riwayat (tagihan_id, siswa_id, nomor_transaksi, nominal_bayar, tanggal_bayar, metode_pembayaran, channel, status, catatan) VALUES (?, ?, ?, ?, ?, ?, 'Loket Tata Usaha', 'berhasil', 'Loket Kasir Tata Usaha')");
 
         $syncedStudents = 0;
@@ -933,16 +946,34 @@ class PembayaranModel {
                         $jenis = 'Iuran Sekolah';
                     }
 
-                    $chk = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE siswa_id = ? AND (kode_tagihan LIKE ? OR judul = ?) LIMIT 1");
-                    $chk->execute([$siswaId, '%' . $kode . '%', $judul]);
+                    $finalKodeTagihan = 'TU-' . $item['tu_id'] . '-' . $kode;
+                    $chk = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE kode_tagihan = ? OR (siswa_id = ? AND (kode_tagihan LIKE ? OR judul = ?)) LIMIT 1");
+                    $chk->execute([$finalKodeTagihan, $siswaId, '%' . $kode . '%', $judul]);
                     $existingId = $chk->fetchColumn();
 
                     if ($existingId) {
-                        $stmtUp->execute([$nominal, $terbayar, $sisa, $status, $existingId]);
-                        $validLmsBillIds[] = $existingId;
+                        $stmtUp->execute([$siswaId, $nominal, $terbayar, $sisa, $status, $existingId]);
+                        $validLmsBillIds[] = (int)$existingId;
                     } else {
-                        $stmtIn->execute([$siswaId, $nis ?: $nisn, $nisn ?: $nis, $jenis, 'TU-' . $item['tu_id'] . '-' . $kode, $judul, $nominal, $terbayar, $sisa, $judul, $status]);
-                        $validLmsBillIds[] = $this->db->lastInsertId();
+                        try {
+                            $stmtIn->execute([$siswaId, $nis ?: $nisn, $nisn ?: $nis, $jenis, $finalKodeTagihan, $judul, $nominal, $terbayar, $sisa, $judul, $status]);
+                            $lastId = (int)$this->db->lastInsertId();
+                            if ($lastId > 0) {
+                                $validLmsBillIds[] = $lastId;
+                            } else {
+                                $chkDup = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE kode_tagihan = ? LIMIT 1");
+                                $chkDup->execute([$finalKodeTagihan]);
+                                $dupId = $chkDup->fetchColumn();
+                                if ($dupId) $validLmsBillIds[] = (int)$dupId;
+                            }
+                        } catch (\Throwable $eDup) {
+                            $stmtFallback = $this->db->prepare("UPDATE pembayaran_tagihan SET siswa_id = ?, nominal = ?, nominal_terbayar = ?, sisa_tagihan = ?, status = ?, updated_at = NOW() WHERE kode_tagihan = ?");
+                            $stmtFallback->execute([$siswaId, $nominal, $terbayar, $sisa, $status, $finalKodeTagihan]);
+                            $chkDup = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE kode_tagihan = ? LIMIT 1");
+                            $chkDup->execute([$finalKodeTagihan]);
+                            $dupId = $chkDup->fetchColumn();
+                            if ($dupId) $validLmsBillIds[] = (int)$dupId;
+                        }
                     }
                 }
 
@@ -1211,6 +1242,16 @@ class PembayaranModel {
             INSERT INTO pembayaran_tagihan
             (siswa_id, nis, nisn, jenis_pembayaran, kode_tagihan, judul, nominal, nominal_terbayar, sisa_tagihan, periode_bulan, tahun_ajaran, tanggal_jatuh_tempo, status, keterangan)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE 
+                siswa_id = VALUES(siswa_id),
+                nis = VALUES(nis),
+                nisn = VALUES(nisn),
+                nominal = VALUES(nominal),
+                nominal_terbayar = VALUES(nominal_terbayar),
+                sisa_tagihan = VALUES(sisa_tagihan),
+                status = VALUES(status),
+                keterangan = VALUES(keterangan),
+                updated_at = NOW()
         ");
         $stmtInTrx = $this->db->prepare("
             INSERT INTO pembayaran_riwayat
@@ -1358,13 +1399,29 @@ class PembayaranModel {
                     $stmtUpTagihan->execute([$nominal, $terbayar, $sisa, $status, $ket, $tagihanDbId]);
                     $syncedCount++;
                 } else {
-                    $stmtInTagihan->execute([
-                        $siswaId, $finalNis, $finalNisn, $jenis, $kodeTagihan, $judul,
-                        $nominal, $terbayar, $sisa, $periode, $ta, $due, $status, $ket
-                    ]);
-                    $tagihanDbId = (int)$this->db->lastInsertId();
-                    $existingTagihanMap[$kodeTagihan] = $tagihanDbId;
-                    $createdCount++;
+                    try {
+                        $stmtInTagihan->execute([
+                            $siswaId, $finalNis, $finalNisn, $jenis, $kodeTagihan, $judul,
+                            $nominal, $terbayar, $sisa, $periode, $ta, $due, $status, $ket
+                        ]);
+                        $tagihanDbId = (int)$this->db->lastInsertId();
+                        if ($tagihanDbId <= 0) {
+                            $findT = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE kode_tagihan = ? LIMIT 1");
+                            $findT->execute([$kodeTagihan]);
+                            $tagihanDbId = (int)$findT->fetchColumn();
+                        }
+                    } catch (\Throwable $eTag) {
+                        $findT = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE kode_tagihan = ? LIMIT 1");
+                        $findT->execute([$kodeTagihan]);
+                        $tagihanDbId = (int)$findT->fetchColumn();
+                        if ($tagihanDbId) {
+                            $stmtUpTagihan->execute([$nominal, $terbayar, $sisa, $status, $ket, $tagihanDbId]);
+                        }
+                    }
+                    if ($tagihanDbId) {
+                        $existingTagihanMap[$kodeTagihan] = $tagihanDbId;
+                        $createdCount++;
+                    }
                 }
 
                 // Sync Riwayat Transaksi Pembayaran Resmi
