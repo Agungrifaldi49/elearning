@@ -147,20 +147,26 @@
 
                                     <div class="w-100 overflow-hidden">
                                         <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <h6 class="fw-bold mb-0 text-truncate text-dark small"><?= htmlspecialchars($c['full_name']) ?></h6>
-                                            <div class="d-flex align-items-center gap-1">
+                                            <h6 class="fw-bold mb-0 text-truncate text-dark small"><?= htmlspecialchars($c['full_name']) ?></h6>                                             <div class="d-flex align-items-center gap-1">
                                                  <?php if (($c['is_online'] ?? 0) == 1): ?>
                                                      <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-0 status-badge" style="font-size:0.65rem;"><i class="bi bi-circle-fill text-success me-1" style="font-size:0.45rem;"></i>Online</span>
                                                  <?php else: ?>
                                                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-0 status-badge" style="font-size:0.65rem;"><i class="bi bi-circle-fill text-danger me-1" style="font-size:0.45rem;"></i>Off</span>
                                                  <?php endif; ?>
-                                                 <span class="badge bg-secondary opacity-75" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
+                                                 <?php
+                                                 $roleBadgeStyle = 'bg-secondary text-white';
+                                                 if ($roleLower === 'guru') $roleBadgeStyle = 'bg-primary-subtle text-primary border border-primary-subtle';
+                                                 elseif ($roleLower === 'siswa') $roleBadgeStyle = 'bg-info-subtle text-info-emphasis border border-info-subtle';
+                                                 elseif ($roleLower === 'kepala sekolah') $roleBadgeStyle = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+                                                 elseif ($roleLower === 'administrator') $roleBadgeStyle = 'bg-dark text-white';
+                                                 ?>
+                                                 <span class="badge <?= $roleBadgeStyle ?> fw-semibold" style="font-size:0.65rem;"><?= htmlspecialchars($c['role_name']) ?></span>
                                              </div>
                                         </div>
 
                                         <!-- Contextual Subtitle: Kelas for Siswa, Mapel for Guru -->
                                         <?php if (!empty($kelasName)): ?>
-                                            <div class="mb-1"><span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.68rem;"><i class="bi bi-bounding-box-circles me-1"></i><?= $kelasName ?></span></div>
+                                            <div class="mb-1"><span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.68rem;"><i class="bi bi-mortarboard me-1"></i><?= $kelasName ?></span></div>
                                         <?php elseif (!empty($mapelName)): ?>
                                             <div class="mb-1 text-truncate"><span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size:0.68rem;"><i class="bi bi-journal-bookmark me-1"></i><?= $mapelName ?></span></div>
                                         <?php endif; ?>
@@ -211,12 +217,20 @@
                                 </div>
                                 <div>
                                     <h6 class="fw-bold mb-0 text-dark"><?= htmlspecialchars($activeContactInfo['full_name']) ?></h6>
-                                    <div class="d-flex align-items-center gap-2 small">
-                                        <span class="badge bg-secondary" style="font-size:0.68rem;"><?= htmlspecialchars($activeContactInfo['role_name']) ?></span>
+                                    <div class="d-flex align-items-center gap-2 small mt-1">
+                                        <?php
+                                        $actRoleLower = strtolower($activeContactInfo['role_name'] ?? '');
+                                        $actRoleBadge = 'bg-secondary text-white';
+                                        if ($actRoleLower === 'guru') $actRoleBadge = 'bg-primary-subtle text-primary border border-primary-subtle';
+                                        elseif ($actRoleLower === 'siswa') $actRoleBadge = 'bg-info-subtle text-info-emphasis border border-info-subtle';
+                                        elseif ($actRoleLower === 'kepala sekolah') $actRoleBadge = 'bg-warning-subtle text-warning-emphasis border border-warning-subtle';
+                                        elseif ($actRoleLower === 'administrator') $actRoleBadge = 'bg-dark text-white';
+                                        ?>
+                                        <span class="badge <?= $actRoleBadge ?>" style="font-size:0.68rem;"><?= htmlspecialchars($activeContactInfo['role_name']) ?></span>
                                         <?php if (!empty($activeContactInfo['nama_kelas'])): ?>
-                                            <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.68rem;"><?= htmlspecialchars($activeContactInfo['nama_kelas']) ?></span>
+                                            <span class="badge bg-light text-dark border" style="font-size:0.68rem;"><i class="bi bi-mortarboard me-1 text-primary"></i><?= htmlspecialchars($activeContactInfo['nama_kelas']) ?></span>
                                         <?php elseif (!empty($activeContactInfo['mata_pelajaran'])): ?>
-                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-truncate" style="font-size:0.68rem; max-width:200px;"><?= htmlspecialchars($activeContactInfo['mata_pelajaran']) ?></span>
+                                            <span class="badge bg-light text-dark border text-truncate" style="font-size:0.68rem; max-width:200px;"><i class="bi bi-book me-1 text-primary"></i><?= htmlspecialchars($activeContactInfo['mata_pelajaran']) ?></span>
                                         <?php endif; ?>
                                     </div>
                                 </div>

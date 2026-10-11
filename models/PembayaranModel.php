@@ -1185,7 +1185,7 @@ class PembayaranModel {
         // 4. Siapkan Prepared Statements
         $stmtInUser = $this->db->prepare("
             INSERT INTO users (username, email, password, full_name, role_id, status, created_at)
-            VALUES (?, ?, ?, ?, 4, 'active', NOW())
+            VALUES (?, ?, ?, ?, 3, 'active', NOW())
         ");
         $stmtInSiswa = $this->db->prepare("
             INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, status)

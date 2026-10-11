@@ -423,7 +423,11 @@ class CommunicationModel extends BaseModel {
         $uid = (int)$currentUserId;
         $stmt = $this->db->prepare("
             SELECT u.id, 
-            COALESCE(s.nama_lengkap, g.nama_lengkap, u.full_name) as full_name,
+            CASE 
+                WHEN LOWER(r.name) = 'siswa' THEN COALESCE(s.nama_lengkap, u.full_name)
+                WHEN LOWER(r.name) = 'guru' THEN COALESCE(g.nama_lengkap, u.full_name)
+                ELSE u.full_name
+            END as full_name,
             u.avatar, 
             u.role_id, 
             r.name as role_name,
@@ -435,11 +439,11 @@ class CommunicationModel extends BaseModel {
                 ELSE 0 
             END as is_online,
             CASE 
-                WHEN r.name = 'Siswa' THEN COALESCE(k.nama_kelas, '')
+                WHEN LOWER(r.name) = 'siswa' THEN COALESCE(k.nama_kelas, '')
                 ELSE ''
             END as nama_kelas,
             CASE 
-                WHEN r.name = 'Guru' THEN COALESCE(
+                WHEN LOWER(r.name) = 'guru' THEN COALESCE(
                     (SELECT GROUP_CONCAT(DISTINCT mp.nama_mapel SEPARATOR ', ') 
                      FROM jadwal j 
                      JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
