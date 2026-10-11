@@ -43,6 +43,7 @@
                     <select name="jabatan" class="form-select rounded-3" onchange="this.form.submit()">
                         <option value="">-- Semua Jabatan --</option>
                         <option value="Guru Pengajar" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Guru Pengajar') ? 'selected' : '' ?>>Guru Pengajar (KBM)</option>
+                        <option value="Kepala Sekolah" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Kepala Sekolah') ? 'selected' : '' ?>>Kepala Sekolah</option>
                         <option value="Tenaga Ahli" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Tenaga Ahli') ? 'selected' : '' ?>>Tenaga Ahli</option>
                         <option value="Bendahara" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Bendahara') ? 'selected' : '' ?>>Bendahara</option>
                         <option value="Kasubag Tata Usaha" <?= (isset($_GET['jabatan']) && $_GET['jabatan'] === 'Kasubag Tata Usaha') ? 'selected' : '' ?>>Kasubag Tata Usaha</option>
@@ -171,7 +172,10 @@
                             $jab = $g['jabatan'] ?? 'Guru Pengajar';
                             $badgeClass = 'bg-primary-subtle text-primary border-primary';
                             $icon = 'bi-mortarboard-fill';
-                            if (stripos($jab, 'satpam') !== false || stripos($jab, 'keamanan') !== false) {
+                            if (stripos($jab, 'kepala sekolah') !== false || stripos($jab, 'kepsek') !== false) {
+                                $badgeClass = 'bg-danger-subtle text-danger border-danger';
+                                $icon = 'bi-award-fill';
+                            } elseif (stripos($jab, 'satpam') !== false || stripos($jab, 'keamanan') !== false) {
                                 $badgeClass = 'bg-dark-subtle text-dark border-dark';
                                 $icon = 'bi-shield-lock-fill';
                             } elseif (stripos($jab, 'bendahara') !== false) {
@@ -412,6 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <td>
                                             <select name="matrix_guru[<?= $gw['id'] ?>][jabatan]" class="form-select form-select-sm">
                                                 <option value="Guru Pengajar" <?= $currJab === 'Guru Pengajar' ? 'selected' : '' ?>>Guru Pengajar</option>
+                                                <option value="Kepala Sekolah" <?= $currJab === 'Kepala Sekolah' ? 'selected' : '' ?>>Kepala Sekolah</option>
                                                 <option value="Tenaga Ahli" <?= $currJab === 'Tenaga Ahli' ? 'selected' : '' ?>>Tenaga Ahli</option>
                                                 <option value="Bendahara" <?= $currJab === 'Bendahara' ? 'selected' : '' ?>>Bendahara</option>
                                                 <option value="Kasubag Tata Usaha" <?= $currJab === 'Kasubag Tata Usaha' ? 'selected' : '' ?>>Kasubag TU</option>
@@ -486,6 +491,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <label class="form-label small fw-semibold">Jabatan / Tugas GTK <span class="text-danger">*</span></label>
                             <select name="jabatan" class="form-select" required>
                                 <option value="Guru Pengajar" selected>Guru Pengajar (Ikuti Jadwal KBM)</option>
+                                <option value="Kepala Sekolah">Kepala Sekolah (Pimpinan)</option>
                                 <option value="Tenaga Ahli">Tenaga Ahli (Jam Kantor Penuh)</option>
                                 <option value="Bendahara">Bendahara (Jam Kantor Penuh)</option>
                                 <option value="Kasubag Tata Usaha">Kasubag Tata Usaha (Jam Kantor Penuh)</option>
@@ -599,6 +605,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <?php $gJab = $g['jabatan'] ?? 'Guru Pengajar'; ?>
                                 <select name="jabatan" class="form-select" required>
                                     <option value="Guru Pengajar" <?= $gJab === 'Guru Pengajar' ? 'selected' : '' ?>>Guru Pengajar (Ikuti Jadwal KBM)</option>
+                                    <option value="Kepala Sekolah" <?= $gJab === 'Kepala Sekolah' ? 'selected' : '' ?>>Kepala Sekolah (Pimpinan)</option>
                                     <option value="Tenaga Ahli" <?= $gJab === 'Tenaga Ahli' ? 'selected' : '' ?>>Tenaga Ahli (Jam Kantor Penuh)</option>
                                     <option value="Bendahara" <?= $gJab === 'Bendahara' ? 'selected' : '' ?>>Bendahara (Jam Kantor Penuh)</option>
                                     <option value="Kasubag Tata Usaha" <?= $gJab === 'Kasubag Tata Usaha' ? 'selected' : '' ?>>Kasubag Tata Usaha (Jam Kantor Penuh)</option>

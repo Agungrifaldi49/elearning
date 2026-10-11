@@ -107,14 +107,20 @@ class AdminController {
 
             $action = $_POST['action'] ?? '';
             if ($action === 'create') {
-                $userModel->createUser([
-                    'role_id' => (int)$_POST['role_id'],
+                $roleId = (int)$_POST['role_id'];
+                $fullName = Security::sanitize($_POST['full_name']);
+                $newUserId = $userModel->createUser([
+                    'role_id' => $roleId,
                     'username' => Security::sanitize($_POST['username']),
                     'email' => Security::sanitize($_POST['email']),
                     'password' => $_POST['password'],
-                    'full_name' => Security::sanitize($_POST['full_name']),
+                    'full_name' => $fullName,
                     'status' => 'active'
                 ]);
+                if ($roleId === 2 && $newUserId) {
+                    $guruModel = new GuruModel();
+                    $guruModel->ensureGuruProfile($newUserId, $fullName);
+                }
                 FlashHelper::setSuccess('User baru berhasil ditambahkan.');
             } elseif ($action === 'delete') {
                 $userModel->deleteUser((int)$_POST['id']);

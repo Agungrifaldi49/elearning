@@ -31,10 +31,16 @@ class GuruModel extends BaseModel {
         $this->ensureJabatanColumn();
 
         $sql = "
-            SELECT g.*, u.username, u.email, u.avatar 
+            SELECT g.*, 
+                   COALESCE(u.username, '') AS username, 
+                   COALESCE(u.email, '') AS email, 
+                   u.avatar,
+                   COALESCE(u.role_id, 2) AS role_id,
+                   COALESCE(r.name, 'Guru') AS role_name
             FROM guru g 
-            JOIN users u ON g.user_id = u.id 
-            WHERE u.role_id = 2
+            LEFT JOIN users u ON g.user_id = u.id 
+            LEFT JOIN roles r ON u.role_id = r.id
+            WHERE 1=1
         ";
         $params = [];
 
@@ -80,10 +86,16 @@ class GuruModel extends BaseModel {
                 } catch (\Throwable $e2) {
                     // Safe fallback if column cannot be added: query without g.jabatan
                     $fallbackSql = "
-                        SELECT g.*, u.username, u.email, u.avatar 
+                        SELECT g.*, 
+                               COALESCE(u.username, '') AS username, 
+                               COALESCE(u.email, '') AS email, 
+                               u.avatar,
+                               COALESCE(u.role_id, 2) AS role_id,
+                               COALESCE(r.name, 'Guru') AS role_name
                         FROM guru g 
-                        JOIN users u ON g.user_id = u.id 
-                        WHERE u.role_id = 2
+                        LEFT JOIN users u ON g.user_id = u.id 
+                        LEFT JOIN roles r ON u.role_id = r.id
+                        WHERE 1=1
                     ";
                     $fallbackParams = [];
                     if ($jenisKelamin && in_array(strtoupper($jenisKelamin), ['L', 'P'])) {
