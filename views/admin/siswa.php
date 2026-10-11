@@ -102,25 +102,14 @@
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('autoSearchInput');
-            const form = document.getElementById('autoFilterForm');
-            if (!searchInput || !form) return;
+            if (!searchInput) return;
 
-            let debounceTimer;
+            // Live filter instan pada tabel menggunakan DataTables tanpa memicu reload halaman
             searchInput.addEventListener('input', function() {
                 if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable) {
                     window.jQuery('.datatable').DataTable().search(this.value).draw();
                 }
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    form.submit();
-                }, 450);
             });
-
-            if (searchInput.value) {
-                searchInput.focus();
-                const len = searchInput.value.length;
-                searchInput.setSelectionRange(len, len);
-            }
         });
         </script>
 

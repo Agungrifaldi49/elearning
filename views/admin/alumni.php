@@ -112,7 +112,8 @@ $alumniStats = is_array($alumniStats ?? null) ? $alumniStats : ['total' => count
                     <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-search text-primary me-1"></i> Cari NISN / NIS / Nama Alumni</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0 rounded-start-3"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" name="q" id="autoSearchInput" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" class="form-control bg-light border-start-0 rounded-end-3" placeholder="Ketik NISN, NIS, atau Nama..." autocomplete="off">
+                        <input type="text" name="q" id="autoSearchInput" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" class="form-control bg-light border-start-0" placeholder="Ketik NISN, NIS, atau Nama..." autocomplete="off">
+                        <button type="submit" class="btn btn-primary rounded-end-3 px-3"><i class="bi bi-search me-1"></i> Cari</button>
                     </div>
                 </div>
 
@@ -161,25 +162,14 @@ $alumniStats = is_array($alumniStats ?? null) ? $alumniStats : ['total' => count
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             const searchInput = document.getElementById('autoSearchInput');
-            const form = document.getElementById('autoFilterForm');
-            if (!searchInput || !form) return;
+            if (!searchInput) return;
 
-            let debounceTimer;
+            // Live filter instan pada tabel menggunakan DataTables tanpa memicu reload halaman
             searchInput.addEventListener('input', function() {
                 if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable) {
-                    window.jQuery('.datatable').DataTable().search(this.value).draw();
+                    window.jQuery('#tableAlumni').DataTable().search(this.value).draw();
                 }
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    form.submit();
-                }, 450);
             });
-
-            if (searchInput.value) {
-                searchInput.focus();
-                const len = searchInput.value.length;
-                searchInput.setSelectionRange(len, len);
-            }
         });
         </script>
 
