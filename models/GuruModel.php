@@ -125,8 +125,9 @@ class GuruModel extends BaseModel {
         $stmt = $this->db->prepare("
             SELECT g.*, u.username, u.email, u.avatar 
             FROM guru g 
-            JOIN users u ON g.user_id = u.id 
-            WHERE g.user_id = ? AND u.role_id = 2
+            JOIN users u ON (g.user_id = u.id OR (u.full_name = g.nama_lengkap AND u.role_id = 2))
+            WHERE u.id = ? AND u.role_id = 2
+            LIMIT 1
         ");
         $stmt->execute([$userId]);
         return $stmt->fetch();

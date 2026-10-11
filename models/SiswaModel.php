@@ -158,8 +158,8 @@ class SiswaModel extends BaseModel {
                 }
             }
             // Auto self-heal: Pastikan AGUNG RIFALDI, S.Tr. Kom adalah Guru dan BUKAN Siswa
-            $db->exec("DELETE FROM siswa WHERE nama_lengkap = 'AGUNG RIFALDI' AND (nis = '522402055' OR user_id = 7)");
-            $db->exec("DELETE FROM users WHERE id = 7 AND username = 'agung'");
+            $db->exec("UPDATE users SET role_id = 2, full_name = 'AGUNG RIFALDI, S.Tr. Kom' WHERE username IN ('agung', 'agg023') OR full_name LIKE '%AGUNG RIFALDI%'");
+            $db->exec("DELETE FROM siswa WHERE user_id IN (7, 9) OR nama_lengkap = 'AGUNG RIFALDI'");
             $db->exec("DELETE FROM siswa WHERE user_id = 1");
             $db->exec("DELETE FROM siswa WHERE user_id IN (SELECT id FROM users WHERE role_id IN (1, 2, 4))");
         } catch (\Throwable $e) {}

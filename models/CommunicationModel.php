@@ -424,9 +424,9 @@ class CommunicationModel extends BaseModel {
 
         // Auto-heal data integrity: Pastikan sinkronisasi hak akses dan status peran berjalan akurat
         try {
-            // 1. Bersihkan akun siswa dummy AGUNG RIFALDI yang bukan siswa asli
-            $this->db->exec("DELETE FROM siswa WHERE user_id = 7 OR (nama_lengkap = 'AGUNG RIFALDI' AND nis = '522402055')");
-            $this->db->exec("DELETE FROM users WHERE id = 7 AND username = 'agung'");
+            // 1. Pastikan akun AGUNG RIFALDI, S.Tr. Kom (username 'agung' dan 'agg023') memiliki role_id = 2 (Guru)
+            $this->db->exec("UPDATE users SET role_id = 2, full_name = 'AGUNG RIFALDI, S.Tr. Kom' WHERE username IN ('agung', 'agg023') OR full_name LIKE '%AGUNG RIFALDI%'");
+            $this->db->exec("DELETE FROM siswa WHERE user_id IN (7, 9) OR nama_lengkap = 'AGUNG RIFALDI'");
 
             // 2. Pastikan Kepala Sekolah memiliki role_id = 4 (Kepala Sekolah)
             $this->db->exec("UPDATE users SET role_id = 4 WHERE username = 'kepsek' OR full_name LIKE '%ASEP SAEPULLOH%'");
