@@ -1,8 +1,8 @@
 {
     "api_base_url": "https://apitatausaha.smkmuthiaharapanclk.com",
-    "api_email": "tatausaha@smkmuthiaharapanclk.com",
+    "api_email": "admin@mhc.com",
     "api_password": "",
-    "api_jwt_token": "",
+    "api_jwt_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjMsImVtYWlsIjoiYWRtaW5AbWhjLmNvbSIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJzbWsgbWhjIiwiZXhwIjoxNzkxNzYxMjQ0LCJpYXQiOjE3OTE2NzQ4NDR9.974XBVqfkcltk4xKWGU9WR_oQNyqyCws5GtGbWpic6M",
     "bridge_secret_token": "SMKMH_PAYMENT_SECRET_KEY_2026",
     "timeout_connect": 10,
     "timeout_response": 30,
