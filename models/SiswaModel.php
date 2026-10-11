@@ -34,6 +34,9 @@ class SiswaModel extends BaseModel {
             LEFT JOIN kelas k ON s.kelas_id = k.id 
             LEFT JOIN jurusan j ON s.jurusan_id = j.id 
             WHERE (u.role_id = 3 OR u.role_id IS NULL)
+              AND (u.role_id NOT IN (1, 2, 4) OR u.role_id IS NULL)
+              AND s.nama_lengkap != 'AGUNG RIFALDI, S.Tr. Kom'
+              AND NOT (s.nama_lengkap = 'AGUNG RIFALDI' AND (s.nis = '522402055' OR s.user_id = 7))
         ";
         $params = [];
 
@@ -154,9 +157,11 @@ class SiswaModel extends BaseModel {
                     $db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL");
                 }
             }
-            // Auto self-heal any corrupted entities in names
-            $db->exec("UPDATE `siswa` SET `nama_lengkap` = REPLACE(`nama_lengkap`, '&#039;', '\'') WHERE `nama_lengkap` LIKE '%&#039;%'");
-            $db->exec("UPDATE `users` SET `full_name` = REPLACE(`full_name`, '&#039;', '\'') WHERE `full_name` LIKE '%&#039;%'");
+            // Auto self-heal: Pastikan AGUNG RIFALDI, S.Tr. Kom adalah Guru dan BUKAN Siswa
+            $db->exec("DELETE FROM siswa WHERE nama_lengkap = 'AGUNG RIFALDI' AND (nis = '522402055' OR user_id = 7)");
+            $db->exec("DELETE FROM users WHERE id = 7 AND username = 'agung'");
+            $db->exec("DELETE FROM siswa WHERE user_id = 1");
+            $db->exec("DELETE FROM siswa WHERE user_id IN (SELECT id FROM users WHERE role_id IN (1, 2, 4))");
         } catch (\Throwable $e) {}
     }
 
