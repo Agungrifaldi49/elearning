@@ -10,6 +10,9 @@
                 <p class="text-muted small mb-0">Daftar Peserta Didik SMK Muthia Harapan Cicalengka dengan Pencarian & Edit Massal.</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
+                <a href="<?= BASE_URL ?>index.php?url=admin/alumni" class="btn btn-outline-primary shadow-sm fw-semibold">
+                    <i class="bi bi-mortarboard-fill text-success me-1"></i> Halaman Data Alumni <span class="badge bg-success ms-1"><?= $totalAlumniCount ?? 0 ?></span>
+                </a>
                 <button type="button" class="btn btn-warning shadow-sm fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalBulkMatrixEdit">
                     <i class="bi bi-pencil-square me-1"></i> Mode Edit Massal (<?= count($siswaList) ?> Siswa)
                 </button>
@@ -69,10 +72,10 @@
                 </div>
 
                 <div class="col-md-2 col-6">
-                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-mortarboard-fill text-success me-1"></i> Status</label>
+                    <label class="form-label small fw-bold text-muted mb-1"><i class="bi bi-person-check-fill text-success me-1"></i> Status</label>
                     <select name="status" class="form-select rounded-3" onchange="this.form.submit()">
-                        <option value="">-- Semua Status --</option>
-                        <option value="aktif" <?= (isset($_GET['status']) && $_GET['status'] === 'aktif') ? 'selected' : '' ?>>🟢 Siswa Aktif</option>
+                        <option value="aktif" <?= (!isset($_GET['status']) || $_GET['status'] === 'aktif') ? 'selected' : '' ?>>🟢 Siswa Aktif (Default)</option>
+                        <option value="semua" <?= (isset($_GET['status']) && $_GET['status'] === 'semua') ? 'selected' : '' ?>>-- Semua Status --</option>
                         <option value="alumni" <?= (isset($_GET['status']) && $_GET['status'] === 'alumni') ? 'selected' : '' ?>>🎓 Alumni / Lulus</option>
                         <option value="drop" <?= (isset($_GET['status']) && $_GET['status'] === 'drop') ? 'selected' : '' ?>>🔴 Drop Out / Keluar</option>
                     </select>

@@ -1175,4 +1175,64 @@ class SiswaModel extends BaseModel {
             return 0;
         }
     }
+
+    public function getAlumniStats() {
+        self::ensureStatusColumn($this->db);
+        $stats = [
+            'total' => 0,
+            'laki' => 0,
+            'perempuan' => 0,
+            'per_jurusan' => []
+        ];
+        try {
+            $rowTotal = $this->db->query("SELECT COUNT(*) as cnt FROM siswa WHERE status = 'alumni'")->fetch();
+            $stats['total'] = (int)($rowTotal['cnt'] ?? 0);
+
+            $rowL = $this->db->query("SELECT COUNT(*) as cnt FROM siswa WHERE status = 'alumni' AND jenis_kelamin = 'L'")->fetch();
+            $stats['laki'] = (int)($rowL['cnt'] ?? 0);
+
+            $rowP = $this->db->query("SELECT COUNT(*) as cnt FROM siswa WHERE status = 'alumni' AND jenis_kelamin = 'P'")->fetch();
+            $stats['perempuan'] = (int)($rowP['cnt'] ?? 0);
+
+            $rowsJ = $this->db->query("
+                SELECT j.nama_jurusan, COUNT(s.id) as cnt 
+                FROM jurusan j 
+                LEFT JOIN siswa s ON s.jurusan_id = j.id AND s.status = 'alumni'
+                GROUP BY j.id, j.nama_jurusan
+            ")->fetchAll();
+            $stats['per_jurusan'] = $rowsJ ?: [];
+        } catch (\Throwable $e) {}
+        return $stats;
+    }
+
+    public function restoreAlumni($siswaId, $kelasId = null) {
+        self::ensureStatusColumn($this->db);
+        $sId = (int)$siswaId;
+        if ($sId <= 0) return false;
+        try {
+            $siswa = $this->getById($sId);
+            if (!$siswa) return false;
+
+            $updateSql = "UPDATE siswa SET status = 'aktif'";
+            $params = [];
+            if ($kelasId && (int)$kelasId > 0) {
+                $updateSql .= ", kelas_id = ?";
+                $params[] = (int)$kelasId;
+            }
+            $updateSql .= " WHERE id = ?";
+            $params[] = $sId;
+
+            $stmt = $this->db->prepare($updateSql);
+            $stmt->execute($params);
+
+            if (!empty($siswa['user_id'])) {
+                $stmtU = $this->db->prepare("UPDATE users SET status = 'active' WHERE id = ?");
+                $stmtU->execute([(int)$siswa['user_id']]);
+            }
+            return true;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
 }
+

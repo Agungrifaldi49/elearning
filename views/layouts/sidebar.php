@@ -63,6 +63,9 @@ if (!empty($sidebarRawLogo)) {
             <li><a class="nav-link <?= isActive($currentUrl,'admin/siswa') ?>" href="<?= BASE_URL ?>index.php?url=admin/siswa">
                 <i class="bi bi-people-fill"></i> Data Siswa
             </a></li>
+            <li><a class="nav-link <?= isActive($currentUrl,'admin/alumni') ?>" href="<?= BASE_URL ?>index.php?url=admin/alumni">
+                <i class="bi bi-mortarboard-fill text-success"></i> Data Alumni
+            </a></li>
             <li><a class="nav-link <?= isActive($currentUrl,'admin/akademik') ?>" href="<?= BASE_URL ?>index.php?url=admin/akademik">
                 <i class="bi bi-journal-bookmark-fill"></i> Kelas, Jurusan & Mapel
             </a></li>

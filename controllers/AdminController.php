@@ -346,12 +346,24 @@ class AdminController {
         $selectedKelasId = isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] > 0 ? (int)$_GET['kelas_id'] : null;
         $selectedJurusanId = isset($_GET['jurusan_id']) && (int)$_GET['jurusan_id'] > 0 ? (int)$_GET['jurusan_id'] : null;
         $selectedJenisKelamin = isset($_GET['jk']) && in_array(strtoupper($_GET['jk']), ['L', 'P']) ? strtoupper($_GET['jk']) : null;
-        $selectedStatus = isset($_GET['status']) && in_array(strtolower($_GET['status']), ['aktif', 'alumni', 'drop']) ? strtolower($_GET['status']) : null;
+        
+        // Halaman Data Siswa default HANYA menampilkan siswa aktif
+        $rawStatus = isset($_GET['status']) ? strtolower(trim($_GET['status'])) : '';
+        if ($rawStatus === 'semua') {
+            $selectedStatus = null;
+        } elseif (in_array($rawStatus, ['aktif', 'drop', 'alumni'])) {
+            $selectedStatus = $rawStatus;
+        } else {
+            $selectedStatus = 'aktif'; // Default aktif agar alumni tidak bercampur
+        }
+
         $searchKeyword = isset($_GET['q']) ? Security::sanitize($_GET['q']) : null;
 
         $siswaList = $siswaModel->getAll($selectedKelasId, $selectedJurusanId, $searchKeyword, $selectedJenisKelamin, $selectedStatus);
         $kelasList = $academicModel->getKelas();
         $jurusanList = $academicModel->getJurusan();
+        $alumniStats = $siswaModel->getAlumniStats();
+        $totalAlumniCount = $alumniStats['total'] ?? 0;
 
         $selectedKelas = null;
         if ($selectedKelasId > 0) {
@@ -360,6 +372,151 @@ class AdminController {
             $selectedKelas = $stmtK ? $stmtK->fetch() : null;
         }
         require_once ROOT_PATH . 'views/admin/siswa.php';
+    }
+
+    public function alumni() {
+        $siswaModel = new SiswaModel();
+        $academicModel = new AcademicModel();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!Security::verifyCsrfToken()) {
+                FlashHelper::setError('CSRF Token Invalid');
+                header('Location: ' . BASE_URL . 'index.php?url=admin/alumni');
+                exit();
+            }
+
+            $action = $_POST['action'] ?? '';
+            if ($action === 'restore') {
+                $id = (int)($_POST['id'] ?? 0);
+                $kelasId = !empty($_POST['kelas_id']) ? (int)$_POST['kelas_id'] : null;
+                if ($id > 0 && $siswaModel->restoreAlumni($id, $kelasId)) {
+                    FlashHelper::setSuccess('Alumni berhasil dikembalikan ke status Siswa Aktif.');
+                } else {
+                    FlashHelper::setError('Gagal mengembalikan alumni ke status aktif.');
+                }
+            } elseif ($action === 'bulk_restore') {
+                $selectedSiswa = $_POST['selected_siswa'] ?? [];
+                $targetKelasId = !empty($_POST['target_kelas_id']) ? (int)$_POST['target_kelas_id'] : null;
+                if (!empty($selectedSiswa)) {
+                    $cnt = $siswaModel->bulkUpdateStatus($selectedSiswa, 'aktif', false, $targetKelasId);
+                    FlashHelper::setSuccess("Berhasil mengembalikan {$cnt} data alumni menjadi Siswa Aktif.");
+                } else {
+                    FlashHelper::setError('Pilih minimal satu alumni yang ingin diaktifkan kembali.');
+                }
+            } elseif ($action === 'bulk_delete') {
+                $selectedSiswa = $_POST['selected_siswa'] ?? [];
+                if (!empty($selectedSiswa)) {
+                    $cnt = $siswaModel->bulkDeleteSiswa($selectedSiswa);
+                    FlashHelper::setSuccess("Berhasil menghapus {$cnt} data alumni secara massal.");
+                } else {
+                    FlashHelper::setError('Pilih minimal satu data alumni untuk dihapus.');
+                }
+            } elseif ($action === 'update') {
+                $id = (int)($_POST['id'] ?? 0);
+                $noOrtu = Security::sanitize($_POST['no_ortu'] ?? $_POST['no_hp_ortu'] ?? $_POST['telepon_ortu'] ?? '');
+                $res = $siswaModel->updateSiswa($id, [
+                    'email' => Security::sanitize($_POST['email'] ?? ''),
+                    'password' => $_POST['password'] ?? '',
+                    'nis' => Security::sanitize($_POST['nis'] ?? ''),
+                    'nisn' => Security::sanitize($_POST['nisn'] ?? ''),
+                    'nama_lengkap' => Security::sanitize($_POST['nama_lengkap'] ?? ''),
+                    'kelas_id' => (int)($_POST['kelas_id'] ?? 0),
+                    'jurusan_id' => (int)($_POST['jurusan_id'] ?? 0),
+                    'jenis_kelamin' => $_POST['jenis_kelamin'] ?? 'L',
+                    'status' => 'alumni',
+                    'no_telepon' => Security::sanitize($_POST['no_telepon'] ?? ''),
+                    'no_ortu' => $noOrtu,
+                    'alamat' => Security::sanitize($_POST['alamat'] ?? '')
+                ]);
+                if ($res) {
+                    FlashHelper::setSuccess('Data Alumni berhasil diperbarui.');
+                } else {
+                    $err = $siswaModel->getLastError() ?: 'Periksa kembali data yang diinput.';
+                    FlashHelper::setError('Gagal memperbarui data alumni: ' . $err);
+                }
+            } elseif ($action === 'delete') {
+                $id = (int)($_POST['id'] ?? 0);
+                if ($id > 0) {
+                    $siswaModel->deleteSiswa($id);
+                    FlashHelper::setSuccess('Data alumni berhasil dihapus.');
+                }
+            }
+
+            $redirectUrl = BASE_URL . 'index.php?url=admin/alumni';
+            if (!empty($_POST['redirect_query'])) {
+                parse_str($_POST['redirect_query'], $parsedQuery);
+                unset($parsedQuery['url']);
+                if (!empty($parsedQuery)) {
+                    $redirectUrl .= '&' . http_build_query($parsedQuery);
+                }
+            }
+            header('Location: ' . $redirectUrl);
+            exit();
+        }
+
+        $selectedKelasId = isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] > 0 ? (int)$_GET['kelas_id'] : null;
+        $selectedJurusanId = isset($_GET['jurusan_id']) && (int)$_GET['jurusan_id'] > 0 ? (int)$_GET['jurusan_id'] : null;
+        $selectedJenisKelamin = isset($_GET['jk']) && in_array(strtoupper($_GET['jk']), ['L', 'P']) ? strtoupper($_GET['jk']) : null;
+        $searchKeyword = isset($_GET['q']) ? Security::sanitize($_GET['q']) : null;
+
+        $alumniList = $siswaModel->getAll($selectedKelasId, $selectedJurusanId, $searchKeyword, $selectedJenisKelamin, 'alumni');
+        $kelasList = $academicModel->getKelas();
+        $jurusanList = $academicModel->getJurusan();
+        $alumniStats = $siswaModel->getAlumniStats();
+
+        require_once ROOT_PATH . 'views/admin/alumni.php';
+    }
+
+    public function cetakAlumni() {
+        $siswaModel = new SiswaModel();
+        $academicModel = new AcademicModel();
+
+        $selectedKelasId = isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] > 0 ? (int)$_GET['kelas_id'] : null;
+        $selectedJurusanId = isset($_GET['jurusan_id']) && (int)$_GET['jurusan_id'] > 0 ? (int)$_GET['jurusan_id'] : null;
+        $selectedJenisKelamin = isset($_GET['jk']) && in_array(strtoupper($_GET['jk']), ['L', 'P']) ? strtoupper($_GET['jk']) : null;
+        $searchKeyword = isset($_GET['q']) ? Security::sanitize($_GET['q']) : null;
+
+        $alumniList = $siswaModel->getAll($selectedKelasId, $selectedJurusanId, $searchKeyword, $selectedJenisKelamin, 'alumni');
+        $kelasList = $academicModel->getKelas();
+        $jurusanList = $academicModel->getJurusan();
+
+        require_once ROOT_PATH . 'views/admin/cetak_alumni.php';
+    }
+
+    public function exportAlumniCsv() {
+        $siswaModel = new SiswaModel();
+        $selectedKelasId = isset($_GET['kelas_id']) && (int)$_GET['kelas_id'] > 0 ? (int)$_GET['kelas_id'] : null;
+        $selectedJurusanId = isset($_GET['jurusan_id']) && (int)$_GET['jurusan_id'] > 0 ? (int)$_GET['jurusan_id'] : null;
+        $selectedJenisKelamin = isset($_GET['jk']) && in_array(strtoupper($_GET['jk']), ['L', 'P']) ? strtoupper($_GET['jk']) : null;
+        $searchKeyword = isset($_GET['q']) ? Security::sanitize($_GET['q']) : null;
+
+        $alumniList = $siswaModel->getAll($selectedKelasId, $selectedJurusanId, $searchKeyword, $selectedJenisKelamin, 'alumni');
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="data_alumni_' . date('Ymd_His') . '.csv"');
+        $output = fopen('php://output', 'w');
+        fputs($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['No', 'NIS', 'NISN', 'Nama Lengkap', 'Jurusan', 'Kelas Terakhir', 'Jenis Kelamin', 'No Telepon', 'No Ortu', 'Email', 'Alamat', 'Status']);
+
+        $no = 1;
+        foreach ($alumniList as $a) {
+            fputcsv($output, [
+                $no++,
+                $a['nis'] ?? '-',
+                $a['nisn'] ?? '-',
+                $a['nama_lengkap'] ?? '-',
+                $a['nama_jurusan'] ?? '-',
+                $a['nama_kelas'] ?? '-',
+                ($a['jenis_kelamin'] ?? 'L') === 'L' ? 'Laki-laki' : 'Perempuan',
+                $a['no_telepon'] ?? '-',
+                $a['no_ortu'] ?? '-',
+                $a['email'] ?? '-',
+                $a['alamat'] ?? '-',
+                'Alumni / Lulus'
+            ]);
+        }
+        fclose($output);
+        exit();
     }
 
     public function akademik() {
