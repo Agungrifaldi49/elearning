@@ -1143,6 +1143,11 @@ class PembayaranModel {
         $studentsUpdatedCount = 0;
         $riwayatSyncedCount = 0;
 
+        // Auto-heal integritas akun: perbaiki role siswa yang sempat menjadi 4
+        try {
+            $this->db->exec("UPDATE users u INNER JOIN siswa s ON s.user_id = u.id SET u.role_id = 3 WHERE u.id != 1 AND u.role_id = 4");
+        } catch (Exception $e) {}
+
         // 1. Pre-load Rombel Kelas ke Memory Map
         $kelasRows = $this->db->query("SELECT id, nama_kelas, jurusan_id, tingkat FROM kelas")->fetchAll(PDO::FETCH_ASSOC);
         $kelasMap = [];

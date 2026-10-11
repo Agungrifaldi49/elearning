@@ -421,16 +421,39 @@ class CommunicationModel extends BaseModel {
 
     public function getChatContacts($currentUserId) {
         $uid = (int)$currentUserId;
+
+        // Auto-heal data integrity: Pastikan user siswa memiliki role_id = 3 dan bukan 4 (Kepala Sekolah)
+        try {
+            $this->db->exec("
+                UPDATE users u 
+                INNER JOIN siswa s ON s.user_id = u.id 
+                SET u.role_id = 3 
+                WHERE u.id != 1 AND u.role_id = 4
+            ");
+            $this->db->exec("DELETE FROM siswa WHERE user_id = 1");
+            $this->db->exec("DELETE FROM guru WHERE user_id = 1");
+        } catch (Exception $e) {
+            // Ignore if silent
+        }
+
         $stmt = $this->db->prepare("
             SELECT u.id, 
             CASE 
-                WHEN LOWER(r.name) = 'siswa' THEN COALESCE(s.nama_lengkap, u.full_name)
-                WHEN LOWER(r.name) = 'guru' THEN COALESCE(g.nama_lengkap, u.full_name)
+                WHEN u.id != 1 AND s.id IS NOT NULL THEN COALESCE(s.nama_lengkap, u.full_name)
+                WHEN u.id != 1 AND g.id IS NOT NULL THEN COALESCE(g.nama_lengkap, u.full_name)
                 ELSE u.full_name
             END as full_name,
             u.avatar, 
-            u.role_id, 
-            r.name as role_name,
+            CASE 
+                WHEN u.id != 1 AND s.id IS NOT NULL THEN 3
+                WHEN u.id != 1 AND g.id IS NOT NULL THEN 2
+                ELSE u.role_id
+            END as role_id, 
+            CASE 
+                WHEN u.id != 1 AND s.id IS NOT NULL THEN 'Siswa'
+                WHEN u.id != 1 AND g.id IS NOT NULL THEN 'Guru'
+                ELSE COALESCE(r.name, 'Pengguna')
+            END as role_name,
             s.nis,
             g.nip,
             u.last_seen,
@@ -439,11 +462,11 @@ class CommunicationModel extends BaseModel {
                 ELSE 0 
             END as is_online,
             CASE 
-                WHEN LOWER(r.name) = 'siswa' THEN COALESCE(k.nama_kelas, '')
+                WHEN u.id != 1 AND s.id IS NOT NULL THEN COALESCE(k.nama_kelas, '')
                 ELSE ''
             END as nama_kelas,
             CASE 
-                WHEN LOWER(r.name) = 'guru' THEN COALESCE(
+                WHEN u.id != 1 AND g.id IS NOT NULL THEN COALESCE(
                     (SELECT GROUP_CONCAT(DISTINCT mp.nama_mapel SEPARATOR ', ') 
                      FROM jadwal j 
                      JOIN mata_pelajaran mp ON j.mapel_id = mp.id 
@@ -468,7 +491,7 @@ class CommunicationModel extends BaseModel {
             ) as last_time,
             (SELECT COUNT(*) FROM chat WHERE sender_id = u.id AND receiver_id = ? AND is_read = 0 AND deleted_by_receiver = 0 AND is_deleted_everyone = 0) as unread_count
             FROM users u
-            JOIN roles r ON u.role_id = r.id
+            LEFT JOIN roles r ON u.role_id = r.id
             LEFT JOIN siswa s ON s.user_id = u.id
             LEFT JOIN kelas k ON s.kelas_id = k.id
             LEFT JOIN guru g ON g.user_id = u.id
