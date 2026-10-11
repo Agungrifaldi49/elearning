@@ -586,10 +586,64 @@ switch ($action) {
         $tuId = (int)$stuData['id'];
         $billsRes = $apiClient->request('GET', "/api/siswa/{$tuId}/tagihan", null, $token);
         $historyRes = $apiClient->request('GET', "/api/siswa/{$tuId}/riwayat-bayar", null, $token);
+
+        // Ambil data dari portal kasir Tata Usaha live untuk menangkap transaksi kasir PYM-
+        $chPortal = curl_init("https://tatausaha.smkmuthiaharapanclk.com/?siswa={$tuId}");
+        curl_setopt($chPortal, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($chPortal, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($chPortal, CURLOPT_TIMEOUT, 6);
+        $portalHtml = curl_exec($chPortal);
+        curl_close($chPortal);
+
+        $billsData = $billsRes['data'] ?? [];
+        if (isset($billsData['data']) && is_array($billsData['data'])) {
+            $billsData = $billsData['data'];
+        }
+
+        $historyData = $historyRes['data'] ?? [];
+        if (isset($historyData['data']) && is_array($historyData['data'])) {
+            $historyData = $historyData['data'];
+        }
+
+        // Jika portal kasir live tersedia, perkaya riwayat dan status tagihan dengan transaksi PYM-
+        if (!empty($portalHtml) && strpos($portalHtml, 'pay-table') !== false) {
+            if (preg_match('/<table class="pay-table">([\s\S]*?)<\/table>/i', $portalHtml, $tMatch)) {
+                if (preg_match_all('/<tr>([\s\S]*?)<\/tr>/i', $tMatch[1], $rowMatches)) {
+                    $existingTrx = [];
+                    foreach ($historyData as $hd) {
+                        if (!empty($hd['kode_pembayaran'])) $existingTrx[$hd['kode_pembayaran']] = true;
+                    }
+                    foreach ($rowMatches[1] as $rHtml) {
+                        if (stripos($rHtml, '<th') !== false) continue;
+                        if (preg_match_all('/<td[^>]*>([\s\S]*?)<\/td>/i', $rHtml, $tds)) {
+                            if (count($tds[1]) >= 5) {
+                                $tgl = preg_replace('/\s+/', ' ', trim(strip_tags($tds[1][0])));
+                                $kdTrx = trim(strip_tags($tds[1][1]));
+                                $tgName = trim(strip_tags($tds[1][2]));
+                                $jml = (float)preg_replace('/[^\d]/', '', trim(strip_tags($tds[1][3])));
+                                $mtd = strtolower(trim(strip_tags($tds[1][4])));
+
+                                if (!isset($existingTrx[$kdTrx])) {
+                                    $historyData[] = [
+                                        'kode_pembayaran' => $kdTrx,
+                                        'tanggal'         => $tgl,
+                                        'nama_tagihan'    => $tgName,
+                                        'jumlah_bayar'    => $jml,
+                                        'metode'          => $mtd
+                                    ];
+                                    $existingTrx[$kdTrx] = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         sendJsonResponse(true, "Data tagihan dan riwayat siswa realtime dari API Tata Usaha", [
             'siswa'   => $stuData,
-            'tagihan' => $billsRes['data'] ?? [],
-            'riwayat' => $historyRes['data'] ?? []
+            'tagihan' => $billsData,
+            'riwayat' => $historyData
         ]);
         break;
 

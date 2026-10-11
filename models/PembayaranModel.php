@@ -437,10 +437,11 @@ class PembayaranModel {
             ];
         }
 
-        // Ambil tagihan & riwayat bayar secara paralel (< 0.4 detik)
+        // Ambil data tagihan, riwayat bayar, dan portal web live secara paralel (< 0.5 detik)
         $mh = curl_multi_init();
         $chBills = curl_init($baseUrl . "/api/siswa/$tuId/tagihan");
         $chHistory = curl_init($baseUrl . "/api/siswa/$tuId/riwayat-bayar");
+        $chPortal = curl_init("https://tatausaha.smkmuthiaharapanclk.com/?siswa=$tuId");
 
         foreach ([$chBills, $chHistory] as $c) {
             curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
@@ -450,21 +451,31 @@ class PembayaranModel {
             curl_setopt($c, CURLOPT_TIMEOUT, 8);
             curl_multi_add_handle($mh, $c);
         }
+        curl_setopt($chPortal, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($chPortal, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($chPortal, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($chPortal, CURLOPT_TIMEOUT, 8);
+        curl_multi_add_handle($mh, $chPortal);
 
         $running = null;
         do {
             curl_multi_exec($mh, $running);
-            curl_multi_select($mh, 0.1);
+            curl_multi_select($mh, 0.05);
         } while ($running > 0);
 
         $rawBills = json_decode(curl_multi_getcontent($chBills), true);
         $rawHistory = json_decode(curl_multi_getcontent($chHistory), true);
+        $rawPortalHtml = curl_multi_getcontent($chPortal);
 
         curl_multi_remove_handle($mh, $chBills);
         curl_multi_remove_handle($mh, $chHistory);
+        curl_multi_remove_handle($mh, $chPortal);
         curl_close($chBills);
         curl_close($chHistory);
+        curl_close($chPortal);
         curl_multi_close($mh);
+
+        $portalData = $this->parseTuPortalHtml($rawPortalHtml);
 
         $tuBills = is_array($rawBills['data'] ?? null) && isset($rawBills['data']['data']) 
             ? $rawBills['data']['data'] 
@@ -489,86 +500,173 @@ class PembayaranModel {
         $stmtInTagihan = $this->db->prepare("
             INSERT INTO pembayaran_tagihan
             (siswa_id, nis, nisn, jenis_pembayaran, kode_tagihan, judul, nominal, nominal_terbayar, sisa_tagihan, periode_bulan, tahun_ajaran, tanggal_jatuh_tempo, status, keterangan)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '2024/2025', NULL, ?, 'Tagihan Realtime API Tata Usaha')
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '2024/2025', NULL, ?, 'Tagihan Realtime Tata Usaha')
         ");
 
-        foreach ($tuBills as $tb) {
-            $billId = (int)($tb['id'] ?? 0);
-            $masterKode = trim((string)($tb['kode_tagihan'] ?? 'TAG'));
-            $kodeTagihan = 'TU-TAG-' . $billId . '-' . $masterKode;
+        // Jika portal web live mengembalikan daftar tagihan lengkap, gunakan data portal karena mencakup transaksi kasir PYM-
+        if ($portalData && !empty($portalData['bills'])) {
+            foreach ($portalData['bills'] as $idx => $pb) {
+                $kode = trim($pb['kode']);
+                $judul = trim($pb['nama']);
+                $nominal = (float)$pb['nominal'];
+                $terbayar = (float)$pb['terbayar'];
+                $sisaItem = (float)$pb['sisa'];
+                $status = $pb['status'];
 
-            $judul    = trim((string)($tb['nama_tagihan'] ?? 'Iuran Sekolah'));
-            $nominal  = (float)($tb['total_tagihan'] ?? ($tb['nominal'] ?? ($tb['jumlah'] ?? 0)));
-            $terbayar = (float)($tb['total_terbayar'] ?? ($tb['nominal_terbayar'] ?? 0));
-            
-            // Sisa per item tagihan (positif untuk tampilan baris)
-            $sisaItem = (float)($tb['sisa_tagihan'] ?? ($tb['sisa'] ?? max(0, $nominal - $terbayar)));
-            if ($sisaItem < 0) $sisaItem = 0; // proteksi tampilan baris agar tidak minus
-
-            $st = strtolower(trim((string)($tb['status'] ?? '')));
-            $status = ($st === 'lunas' || $sisaItem <= 0 || $terbayar >= $nominal) ? 'lunas' : (($st === 'sebagian' || $terbayar > 0) ? 'sebagian' : 'belum_lunas');
-
-            $jenis = 'SPP';
-            if (stripos($judul, 'ujian') !== false || stripos($masterKode, 'ujian') !== false) {
-                $jenis = 'Ujian';
-            } elseif (stripos($judul, 'dsp') !== false || stripos($masterKode, 'dsp') !== false) {
-                $jenis = 'DSP';
-            } elseif (stripos($judul, 'prak') !== false || stripos($masterKode, 'prak') !== false) {
-                $jenis = 'Praktikum';
-            }
-
-            $totNom   += $nominal;
-            $totBayar += $terbayar;
-            if ($status === 'lunas') $countLunas++; else $countBelum++;
-
-            $normalizedBills[] = [
-                'id'                  => $billId,
-                'kode_tagihan'        => $kodeTagihan,
-                'judul'               => $judul,
-                'jenis_pembayaran'    => $jenis,
-                'nominal'             => $nominal,
-                'nominal_terbayar'    => $terbayar,
-                'sisa_tagihan'        => $sisaItem,
-                'status'              => $status,
-                'periode_bulan'       => $judul,
-                'tanggal_jatuh_tempo' => null
-            ];
-
-            // Selaraskan ke DB lokal
-            try {
-                $chk = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE kode_tagihan = ? LIMIT 1");
-                $chk->execute([$kodeTagihan]);
-                $exId = $chk->fetchColumn();
-                if ($exId) {
-                    $stmtUpTagihan->execute([$nominal, $terbayar, $sisaItem, $status, $exId]);
-                } else {
-                    $stmtInTagihan->execute([$siswaId, $nis ?: $nisn, $nisn ?: $nis, $jenis, $kodeTagihan, $judul, $nominal, $terbayar, $sisaItem, $judul, $status]);
+                $jenis = 'SPP';
+                if (stripos($judul, 'ujian') !== false || stripos($kode, 'ujian') !== false) {
+                    $jenis = 'Ujian';
+                } elseif (stripos($judul, 'dsp') !== false || stripos($kode, 'dsp') !== false) {
+                    $jenis = 'DSP';
+                } elseif (stripos($judul, 'spp') === false) {
+                    $jenis = 'Iuran Sekolah';
                 }
-            } catch (\Throwable $eDb) {}
+
+                $totNom += $nominal;
+                $totBayar += $terbayar;
+                if ($status === 'lunas') $countLunas++; else $countBelum++;
+
+                $kodeTagihan = 'TU-TAG-' . $tuId . '-' . $kode;
+
+                $normalizedBills[] = [
+                    'id'                  => $idx + 1,
+                    'kode_tagihan'        => $kodeTagihan,
+                    'judul'               => $judul,
+                    'jenis_pembayaran'    => $jenis,
+                    'nominal'             => $nominal,
+                    'nominal_terbayar'    => $terbayar,
+                    'sisa_tagihan'        => $sisaItem,
+                    'status'              => $status,
+                    'periode_bulan'       => $judul,
+                    'tanggal_jatuh_tempo' => null
+                ];
+
+                // Selaraskan ke DB lokal
+                try {
+                    $chk = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE siswa_id = ? AND (kode_tagihan LIKE ? OR judul = ?) LIMIT 1");
+                    $chk->execute([$siswaId, '%' . $kode . '%', $judul]);
+                    $exId = $chk->fetchColumn();
+                    if ($exId) {
+                        $stmtUpTagihan->execute([$nominal, $terbayar, $sisaItem, $status, $exId]);
+                    } else {
+                        $stmtInTagihan->execute([$siswaId, $nis ?: $nisn, $nisn ?: $nis, $jenis, $kodeTagihan, $judul, $nominal, $terbayar, $sisaItem, $judul, $status]);
+                    }
+                } catch (\Throwable $eDb) {}
+            }
+        } else {
+            // Fallback ke REST API jika portal offline
+            foreach ($tuBills as $tb) {
+                $billId = (int)($tb['id'] ?? 0);
+                $masterKode = trim((string)($tb['kode_tagihan'] ?? 'TAG'));
+                $kodeTagihan = 'TU-TAG-' . $billId . '-' . $masterKode;
+
+                $judul    = trim((string)($tb['nama_tagihan'] ?? 'Iuran Sekolah'));
+                $nominal  = (float)($tb['total_tagihan'] ?? ($tb['nominal'] ?? ($tb['jumlah'] ?? 0)));
+                $terbayar = (float)($tb['total_terbayar'] ?? ($tb['nominal_terbayar'] ?? 0));
+                
+                $sisaItem = (float)($tb['sisa_tagihan'] ?? ($tb['sisa'] ?? max(0, $nominal - $terbayar)));
+                if ($sisaItem < 0) $sisaItem = 0;
+
+                $st = strtolower(trim((string)($tb['status'] ?? '')));
+                $status = ($st === 'lunas' || $sisaItem <= 0 || $terbayar >= $nominal) ? 'lunas' : (($st === 'sebagian' || $terbayar > 0) ? 'sebagian' : 'belum_lunas');
+
+                $jenis = 'SPP';
+                if (stripos($judul, 'ujian') !== false || stripos($masterKode, 'ujian') !== false) {
+                    $jenis = 'Ujian';
+                } elseif (stripos($judul, 'dsp') !== false || stripos($masterKode, 'dsp') !== false) {
+                    $jenis = 'DSP';
+                } elseif (stripos($judul, 'prak') !== false || stripos($masterKode, 'prak') !== false) {
+                    $jenis = 'Praktikum';
+                }
+
+                $totNom   += $nominal;
+                $totBayar += $terbayar;
+                if ($status === 'lunas') $countLunas++; else $countBelum++;
+
+                $normalizedBills[] = [
+                    'id'                  => $billId,
+                    'kode_tagihan'        => $kodeTagihan,
+                    'judul'               => $judul,
+                    'jenis_pembayaran'    => $jenis,
+                    'nominal'             => $nominal,
+                    'nominal_terbayar'    => $terbayar,
+                    'sisa_tagihan'        => $sisaItem,
+                    'status'              => $status,
+                    'periode_bulan'       => $judul,
+                    'tanggal_jatuh_tempo' => null
+                ];
+
+                try {
+                    $chk = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE kode_tagihan = ? LIMIT 1");
+                    $chk->execute([$kodeTagihan]);
+                    $exId = $chk->fetchColumn();
+                    if ($exId) {
+                        $stmtUpTagihan->execute([$nominal, $terbayar, $sisaItem, $status, $exId]);
+                    } else {
+                        $stmtInTagihan->execute([$siswaId, $nis ?: $nisn, $nisn ?: $nis, $jenis, $kodeTagihan, $judul, $nominal, $terbayar, $sisaItem, $judul, $status]);
+                    }
+                } catch (\Throwable $eDb) {}
+            }
         }
 
+        // Normalisasi riwayat pembayaran
         $normalizedHistory = [];
         $stmtInTrx = $this->db->prepare("
             INSERT IGNORE INTO pembayaran_riwayat
             (tagihan_id, siswa_id, nomor_transaksi, nominal_bayar, tanggal_bayar, metode_pembayaran, channel, status, catatan)
-            VALUES (?, ?, ?, ?, ?, ?, 'API Tata Usaha Realtime', 'berhasil', ?)
+            VALUES (?, ?, ?, ?, ?, ?, 'Loket Tata Usaha', 'berhasil', ?)
         ");
 
-        foreach ($tuHistory as $th) {
-            $noTrx = $th['kode_pembayaran'] ?? ('PAY-' . ($th['id'] ?? uniqid()));
-            $nom = (float)($th['jumlah_bayar'] ?? 0);
-            $tgl = !empty($th['tanggal']) ? ($th['tanggal'] . ' 08:00:00') : date('Y-m-d H:i:s');
-            $metode = $th['metode'] ?? 'tunai';
-            $judulTrx = $th['nama_tagihan'] ?? 'Pembayaran Loket TU';
+        if ($portalData && !empty($portalData['history'])) {
+            foreach ($portalData['history'] as $ph) {
+                $noTrx = $ph['kode_transaksi'];
+                $nom = (float)$ph['nominal'];
+                $tglStr = $ph['tanggal'];
+                $tgl = date('Y-m-d H:i:s');
+                if (preg_match('/(\d{2})\/(\d{2})\/(\d{4})/', $tglStr, $tm)) {
+                    $tgl = "{$tm[3]}-{$tm[2]}-{$tm[1]} 08:00:00";
+                }
+                $metode = strtolower($ph['metode'] ?? 'tunai');
+                $judulTrx = $ph['tagihan'] ?? 'Pembayaran Loket TU';
 
-            $normalizedHistory[] = [
-                'nomor_transaksi'   => $noTrx,
-                'tanggal_bayar'     => $tgl,
-                'nama_tagihan'      => $judulTrx,
-                'nominal_bayar'     => $nom,
-                'metode_pembayaran' => $metode,
-                'status'            => 'berhasil'
-            ];
+                $normalizedHistory[] = [
+                    'nomor_transaksi'   => $noTrx,
+                    'tanggal_bayar'     => $tgl,
+                    'nama_tagihan'      => $judulTrx,
+                    'nominal_bayar'     => $nom,
+                    'metode_pembayaran' => $metode,
+                    'status'            => 'berhasil'
+                ];
+
+                try {
+                    $chkTag = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE siswa_id = ? AND judul LIKE ? LIMIT 1");
+                    $chkTag->execute([$siswaId, '%' . $judulTrx . '%']);
+                    $tId = $chkTag->fetchColumn();
+                    if (!$tId) {
+                        $chkFallback = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE siswa_id = ? LIMIT 1");
+                        $chkFallback->execute([$siswaId]);
+                        $tId = $chkFallback->fetchColumn() ?: 0;
+                    }
+                    $stmtInTrx->execute([$tId, $siswaId, $noTrx, $nom, $tgl, $metode, 'Pembayaran Loket TU']);
+                } catch (\Throwable $eHist) {}
+            }
+        } else {
+            foreach ($tuHistory as $th) {
+                $noTrx = $th['kode_pembayaran'] ?? ('PAY-' . ($th['id'] ?? uniqid()));
+                $nom = (float)($th['jumlah_bayar'] ?? 0);
+                $tgl = !empty($th['tanggal']) ? ($th['tanggal'] . ' 08:00:00') : date('Y-m-d H:i:s');
+                $metode = $th['metode'] ?? 'tunai';
+                $judulTrx = $th['nama_tagihan'] ?? 'Pembayaran Loket TU';
+
+                $normalizedHistory[] = [
+                    'nomor_transaksi'   => $noTrx,
+                    'tanggal_bayar'     => $tgl,
+                    'nama_tagihan'      => $judulTrx,
+                    'nominal_bayar'     => $nom,
+                    'metode_pembayaran' => $metode,
+                    'status'            => 'berhasil'
+                ];
+            }
         }
 
         // Kalkulasi Total Sisa Tunggakan secara global konsisten (Nominal - Terbayar)
@@ -595,6 +693,99 @@ class PembayaranModel {
             'summary'     => $summary,
             'bills'       => $normalizedBills,
             'history'     => $normalizedHistory
+        ];
+    }
+
+    /**
+     * Parse HTML data dari Web Portal Kasir Tata Usaha (https://tatausaha.smkmuthiaharapanclk.com/?siswa={id})
+     */
+    public function parseTuPortalHtml($html) {
+        if (empty($html) || strpos($html, 'bill-item') === false) return null;
+
+        $tagihan = 0; $terbayar = 0; $sisa = 0;
+        if (preg_match('/Total Tagihan<\/div><div class="stat-val"[^>]*>Rp\s*([\d\.]+)/i', $html, $m)) {
+            $tagihan = (float)str_replace('.', '', $m[1]);
+        }
+        if (preg_match('/Terbayar<\/div><div class="stat-val"[^>]*>Rp\s*([\d\.]+)/i', $html, $m)) {
+            $terbayar = (float)str_replace('.', '', $m[1]);
+        }
+        if (preg_match('/Sisa<\/div><div class="stat-val"[^>]*>Rp\s*([\d\.]+)/i', $html, $m)) {
+            $sisa = (float)str_replace('.', '', $m[1]);
+        }
+
+        $bills = [];
+        if (preg_match_all('/<li class="bill-item">([\s\S]*?)<\/li>/i', $html, $liMatches)) {
+            foreach ($liMatches[1] as $itemHtml) {
+                $name = ''; $kode = ''; $stText = 'belum'; $nominal = 0; $bayar = 0; $sisaItem = 0;
+                
+                if (preg_match('/<div class="bill-name">(.*?)<\/div>/i', $itemHtml, $m)) {
+                    $name = trim(strip_tags($m[1]));
+                }
+                if (preg_match('/<span class="bill-kode">(.*?)<\/span>/i', $itemHtml, $m)) {
+                    $kode = trim(strip_tags($m[1]));
+                }
+                if (preg_match('/<span class="st-pill [^"]*">(.*?)<\/span>/i', $itemHtml, $m)) {
+                    $stText = strtolower(trim(strip_tags($m[1])));
+                }
+                if (preg_match('/<span class="bill-total">Rp\s*([\d\.]+)<\/span>/i', $itemHtml, $m)) {
+                    $nominal = (float)str_replace('.', '', $m[1]);
+                }
+                if (preg_match('/<span class="bill-bayar">[^R]*Rp\s*([\d\.]+)<\/span>/i', $itemHtml, $m)) {
+                    $bayar = (float)str_replace('.', '', $m[1]);
+                }
+                if (preg_match('/<span class="bill-sisa"[^>]*>[^R]*Rp\s*([\d\.]+)<\/span>/i', $itemHtml, $m)) {
+                    $sisaItem = (float)str_replace('.', '', $m[1]);
+                } else {
+                    $sisaItem = max(0, $nominal - $bayar);
+                }
+
+                $status = ($stText === 'lunas' || $sisaItem <= 0 || $bayar >= $nominal) ? 'lunas' : (($stText === 'sebagian' || $bayar > 0) ? 'sebagian' : 'belum_lunas');
+
+                $bills[] = [
+                    'nama'     => $name,
+                    'kode'     => $kode,
+                    'nominal'  => $nominal,
+                    'terbayar' => $bayar,
+                    'sisa'     => $sisaItem,
+                    'status'   => $status
+                ];
+            }
+        }
+
+        $history = [];
+        if (preg_match('/<table class="pay-table">([\s\S]*?)<\/table>/i', $html, $tMatch)) {
+            if (preg_match_all('/<tr>([\s\S]*?)<\/tr>/i', $tMatch[1], $rowMatches)) {
+                foreach ($rowMatches[1] as $rHtml) {
+                    if (stripos($rHtml, '<th') !== false) continue;
+                    if (preg_match_all('/<td[^>]*>([\s\S]*?)<\/td>/i', $rHtml, $tds)) {
+                        if (count($tds[1]) >= 5) {
+                            $tgl = trim(strip_tags($tds[1][0]));
+                            $tglClean = preg_replace('/\s+/', ' ', $tgl);
+                            $kodeTrx = trim(strip_tags($tds[1][1]));
+                            $tagihanName = trim(strip_tags($tds[1][2]));
+                            $jmlStr = trim(strip_tags($tds[1][3]));
+                            $jml = (float)preg_replace('/[^\d]/', '', $jmlStr);
+                            $metode = trim(strip_tags($tds[1][4]));
+
+                            $history[] = [
+                                'tanggal'        => $tglClean,
+                                'kode_transaksi' => $kodeTrx,
+                                'tagihan'        => $tagihanName,
+                                'nominal'        => $jml,
+                                'metode'         => $metode
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        return [
+            'tagihan'  => $tagihan,
+            'terbayar' => $terbayar,
+            'sisa'     => $sisa,
+            'bills'    => $bills,
+            'history'  => $history
         ];
     }
 
