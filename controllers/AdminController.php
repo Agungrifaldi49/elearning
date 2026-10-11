@@ -389,17 +389,24 @@ class AdminController {
             if ($action === 'restore') {
                 $id = (int)($_POST['id'] ?? 0);
                 $kelasId = !empty($_POST['kelas_id']) ? (int)$_POST['kelas_id'] : null;
+                $restoredSiswa = $siswaModel->getById($id);
+                $siswaNama = $restoredSiswa['nama_lengkap'] ?? 'Siswa';
                 if ($id > 0 && $siswaModel->restoreAlumni($id, $kelasId)) {
-                    FlashHelper::setSuccess('Alumni berhasil dikembalikan ke status Siswa Aktif.');
+                    $updatedSiswa = $siswaModel->getById($id);
+                    $targetKlsNama = $updatedSiswa['nama_kelas'] ?? 'Kelas Aktif';
+                    $viewUrl = BASE_URL . 'index.php?url=admin/siswa&q=' . urlencode($siswaNama);
+                    FlashHelper::setSuccess("Siswa <strong>{$siswaNama}</strong> berhasil diaktifkan kembali ke <strong>{$targetKlsNama}</strong>. <a href='{$viewUrl}' class='btn btn-sm btn-outline-success ms-2 fw-semibold'>Lihat di Data Siswa &rarr;</a>");
                 } else {
-                    FlashHelper::setError('Gagal mengembalikan alumni ke status aktif.');
+                    $err = $siswaModel->getLastError() ?: 'Terjadi kendala sistem.';
+                    FlashHelper::setError('Gagal mengembalikan alumni ke status aktif: ' . $err);
                 }
             } elseif ($action === 'bulk_restore') {
                 $selectedSiswa = $_POST['selected_siswa'] ?? [];
                 $targetKelasId = !empty($_POST['target_kelas_id']) ? (int)$_POST['target_kelas_id'] : null;
                 if (!empty($selectedSiswa)) {
                     $cnt = $siswaModel->bulkUpdateStatus($selectedSiswa, 'aktif', false, $targetKelasId);
-                    FlashHelper::setSuccess("Berhasil mengembalikan {$cnt} data alumni menjadi Siswa Aktif.");
+                    $viewUrl = BASE_URL . 'index.php?url=admin/siswa';
+                    FlashHelper::setSuccess("Berhasil mengembalikan <strong>{$cnt}</strong> data alumni menjadi Siswa Aktif. <a href='{$viewUrl}' class='btn btn-sm btn-outline-success ms-2 fw-semibold'>Buka Data Siswa &rarr;</a>");
                 } else {
                     FlashHelper::setError('Pilih minimal satu alumni yang ingin diaktifkan kembali.');
                 }

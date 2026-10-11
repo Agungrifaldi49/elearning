@@ -291,7 +291,7 @@ $alumniStats = is_array($alumniStats ?? null) ? $alumniStats : ['total' => count
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-sm btn-outline-success" title="Aktifkan Kembali ke Siswa Aktif"
-                                                        onclick="openRestoreModal(<?= (int)$a['id'] ?>, '<?= htmlspecialchars(addslashes($a['nama_lengkap'])) ?>', <?= (int)$a['kelas_id'] ?>)">
+                                                        onclick="openRestoreModal(<?= (int)$a['id'] ?>, '<?= htmlspecialchars(addslashes($a['nama_lengkap'])) ?>', <?= (int)$a['kelas_id'] ?>, '<?= htmlspecialchars(addslashes($a['nama_kelas'])) ?>')">
                                                     <i class="bi bi-arrow-counterclockwise"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-sm btn-outline-danger" title="Hapus Data Alumni"
@@ -466,7 +466,7 @@ $alumniStats = is_array($alumniStats ?? null) ? $alumniStats : ['total' => count
 <div class="modal fade" id="modalRestoreAlumni" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <form action="<?= BASE_URL ?>index.php?url=admin/alumni" method="POST" onsubmit="const btn = this.querySelector('button[type=submit]'); if(btn){ btn.disabled = true; btn.innerHTML = '<span class=\'spinner-border spinner-border-sm me-1\'></span> Memproses...'; }">
+            <form action="<?= BASE_URL ?>index.php?url=admin/alumni" method="POST" onsubmit="const btn = this.querySelector('button[type=submit]'); if(btn){ setTimeout(() => { btn.disabled = true; }, 50); btn.innerHTML = '<span class=\'spinner-border spinner-border-sm me-1\'></span> Memproses...'; }">
                 <?= Security::csrfField() ?>
                 <input type="hidden" name="action" value="restore">
                 <input type="hidden" name="id" id="restoreId">
@@ -645,15 +645,30 @@ function openEditModal(data) {
     modal.show();
 }
 
-function openRestoreModal(id, nama, kelasId) {
+function openRestoreModal(id, nama, kelasId, namaKelas) {
     document.getElementById('restoreId').value = id;
     document.getElementById('restoreNama').textContent = nama;
     const select = document.getElementById('restoreKelasId');
     if (select) {
-        if (kelasId && select.querySelector('option[value="' + kelasId + '"]')) {
-            select.value = kelasId;
-        } else if (select.options.length > 0) {
-            select.selectedIndex = 0;
+        let matched = false;
+        // Bersihkan nama kelas alumni untuk mencari padanan kelas aktif (misal "ALUMNI KELAS XII RPL 1" -> "XII RPL 1")
+        if (namaKelas) {
+            const cleanTarget = namaKelas.replace(/^ALUMNI\s+(KELAS\s+)?/i, '').trim().toLowerCase();
+            for (let i = 0; i < select.options.length; i++) {
+                const optText = select.options[i].textContent.trim().toLowerCase();
+                if (optText === cleanTarget || optText.includes(cleanTarget)) {
+                    select.selectedIndex = i;
+                    matched = true;
+                    break;
+                }
+            }
+        }
+        if (!matched) {
+            if (kelasId && select.querySelector('option[value="' + kelasId + '"]')) {
+                select.value = kelasId;
+            } else if (select.options.length > 0) {
+                select.selectedIndex = 0;
+            }
         }
     }
     const modal = new bootstrap.Modal(document.getElementById('modalRestoreAlumni'));

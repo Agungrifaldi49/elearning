@@ -1286,21 +1286,38 @@ class SiswaModel extends BaseModel {
                 }
             }
 
-            // Jika belum ada target kelas aktif yang valid, otomatis cari kelas aktif yang sesuai
+            // Jika belum ada target kelas aktif yang valid, otomatis cari pasangan nama kelas aktif yang sesuai
             if ($targetKelasId <= 0) {
-                $jurusanId = (int)($siswa['jurusan_id'] ?? 0);
-                if ($jurusanId > 0) {
-                    $stmtAuto = $this->db->prepare("
+                $currentKelasNama = $siswa['nama_kelas'] ?? '';
+                if (!empty($currentKelasNama)) {
+                    $cleanTarget = trim(preg_replace('/^ALUMNI\s+(KELAS\s+)?/i', '', $currentKelasNama));
+                    $stmtMatch = $this->db->prepare("
                         SELECT id FROM kelas 
-                        WHERE jurusan_id = ? 
+                        WHERE LOWER(TRIM(nama_kelas)) = LOWER(?) 
                           AND nama_kelas NOT LIKE '%ALUMNI%' 
                           AND nama_kelas NOT LIKE '%LULUS%' 
-                        ORDER BY tingkat DESC, id ASC 
                         LIMIT 1
                     ");
-                    $stmtAuto->execute([$jurusanId]);
-                    $targetKelasId = (int)$stmtAuto->fetchColumn();
+                    $stmtMatch->execute([$cleanTarget]);
+                    $targetKelasId = (int)$stmtMatch->fetchColumn();
                 }
+
+                if ($targetKelasId <= 0) {
+                    $jurusanId = (int)($siswa['jurusan_id'] ?? 0);
+                    if ($jurusanId > 0) {
+                        $stmtAuto = $this->db->prepare("
+                            SELECT id FROM kelas 
+                            WHERE jurusan_id = ? 
+                              AND nama_kelas NOT LIKE '%ALUMNI%' 
+                              AND nama_kelas NOT LIKE '%LULUS%' 
+                            ORDER BY tingkat DESC, id ASC 
+                            LIMIT 1
+                        ");
+                        $stmtAuto->execute([$jurusanId]);
+                        $targetKelasId = (int)$stmtAuto->fetchColumn();
+                    }
+                }
+
                 if ($targetKelasId <= 0) {
                     $targetKelasId = (int)$this->db->query("
                         SELECT id FROM kelas 
