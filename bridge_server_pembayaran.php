@@ -352,65 +352,108 @@ class TataUsahaApiClient {
     }
 
     /**
-     * Mengambil data halaman dengan paginasi berkinerja tinggi (per_page=100)
+     * Eksekusi batch HTTP request cURL paralel berkecepatan tinggi
      */
-    public function fetchAllPages($endpoint, $maxPages = 20, $perPage = 100) {
-        $allRecords = [];
-        $page = 1;
-
-        // Tambahkan per_page=100 jika belum ditentukan
-        $cleanEndpoint = $endpoint;
-        if (strpos($cleanEndpoint, 'per_page=') === false) {
-            $cleanEndpoint .= (strpos($cleanEndpoint, '?') !== false ? '&' : '?') . 'per_page=' . $perPage;
+    public function fetchMultiParallel(array $urls, $concurrency = 15) {
+        $jwtToken = $this->getValidJwtToken();
+        $headers = [
+            'Accept: application/json',
+            'User-Agent: E-Learning-SMK-Muthia-Harapan-Bridge/2.0'
+        ];
+        if (!empty($jwtToken)) {
+            $headers[] = 'Authorization: Bearer ' . $jwtToken;
         }
 
-        $separator = (strpos($cleanEndpoint, '?') !== false) ? '&' : '?';
+        $allResults = [];
+        $chunks = array_chunk($urls, $concurrency, true);
 
-        while ($page <= $maxPages) {
-            $pageUrl = $cleanEndpoint . $separator . 'page=' . $page;
-            $res = $this->request('GET', $pageUrl);
+        foreach ($chunks as $chunk) {
+            $mh = curl_multi_init();
+            $handles = [];
 
-            if (!$res['status']) {
-                if ($page === 1) {
-                    return $res;
+            foreach ($chunk as $key => $relUrl) {
+                $fullUrl = (strpos($relUrl, 'http') === 0) ? $relUrl : ($this->baseUrl . '/' . ltrim($relUrl, '/'));
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $fullUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->timeoutConnect);
+                curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeoutResponse);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $this->verifySsl);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $this->verifySsl ? 2 : 0);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                curl_multi_add_handle($mh, $ch);
+                $handles[$key] = $ch;
+            }
+
+            $running = null;
+            do {
+                curl_multi_exec($mh, $running);
+                curl_multi_select($mh, 0.2);
+            } while ($running > 0);
+
+            foreach ($handles as $key => $ch) {
+                $raw = curl_multi_getcontent($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $json = json_decode($raw, true);
+                $allResults[$key] = [
+                    'status'    => ($httpCode >= 200 && $httpCode < 300),
+                    'http_code' => $httpCode,
+                    'data'      => $json
+                ];
+                curl_multi_remove_handle($mh, $ch);
+                curl_close($ch);
+            }
+            curl_multi_close($mh);
+        }
+
+        return $allResults;
+    }
+
+    /**
+     * Mengambil seluruh halaman data dengan cURL multi paralel super cepat (hingga ratusan halaman)
+     */
+    public function fetchAllPagesParallel($endpoint, $maxPages = 200, $concurrency = 15) {
+        $separator = (strpos($endpoint, '?') !== false) ? '&' : '?';
+        $firstUrl = $endpoint . $separator . 'page=1';
+        $firstRes = $this->request('GET', $firstUrl);
+
+        if (!$firstRes['status']) {
+            return $firstRes;
+        }
+
+        $allRecords = [];
+        $firstJson = $firstRes['data'] ?? [];
+        $records1 = [];
+        $lastPage = 1;
+
+        if (isset($firstJson['data']) && is_array($firstJson['data'])) {
+            $records1 = $firstJson['data'];
+            $lastPage = $firstJson['meta']['last_page'] ?? ($firstJson['last_page'] ?? 1);
+        } elseif (is_array($firstJson)) {
+            $records1 = $firstJson;
+        }
+
+        foreach ($records1 as $r) {
+            $allRecords[] = $r;
+        }
+
+        $lastPage = min((int)$lastPage, $maxPages);
+        if ($lastPage <= 1) {
+            return ['status' => true, 'total_data' => count($allRecords), 'records' => $allRecords];
+        }
+
+        $pageUrls = [];
+        for ($p = 2; $p <= $lastPage; $p++) {
+            $pageUrls[$p] = $endpoint . $separator . 'page=' . $p;
+        }
+
+        $multiRes = $this->fetchMultiParallel($pageUrls, $concurrency);
+        foreach ($multiRes as $p => $resItem) {
+            if (!empty($resItem['status']) && !empty($resItem['data']['data']) && is_array($resItem['data']['data'])) {
+                foreach ($resItem['data']['data'] as $rec) {
+                    $allRecords[] = $rec;
                 }
-                break;
             }
-
-            $jsonData = $res['data'] ?? [];
-            $records = [];
-            $lastPage = null;
-
-            // Tata Usaha API Paginator: $json['data'] adalah array numerik, dan $json['meta']['last_page']
-            if (isset($jsonData['data']) && is_array($jsonData['data'])) {
-                if (isset($jsonData['data'][0])) {
-                    $records = $jsonData['data'];
-                    $lastPage = $jsonData['meta']['last_page'] ?? null;
-                } elseif (isset($jsonData['data']['data']) && is_array($jsonData['data']['data'])) {
-                    $records = $jsonData['data']['data'];
-                    $lastPage = $jsonData['data']['last_page'] ?? ($jsonData['meta']['last_page'] ?? null);
-                }
-            } elseif (isset($jsonData['items']) && is_array($jsonData['items'])) {
-                $records = $jsonData['items'];
-                $lastPage = $jsonData['total_pages'] ?? null;
-            } elseif (is_array($jsonData) && isset($jsonData[0])) {
-                $records = $jsonData;
-                $lastPage = 1;
-            }
-
-            if (empty($records)) {
-                break;
-            }
-
-            foreach ($records as $item) {
-                $allRecords[] = $item;
-            }
-
-            if ($lastPage !== null && $page >= (int)$lastPage) {
-                break;
-            }
-
-            $page++;
         }
 
         return [
@@ -418,6 +461,13 @@ class TataUsahaApiClient {
             'total_data' => count($allRecords),
             'records'    => $allRecords
         ];
+    }
+
+    /**
+     * Mengambil data halaman dengan paginasi berkinerja tinggi (per_page=100)
+     */
+    public function fetchAllPages($endpoint, $maxPages = 20, $perPage = 100) {
+        return $this->fetchAllPagesParallel($endpoint, $maxPages);
     }
 
     private function translateCurlError($errNo, $rawMsg) {
@@ -517,7 +567,7 @@ function pullAndNormalizeData(TataUsahaApiClient $apiClient, array $config) {
 
     // 1. Ambil seluruh data siswa (/api/siswa) untuk mapping kelas dan identitas akurat
     $siswaMap = [];
-    $siswaRes = $apiClient->fetchAllPages('/api/siswa?per_page=100', 10);
+    $siswaRes = $apiClient->fetchAllPagesParallel('/api/siswa?per_page=100', 10, 10);
     if ($siswaRes['status'] && !empty($siswaRes['records'])) {
         foreach ($siswaRes['records'] as $st) {
             $sNis = trim((string)($st['nis'] ?? ''));
@@ -532,10 +582,10 @@ function pullAndNormalizeData(TataUsahaApiClient $apiClient, array $config) {
         }
     }
 
-    // 2. Ambil data riwayat transaksi pembayaran (/api/pembayaran)
+    // 2. Ambil seluruh data riwayat transaksi pembayaran (/api/pembayaran)
     $rawPayments = [];
     $paymentsByBill = [];
-    $trxRes = $apiClient->fetchAllPages('/api/pembayaran?per_page=100', 30);
+    $trxRes = $apiClient->fetchAllPagesParallel('/api/pembayaran?per_page=100', 80, 15);
     if ($trxRes['status'] && !empty($trxRes['records'])) {
         $rawPayments = $trxRes['records'];
         foreach ($rawPayments as $p) {
@@ -563,9 +613,9 @@ function pullAndNormalizeData(TataUsahaApiClient $apiClient, array $config) {
         }
     }
 
-    // 3. Ambil data tagihan setiap siswa (/api/tagihan-siswa)
+    // 3. Ambil data tagihan seluruh siswa tanpa terpotong (/api/tagihan-siswa - mencakup Kelas X, XI, XII & Alumni)
     $rawBills = [];
-    $billsRes = $apiClient->fetchAllPages('/api/tagihan-siswa?per_page=100', 35);
+    $billsRes = $apiClient->fetchAllPagesParallel('/api/tagihan-siswa?per_page=100', 180, 15);
     if ($billsRes['status'] && !empty($billsRes['records'])) {
         $rawBills = $billsRes['records'];
     }

@@ -16,108 +16,11 @@ class PembayaranModel {
     }
 
     /**
-     * Auto-seed realistic sample data if payment tables are empty
+     * Murni data resmi: Seed dummy data dinonaktifkan total untuk menjaga integritas data keuangan
      */
     public function seedInitialDataIfEmpty() {
-        try {
-            $stmtCheck = $this->db->query("SELECT COUNT(*) FROM pembayaran_tagihan");
-            if ((int)$stmtCheck->fetchColumn() > 0) {
-                return; // Already populated
-            }
-
-            // Fetch active students
-            $stmtSiswa = $this->db->query("
-                SELECT s.id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas, j.nama_jurusan 
-                FROM siswa s
-                LEFT JOIN kelas k ON s.kelas_id = k.id
-                LEFT JOIN jurusan j ON s.jurusan_id = j.id
-                LIMIT 30
-            ");
-            $students = $stmtSiswa->fetchAll(PDO::FETCH_ASSOC);
-            if (empty($students)) return;
-
-            $currentTa = '2025/2026';
-            $bulanList = [
-                ['bulan' => 'Juli 2025', 'due' => '2025-07-10', 'paid' => true, 'tgl_bayar' => '2025-07-08 09:30:00', 'metode' => 'Transfer Bank BCA'],
-                ['bulan' => 'Agustus 2025', 'due' => '2025-08-10', 'paid' => true, 'tgl_bayar' => '2025-08-05 14:15:00', 'metode' => 'Kasir TU Sekolah'],
-                ['bulan' => 'September 2025', 'due' => '2025-09-10', 'paid' => false, 'tgl_bayar' => null, 'metode' => null],
-                ['bulan' => 'Oktober 2025', 'due' => '2025-10-10', 'paid' => false, 'tgl_bayar' => null, 'metode' => null]
-            ];
-
-            foreach ($students as $idx => $s) {
-                $siswaId = (int)$s['id'];
-                $nis = !empty($s['nis']) ? $s['nis'] : '2526' . str_pad($siswaId, 4, '0', STR_PAD_LEFT);
-                $nisn = !empty($s['nisn']) ? $s['nisn'] : '00' . rand(70000000, 99999999);
-
-                // 1. Tagihan SPP Bulanan
-                foreach ($bulanList as $bIdx => $b) {
-                    $kodeTagihan = 'SPP-' . $nis . '-' . ($bIdx + 1);
-                    $nominal = 250000.00;
-                    // Student 1 or even indexed students have paid Sept, others haven't
-                    $isPaid = $b['paid'] || ($siswaId % 2 === 1 && $bIdx === 2);
-                    $terbayar = $isPaid ? $nominal : 0.00;
-                    $sisa = $isPaid ? 0.00 : $nominal;
-                    $status = $isPaid ? 'lunas' : 'belum_lunas';
-
-                    $stmtInsert = $this->db->prepare("
-                        INSERT INTO pembayaran_tagihan 
-                        (siswa_id, nis, nisn, jenis_pembayaran, kode_tagihan, judul, nominal, nominal_terbayar, sisa_tagihan, periode_bulan, tahun_ajaran, tanggal_jatuh_tempo, status, keterangan)
-                        VALUES (?, ?, ?, 'SPP', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ");
-                    $judul = 'SPP Bulanan - ' . $b['bulan'];
-                    $ket = 'Iuran Pembinaan Pendidikan (SPP) Reguler SMK Muthia Harapan';
-                    $stmtInsert->execute([$siswaId, $nis, $nisn, $kodeTagihan, $judul, $nominal, $terbayar, $sisa, $b['bulan'], $currentTa, $b['due'], $status, $ket]);
-                    $tagihanId = (int)$this->db->lastInsertId();
-
-                    if ($isPaid) {
-                        $noTrx = 'TRX-' . date('Ymd') . '-' . rand(1000, 9999) . '-' . $tagihanId;
-                        $tglBayar = $b['tgl_bayar'] ?: date('Y-m-d H:i:s', strtotime('-' . rand(1, 10) . ' days'));
-                        $metode = $b['metode'] ?: 'Transfer Bank Mandiri';
-                        $stmtTrx = $this->db->prepare("
-                            INSERT INTO pembayaran_riwayat 
-                            (tagihan_id, siswa_id, nomor_transaksi, nominal_bayar, tanggal_bayar, metode_pembayaran, channel, status, catatan)
-                            VALUES (?, ?, ?, ?, ?, ?, 'Portal Keuangan SMK', 'berhasil', 'Pembayaran diverifikasi otomatis oleh Sistem Keuangan')
-                        ");
-                        $stmtTrx->execute([$tagihanId, $siswaId, $noTrx, $nominal, $tglBayar, $metode]);
-                    }
-                }
-
-                // 2. Tagihan Dana Pengembangan Gedung / DSP (Sekali per Tahun)
-                $kodeDsp = 'DSP-' . $nis . '-2025';
-                $nomDsp = 750000.00;
-                $isDspPaid = ($siswaId % 3 === 0);
-                $terbayarDsp = $isDspPaid ? $nomDsp : 0.00;
-                $sisaDsp = $isDspPaid ? 0.00 : $nomDsp;
-                $statusDsp = $isDspPaid ? 'lunas' : 'belum_lunas';
-
-                $stmtDsp = $this->db->prepare("
-                    INSERT INTO pembayaran_tagihan 
-                    (siswa_id, nis, nisn, jenis_pembayaran, kode_tagihan, judul, nominal, nominal_terbayar, sisa_tagihan, periode_bulan, tahun_ajaran, tanggal_jatuh_tempo, status, keterangan)
-                    VALUES (?, ?, ?, 'DSP', ?, 'Dana Pengembangan Sarpras / DSP', ?, ?, ?, 'Semester Ganjil', ?, '2025-11-30', ?, 'Iuran Sarana & Prasarana Pendidikan')
-                ");
-                $stmtDsp->execute([$siswaId, $nis, $nisn, $kodeDsp, $nomDsp, $terbayarDsp, $sisaDsp, $currentTa, $statusDsp]);
-
-                // 3. Tagihan Biaya Ujian CBT & Praktik Kejuruan
-                $kodeUjian = 'UJN-' . $nis . '-2025';
-                $nomUjian = 150000.00;
-                $stmtUjian = $this->db->prepare("
-                    INSERT INTO pembayaran_tagihan 
-                    (siswa_id, nis, nisn, jenis_pembayaran, kode_tagihan, judul, nominal, nominal_terbayar, sisa_tagihan, periode_bulan, tahun_ajaran, tanggal_jatuh_tempo, status, keterangan)
-                    VALUES (?, ?, ?, 'Ujian', ?, 'Biaya Administrasi Ujian CBT & Praktik', ?, 150000.00, 0.00, 'Semester Ganjil', ?, '2025-08-30', 'lunas', 'Biaya Lisensi CBT & Uji Kompetensi Kejuruan')
-                ");
-                $stmtUjian->execute([$siswaId, $nis, $nisn, $kodeUjian, $nomUjian, $currentTa]);
-                $ujnTagihanId = (int)$this->db->lastInsertId();
-
-                $stmtTrxUjian = $this->db->prepare("
-                    INSERT INTO pembayaran_riwayat 
-                    (tagihan_id, siswa_id, nomor_transaksi, nominal_bayar, tanggal_bayar, metode_pembayaran, channel, status, catatan)
-                    VALUES (?, ?, ?, ?, ?, 'Kasir TU Sekolah', 'Loket Keuangan', 'berhasil', 'Lunas Registrasi Ujian CBT')
-                ");
-                $stmtTrxUjian->execute([$ujnTagihanId, $siswaId, 'TRX-UJN-' . $nis . '-01', $nomUjian, '2025-08-20 10:00:00']);
-            }
-        } catch (\Throwable $e) {
-            // Silently ignore seed issues
-        }
+        // Dinonaktifkan: Seluruh data tagihan dan pembayaran wajib berasal murni dari API Tata Usaha resmi.
+        return;
     }
 
     /**
@@ -430,183 +333,296 @@ class PembayaranModel {
 
     /**
      * Sync / Pull Payment Data from External Payload (Method 1 & API Bridge)
-     * Format per item: [ 'nisn' => '...', 'kode_tagihan' => '...', 'judul' => '...', 'nominal' => 250000, 'terbayar' => 250000, 'status' => 'lunas', 'periode_bulan' => '...', ... ]
+     * Kinerja tinggi: Pre-load memory maps, bulk transactions, pencocokan rombel resmi X, XI, XII
      */
     public function syncExternalPaymentData($items) {
         if (!is_array($items) || empty($items)) {
             return ['status' => false, 'message' => 'Data tagihan kosong atau format tidak valid.'];
         }
 
+        @set_time_limit(300);
+        @ini_set('memory_limit', '512M');
+
         $syncedCount = 0;
         $createdCount = 0;
+        $studentsCreatedCount = 0;
+        $studentsUpdatedCount = 0;
+        $riwayatSyncedCount = 0;
 
-        foreach ($items as $item) {
-            $nisn = trim($item['nisn'] ?? '');
-            $nis = trim($item['nis'] ?? '');
-            $kodeTagihan = trim($item['kode_tagihan'] ?? '');
+        // 1. Pre-load Rombel Kelas ke Memory Map
+        $kelasRows = $this->db->query("SELECT id, nama_kelas, jurusan_id, tingkat FROM kelas")->fetchAll(PDO::FETCH_ASSOC);
+        $kelasMap = [];
+        foreach ($kelasRows as $kr) {
+            $kelasMap[trim(strtolower($kr['nama_kelas']))] = [
+                'id'         => (int)$kr['id'],
+                'jurusan_id' => (int)$kr['jurusan_id'],
+                'tingkat'    => $kr['tingkat']
+            ];
+        }
 
-            if (empty($kodeTagihan) && (empty($nisn) && empty($nis))) {
-                continue;
+        // 2. Pre-load Users & Siswa ke Memory Map
+        $userRows = $this->db->query("SELECT id, username, email FROM users")->fetchAll(PDO::FETCH_ASSOC);
+        $userMap = [];
+        foreach ($userRows as $ur) {
+            if (!empty($ur['username'])) $userMap[trim(strtolower($ur['username']))] = (int)$ur['id'];
+            if (!empty($ur['email'])) $userMap[trim(strtolower($ur['email']))] = (int)$ur['id'];
+        }
+
+        $siswaRows = $this->db->query("SELECT id, user_id, nis, nisn, kelas_id, jurusan_id, nama_lengkap FROM siswa")->fetchAll(PDO::FETCH_ASSOC);
+        $siswaMap = [];
+        foreach ($siswaRows as $sr) {
+            $obj = [
+                'id'           => (int)$sr['id'],
+                'user_id'      => (int)$sr['user_id'],
+                'nis'          => trim((string)$sr['nis']),
+                'nisn'         => trim((string)$sr['nisn']),
+                'kelas_id'     => (int)$sr['kelas_id'],
+                'jurusan_id'   => (int)$sr['jurusan_id'],
+                'nama_lengkap' => $sr['nama_lengkap']
+            ];
+            if (!empty($sr['nis']))  $siswaMap['nis_' . trim($sr['nis'])] = $obj;
+            if (!empty($sr['nisn'])) $siswaMap['nisn_' . trim($sr['nisn'])] = $obj;
+        }
+
+        // 3. Pre-load Tagihan & Riwayat Transaksi ke Memory Map
+        $existingTagihanMap = $this->db->query("SELECT kode_tagihan, id FROM pembayaran_tagihan")->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+        $existingTrxMap = $this->db->query("SELECT nomor_transaksi, id FROM pembayaran_riwayat")->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+
+        // 4. Siapkan Prepared Statements
+        $stmtInUser = $this->db->prepare("
+            INSERT INTO users (username, email, password, full_name, role_id, status, created_at)
+            VALUES (?, ?, ?, ?, 4, 'active', NOW())
+        ");
+        $stmtInSiswa = $this->db->prepare("
+            INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'L', 'aktif')
+        ");
+        $stmtUpSiswaKelas = $this->db->prepare("
+            UPDATE siswa SET kelas_id = ?, jurusan_id = ?, nama_lengkap = ? WHERE id = ?
+        ");
+        $stmtInKelas = $this->db->prepare("
+            INSERT INTO kelas (nama_kelas, tingkat, jurusan_id) VALUES (?, ?, ?)
+        ");
+        $stmtUpTagihan = $this->db->prepare("
+            UPDATE pembayaran_tagihan
+            SET nominal = ?, nominal_terbayar = ?, sisa_tagihan = ?, status = ?, keterangan = ?, updated_at = NOW()
+            WHERE id = ?
+        ");
+        $stmtInTagihan = $this->db->prepare("
+            INSERT INTO pembayaran_tagihan
+            (siswa_id, nis, nisn, jenis_pembayaran, kode_tagihan, judul, nominal, nominal_terbayar, sisa_tagihan, periode_bulan, tahun_ajaran, tanggal_jatuh_tempo, status, keterangan)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmtInTrx = $this->db->prepare("
+            INSERT INTO pembayaran_riwayat
+            (tagihan_id, siswa_id, nomor_transaksi, nominal_bayar, tanggal_bayar, metode_pembayaran, channel, status, catatan)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        // Helper fungsi resolusi kelas
+        $resolveKelas = function($targetClass) use (&$kelasMap, $stmtInKelas) {
+            $norm = trim(strtolower($targetClass));
+            if (empty($norm)) {
+                return ['id' => 1, 'jurusan_id' => 1];
+            }
+            if (isset($kelasMap[$norm])) {
+                return $kelasMap[$norm];
             }
 
-            // Find or Auto-Create matching student
-            $siswa = null;
-            if (!empty($nisn)) {
-                $stmt = $this->db->prepare("SELECT id, nis, nisn FROM siswa WHERE nisn = ? LIMIT 1");
-                $stmt->execute([$nisn]);
-                $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
-            }
-            if (!$siswa && !empty($nis)) {
-                $stmt = $this->db->prepare("SELECT id, nis, nisn FROM siswa WHERE nis = ? LIMIT 1");
-                $stmt->execute([$nis]);
-                $siswa = $stmt->fetch(PDO::FETCH_ASSOC);
+            // Tentukan tingkat
+            $tingkat = 'XII';
+            if (stripos($targetClass, 'XII') !== false) {
+                $tingkat = 'XII';
+            } elseif (stripos($targetClass, 'XI') !== false) {
+                $tingkat = 'XI';
+            } elseif (stripos($targetClass, 'X') !== false) {
+                $tingkat = 'X';
             }
 
-            // Jika siswa belum ada di LMS, daftarkan otomatis agar sinkron dengan data resmi API Tata Usaha
-            if (!$siswa) {
-                $studentName = !empty($item['nama_siswa']) ? trim($item['nama_siswa']) : ('Siswa ' . ($nis ?: $nisn));
-                $userLoginKey = !empty($nis) ? $nis : $nisn;
-                if (empty($userLoginKey)) continue;
+            // Tentukan jurusan
+            $isRpl = (stripos($targetClass, 'RPL') !== false || stripos($targetClass, 'PPLG') !== false);
+            $jurId = $isRpl ? 1 : 4;
 
-                // 1. Cari atau buat akun user
-                $userEmail = $userLoginKey . '@siswa.smkmuthiaharapan.sch.id';
-                $stmtUser = $this->db->prepare("SELECT id FROM users WHERE username = ? OR email = ? LIMIT 1");
-                $stmtUser->execute([$userLoginKey, $userEmail]);
-                $uRow = $stmtUser->fetch(PDO::FETCH_ASSOC);
-                if (!$uRow) {
-                    $hashedPwd = password_hash($userLoginKey, PASSWORD_BCRYPT);
-                    $stmtInUser = $this->db->prepare("INSERT INTO users (username, email, password, full_name, role_id, status, created_at) VALUES (?, ?, ?, ?, 4, 'active', NOW())");
-                    $stmtInUser->execute([$userLoginKey, $userEmail, $hashedPwd, $studentName]);
-                    $userId = (int)$this->db->lastInsertId();
-                } else {
-                    $userId = (int)$uRow['id'];
-                }
+            try {
+                $stmtInKelas->execute([trim($targetClass), $tingkat, $jurId]);
+                $newKid = (int)$this->db->lastInsertId();
+                $kelasInfo = ['id' => $newKid, 'jurusan_id' => $jurId, 'tingkat' => $tingkat];
+                $kelasMap[$norm] = $kelasInfo;
+                return $kelasInfo;
+            } catch (\Throwable $eK) {
+                return ['id' => 1, 'jurusan_id' => 1];
+            }
+        };
 
-                // 2. Cocokkan kelas dari nama_kelas jika ada
-                $kelasId = 1;
-                $jurusanId = 1;
-                $targetClass = trim($item['nama_kelas'] ?? '');
-                if (!empty($targetClass)) {
-                    $stmtK = $this->db->prepare("SELECT id, jurusan_id FROM kelas WHERE nama_kelas = ? LIMIT 1");
-                    $stmtK->execute([$targetClass]);
-                    $kRow = $stmtK->fetch(PDO::FETCH_ASSOC);
-                    if ($kRow) {
-                        $kelasId = (int)$kRow['id'];
-                        $jurusanId = (int)$kRow['jurusan_id'];
-                    } else {
-                        $isRpl = (stripos($targetClass, 'RPL') !== false || stripos($targetClass, 'PPLG') !== false);
-                        $jurId = $isRpl ? 1 : 4;
-                        try {
-                            $stmtAddK = $this->db->prepare("INSERT INTO kelas (nama_kelas, jurusan_id) VALUES (?, ?)");
-                            $stmtAddK->execute([$targetClass, $jurId]);
-                            $kelasId = (int)$this->db->lastInsertId();
-                            $jurusanId = $jurId;
-                        } catch (\Throwable $exK) {
-                            $kelasId = 1;
-                            $jurusanId = 1;
-                        }
-                    }
-                }
+        // 5. Eksekusi Sinkronisasi dalam Transaksi Database
+        $this->db->beginTransaction();
 
-                // 3. Daftarkan siswa ke tabel siswa
-                try {
-                    $stmtInSiswa = $this->db->prepare("
-                        INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, status)
-                        VALUES (?, ?, ?, ?, ?, ?, 'L', 'aktif')
-                    ");
-                    $stmtInSiswa->execute([$userId, $nis ?: $nisn, $nisn ?: $nis, $studentName, $kelasId, $jurusanId]);
-                    $newSiswaId = (int)$this->db->lastInsertId();
-                    $siswa = ['id' => $newSiswaId, 'nis' => $nis ?: $nisn, 'nisn' => $nisn ?: $nis];
-                    $studentsCreatedCount = ($studentsCreatedCount ?? 0) + 1;
-                } catch (\Throwable $exS) {
+        try {
+            foreach ($items as $item) {
+                $nisn = trim((string)($item['nisn'] ?? ''));
+                $nis  = trim((string)($item['nis'] ?? ''));
+                $kodeTagihan = trim((string)($item['kode_tagihan'] ?? ''));
+
+                if (empty($kodeTagihan) && empty($nisn) && empty($nis)) {
                     continue;
                 }
-            }
 
-            $siswaId = (int)$siswa['id'];
-            $finalNis = $siswa['nis'] ?: $nis;
-            $finalNisn = $siswa['nisn'] ?: $nisn;
-            $judul = $item['judul'] ?? 'Iuran Sekolah';
-            $jenis = $item['jenis_pembayaran'] ?? 'SPP';
-            $nominal = (float)($item['nominal'] ?? 0);
-            $terbayar = (float)($item['nominal_terbayar'] ?? ($item['terbayar'] ?? 0));
-            $sisa = max(0, $nominal - $terbayar);
-            $status = $sisa <= 0 ? 'lunas' : ($terbayar > 0 ? 'sebagian' : 'belum_lunas');
-            $periode = $item['periode_bulan'] ?? null;
-            $ta = $item['tahun_ajaran'] ?? '2025/2026';
-            $due = $item['tanggal_jatuh_tempo'] ?? null;
-            $ket = $item['keterangan'] ?? 'Sinkronisasi Sistem Pembayaran';
+                // Cari siswa di cache memory
+                $siswa = null;
+                if (!empty($nis) && isset($siswaMap['nis_' . $nis])) {
+                    $siswa = $siswaMap['nis_' . $nis];
+                } elseif (!empty($nisn) && isset($siswaMap['nisn_' . $nisn])) {
+                    $siswa = $siswaMap['nisn_' . $nisn];
+                }
 
-            // Check if tagihan already exists by kode_tagihan
-            $stmtCheck = $this->db->prepare("SELECT id FROM pembayaran_tagihan WHERE kode_tagihan = ? LIMIT 1");
-            $stmtCheck->execute([$kodeTagihan]);
-            $existing = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+                $targetClass = trim((string)($item['nama_kelas'] ?? ''));
+                $kelasInfo = $resolveKelas($targetClass);
+                $studentName = !empty($item['nama_siswa']) ? trim($item['nama_siswa']) : ('Siswa ' . ($nis ?: $nisn));
 
-            $tagihanDbId = null;
-            if ($existing) {
-                $stmtUp = $this->db->prepare("
-                    UPDATE pembayaran_tagihan
-                    SET nominal = ?, nominal_terbayar = ?, sisa_tagihan = ?, status = ?, keterangan = ?, updated_at = NOW()
-                    WHERE id = ?
-                ");
-                $stmtUp->execute([$nominal, $terbayar, $sisa, $status, $ket, $existing['id']]);
-                $syncedCount++;
-                $tagihanDbId = (int)$existing['id'];
-            } else {
-                $stmtIn = $this->db->prepare("
-                    INSERT INTO pembayaran_tagihan
-                    (siswa_id, nis, nisn, jenis_pembayaran, kode_tagihan, judul, nominal, nominal_terbayar, sisa_tagihan, periode_bulan, tahun_ajaran, tanggal_jatuh_tempo, status, keterangan)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ");
-                $stmtIn->execute([$siswaId, $finalNis, $finalNisn, $jenis, $kodeTagihan, $judul, $nominal, $terbayar, $sisa, $periode, $ta, $due, $status, $ket]);
-                $createdCount++;
-                $tagihanDbId = (int)$this->db->lastInsertId();
-            }
+                // Jika siswa belum ada di LMS, daftarkan akun dan baris siswa resmi
+                if (!$siswa) {
+                    $userLoginKey = !empty($nis) ? $nis : $nisn;
+                    if (empty($userLoginKey)) continue;
 
-            // Sync Riwayat Transaksi jika tersedia dalam payload
-            if ($tagihanDbId && !empty($item['riwayat']) && is_array($item['riwayat'])) {
-                foreach ($item['riwayat'] as $rw) {
-                    $noTrx = trim((string)($rw['nomor_transaksi'] ?? ''));
-                    if (empty($noTrx)) continue;
+                    $normLogin = trim(strtolower($userLoginKey));
+                    $userEmail = $userLoginKey . '@siswa.smkmuthiaharapan.sch.id';
+                    $normEmail = trim(strtolower($userEmail));
 
-                    $nomTrx = (float)($rw['nominal_bayar'] ?? 0);
-                    $tglTrx = $rw['tanggal_bayar'] ?? date('Y-m-d H:i:s');
-                    $metodeTrx = $rw['metode_pembayaran'] ?? 'Kasir TU Sekolah';
-                    $channelTrx = $rw['channel'] ?? 'API Tata Usaha';
-                    $statusTrx = in_array($rw['status'] ?? '', ['berhasil', 'pending', 'batal']) ? $rw['status'] : 'berhasil';
-                    $catatanTrx = $rw['catatan'] ?? 'Sinkronisasi dari API Tata Usaha';
+                    $userId = $userMap[$normLogin] ?? ($userMap[$normEmail] ?? null);
+                    if (!$userId) {
+                        $hashedPwd = password_hash($userLoginKey, PASSWORD_BCRYPT);
+                        $stmtInUser->execute([$userLoginKey, $userEmail, $hashedPwd, $studentName]);
+                        $userId = (int)$this->db->lastInsertId();
+                        $userMap[$normLogin] = $userId;
+                        $userMap[$normEmail] = $userId;
+                    }
 
-                    $stmtCheckTrx = $this->db->prepare("SELECT id FROM pembayaran_riwayat WHERE nomor_transaksi = ? LIMIT 1");
-                    $stmtCheckTrx->execute([$noTrx]);
-                    if (!$stmtCheckTrx->fetch()) {
-                        $stmtInTrx = $this->db->prepare("
-                            INSERT INTO pembayaran_riwayat
-                            (tagihan_id, siswa_id, nomor_transaksi, nominal_bayar, tanggal_bayar, metode_pembayaran, channel, status, catatan)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ");
-                        $stmtInTrx->execute([$tagihanDbId, $siswaId, $noTrx, $nomTrx, $tglTrx, $metodeTrx, $channelTrx, $statusTrx, $catatanTrx]);
-                        $riwayatSyncedCount = ($riwayatSyncedCount ?? 0) + 1;
+                    $stmtInSiswa->execute([
+                        $userId,
+                        $nis ?: $nisn,
+                        $nisn ?: $nis,
+                        $studentName,
+                        $kelasInfo['id'],
+                        $kelasInfo['jurusan_id']
+                    ]);
+                    $newSiswaId = (int)$this->db->lastInsertId();
+
+                    $siswa = [
+                        'id'           => $newSiswaId,
+                        'user_id'      => $userId,
+                        'nis'          => $nis ?: $nisn,
+                        'nisn'         => $nisn ?: $nis,
+                        'kelas_id'     => $kelasInfo['id'],
+                        'jurusan_id'   => $kelasInfo['jurusan_id'],
+                        'nama_lengkap' => $studentName
+                    ];
+
+                    if (!empty($nis))  $siswaMap['nis_' . $nis] = $siswa;
+                    if (!empty($nisn)) $siswaMap['nisn_' . $nisn] = $siswa;
+                    $studentsCreatedCount++;
+                } else {
+                    // Jika siswa sudah ada, pastikan rombel kelas dan nama tersinkron dengan data resmi API Tata Usaha
+                    if (!empty($kelasInfo['id']) && $siswa['kelas_id'] !== $kelasInfo['id']) {
+                        $stmtUpSiswaKelas->execute([
+                            $kelasInfo['id'],
+                            $kelasInfo['jurusan_id'],
+                            !empty($studentName) ? $studentName : $siswa['nama_lengkap'],
+                            $siswa['id']
+                        ]);
+                        $siswa['kelas_id'] = $kelasInfo['id'];
+                        $siswa['jurusan_id'] = $kelasInfo['jurusan_id'];
+                        if (!empty($studentName)) $siswa['nama_lengkap'] = $studentName;
+                        if (!empty($nis))  $siswaMap['nis_' . $nis] = $siswa;
+                        if (!empty($nisn)) $siswaMap['nisn_' . $nisn] = $siswa;
+                        $studentsUpdatedCount++;
+                    }
+                }
+
+                $siswaId   = (int)$siswa['id'];
+                $finalNis  = $siswa['nis'] ?: $nis;
+                $finalNisn = $siswa['nisn'] ?: $nisn;
+                $judul     = $item['judul'] ?? 'Iuran Sekolah';
+                $jenis     = $item['jenis_pembayaran'] ?? 'SPP';
+                $nominal   = (float)($item['nominal'] ?? 0);
+                $terbayar  = (float)($item['nominal_terbayar'] ?? ($item['terbayar'] ?? 0));
+                $sisa      = max(0, $nominal - $terbayar);
+                $status    = $sisa <= 0 ? 'lunas' : ($terbayar > 0 ? 'sebagian' : 'belum_lunas');
+                $periode   = $item['periode_bulan'] ?? null;
+                $ta        = $item['tahun_ajaran'] ?? '2024/2025';
+                $due       = $item['tanggal_jatuh_tempo'] ?? null;
+                $ket       = $item['keterangan'] ?? 'Tagihan Resmi API Tata Usaha';
+
+                // Upsert Tagihan Siswa
+                $tagihanDbId = null;
+                if (isset($existingTagihanMap[$kodeTagihan])) {
+                    $tagihanDbId = (int)$existingTagihanMap[$kodeTagihan];
+                    $stmtUpTagihan->execute([$nominal, $terbayar, $sisa, $status, $ket, $tagihanDbId]);
+                    $syncedCount++;
+                } else {
+                    $stmtInTagihan->execute([
+                        $siswaId, $finalNis, $finalNisn, $jenis, $kodeTagihan, $judul,
+                        $nominal, $terbayar, $sisa, $periode, $ta, $due, $status, $ket
+                    ]);
+                    $tagihanDbId = (int)$this->db->lastInsertId();
+                    $existingTagihanMap[$kodeTagihan] = $tagihanDbId;
+                    $createdCount++;
+                }
+
+                // Sync Riwayat Transaksi Pembayaran Resmi
+                if ($tagihanDbId && !empty($item['riwayat']) && is_array($item['riwayat'])) {
+                    foreach ($item['riwayat'] as $rw) {
+                        $noTrx = trim((string)($rw['nomor_transaksi'] ?? ''));
+                        if (empty($noTrx) || isset($existingTrxMap[$noTrx])) {
+                            continue;
+                        }
+
+                        $nomTrx     = (float)($rw['nominal_bayar'] ?? 0);
+                        $tglTrx     = $rw['tanggal_bayar'] ?? date('Y-m-d H:i:s');
+                        $metodeTrx  = $rw['metode_pembayaran'] ?? 'Kasir TU Sekolah';
+                        $channelTrx = $rw['channel'] ?? 'API Tata Usaha';
+                        $statusTrx  = in_array($rw['status'] ?? '', ['berhasil', 'pending', 'batal']) ? $rw['status'] : 'berhasil';
+                        $catatanTrx = $rw['catatan'] ?? 'Sinkronisasi dari API Tata Usaha';
+
+                        $stmtInTrx->execute([
+                            $tagihanDbId, $siswaId, $noTrx, $nomTrx, $tglTrx,
+                            $metodeTrx, $channelTrx, $statusTrx, $catatanTrx
+                        ]);
+                        $existingTrxMap[$noTrx] = (int)$this->db->lastInsertId();
+                        $riwayatSyncedCount++;
                     }
                 }
             }
+
+            $this->db->commit();
+        } catch (\Throwable $eTrans) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            return [
+                'status'  => false,
+                'message' => 'Gagal memproses sinkronisasi database: ' . $eTrans->getMessage()
+            ];
         }
 
         $extraMsgParts = [];
         if (!empty($studentsCreatedCount)) {
-            $extraMsgParts[] = "{$studentsCreatedCount} siswa baru disinkronkan";
+            $extraMsgParts[] = "{$studentsCreatedCount} siswa baru didaftarkan";
+        }
+        if (!empty($studentsUpdatedCount)) {
+            $extraMsgParts[] = "{$studentsUpdatedCount} rombel siswa diselaraskan";
         }
         if (!empty($riwayatSyncedCount)) {
-            $extraMsgParts[] = "{$riwayatSyncedCount} transaksi riwayat dicatat";
+            $extraMsgParts[] = "{$riwayatSyncedCount} transaksi resmi dicatat";
         }
         $extraMsg = !empty($extraMsgParts) ? (" (" . implode(", ", $extraMsgParts) . ")") : "";
 
         return [
-            'status' => true,
-            'message' => "Sinkronisasi berhasil: {$syncedCount} tagihan diperbarui, {$createdCount} tagihan baru ditambahkan{$extraMsg}.",
-            'synced' => $syncedCount,
-            'created' => $createdCount,
-            'riwayat' => $riwayatSyncedCount ?? 0,
-            'siswa_baru' => $studentsCreatedCount ?? 0
+            'status'     => true,
+            'message'    => "Sinkronisasi berhasil: {$createdCount} tagihan baru ditambahkan, {$syncedCount} tagihan diperbarui{$extraMsg}.",
+            'synced'     => $syncedCount,
+            'created'    => $createdCount,
+            'riwayat'    => $riwayatSyncedCount,
+            'siswa_baru' => $studentsCreatedCount
         ];
     }
 
