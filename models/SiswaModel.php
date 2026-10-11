@@ -15,6 +15,7 @@ class SiswaModel extends BaseModel {
             if (empty($cols)) {
                 $db->exec("ALTER TABLE `siswa` ADD COLUMN `status` ENUM('aktif', 'alumni', 'drop') DEFAULT 'aktif' AFTER `alamat`");
             }
+            self::ensureAgungAccounts($db);
         } catch (\Throwable $e) {}
     }
 
@@ -35,8 +36,7 @@ class SiswaModel extends BaseModel {
             LEFT JOIN jurusan j ON s.jurusan_id = j.id 
             WHERE (u.role_id = 3 OR u.role_id IS NULL)
               AND (u.role_id NOT IN (1, 2, 4) OR u.role_id IS NULL)
-              AND s.nama_lengkap != 'AGUNG RIFALDI, S.Tr. Kom'
-              AND NOT (s.nama_lengkap = 'AGUNG RIFALDI' AND (s.nis = '522402055' OR s.user_id = 7))
+              AND s.nama_lengkap NOT LIKE 'AGUNG RIFALDI, S.%'
         ";
         $params = [];
 
@@ -144,6 +144,70 @@ class SiswaModel extends BaseModel {
         return $this->getByUserId($userId);
     }
 
+    public static function ensureAgungAccounts($db) {
+        static $ensured = false;
+        if ($ensured) return;
+        $ensured = true;
+        try {
+            $defaultHash = password_hash('123456', PASSWORD_BCRYPT);
+
+            // 1. Pastikan Rombel 'X RPL 2' ada di tabel kelas
+            $kCheck = $db->query("SELECT id FROM kelas WHERE nama_kelas = 'X RPL 2' LIMIT 1")->fetch();
+            if (!$kCheck) {
+                $jur = $db->query("SELECT id FROM jurusan WHERE nama_jurusan LIKE '%RPL%' OR kode_jurusan = 'RPL' LIMIT 1")->fetch();
+                $jurId = $jur ? (int)$jur['id'] : 1;
+                $db->prepare("INSERT INTO kelas (nama_kelas, jurusan_id, tingkat) VALUES ('X RPL 2', ?, 'X')")->execute([$jurId]);
+                $kCheck = $db->query("SELECT id FROM kelas WHERE nama_kelas = 'X RPL 2' LIMIT 1")->fetch();
+            }
+            $kelasIdXRpl2 = $kCheck ? (int)$kCheck['id'] : 1;
+
+            // 2. Sinkronisasi Akun GURU: agg023 (AGUNG RIFALDI, S. Tr. Kom)
+            $uGuru = $db->query("SELECT id FROM users WHERE username = 'agg023' LIMIT 1")->fetch();
+            if ($uGuru) {
+                $db->prepare("UPDATE users SET role_id = 2, full_name = 'AGUNG RIFALDI, S. Tr. Kom', password = ?, status = 'active' WHERE id = ?")
+                   ->execute([$defaultHash, $uGuru['id']]);
+                $guruUserId = (int)$uGuru['id'];
+            } else {
+                $db->prepare("INSERT INTO users (username, email, password, full_name, role_id, status) VALUES ('agg023', 'agg023@smkmh-cicalengka.sch.id', ?, 'AGUNG RIFALDI, S. Tr. Kom', 2, 'active')")
+                   ->execute([$defaultHash]);
+                $guruUserId = (int)$db->lastInsertId();
+            }
+
+            $gProfile = $db->query("SELECT id FROM guru WHERE user_id = {$guruUserId} OR nip IN ('3204252301040001', '32042523010400001') LIMIT 1")->fetch();
+            if ($gProfile) {
+                $db->prepare("UPDATE guru SET user_id = ?, nip = '3204252301040001', nama_lengkap = 'AGUNG RIFALDI, S. Tr. Kom', jabatan = 'Guru Pengajar', status = 'aktif' WHERE id = ?")
+                   ->execute([$guruUserId, $gProfile['id']]);
+            } else {
+                $db->prepare("INSERT INTO guru (user_id, nip, nama_lengkap, jabatan, jenis_kelamin, status) VALUES (?, '3204252301040001', 'AGUNG RIFALDI, S. Tr. Kom', 'Guru Pengajar', 'L', 'aktif')")
+                   ->execute([$guruUserId]);
+            }
+
+            // 3. Sinkronisasi Akun SISWA: agung (AGUNG RIFALDI, NIS: 522402055, Rombel: X RPL 2)
+            $uSiswa = $db->query("SELECT id FROM users WHERE username = 'agung' LIMIT 1")->fetch();
+            if ($uSiswa) {
+                $db->prepare("UPDATE users SET role_id = 3, full_name = 'AGUNG RIFALDI', password = ?, status = 'active' WHERE id = ?")
+                   ->execute([$defaultHash, $uSiswa['id']]);
+                $siswaUserId = (int)$uSiswa['id'];
+            } else {
+                $db->prepare("INSERT INTO users (username, email, password, full_name, role_id, status) VALUES ('agung', 'agung.siswa@smkmuthia.sch.id', ?, 'AGUNG RIFALDI', 3, 'active')")
+                   ->execute([$defaultHash]);
+                $siswaUserId = (int)$db->lastInsertId();
+            }
+
+            $sProfile = $db->query("SELECT id FROM siswa WHERE user_id = {$siswaUserId} OR nis = '522402055' LIMIT 1")->fetch();
+            if ($sProfile) {
+                $db->prepare("UPDATE siswa SET user_id = ?, nis = '522402055', nisn = '522402055', nama_lengkap = 'AGUNG RIFALDI', kelas_id = ?, status = 'aktif' WHERE id = ?")
+                   ->execute([$siswaUserId, $kelasIdXRpl2, $sProfile['id']]);
+            } else {
+                $db->prepare("INSERT INTO siswa (user_id, nis, nisn, nama_lengkap, kelas_id, jurusan_id, jenis_kelamin, status) VALUES (?, '522402055', '522402055', 'AGUNG RIFALDI', ?, 1, 'L', 'aktif')")
+                   ->execute([$siswaUserId, $kelasIdXRpl2]);
+            }
+
+            // Bersihkan jika ada user non-siswa yang tercatat di tabel siswa
+            $db->exec("DELETE FROM siswa WHERE user_id = 1 OR user_id = {$guruUserId}");
+        } catch (\Throwable $e) {}
+    }
+
     public static function ensureNoOrtuColumn($db) {
         static $checked = false;
         if ($checked) return;
@@ -157,12 +221,7 @@ class SiswaModel extends BaseModel {
                     $db->exec("ALTER TABLE `siswa` ADD COLUMN `no_ortu` VARCHAR(25) NULL DEFAULT NULL");
                 }
             }
-            // Auto self-heal: Pastikan AGUNG RIFALDI, S.Tr. Kom adalah Guru (agg023) dan hapus akun siswa dummy agung
-            $db->exec("UPDATE users SET role_id = 2, full_name = 'AGUNG RIFALDI, S.Tr. Kom' WHERE username = 'agg023'");
-            $db->exec("DELETE FROM siswa WHERE user_id = 7 OR nis = '522402055'");
-            $db->exec("DELETE FROM users WHERE id = 7 AND username = 'agung'");
-            $db->exec("DELETE FROM siswa WHERE user_id = 1");
-            $db->exec("DELETE FROM siswa WHERE user_id IN (SELECT id FROM users WHERE role_id IN (1, 2, 4))");
+            self::ensureAgungAccounts($db);
         } catch (\Throwable $e) {}
     }
 

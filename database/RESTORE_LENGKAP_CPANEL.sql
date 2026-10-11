@@ -439,7 +439,7 @@ CREATE TABLE `guru` (
 -- Dumping data for `guru` --
 INSERT INTO `guru` VALUES('1', '2', '198501152010011002', 'Drs. Ahmad Hidayat, M.Pd.', 'Guru Pengajar', 'L', '081234567890', 'Jl. Raya Cicalengka No. 45, Bandung', 'aktif');
 INSERT INTO `guru` VALUES('2', '5', '199003202015021004', 'Budi Santoso, S.T.', 'Guru Pengajar', 'L', '082198765432', 'Jl. Alun-Alun Cicalengka No. 12', 'aktif');
-INSERT INTO `guru` VALUES('3', '9', '32042523010400001', 'AGUNG RIFALDI, S.Tr. Kom', 'Guru Pengajar', 'L', '82198765433', 'Kp. Munggang Rt. 01/08 Desa Dampit Kec. Cicalengka Kab. Bandung', 'aktif');
+INSERT INTO `guru` VALUES('3', '9', '3204252301040001', 'AGUNG RIFALDI, S. Tr. Kom', 'Guru Pengajar', 'L', '82198765433', 'Kp. Munggang Rt. 01/08 Desa Dampit Kec. Cicalengka Kab. Bandung', 'aktif');
 INSERT INTO `guru` VALUES('11', '1', 'G202608810', 'Administrator Utama', 'Guru Pengajar', 'L', NULL, NULL, 'aktif');
 INSERT INTO `guru` VALUES('12', '4', 'G202608503', 'H. ASEP SAEPULLOH, S.Ag', 'Guru Pengajar', 'L', NULL, NULL, 'aktif');
 
@@ -622,6 +622,7 @@ INSERT INTO `kelas` VALUES('2', 'XI RPL 1', '1', 'XI', NULL);
 INSERT INTO `kelas` VALUES('3', 'XII RPL 1', '1', 'XII', NULL);
 INSERT INTO `kelas` VALUES('7', 'XII RPL 3', '1', 'XII', NULL);
 INSERT INTO `kelas` VALUES('8', 'X PPLG 1', '1', 'X', NULL);
+INSERT INTO `kelas` VALUES('9', 'X RPL 2', '1', 'X', NULL);
 
 -- Table structure for `komentar` --
 DROP TABLE IF EXISTS `komentar`;
@@ -1583,7 +1584,7 @@ CREATE TABLE `siswa` (
 -- Dumping data for `siswa` --
 INSERT INTO `siswa` VALUES('1', '3', '20231001', '0061234567', 'Muhammad Rizky Pratama', '2', '1', 'L', '085712345678', 'Jl. Cikopo Cicalengka No. 8', 'aktif');
 INSERT INTO `siswa` VALUES('2', '6', '20231002', '0067654321', 'Siti Rahmawati', '2', '1', 'P', '085798765432', 'Jl. Nagreg No. 15, Bandung', 'aktif');
-INSERT INTO `siswa` VALUES('3', '7', '522402055', '522402055', 'AGUNG RIFALDI', '1', '1', 'L', '082317864874', 'Cicalengka, Bandung', 'aktif');
+INSERT INTO `siswa` VALUES('3', '7', '522402055', '522402055', 'AGUNG RIFALDI', '9', '1', 'L', '082317864874', 'Cicalengka, Bandung', 'aktif');
 INSERT INTO `siswa` VALUES('4', '8', '522402056', '522402056', 'Dwi Handoko', '7', '1', 'L', '82366965785', '', 'aktif');
 INSERT INTO `siswa` VALUES('5', '10', '230104001', '230104001', 'Yulia', '1', '1', 'P', '82366965785', '', 'aktif');
 INSERT INTO `siswa` VALUES('6', '1', 'S2026097583', 'S2026097583', 'Administrator Utama', '1', '1', 'L', NULL, NULL, 'aktif');
@@ -1815,9 +1816,9 @@ INSERT INTO `users` VALUES('3', '3', 'siswa', 'agung.guru@smkmuthia.sch.id', '$2
 INSERT INTO `users` VALUES('4', '4', 'kepsek', 'kepsek@smkmh-cicalengka.sch.id', 'y$vDUgWL4AaAJA/8X95QXKA.IYjnC8ChmMjc1HJbMUtoWvXBv3kB.ru', 'H. ASEP SAEPULLOH, S.Ag', 'avatar_kepsek_4_1785716342.jpg', 'active', NULL, '2026-08-02 07:09:37', '2026-08-03 07:19:02', NULL, NULL);
 INSERT INTO `users` VALUES('5', '2', 'guru2', 'budi@smkmh-cicalengka.sch.id', 'y$L7z.BOsIzrCmQ3DzBMIi0.zrA6KTFtfkgf1yRfHP8K2fKJE9OjlnO', 'Budi Santoso, S.T.', 'default_avatar.png', 'active', NULL, '2026-08-02 07:09:37', '2026-08-02 07:09:37', NULL, NULL);
 INSERT INTO `users` VALUES('6', '3', 'siswa2', 'siti@smkmh-cicalengka.sch.id', '$2y$10$qS2iG1GqV2L3N.a5v7Z0eeR2h8kL4A2.v7qB6C8m9D0e1F2g3H4i5', 'Siti Rahmawati', 'default_avatar.png', 'active', NULL, '2026-08-02 07:09:37', '2026-08-02 07:09:37', NULL, NULL);
-INSERT INTO `users` VALUES('7', '3', 'agung', 'agung.siswa@smkmuthia.sch.id', 'y$Zv5aC7vSYBo2xhEzpJaTd.1UDtgoPox4tn4QfEy5X78ppMAyvXZA6', 'AGUNG RIFALDI', 'profile_1785912791_6a72ddd7ab8d6.png', 'active', NULL, '2026-08-02 08:41:59', '2026-08-11 21:36:40', '2026-08-10 21:21:27', NULL);
+INSERT INTO `users` VALUES('7', '3', 'agung', 'agung.siswa@smkmuthia.sch.id', '$2y$10$I9jMj.0J86SfZ2Zp1SKQhugLCaxo2v/XxNzXSWi8yI/K3KXHFvrCC', 'AGUNG RIFALDI', 'profile_1785912791_6a72ddd7ab8d6.png', 'active', NULL, '2026-08-02 08:41:59', '2026-08-11 21:36:40', '2026-08-10 21:21:27', NULL);
 INSERT INTO `users` VALUES('8', '3', 'dwihan', 'dwihan@gmail.com', '$2y$10$a6FdhD.jAlOsYgHuyiQdQO.VuN193SooQ73RGZemL5vCIUiwstA1i', 'Dwi Handoko', 'default_avatar.png', 'active', NULL, '2026-08-02 09:43:03', '2026-08-02 09:43:03', NULL, NULL);
-INSERT INTO `users` VALUES('9', '2', 'agg023', 'agg023@smkmh-cicalengka.sch.id', 'y$L7z.BOsIzrCmQ3DzBMIi0.zrA6KTFtfkgf1yRfHP8K2fKJE9OjlnO', 'AGUNG RIFALDI, S.Tr. Kom', 'profile_1785912173_6a72db6dd8de0.png', 'active', NULL, '2026-08-02 09:48:07', '2026-08-05 13:55:14', NULL, NULL);
+INSERT INTO `users` VALUES('9', '2', 'agg023', 'agg023@smkmh-cicalengka.sch.id', '$2y$10$I9jMj.0J86SfZ2Zp1SKQhugLCaxo2v/XxNzXSWi8yI/K3KXHFvrCC', 'AGUNG RIFALDI, S. Tr. Kom', 'profile_1785912173_6a72db6dd8de0.png', 'active', NULL, '2026-08-02 09:48:07', '2026-08-05 13:55:14', NULL, NULL);
 INSERT INTO `users` VALUES('10', '3', 'yusan', 'yusan@gmail.com', '$2y$10$pD37Ho1013xL1jpHj6FZnOVS7SLddYuS6FEuPPpHftWEbpQxt8l8e', 'Yulia', 'default_avatar.png', 'active', NULL, '2026-08-05 12:57:45', '2026-08-05 12:57:45', NULL, NULL);
 
 -- Table structure for `video` --
