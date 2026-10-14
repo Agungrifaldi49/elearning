@@ -255,7 +255,37 @@ class AbsensiModel extends BaseModel {
             ];
         }
 
+        // Ambil konfigurasi batas jam masuk & toleransi dari pengaturan
+        require_once ROOT_PATH . 'models/SettingsModel.php';
+        $settingsModel = new SettingsModel();
+        $settings = $settingsModel->getAll();
+        $mode = $settings['presensi_mode_jadwal'] ?? 'jadwal';
+        $standarMasukBatas = ($settings['presensi_jam_masuk_batas'] ?? '07:30');
+        if (strlen($standarMasukBatas) === 5) $standarMasukBatas .= ':00';
+        $toleransiTerlambatMenit = max(0, (int)($settings['presensi_toleransi_terlambat_menit'] ?? 0));
+
+        // Jam mulai KBM pertama kelas siswa hari ini (fallback ke min_start jadwal sekolah atau standar batas)
+        $effectiveMinStart = $classMinStart ?: ($jStat['min_start'] ?: $standarMasukBatas);
+        if (strlen($effectiveMinStart) === 5) $effectiveMinStart .= ':00';
+
+        // Tentukan batas waktu masuk tepat waktu:
+        // Jika mode serentak atau kelas tidak memiliki jadwal spesifik, gunakan batas serentak
+        if ($mode === 'serentak' || empty($classMinStart)) {
+            $baseBatas = $standarMasukBatas;
+        } else {
+            // Mode jadwal: mengikuti jam mulai pelajaran pertama kelas tersebut
+            $baseBatas = $effectiveMinStart;
+        }
+
+        // Tambahkan toleransi keterlambatan jika ada
+        if ($toleransiTerlambatMenit > 0) {
+            $batasMasuk = date('H:i:s', strtotime($baseBatas . " +{$toleransiTerlambatMenit} minutes"));
+        } else {
+            $batasMasuk = $baseBatas;
+        }
+
         $effectiveMaxEnd = $classMaxEnd ?: ($jStat['max_end'] ?: '14:00:00');
+        if (strlen($effectiveMaxEnd) === 5) $effectiveMaxEnd .= ':00';
         // Allow exit scan starting 10 minutes before max KBM end
         $allowExitStart = date('H:i:s', strtotime($effectiveMaxEnd . ' -10 minutes'));
 
@@ -264,8 +294,11 @@ class AbsensiModel extends BaseModel {
             'day_name' => $todayDayName,
             'min_start' => $minStart,
             'max_end' => $maxEnd,
+            'class_min_start' => $effectiveMinStart,
             'class_max_end' => $effectiveMaxEnd,
-            'allow_exit_start' => $allowExitStart
+            'allow_exit_start' => $allowExitStart,
+            'batas_masuk' => $batasMasuk,
+            'toleransi_terlambat_menit' => $toleransiTerlambatMenit
         ];
     }
 
@@ -322,7 +355,7 @@ class AbsensiModel extends BaseModel {
         $jabatan = trim($guruData['jabatan'] ?? 'Guru Pengajar');
         $isNonKbmStaff = ($jabatan !== 'Guru Pengajar' && !empty($jabatan));
 
-        // Settings (Jam Standar Operasional Sekolah)
+        // Settings (Jam Standar Operasional Sekolah & Toleransi)
         require_once ROOT_PATH . 'models/SettingsModel.php';
         $settingsModel = new SettingsModel();
         $settings = $settingsModel->getAll();
@@ -330,9 +363,14 @@ class AbsensiModel extends BaseModel {
         $standarMasukMulai = ($settings['presensi_jam_masuk_mulai'] ?? '06:00') . ':00';
         $standarMasukBatas = ($settings['presensi_jam_masuk_batas'] ?? '07:30') . ':00';
         $standarPulangMulai = ($settings['presensi_jam_pulang_mulai'] ?? '15:00') . ':00';
+        $toleransiTerlambatMenit = max(0, (int)($settings['presensi_toleransi_terlambat_menit'] ?? 0));
 
         // Non-KBM Staff (Tenaga Ahli, Bendahara, Kasubag TU, Satpam, Pustakawan, dll) OR Mode Serentak
         if ($isNonKbmStaff || $mode === 'serentak') {
+            $batasMasukNonKbm = ($toleransiTerlambatMenit > 0)
+                ? date('H:i:s', strtotime($standarMasukBatas . " +{$toleransiTerlambatMenit} minutes"))
+                : $standarMasukBatas;
+
             return [
                 'allowed' => true,
                 'is_non_kbm' => true,
@@ -342,7 +380,8 @@ class AbsensiModel extends BaseModel {
                 'min_start' => $standarMasukBatas,
                 'max_end' => $standarPulangMulai,
                 'allow_entry_start' => $standarMasukMulai,
-                'allow_exit_start' => $standarPulangMulai
+                'allow_exit_start' => $standarPulangMulai,
+                'batas_masuk' => $batasMasukNonKbm
             ];
         }
 
@@ -381,6 +420,11 @@ class AbsensiModel extends BaseModel {
         $minStart = (!empty($gStat['min_start'])) ? date('H:i:s', strtotime($gStat['min_start'])) : '07:00:00';
         $maxEnd = (!empty($gStat['max_end'])) ? date('H:i:s', strtotime($gStat['max_end'])) : '15:00:00';
 
+        // Batas masuk tepat waktu guru sesuai jam KBM pertama + toleransi
+        $batasMasukGuru = ($toleransiTerlambatMenit > 0)
+            ? date('H:i:s', strtotime($minStart . " +{$toleransiTerlambatMenit} minutes"))
+            : $minStart;
+
         // Buffer: Allowed to scan entry 60 mins before first class (or min 06:00 WIB)
         $allowEntryStart = date('H:i:s', strtotime($minStart . ' -60 minutes'));
         if (strtotime($allowEntryStart) > strtotime('06:00:00')) $allowEntryStart = '06:00:00';
@@ -397,7 +441,8 @@ class AbsensiModel extends BaseModel {
             'min_start' => $minStart,
             'max_end' => $maxEnd,
             'allow_entry_start' => $allowEntryStart,
-            'allow_exit_start' => $allowExitStart
+            'allow_exit_start' => $allowExitStart,
+            'batas_masuk' => $batasMasukGuru
         ];
     }
 
@@ -604,7 +649,9 @@ class AbsensiModel extends BaseModel {
                 if ($resG) {
                     $jamMasuk = date('H:i', strtotime($now));
                     $jamSelesaiKbm = date('H:i', strtotime($gSched['max_end']));
-                    $isLate = ($currentTime > '07:15:00');
+                    $batasMasukG = $gSched['batas_masuk'] ?? ($gSched['min_start'] ?? '07:30:00');
+                    $formatBatasG = date('H:i', strtotime($batasMasukG));
+                    $isLate = ($currentTime > $batasMasukG);
                     $statusKet = $isLate ? 'Terlambat' : 'Hadir Tepat Waktu';
                     return [
                         'success' => true,
@@ -617,7 +664,7 @@ class AbsensiModel extends BaseModel {
                         'jam_masuk' => $jamMasuk . ' WIB',
                         'is_late' => $isLate,
                         'status_keterangan' => $statusKet,
-                        'message' => "Presensi MASUK GURU/GTK ({$guru['nama_lengkap']}) berhasil dicatat pukul {$jamMasuk} WIB! Status: {$statusKet}. (Jadwal KBM Selesai: {$jamSelesaiKbm} WIB)."
+                        'message' => "Presensi MASUK GURU/GTK ({$guru['nama_lengkap']}) berhasil dicatat pukul {$jamMasuk} WIB! Status: {$statusKet} (Batas: {$formatBatasG} WIB). (Jadwal KBM Selesai: {$jamSelesaiKbm} WIB)."
                     ];
                 }
             }
@@ -763,8 +810,23 @@ class AbsensiModel extends BaseModel {
 
             if ($res) {
                 $jamMasuk = date('H:i', strtotime($now));
-                $isLate = ($currentTime > '07:15:00');
+                $batasMasuk = $schedCheck['batas_masuk'] ?? '07:30:00';
+                $formatBatasMasuk = date('H:i', strtotime($batasMasuk));
+                $isLate = ($currentTime > $batasMasuk);
                 $statusKet = $isLate ? 'Terlambat' : 'Hadir Tepat Waktu';
+
+                $keteranganMasuk = $isLate 
+                    ? "Tiba di sekolah pukul {$jamMasuk} WIB (Batas masuk: {$formatBatasMasuk} WIB)" 
+                    : "Hadir Tepat Waktu (Batas masuk: {$formatBatasMasuk} WIB)";
+
+                // Update keterangan di baris absensi yang baru dimasukkan
+                try {
+                    $lastId = $this->db->lastInsertId();
+                    if ($lastId) {
+                        $stmtUpdKet = $this->db->prepare("UPDATE absensi SET keterangan = ? WHERE id = ?");
+                        $stmtUpdKet->execute(["Presensi Masuk Digital ({$statusKet})", $lastId]);
+                    }
+                } catch (\Throwable $eKet) {}
 
                 // Kirim Notifikasi WhatsApp Masuk ke Orang Tua Siswa
                 $waStatusInfo = '';
@@ -775,7 +837,7 @@ class AbsensiModel extends BaseModel {
                         'tanggal' => $today,
                         'jam' => $jamMasuk . ' WIB',
                         'status' => $statusKet,
-                        'keterangan' => $isLate ? 'Tiba di sekolah setelah batas waktu masuk 07:15 WIB' : 'Tepat Waktu'
+                        'keterangan' => $keteranganMasuk
                     ]);
                     if (!empty($waRes['status'])) {
                         $waStatusInfo = ' 📲 [WA Ortu Terkirim]';
@@ -794,10 +856,11 @@ class AbsensiModel extends BaseModel {
                     'kelas' => $siswa['nama_kelas'] ?: 'Tanpa Kelas',
                     'jam' => $jamMasuk . ' WIB',
                     'jam_masuk' => $jamMasuk . ' WIB',
+                    'batas_masuk' => $formatBatasMasuk . ' WIB',
                     'is_late' => $isLate,
                     'status_keterangan' => $statusKet,
                     'wa_info' => $waStatusInfo,
-                    'message' => "Presensi MASUK {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat pukul {$jamMasuk} WIB! Status: {$statusKet}.{$waStatusInfo}"
+                    'message' => "Presensi MASUK {$siswa['nama_lengkap']} ({$siswa['nama_kelas']}) berhasil dicatat pukul {$jamMasuk} WIB! Status: {$statusKet} (Batas: {$formatBatasMasuk} WIB).{$waStatusInfo}"
                 ];
             } else {
                 return ['success' => false, 'message' => 'Gagal menyimpan data presensi ke database.'];
@@ -1457,7 +1520,7 @@ class AbsensiModel extends BaseModel {
         $whereSql = " WHERE " . implode(" AND ", $whereConds);
 
         $stmtS = $this->db->prepare("
-            SELECT s.id as siswa_id, s.nis, s.nisn, s.nama_lengkap, k.nama_kelas
+            SELECT s.id as siswa_id, s.nis, s.nisn, s.nama_lengkap, s.kelas_id, k.nama_kelas
             FROM siswa s
             LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN kelas k ON s.kelas_id = k.id
@@ -1495,9 +1558,39 @@ class AbsensiModel extends BaseModel {
             }
         }
 
+        // Ambil konfigurasi jam operasional & toleransi dari pengaturan
+        require_once ROOT_PATH . 'models/SettingsModel.php';
+        $settingsModel = new SettingsModel();
+        $settings = $settingsModel->getAll();
+        $mode = $settings['presensi_mode_jadwal'] ?? 'jadwal';
+        $standarMasukBatas = ($settings['presensi_jam_masuk_batas'] ?? '07:30') . ':00';
+        $toleransiTerlambatMenit = max(0, (int)($settings['presensi_toleransi_terlambat_menit'] ?? 0));
+        $standarBatasWithTol = ($toleransiTerlambatMenit > 0)
+            ? date('H:i:s', strtotime($standarMasukBatas . " +{$toleransiTerlambatMenit} minutes"))
+            : $standarMasukBatas;
+
+        // Ambil jadwal jam mulai KBM pertama per kelas per hari
+        $classSchedules = [];
+        try {
+            $stmtJadwal = $this->db->query("
+                SELECT kelas_id, hari, MIN(jam_mulai) as min_start 
+                FROM jadwal 
+                WHERE kelas_id IS NOT NULL 
+                GROUP BY kelas_id, hari
+            ");
+            while ($jRow = $stmtJadwal->fetch(PDO::FETCH_ASSOC)) {
+                $kId = (int)$jRow['kelas_id'];
+                $hari = $jRow['hari'];
+                $classSchedules[$kId][$hari] = $jRow['min_start'];
+            }
+        } catch (\Throwable $e) {}
+
+        $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+
         $results = [];
         foreach ($siswaList as $s) {
             $sId = $s['siswa_id'];
+            $kId = (int)($s['kelas_id'] ?? 0);
             $daily = [];
             $hadir = 0;
             $terlambat = 0;
@@ -1511,7 +1604,22 @@ class AbsensiModel extends BaseModel {
                     $rec = $absMap[$sId][$d];
                     $st = strtolower($rec['status'] ?? 'hadir');
                     $wktMasuk = $rec['waktu_masuk'] ? date('H:i:s', strtotime($rec['waktu_masuk'])) : null;
-                    $isLate = ($wktMasuk && $wktMasuk > '07:15:00');
+
+                    $dateStr = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+                    $dayOfWeekNum = (int)date('N', strtotime($dateStr));
+                    $dayName = $daysMap[$dayOfWeekNum] ?? 'Senin';
+
+                    $classStart = $classSchedules[$kId][$dayName] ?? null;
+                    if ($mode === 'serentak' || empty($classStart)) {
+                        $batasMasukDay = $standarBatasWithTol;
+                    } else {
+                        if (strlen($classStart) === 5) $classStart .= ':00';
+                        $batasMasukDay = ($toleransiTerlambatMenit > 0)
+                            ? date('H:i:s', strtotime($classStart . " +{$toleransiTerlambatMenit} minutes"))
+                            : $classStart;
+                    }
+
+                    $isLate = ($wktMasuk && $wktMasuk > $batasMasukDay);
 
                     if ($st === 'sakit') {
                         $daily[$d] = 'S';
@@ -1597,6 +1705,35 @@ class AbsensiModel extends BaseModel {
             $absMap[$gId][$dayNum] = $row;
         }
 
+        // Ambil konfigurasi jam operasional & toleransi dari pengaturan
+        require_once ROOT_PATH . 'models/SettingsModel.php';
+        $settingsModel = new SettingsModel();
+        $settings = $settingsModel->getAll();
+        $mode = $settings['presensi_mode_jadwal'] ?? 'jadwal';
+        $standarMasukBatas = ($settings['presensi_jam_masuk_batas'] ?? '07:30') . ':00';
+        $toleransiTerlambatMenit = max(0, (int)($settings['presensi_toleransi_terlambat_menit'] ?? 0));
+        $standarBatasWithTol = ($toleransiTerlambatMenit > 0)
+            ? date('H:i:s', strtotime($standarMasukBatas . " +{$toleransiTerlambatMenit} minutes"))
+            : $standarMasukBatas;
+
+        // Ambil jadwal jam mulai KBM pertama per guru per hari
+        $guruSchedules = [];
+        try {
+            $stmtJadwalG = $this->db->query("
+                SELECT guru_id, hari, MIN(jam_mulai) as min_start 
+                FROM jadwal 
+                WHERE guru_id IS NOT NULL 
+                GROUP BY guru_id, hari
+            ");
+            while ($jRow = $stmtJadwalG->fetch(PDO::FETCH_ASSOC)) {
+                $gIdKey = (int)$jRow['guru_id'];
+                $hari = $jRow['hari'];
+                $guruSchedules[$gIdKey][$hari] = $jRow['min_start'];
+            }
+        } catch (\Throwable $e) {}
+
+        $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+
         $results = [];
         foreach ($guruList as $g) {
             $gId = $g['guru_id'];
@@ -1613,7 +1750,22 @@ class AbsensiModel extends BaseModel {
                     $rec = $absMap[$gId][$d];
                     $st = strtolower($rec['status'] ?? 'hadir');
                     $wktMasuk = $rec['waktu_masuk'] ? date('H:i:s', strtotime($rec['waktu_masuk'])) : null;
-                    $isLate = ($wktMasuk && $wktMasuk > '07:15:00');
+
+                    $dateStr = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+                    $dayOfWeekNum = (int)date('N', strtotime($dateStr));
+                    $dayName = $daysMap[$dayOfWeekNum] ?? 'Senin';
+
+                    $teacherStart = $guruSchedules[$gId][$dayName] ?? null;
+                    if ($mode === 'serentak' || empty($teacherStart)) {
+                        $batasMasukDay = $standarBatasWithTol;
+                    } else {
+                        if (strlen($teacherStart) === 5) $teacherStart .= ':00';
+                        $batasMasukDay = ($toleransiTerlambatMenit > 0)
+                            ? date('H:i:s', strtotime($teacherStart . " +{$toleransiTerlambatMenit} minutes"))
+                            : $teacherStart;
+                    }
+
+                    $isLate = ($wktMasuk && $wktMasuk > $batasMasukDay);
 
                     if ($st === 'sakit') {
                         $daily[$d] = 'S';

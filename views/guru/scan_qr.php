@@ -358,7 +358,7 @@ $processScanEndpoint = $isAdminScanRoute ? BASE_URL . 'index.php?url=admin/proce
             Swal.fire({
                 icon: isPulang ? 'info' : (d.is_late ? 'warning' : 'success'),
                 title: isPulang ? 'Presensi PULANG Terekam!' : (d.is_late ? 'Presensi MASUK (Terlambat)' : 'Presensi MASUK (Tepat Waktu)'),
-                html: isPulang ? `<b>${d.nama}</b> (${d.kelas}) berhasil presensi PULANG pukul <b>${d.jam_pulang}</b>. (Masuk: ${d.jam_masuk}).` : `<b>${d.nama}</b> (${d.kelas}) berhasil presensi MASUK pukul <b>${d.jam_masuk}</b>.<br><span class="badge bg-success-subtle text-success border border-success mt-2 px-3 py-1 fs-6">Status: ${d.status_keterangan || 'Hadir Tepat Waktu'}</span>`,
+                html: isPulang ? `<b>${d.nama}</b> (${d.kelas}) berhasil presensi PULANG pukul <b>${d.jam_pulang}</b>. (Masuk: ${d.jam_masuk}).` : `<b>${d.nama}</b> (${d.kelas}) berhasil presensi MASUK pukul <b>${d.jam_masuk}</b>.<br><span class="badge ${d.is_late ? 'bg-warning-subtle text-dark border border-warning' : 'bg-success-subtle text-success border border-success'} mt-2 px-3 py-1 fs-6">Status: ${d.status_keterangan || 'Hadir Tepat Waktu'}</span>`,
                 showConfirmButton: false,
                 timer: 2500,
                 timerProgressBar: true
