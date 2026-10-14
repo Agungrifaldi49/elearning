@@ -1851,6 +1851,7 @@ class AdminController {
                     $conflicts = $res['conflicts'];
 
                     if ($successCount > 0) {
+                        $academicModel->syncKeysWithSchedule();
                         FlashHelper::setSuccess("Berhasil menyimpan {$successCount} jadwal KBM baru secara massal!");
                     }
                     if (!empty($conflicts)) {
@@ -1864,12 +1865,6 @@ class AdminController {
             $redirectUrl = BASE_URL . 'index.php?url=admin/jadwal' . ($selectedKelasId ? "&kelas_id={$selectedKelasId}" : "");
             header("Location: {$redirectUrl}");
             exit();
-        }
-
-        if (!empty($guruList) && is_array($guruList)) {
-            foreach ($guruList as $gItem) {
-                $academicModel->ensureGuruClassKeys($gItem['id'] ?? 0);
-            }
         }
 
         $jadwalList = $academicModel->getJadwal($selectedKelasId);

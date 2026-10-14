@@ -166,7 +166,9 @@ class Database {
             "idx_hasil_quiz_finished" => "ALTER TABLE hasil_quiz ADD INDEX idx_hasil_quiz_finished (finished_at)",
             "idx_hasil_quiz_status_lulus" => "ALTER TABLE hasil_quiz ADD INDEX idx_hasil_quiz_status_lulus (status_lulus)",
             "idx_quiz_susulan_status" => "ALTER TABLE quiz_susulan ADD INDEX idx_quiz_susulan_status (status)",
-            "idx_jawaban_siswa_lookup" => "ALTER TABLE jawaban_siswa ADD INDEX idx_jawaban_siswa_lookup (quiz_id, siswa_id, soal_id)"
+            "idx_jawaban_siswa_lookup" => "ALTER TABLE jawaban_siswa ADD INDEX idx_jawaban_siswa_lookup (quiz_id, siswa_id, soal_id)",
+            "idx_mek_lookup" => "ALTER TABLE mapel_enrollment_keys ADD INDEX idx_mek_lookup (mapel_id, guru_id, kelas_id)",
+            "idx_jadwal_hari_jam" => "ALTER TABLE jadwal ADD INDEX idx_jadwal_hari_jam (hari, jam_mulai, jam_selesai)"
         ];
 
         foreach ($indexes as $name => $sql) {

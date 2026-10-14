@@ -508,37 +508,53 @@ class AcademicModel extends BaseModel {
             $jadwalList[$i]['is_conflict'] = false;
             $jadwalList[$i]['conflict_reasons'] = [];
         }
+        if ($count === 0) return;
 
+        // Ambil data jadwal seluruh sekolah untuk pembanding
         $allJadwal = $this->getJadwal();
 
+        // Kelompokkan jadwal pembanding berdasarkan hari agar pencarian bentrok sangat cepat (O(N))
+        $byDay = [];
+        foreach ($allJadwal as $b) {
+            $dayKey = strtolower(trim($b['hari'] ?? ''));
+            $byDay[$dayKey][] = $b;
+        }
+
         for ($i = 0; $i < $count; $i++) {
-            $a = $jadwalList[$i];
+            $a = &$jadwalList[$i];
+            $dayKey = strtolower(trim($a['hari'] ?? ''));
+            if (!isset($byDay[$dayKey])) continue;
 
-            foreach ($allJadwal as $b) {
-                if ((int)$a['id'] === (int)$b['id']) continue;
+            $startA = $a['jam_mulai'];
+            $endA   = $a['jam_selesai'];
+            $aId    = (int)$a['id'];
+            $aGuru  = (int)$a['guru_id'];
+            $aKelas = (int)$a['kelas_id'];
+            $aRoom  = trim($a['ruangan'] ?? '');
+            $aGenericRoom = $this->isGenericRoom($aRoom);
 
-                if (strcasecmp($a['hari'], $b['hari']) === 0) {
-                    $startA = strtotime("1970-01-01 " . $a['jam_mulai']);
-                    $endA   = strtotime("1970-01-01 " . $a['jam_selesai']);
-                    $startB = strtotime("1970-01-01 " . $b['jam_mulai']);
-                    $endB   = strtotime("1970-01-01 " . $b['jam_selesai']);
+            foreach ($byDay[$dayKey] as $b) {
+                if ($aId === (int)$b['id']) continue;
 
-                    if ($startA < $endB && $endA > $startB) {
-                        $reasons = [];
-                        if ((int)$a['guru_id'] === (int)$b['guru_id']) {
-                            $reasons[] = "Guru {$a['nama_guru']} mengajar 2 kelas bersamaan ({$a['nama_kelas']} & {$b['nama_kelas']})";
-                        }
-                        if ((int)$a['kelas_id'] === (int)$b['kelas_id']) {
-                            $reasons[] = "Kelas {$a['nama_kelas']} mempunyai 2 mapel bersamaan ({$a['nama_mapel']} & {$b['nama_mapel']})";
-                        }
-                        if (!$this->isGenericRoom($a['ruangan'] ?? '') && !$this->isGenericRoom($b['ruangan'] ?? '') && strcasecmp(trim($a['ruangan']), trim($b['ruangan'])) === 0) {
-                            $reasons[] = "Ruangan '{$a['ruangan']}' dipakai 2 kelas bersamaan ({$a['nama_kelas']} & {$b['nama_kelas']})";
-                        }
+                $startB = $b['jam_mulai'];
+                $endB   = $b['jam_selesai'];
 
-                        if (!empty($reasons)) {
-                            $jadwalList[$i]['is_conflict'] = true;
-                            $jadwalList[$i]['conflict_reasons'] = array_unique(array_merge($jadwalList[$i]['conflict_reasons'], $reasons));
-                        }
+                // Pembandingan rentang waktu langsung secara string ISO (misal '07:30:00' < '09:00:00')
+                if ($startA < $endB && $endA > $startB) {
+                    $reasons = [];
+                    if ($aGuru === (int)$b['guru_id']) {
+                        $reasons[] = "Guru {$a['nama_guru']} mengajar 2 kelas bersamaan ({$a['nama_kelas']} & {$b['nama_kelas']})";
+                    }
+                    if ($aKelas === (int)$b['kelas_id']) {
+                        $reasons[] = "Kelas {$a['nama_kelas']} mempunyai 2 mapel bersamaan ({$a['nama_mapel']} & {$b['nama_mapel']})";
+                    }
+                    if (!$aGenericRoom && !$this->isGenericRoom($b['ruangan'] ?? '') && strcasecmp($aRoom, trim($b['ruangan'])) === 0) {
+                        $reasons[] = "Ruangan '{$aRoom}' dipakai 2 kelas bersamaan ({$a['nama_kelas']} & {$b['nama_kelas']})";
+                    }
+
+                    if (!empty($reasons)) {
+                        $a['is_conflict'] = true;
+                        $a['conflict_reasons'] = array_unique(array_merge($a['conflict_reasons'], $reasons));
                     }
                 }
             }
@@ -789,11 +805,11 @@ class AcademicModel extends BaseModel {
     }
 
     public function ensureGuruClassKeys($guru_id) {
-        $this->syncKeysWithSchedule();
         $gId = (int)$guru_id;
         if ($gId <= 0) return;
 
         try {
+            $this->ensureEnrollmentTables();
             $sql = "
                 SELECT DISTINCT j.mapel_id, j.kelas_id, m.nama_mapel, k.nama_kelas, k.tingkat
                 FROM jadwal j
