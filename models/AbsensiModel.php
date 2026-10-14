@@ -2269,4 +2269,78 @@ class AbsensiModel extends BaseModel {
             'data' => $results
         ];
     }
+
+    /**
+     * Ambil jadwal KBM hari ini milik Guru yang sudah memasuki jam pelajaran namun belum dilakukan absensi kelas siswa.
+     * Digunakan sebagai data pemicu pop-up pengingat otomatis bagi guru.
+     */
+    public function getPendingClassAttendanceReminderForGuru($guruId, $todayDate = null, $nowTime = null) {
+        $guruId = (int)$guruId;
+        if ($guruId <= 0) return null;
+
+        if (!$todayDate) $todayDate = date('Y-m-d');
+        if (!$nowTime) $nowTime = date('H:i:s');
+
+        $daysMap = [1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu'];
+        $dayNum = (int)date('N', strtotime($todayDate));
+        $todayDayName = $daysMap[$dayNum] ?? 'Senin';
+
+        try {
+            $stmt = $this->db->prepare("
+                SELECT j.id, j.kelas_id, j.mapel_id, j.hari, j.jam_mulai, j.jam_selesai, j.ruangan,
+                       m.nama_mapel, k.nama_kelas, k.tingkat
+                FROM jadwal j
+                JOIN mata_pelajaran m ON j.mapel_id = m.id
+                JOIN kelas k ON j.kelas_id = k.id
+                WHERE j.guru_id = ? AND j.hari = ?
+                ORDER BY j.jam_mulai ASC
+            ");
+            $stmt->execute([$guruId, $todayDayName]);
+            $schedules = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        if (empty($schedules)) return null;
+
+        $pendingList = [];
+        foreach ($schedules as $sched) {
+            $jId = (int)$sched['id'];
+
+            // Munculkan pengingat mulai 5 menit sebelum jam mulai KBM
+            $startBuffer = date('H:i:s', strtotime($sched['jam_mulai'] . ' -5 minutes'));
+
+            // Jika belum memasuki waktu KBM (kurang dari 5 menit sebelum jam mulai), lewati
+            if ($nowTime < $startBuffer) {
+                continue;
+            }
+
+            // Cek apakah absensi siswa sudah diisi untuk sesi jadwal dan tanggal ini
+            $stmtChk = $this->db->prepare("
+                SELECT COUNT(*) as total_absen 
+                FROM absensi 
+                WHERE jadwal_id = ? AND tanggal = ?
+            ");
+            $stmtChk->execute([$jId, $todayDate]);
+            $absenCount = (int)($stmtChk->fetchColumn() ?: 0);
+
+            // Jika belum ada siswa yang diabsen (total_absen = 0), tandai sebagai belum absensi
+            if ($absenCount === 0) {
+                $isLive = ($nowTime >= $sched['jam_mulai'] && $nowTime <= $sched['jam_selesai']);
+                $sched['is_live'] = $isLive;
+                $sched['jam_mulai_fmt'] = substr($sched['jam_mulai'], 0, 5);
+                $sched['jam_selesai_fmt'] = substr($sched['jam_selesai'], 0, 5);
+                $pendingList[] = $sched;
+            }
+        }
+
+        if (empty($pendingList)) return null;
+
+        return [
+            'has_pending' => true,
+            'count' => count($pendingList),
+            'schedules' => $pendingList,
+            'primary' => $pendingList[0]
+        ];
+    }
 }

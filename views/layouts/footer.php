@@ -25,6 +25,9 @@
     if (class_exists('FlashHelper')) {
         echo FlashHelper::render();
     }
+    if (file_exists(ROOT_PATH . 'views/layouts/modal_pengingat_absensi.php')) {
+        require_once ROOT_PATH . 'views/layouts/modal_pengingat_absensi.php';
+    }
     ?>
 </body>
 </html>
