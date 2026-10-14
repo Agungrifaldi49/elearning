@@ -247,6 +247,16 @@ class _GuruMainScreenState extends State<GuruMainScreen> {
               hasClockedOutToday: guruProvider.hasClockedOutToday,
               isAbsentToday: guruProvider.isAbsentToday,
             );
+            // Setelah jeda singkat (hindari dua dialog muncul bersamaan),
+            // tampilkan pengingat absensi KBM kelas siswa jika ada jadwal pending.
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted) {
+                AttendanceReminderService.checkAndShowKBMReminder(
+                  context: context,
+                  reminderData: guruProvider.attendanceReminder,
+                );
+              }
+            });
           }
         });
         guruProvider.fetchQuiz(user.id);

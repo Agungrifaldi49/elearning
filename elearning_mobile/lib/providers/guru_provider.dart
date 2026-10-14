@@ -61,6 +61,15 @@ class GuruProvider with ChangeNotifier {
     return (_dashboardData?['guided_ekskul_list'] as List?) ?? [];
   }
 
+  /// Jadwal KBM hari ini yang sudah memasuki jam pelajaran namun belum dilakukan absensi kelas.
+  /// null berarti tidak ada pengingat (semua sudah diabsen atau belum waktunya).
+  Map<String, dynamic>? get attendanceReminder {
+    final r = _dashboardData?['attendance_reminder'];
+    if (r == null || r is! Map) return null;
+    if (r['has_pending'] != true) return null;
+    return Map<String, dynamic>.from(r);
+  }
+
   Future<void> fetchDashboard(int userId) async {
     _isLoading = true;
     notifyListeners();

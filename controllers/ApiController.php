@@ -2465,12 +2465,14 @@ class ApiController {
         require_once ROOT_PATH . 'models/ExamModel.php';
         require_once ROOT_PATH . 'models/AcademicModel.php';
         require_once ROOT_PATH . 'models/CommunicationModel.php';
+        require_once ROOT_PATH . 'models/AbsensiModel.php';
 
         $guruModel = new GuruModel();
         $learningModel = new LearningModel();
         $examModel = new ExamModel();
         $academicModel = new AcademicModel();
         $commModel = new CommunicationModel();
+        $absensiModel = new AbsensiModel();
 
         // Get logged in user details if available
         $userObj = null;
@@ -2573,6 +2575,9 @@ class ApiController {
                 $guidedEkskul = $ekskulModel->getEkskulByGuru($guruId);
                 $isPembimbingEkskul = !empty($guidedEkskul);
 
+                // Pengingat absensi kelas KBM – jadwal yang sudah memasuki jam pelajaran namun belum diabsen
+                $attendanceReminder = $absensiModel->getPendingClassAttendanceReminderForGuru($guruId);
+
                 $this->jsonResponse(true, 'Dashboard Guru Overview', [
                     'guru' => $guru,
                     'user' => $userObj ?: ['full_name' => $guru['nama_lengkap']],
@@ -2601,7 +2606,8 @@ class ApiController {
                         'status' => $absGuruStatus,
                         'waktu_masuk' => $absGuru['waktu_masuk'] ?? $absGuru['waktu_hadir'] ?? null,
                         'waktu_pulang' => $absGuru['waktu_pulang'] ?? null,
-                    ]
+                    ],
+                    'attendance_reminder' => $attendanceReminder,
                 ]);
                 break;
 
