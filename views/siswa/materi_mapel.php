@@ -608,11 +608,6 @@ h1, h2, h3, h4, h5, .bab-title, .materi-unit-title, .qa-item-title {
         padding: 24px 20px !important;
         border-radius: 16px;
     }
-    .materi-actions-wrap {
-        justify-content: flex-start !important;
-        width: 100%;
-        margin-top: 10px;
-    }
 }
 
 @media (max-width: 767.98px) {
@@ -676,18 +671,6 @@ h1, h2, h3, h4, h5, .bab-title, .materi-unit-title, .qa-item-title {
         margin: 8px 4px;
         padding: 12px 10px;
         border-radius: 10px;
-    }
-    .materi-actions-wrap {
-        display: flex !important;
-        width: 100%;
-        gap: 6px;
-        flex-wrap: wrap;
-    }
-    .materi-actions-wrap .btn {
-        flex: 1 1 auto;
-        justify-content: center;
-        padding: 6px 10px;
-        font-size: 0.76rem;
     }
     .berkas-media-strip {
         flex-direction: column;
@@ -875,43 +858,18 @@ h1, h2, h3, h4, h5, .bab-title, .materi-unit-title, .qa-item-title {
                             </div>
                         </div>
 
-                        <!-- 2. JUDUL MATERI & Tombol Aksi Pembelajaran -->
-                        <div class="row align-items-center g-3 mb-3">
-                            <div class="col-lg-8">
-                                <div class="d-flex align-items-start gap-3">
-                                    <div class="materi-row-icon shadow-xs" style="background:<?= $iconBg ?>; min-width: 46px; width: 46px; height: 46px;">
-                                        <i class="bi <?= $fileIconClass ?>" style="font-size: 1.4rem;"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="fw-bold text-dark mb-1" style="font-size: 1.15rem; line-height: 1.4;">
-                                            <?= htmlspecialchars($m['judul']) ?>
-                                        </h4>
-                                        <p class="text-muted small mb-0">
-                                            <i class="bi bi-person-circle me-1"></i> <?= htmlspecialchars($namaGuru ?: 'Guru Pengampu') ?>
-                                        </p>
-                                    </div>
-                                </div>
+                        <!-- 2. JUDUL MATERI -->
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div class="materi-row-icon shadow-xs" style="background:<?= $iconBg ?>; min-width: 46px; width: 46px; height: 46px;">
+                                <i class="bi <?= $fileIconClass ?>" style="font-size: 1.4rem;"></i>
                             </div>
-                            <div class="col-lg-4 text-lg-end">
-                                <div class="d-flex align-items-center gap-2 justify-content-lg-end flex-wrap materi-actions-wrap">
-                                    <?php if ($hasFile || $m['jenis_file'] !== 'youtube'): ?>
-                                        <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5 hover-scale">
-                                            <i class="bi bi-book-half"></i>
-                                            <span><?= $m['jenis_file'] === 'video' ? 'Tonton Video' : 'Buka Modul' ?></span>
-                                        </a>
-                                    <?php endif; ?>
-                                    <?php if ($isYT && !empty($m['youtube_url'])): ?>
-                                        <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-sm btn-danger rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5 text-white hover-scale">
-                                            <i class="bi bi-youtube"></i>
-                                            <span>Video Pembelajaran</span>
-                                        </a>
-                                    <?php endif; ?>
-                                    <?php if ($hasFile): ?>
-                                        <a href="<?= $fileUrl ?>" download class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1.5 d-inline-flex align-items-center" title="Unduh Berkas Lampiran">
-                                            <i class="bi bi-download"></i>
-                                        </a>
-                                    <?php endif; ?>
-                                </div>
+                            <div class="flex-grow-1 min-width-0">
+                                <h4 class="fw-bold text-dark mb-1" style="font-size: 1.15rem; line-height: 1.4;">
+                                    <?= htmlspecialchars($m['judul']) ?>
+                                </h4>
+                                <p class="text-muted small mb-0">
+                                    <i class="bi bi-person-circle me-1"></i> <?= htmlspecialchars($namaGuru ?: 'Guru Pengampu') ?>
+                                </p>
                             </div>
                         </div>
 
