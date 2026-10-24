@@ -104,8 +104,8 @@ class Security {
         $html = preg_replace('/on[a-z]+\s*=\s*[^ >]+/i', '', $html);
         $html = preg_replace('/javascript:/i', '', $html);
 
-        // Allowed tags
-        $allowed = '<ol><ul><li><p><br><b><strong><i><em><u><span><div><style>';
+        // Allowed tags for rich text learning content
+        $allowed = '<ol><ul><li><p><br><b><strong><i><em><u><span><div><style><h1><h2><h3><h4><h5><h6><blockquote><code><pre><hr>';
         return strip_tags(trim($html), $allowed);
     }
 

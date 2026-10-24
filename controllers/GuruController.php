@@ -110,7 +110,7 @@ class GuruController {
 
             if ($action === 'create') {
                 $judul = Security::sanitize($_POST['judul']);
-                $deskripsi = Security::sanitize($_POST['deskripsi']);
+                $deskripsi = Security::sanitizeHtml($_POST['deskripsi'] ?? '');
                 $mapel_id = (int)$_POST['mapel_id'];
                 
                 // Ambil daftar kelas_ids
@@ -155,7 +155,7 @@ class GuruController {
 
             } elseif ($action === 'update' && $id > 0) {
                 $judul = Security::sanitize($_POST['judul']);
-                $deskripsi = Security::sanitize($_POST['deskripsi']);
+                $deskripsi = Security::sanitizeHtml($_POST['deskripsi'] ?? '');
                 $mapel_id = (int)$_POST['mapel_id'];
                 
                 $kelas_ids = [];

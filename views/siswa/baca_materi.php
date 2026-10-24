@@ -34,6 +34,16 @@ if (!empty($materi['file_path']) && file_exists(ROOT_PATH . 'assets/uploads/mate
     $fileSizeBytes = @filesize(ROOT_PATH . 'assets/uploads/materi/' . $materi['file_path']);
 }
 $fileSizeFormatted = $fileSizeBytes ? round($fileSizeBytes / (1024 * 1024), 1) . ' MB' : null;
+
+if (!function_exists('renderRichContent')) {
+    function renderRichContent($content) {
+        if (empty($content)) return '';
+        if (preg_match('/<[a-z][\s\S]*>/i', $content)) {
+            return Security::safeHtml($content);
+        }
+        return nl2br(htmlspecialchars($content));
+    }
+}
 ?>
 
 <style>
@@ -508,7 +518,7 @@ $fileSizeFormatted = $fileSizeBytes ? round($fileSizeBytes / (1024 * 1024), 1) .
                                 <?php if (!empty($materi['deskripsi'])): ?>
                                     <div class="p-3 bg-light rounded-3 border-start border-4 border-primary">
                                         <div class="small fw-bold text-primary mb-1"><i class="bi bi-info-circle-fill me-1"></i>Catatan KBM:</div>
-                                        <div class="small text-dark lh-base"><?= nl2br(htmlspecialchars($materi['deskripsi'])) ?></div>
+                                        <div class="small text-dark lh-base"><?= renderRichContent($materi['deskripsi']) ?></div>
                                     </div>
                                 <?php else: ?>
                                     <div class="small text-muted py-2 text-center">Tidak ada catatan instruksi khusus dari guru pengampu.</div>
@@ -613,7 +623,7 @@ $fileSizeFormatted = $fileSizeBytes ? round($fileSizeBytes / (1024 * 1024), 1) .
                             <h6 class="fw-bold text-dark mb-0" style="font-size:0.9rem;">Petunjuk Pembelajaran</h6>
                         </div>
                         <div class="text-slate-700 small lh-base" style="color: #334155; font-size:0.86rem;">
-                            <?= nl2br(htmlspecialchars($materi['deskripsi'])) ?>
+                            <?= renderRichContent($materi['deskripsi']) ?>
                         </div>
                     </div>
                 <?php endif; ?>

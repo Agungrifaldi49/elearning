@@ -387,7 +387,10 @@ if (!function_exists('getFileIcon')) {
                             <div class="materi-row-desc">
                                 <span class="badge" style="background:<?= $iconBg ?>;color:<?= $color ?>;font-size:.68rem;font-weight:700;border-radius:50rem;padding:2px 8px;"><?= $fileTypeName ?></span>
                                 <?php if (!empty($m['deskripsi'])): ?>
-                                &nbsp;<span><?= htmlspecialchars(mb_substr($m['deskripsi'], 0, 80)) ?><?= mb_strlen($m['deskripsi']) > 80 ? '...' : '' ?></span>
+                                <?php $plainSnippet = trim(strip_tags($m['deskripsi'])); ?>
+                                <?php if (!empty($plainSnippet)): ?>
+                                &nbsp;<span><?= htmlspecialchars(mb_substr($plainSnippet, 0, 80)) ?><?= mb_strlen($plainSnippet) > 80 ? '...' : '' ?></span>
+                                <?php endif; ?>
                                 <?php endif; ?>
                                 <span class="text-muted ms-1" style="font-size:.7rem;">
                                     &bull; <?= date('d M Y', strtotime($m['created_at'])) ?>
