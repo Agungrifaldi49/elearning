@@ -18,6 +18,17 @@ if (!function_exists('ytEmbedUrl')) {
     }
 }
 
+// Helper render rich content HTML aman untuk materi singkat
+if (!function_exists('renderRichContent')) {
+    function renderRichContent($content) {
+        if (empty($content)) return '';
+        if (preg_match('/<[a-z][\s\S]*>/i', $content)) {
+            return Security::safeHtml($content);
+        }
+        return nl2br(htmlspecialchars($content));
+    }
+}
+
 // Warna bab berputar (palet harmonis)
 $babColors = ['#2563eb','#7c3aed','#0891b2','#059669','#d97706','#dc2626','#db2777','#65a30d'];
 
@@ -132,90 +143,137 @@ if (!function_exists('getFileIcon')) {
 [data-bs-theme="dark"] .bab-body { border-color: #334155; }
 .bab-card.is-open .bab-body { display: block; }
 
-/* ── Materi Row ── */
-.materi-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 16px 22px;
-    border-bottom: 1px solid #f8fafc;
-    transition: background .15s ease;
+/* ── Unit Card Materi di dalam Bab ── */
+.materi-unit-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin: 14px 18px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
-.materi-row:last-child { border-bottom: none; }
-.materi-row:hover { background: #f8fafc; }
-[data-bs-theme="dark"] .materi-row { border-color: #1e293b; }
-[data-bs-theme="dark"] .materi-row:hover { background: rgba(255,255,255,.04); }
+.materi-unit-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+[data-bs-theme="dark"] .materi-unit-card {
+    background: #1e293b;
+    border-color: #334155;
+}
 
 .materi-row-icon {
-    width: 40px; height: 40px;
-    border-radius: 10px;
+    width: 44px; height: 44px;
+    border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.15rem;
+    font-size: 1.25rem;
     flex-shrink: 0;
-    margin-top: 2px;
-}
-.materi-row-body { flex: 1; min-width: 0; }
-.materi-row-title { font-size: .95rem; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
-[data-bs-theme="dark"] .materi-row-title { color: #f1f5f9; }
-.materi-row-desc { font-size: .78rem; color: #64748b; margin: 0; }
-.materi-row-actions { display: flex; gap: 6px; flex-shrink: 0; margin-top: 4px; }
-.btn-materi-action {
-    font-size: .78rem; font-weight: 600;
-    padding: 5px 14px;
-    border-radius: 50rem;
-    display: inline-flex; align-items: center; gap: 5px;
-    white-space: nowrap;
-    text-decoration: none;
-    border: 1.5px solid transparent;
-    transition: all .2s ease;
-}
-.btn-materi-read  { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-.btn-materi-read:hover { background: #2563eb; color: #fff; }
-.btn-materi-video { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
-.btn-materi-video:hover { background: #dc2626; color: #fff; }
-
-/* ── Quiz & Tugas Divider & Card ── */
-.qanda-divider {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 22px 4px;
-}
-.qanda-divider::before, .qanda-divider::after {
-    content: ''; flex: 1; height: 1px;
-    background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
-}
-[data-bs-theme="dark"] .qanda-divider::before,
-[data-bs-theme="dark"] .qanda-divider::after { background: linear-gradient(90deg, transparent, #334155, transparent); }
-.qanda-divider span {
-    font-size: .72rem; font-weight: 700;
-    color: #94a3b8; letter-spacing: .06em;
-    text-transform: uppercase; white-space: nowrap;
 }
 
-.qa-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 22px;
+/* ── Box Materi Singkat & Rangkuman ── */
+.materi-singkat-preview-box {
     background: #f8fafc;
-    border-bottom: 1px solid #f1f5f9;
-    transition: background .15s;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 14px;
+    margin-bottom: 12px;
 }
-.qa-item:last-child { border-bottom: none; }
-.qa-item:hover { background: #f1f5f9; }
-[data-bs-theme="dark"] .qa-item { background: rgba(15,23,42,.4); border-color: #1e293b; }
-[data-bs-theme="dark"] .qa-item:hover { background: rgba(15,23,42,.6); }
+[data-bs-theme="dark"] .materi-singkat-preview-box {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+/* ── Dukungan Format List Lengkap (A, a, 1, I, i, Bullet) ── */
+.rendered-materi-content {
+    line-height: 1.75;
+    font-size: 0.92rem;
+    color: #1e293b;
+}
+[data-bs-theme="dark"] .rendered-materi-content {
+    color: #cbd5e1;
+}
+.rendered-materi-content ol {
+    padding-left: 26px;
+    margin-bottom: 10px;
+}
+.rendered-materi-content ul {
+    padding-left: 26px;
+    margin-bottom: 10px;
+    list-style-type: disc !important;
+}
+.rendered-materi-content li {
+    margin-bottom: 4px;
+}
+.rendered-materi-content ol[type="A"], .rendered-materi-content ol.list-alpha-upper {
+    list-style-type: upper-alpha !important;
+}
+.rendered-materi-content ol[type="a"], .rendered-materi-content ol.list-alpha-lower {
+    list-style-type: lower-alpha !important;
+}
+.rendered-materi-content ol[type="1"], .rendered-materi-content ol.list-decimal {
+    list-style-type: decimal !important;
+}
+.rendered-materi-content ol[type="I"], .rendered-materi-content ol.list-roman-upper {
+    list-style-type: upper-roman !important;
+}
+.rendered-materi-content ol[type="i"], .rendered-materi-content ol.list-roman-lower {
+    list-style-type: lower-roman !important;
+}
+
+/* Callout Box Catatan */
+.rich-callout-box, .rendered-materi-content .rich-callout-box {
+    background-color: #f0fdf4;
+    border-left: 4px solid #16a34a;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin: 10px 0;
+    color: #166534;
+    font-size: 0.88rem;
+}
+[data-bs-theme="dark"] .rich-callout-box,
+[data-bs-theme="dark"] .rendered-materi-content .rich-callout-box {
+    background-color: #064e3b;
+    border-color: #34d399;
+    color: #ecfdf5;
+}
+
+/* ── Evaluasi Section di Bawah Materi ── */
+.eval-section-box {
+    background: #fdfefe;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-top: 14px;
+}
+[data-bs-theme="dark"] .eval-section-box {
+    background: rgba(15,23,42,0.3);
+    border-color: #334155;
+}
+
+.eval-item-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition: all 0.2s ease;
+}
+.eval-item-card:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 3px 10px rgba(59,130,246,0.06);
+}
+[data-bs-theme="dark"] .eval-item-card {
+    background: #1e293b;
+    border-color: #334155;
+}
 
 .qa-item-icon {
     width: 36px; height: 36px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     font-size: 1rem; flex-shrink: 0;
 }
-.qa-item-body { flex: 1; min-width: 0; }
 .qa-item-title { font-size: .88rem; font-weight: 700; margin: 0; color: #0f172a; }
 [data-bs-theme="dark"] .qa-item-title { color: #f1f5f9; }
-.qa-item-meta  { font-size: .73rem; color: #64748b; margin: 0; }
-.qa-item-badge { font-size: .7rem; font-weight: 700; padding: 3px 10px; border-radius: 50rem; white-space: nowrap; }
-.badge-done    { background: #dcfce7; color: #15803d; }
-.badge-pending { background: #fff7ed; color: #c2410c; }
-.badge-nilai   { background: #eff6ff; color: #1d4ed8; }
 
 /* ── Empty bab ── */
 .bab-empty { padding: 28px 22px; text-align: center; color: #94a3b8; font-size: .88rem; }
@@ -245,6 +303,47 @@ if (!function_exists('getFileIcon')) {
     .materi-row { flex-direction: column; gap: 10px; }
     .materi-row-actions { width: 100%; }
     .bab-title { font-size: .9rem; }
+    .materi-unit-card { margin: 10px 8px; padding: 14px 12px; }
+}
+
+/* ── Hover Effects & Utility ── */
+.hover-scale {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-scale:hover {
+    transform: translateY(-2px);
+}
+.btn-xs {
+    padding: 3px 10px;
+    font-size: 0.72rem;
+    border-radius: 50rem;
+    font-weight: 600;
+}
+.berkas-media-strip {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition: all 0.2s ease;
+}
+[data-bs-theme="dark"] .berkas-media-strip {
+    background: #0f172a;
+    border-color: #334155;
+}
+/* Scrollbar halus untuk rendered-materi-content */
+.rendered-materi-content::-webkit-scrollbar {
+    width: 5px;
+}
+.rendered-materi-content::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.03);
+    border-radius: 4px;
+}
+.rendered-materi-content::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+[data-bs-theme="dark"] .rendered-materi-content::-webkit-scrollbar-thumb {
+    background: #475569;
 }
 </style>
 
@@ -376,168 +475,235 @@ if (!function_exists('getFileIcon')) {
 
                     // bg ikon sesuai warna bab (muted)
                     $iconBg = 'rgba(' . implode(',', sscanf(ltrim($color, '#'), "%02x%02x%02x")) . ',.12)';
+                    $mQuiz  = $m['linked_quiz']  ?? [];
+                    $mTugas = $m['linked_tugas'] ?? [];
                 ?>
-                    <!-- MATERI ROW -->
-                    <div class="materi-row">
-                        <div class="materi-row-icon" style="background:<?= $iconBg ?>;">
-                            <i class="bi <?= $fileIconClass ?>"></i>
-                        </div>
-                        <div class="materi-row-body">
-                            <div class="materi-row-title"><?= htmlspecialchars($m['judul']) ?></div>
-                            <div class="materi-row-desc">
-                                <span class="badge" style="background:<?= $iconBg ?>;color:<?= $color ?>;font-size:.68rem;font-weight:700;border-radius:50rem;padding:2px 8px;"><?= $fileTypeName ?></span>
-                                <?php if (!empty($m['deskripsi'])): ?>
-                                <?php $plainSnippet = trim(strip_tags($m['deskripsi'])); ?>
-                                <?php if (!empty($plainSnippet)): ?>
-                                &nbsp;<span><?= htmlspecialchars(mb_substr($plainSnippet, 0, 80)) ?><?= mb_strlen($plainSnippet) > 80 ? '...' : '' ?></span>
-                                <?php endif; ?>
-                                <?php endif; ?>
-                                <span class="text-muted ms-1" style="font-size:.7rem;">
-                                    &bull; <?= date('d M Y', strtotime($m['created_at'])) ?>
+                    <!-- ══ UNIT CARD MATERI PEMBELAJARAN ══ -->
+                    <div class="materi-unit-card shadow-xs mb-3">
+                        <!-- 1. Header Metadata Materi: Nomor Materi, Tanggal, Tipe Berkas -->
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 pb-2 mb-3 border-bottom">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge rounded-pill fw-bold px-3 py-1.5 shadow-xs" style="background:<?= $color ?>; color: #fff; font-size: 0.75rem;">
+                                    <i class="bi bi-bookmark-check-fill me-1"></i> Materi #<?= $idx + 1 ?>
+                                </span>
+                                <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1" style="font-size: 0.72rem;">
+                                    <i class="bi bi-calendar3 me-1"></i><?= date('d M Y', strtotime($m['created_at'])) ?>
+                                </span>
+                            </div>
+                            <div>
+                                <span class="badge" style="background:<?= $iconBg ?>; color:<?= $color ?>; font-size: 0.75rem; font-weight: 700; border-radius: 50rem; padding: 4px 12px;">
+                                    <i class="bi <?= $fileIconClass ?> me-1"></i> <?= $fileTypeName ?>
                                 </span>
                             </div>
                         </div>
-                        <div class="materi-row-actions flex-wrap">
-                            <?php if ($hasFile || $m['jenis_file'] !== 'youtube'): ?>
-                                <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>"
-                                   class="btn-materi-action btn-materi-read">
-                                    <i class="bi bi-book-half"></i>
-                                    <?= $m['jenis_file'] === 'video' ? 'Tonton' : 'Baca' ?>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($isYT && !empty($m['youtube_url'])): ?>
-                                <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>"
-                                   class="btn-materi-action btn-materi-video">
-                                    <i class="bi bi-youtube"></i> Video
-                                </a>
-                            <?php endif; ?>
-                        </div>
-                    </div>
 
-                    <?php
-                    // Setelah materi terakhir, tampilkan divider + quiz/tugas terkait
-                    $isLastInBab = ($idx === count($materiItems) - 1);
-
-                    // Kumpulkan semua linked quiz & tugas di bab ini
-                    $babLinkedQuiz  = $m['linked_quiz']  ?? [];
-                    $babLinkedTugas = $m['linked_tugas'] ?? [];
-
-                    if (!empty($babLinkedQuiz) || !empty($babLinkedTugas)):
-                    ?>
-                        <!-- Quiz & Tugas Divider -->
-                        <div class="qanda-divider">
-                            <span><i class="bi bi-arrow-down-short"></i> Selesai membaca? Kerjakan di bawah</span>
-                        </div>
-
-                        <?php foreach ($babLinkedQuiz as $q):
-                            $sdDikerjakan = $q['sudah_dikerjakan'] ?? false;
-                            $nilaiQ       = $q['nilai_siswa'] ?? null;
-                            $isExpired    = !empty($q['tanggal_selesai']) && strtotime($q['tanggal_selesai']) < time();
-                        ?>
-                        <div class="qa-item">
-                            <div class="qa-item-icon"
-                                 style="background:<?= $sdDikerjakan ? '#dcfce7' : '#fef3c7' ?>;">
-                                <i class="bi bi-patch-question-fill"
-                                   style="color:<?= $sdDikerjakan ? '#16a34a' : '#d97706' ?>;"></i>
+                        <!-- 2. JUDUL MATERI & Tombol Aksi Pembelajaran -->
+                        <div class="row align-items-center g-3 mb-3">
+                            <div class="col-lg-8">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="materi-row-icon shadow-xs" style="background:<?= $iconBg ?>; min-width: 46px; width: 46px; height: 46px;">
+                                        <i class="bi <?= $fileIconClass ?>" style="font-size: 1.4rem;"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="fw-bold text-dark mb-1" style="font-size: 1.15rem; line-height: 1.4;">
+                                            <?= htmlspecialchars($m['judul']) ?>
+                                        </h4>
+                                        <p class="text-muted small mb-0">
+                                            <i class="bi bi-person-circle me-1"></i> <?= htmlspecialchars($namaGuru ?: 'Guru Pengampu') ?>
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="qa-item-body">
-                                <p class="qa-item-title"><?= htmlspecialchars($q['judul']) ?></p>
-                                <p class="qa-item-meta">
-                                    Quiz
-                                    <?php if (!empty($q['tanggal_selesai'])): ?>
-                                    &bull; Ditutup: <?= date('d M Y, H:i', strtotime($q['tanggal_selesai'])) ?>
+                            <div class="col-lg-4 text-lg-end">
+                                <div class="d-flex align-items-center gap-2 justify-content-lg-end flex-wrap">
+                                    <?php if ($hasFile || $m['jenis_file'] !== 'youtube'): ?>
+                                        <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5 hover-scale">
+                                            <i class="bi bi-book-half"></i>
+                                            <span><?= $m['jenis_file'] === 'video' ? 'Tonton Video' : 'Buka Modul' ?></span>
+                                        </a>
                                     <?php endif; ?>
-                                </p>
+                                    <?php if ($isYT && !empty($m['youtube_url'])): ?>
+                                        <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-sm btn-danger rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5 text-white hover-scale">
+                                            <i class="bi bi-youtube"></i>
+                                            <span>Video Pembelajaran</span>
+                                        </a>
+                                    <?php endif; ?>
+                                    <?php if ($hasFile): ?>
+                                        <a href="<?= $fileUrl ?>" download class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1.5 d-inline-flex align-items-center" title="Unduh Berkas Lampiran">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
                             </div>
-                            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-                                <?php if ($sdDikerjakan): ?>
-                                    <span class="qa-item-badge badge-done">
-                                        <i class="bi bi-check-circle-fill me-1"></i>Selesai
+                        </div>
+
+                        <!-- 3. Materi Singkat & Rangkuman Pembelajaran -->
+                        <?php if (!empty($m['deskripsi'])): ?>
+                            <div class="materi-singkat-preview-box">
+                                <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom">
+                                    <span class="fw-bold text-primary d-flex align-items-center gap-1.5" style="font-size: 0.86rem;">
+                                        <i class="bi bi-file-earmark-richtext-fill"></i>
+                                        <span>3. Materi Singkat &amp; Rangkuman Pembelajaran</span>
                                     </span>
-                                    <?php if ($nilaiQ !== null): ?>
-                                    <span class="qa-item-badge badge-nilai">Nilai: <?= $nilaiQ ?></span>
-                                    <?php endif; ?>
-                                    <a href="<?= BASE_URL ?>index.php?url=siswa/reviewQuiz&quiz_id=<?= $q['id'] ?>"
-                                       class="btn-materi-action" style="background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;font-size:.72rem;">
-                                        <i class="bi bi-eye"></i> Review
-                                    </a>
-                                <?php elseif ($isExpired): ?>
-                                    <span class="qa-item-badge" style="background:#f1f5f9;color:#64748b;">
-                                        <i class="bi bi-lock-fill me-1"></i>Ditutup
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5" style="font-size: 0.68rem; font-weight: 600;">
+                                        Ringkasan KBM Terstruktur
                                     </span>
+                                </div>
+                                <div class="rendered-materi-content text-dark px-1" style="max-height: 280px; overflow-y: auto;">
+                                    <?= renderRichContent($m['deskripsi']) ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- 4. Media & Berkas Pembelajaran -->
+                        <div class="berkas-media-strip d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                            <div class="d-flex align-items-center gap-2 text-secondary" style="font-size: 0.82rem;">
+                                <i class="bi bi-folder-check text-primary fs-6"></i>
+                                <span class="fw-semibold text-dark">Media/Berkas:</span>
+                                <?php if ($hasFile): ?>
+                                    <span class="text-dark fw-bold"><?= htmlspecialchars(basename($m['file_path'])) ?></span>
+                                    <span class="badge bg-light text-secondary border rounded-pill px-2 py-0.5" style="font-size: 0.7rem;"><?= strtoupper($ext ?: $m['jenis_file']) ?></span>
+                                <?php elseif ($isYT): ?>
+                                    <span class="text-danger fw-bold"><i class="bi bi-youtube me-1"></i>Video Streaming YouTube</span>
                                 <?php else: ?>
-                                    <span class="qa-item-badge badge-pending">
-                                        <i class="bi bi-clock-fill me-1"></i>Belum
-                                    </span>
-                                    <a href="<?= BASE_URL ?>index.php?url=siswa/kerjakanQuiz&quiz_id=<?= $q['id'] ?>"
-                                       class="btn-materi-action"
-                                       style="background:#fef3c7;color:#92400e;border-color:#fcd34d;font-size:.72rem;">
-                                        <i class="bi bi-pencil-fill"></i> Kerjakan
-                                    </a>
+                                    <span class="text-muted">Materi Teks Digital</span>
                                 <?php endif; ?>
                             </div>
-                        </div>
-                        <?php endforeach; ?>
-
-                        <?php foreach ($babLinkedTugas as $t):
-                            $sdDikumpul = $t['sudah_dikumpul'] ?? false;
-                            $nilaiT     = $t['nilai_siswa']   ?? null;
-                            $isExpired  = !empty($t['deadline']) && strtotime($t['deadline']) < time();
-                        ?>
-                        <div class="qa-item">
-                            <div class="qa-item-icon"
-                                 style="background:<?= $sdDikumpul ? '#dcfce7' : '#fce7f3' ?>;">
-                                <i class="bi bi-clipboard2-check-fill"
-                                   style="color:<?= $sdDikumpul ? '#16a34a' : '#be185d' ?>;"></i>
-                            </div>
-                            <div class="qa-item-body">
-                                <p class="qa-item-title"><?= htmlspecialchars($t['judul']) ?></p>
-                                <p class="qa-item-meta">
-                                    Tugas
-                                    <?php if (!empty($t['deadline'])): ?>
-                                    &bull; Deadline: <?= date('d M Y, H:i', strtotime($t['deadline'])) ?>
-                                    <span class="ms-1 <?= $isExpired ? 'text-danger' : 'text-success' ?> fw-semibold" style="font-size:.7rem;">
-                                        (<?= $isExpired ? 'Lewat' : 'Aktif' ?>)
-                                    </span>
-                                    <?php endif; ?>
-                                </p>
-                            </div>
-                            <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
-                                <?php if ($sdDikumpul): ?>
-                                    <span class="qa-item-badge badge-done">
-                                        <i class="bi bi-check-circle-fill me-1"></i>Dikumpul
-                                    </span>
-                                    <?php if ($nilaiT !== null): ?>
-                                    <span class="qa-item-badge badge-nilai">Nilai: <?= $nilaiT ?></span>
-                                    <?php endif; ?>
-                                    <a href="<?= BASE_URL ?>index.php?url=siswa/tugas&id=<?= $t['id'] ?>"
-                                       class="btn-materi-action" style="background:#dcfce7;color:#15803d;border-color:#86efac;font-size:.72rem;">
-                                        <i class="bi bi-eye"></i> Lihat
-                                    </a>
-                                <?php elseif ($isExpired): ?>
-                                    <span class="qa-item-badge" style="background:#fef2f2;color:#dc2626;">
-                                        <i class="bi bi-x-circle-fill me-1"></i>Terlambat
-                                    </span>
-                                    <a href="<?= BASE_URL ?>index.php?url=siswa/tugas&id=<?= $t['id'] ?>"
-                                       class="btn-materi-action" style="background:#fef2f2;color:#dc2626;border-color:#fecaca;font-size:.72rem;">
-                                        <i class="bi bi-upload"></i> Susulan
-                                    </a>
-                                <?php else: ?>
-                                    <span class="qa-item-badge badge-pending">
-                                        <i class="bi bi-clock-fill me-1"></i>Belum
-                                    </span>
-                                    <a href="<?= BASE_URL ?>index.php?url=siswa/tugas&id=<?= $t['id'] ?>"
-                                       class="btn-materi-action"
-                                       style="background:#fce7f3;color:#9d174d;border-color:#fbcfe8;font-size:.72rem;">
-                                        <i class="bi bi-upload"></i> Kumpulkan
-                                    </a>
-                                <?php endif; ?>
+                            <div>
+                                <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="text-primary text-decoration-none fw-bold d-inline-flex align-items-center gap-1" style="font-size: 0.8rem;">
+                                    <span>Baca Versi Lengkap E-Book</span>
+                                    <i class="bi bi-arrow-right"></i>
+                                </a>
                             </div>
                         </div>
-                        <?php endforeach; ?>
 
-                    <?php endif; // if linked_quiz/tugas ?>
+                        <!-- 5. Evaluasi Terkait (Kuis & Tugas di bawah materi) -->
+                        <?php if (!empty($mQuiz) || !empty($mTugas)): ?>
+                            <div class="eval-section-box">
+                                <div class="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning-emphasis rounded-circle" style="width:26px; height:26px; font-size:0.8rem;">
+                                            <i class="bi bi-award-fill"></i>
+                                        </span>
+                                        <span class="fw-bold text-dark" style="font-size: 0.85rem;">
+                                            5. Evaluasi &amp; Penugasan Terkait Materi Ini
+                                        </span>
+                                    </div>
+                                    <span class="text-muted" style="font-size: 0.72rem;">
+                                        <i class="bi bi-info-circle me-1"></i>Selesai membaca? Kerjakan kuis &amp; tugas berikut
+                                    </span>
+                                </div>
 
+                                <div class="row g-2">
+                                    <!-- Kuis Terhubung -->
+                                    <?php foreach ($mQuiz as $q):
+                                        $sdDikerjakan = $q['sudah_dikerjakan'] ?? false;
+                                        $nilaiQ       = $q['nilai_siswa'] ?? null;
+                                        $isExpired    = !empty($q['tanggal_selesai']) && strtotime($q['tanggal_selesai']) < time();
+                                    ?>
+                                    <div class="col-md-6">
+                                        <div class="eval-item-card d-flex align-items-center justify-content-between gap-2 h-100">
+                                            <div class="d-flex align-items-center gap-2.5 min-width-0">
+                                                <div class="qa-item-icon" style="background:<?= $sdDikerjakan ? '#dcfce7' : '#fef3c7' ?>;">
+                                                    <i class="bi bi-patch-question-fill" style="color:<?= $sdDikerjakan ? '#16a34a' : '#d97706' ?>;"></i>
+                                                </div>
+                                                <div class="min-width-0">
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5 mb-1" style="font-size:0.65rem;">Quiz</span>
+                                                    <h6 class="qa-item-title text-truncate" title="<?= htmlspecialchars($q['judul']) ?>"><?= htmlspecialchars($q['judul']) ?></h6>
+                                                    <span class="text-muted" style="font-size:0.7rem;">
+                                                        <?php if (!empty($q['tanggal_selesai'])): ?>
+                                                            <i class="bi bi-clock me-1"></i>Batas: <?= date('d M Y, H:i', strtotime($q['tanggal_selesai'])) ?>
+                                                        <?php else: ?>
+                                                            <i class="bi bi-infinity me-1"></i>Fleksibel
+                                                        <?php endif; ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                                                <?php if ($sdDikerjakan): ?>
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                                        <i class="bi bi-check-circle-fill me-1"></i>Selesai
+                                                    </span>
+                                                    <?php if ($nilaiQ !== null): ?>
+                                                        <span class="badge bg-primary text-white rounded-pill px-2 py-0.5" style="font-size:0.7rem;">Nilai: <?= $nilaiQ ?></span>
+                                                    <?php endif; ?>
+                                                    <a href="<?= BASE_URL ?>index.php?url=siswa/reviewQuiz&quiz_id=<?= $q['id'] ?>" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1" style="font-size:0.72rem;">
+                                                        <i class="bi bi-eye me-1"></i>Review
+                                                    </a>
+                                                <?php elseif ($isExpired): ?>
+                                                    <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                                        <i class="bi bi-lock-fill me-1"></i>Ditutup
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                                        <i class="bi bi-clock-fill me-1"></i>Belum
+                                                    </span>
+                                                    <a href="<?= BASE_URL ?>index.php?url=siswa/kerjakanQuiz&quiz_id=<?= $q['id'] ?>" class="btn btn-xs btn-warning rounded-pill px-3 py-1 fw-bold text-dark shadow-xs" style="font-size:0.72rem;">
+                                                        <i class="bi bi-pencil-fill me-1"></i>Kerjakan
+                                                    </a>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+
+                                    <!-- Tugas Terhubung -->
+                                    <?php foreach ($mTugas as $t):
+                                        $sdDikumpul = $t['sudah_dikumpul'] ?? false;
+                                        $nilaiT     = $t['nilai_siswa']   ?? null;
+                                        $isExpired  = !empty($t['deadline']) && strtotime($t['deadline']) < time();
+                                    ?>
+                                    <div class="col-md-6">
+                                        <div class="eval-item-card d-flex align-items-center justify-content-between gap-2 h-100">
+                                            <div class="d-flex align-items-center gap-2.5 min-width-0">
+                                                <div class="qa-item-icon" style="background:<?= $sdDikumpul ? '#dcfce7' : '#fce7f3' ?>;">
+                                                    <i class="bi bi-clipboard2-check-fill" style="color:<?= $sdDikumpul ? '#16a34a' : '#be185d' ?>;"></i>
+                                                </div>
+                                                <div class="min-width-0">
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5 mb-1" style="font-size:0.65rem;">Tugas</span>
+                                                    <h6 class="qa-item-title text-truncate" title="<?= htmlspecialchars($t['judul']) ?>"><?= htmlspecialchars($t['judul']) ?></h6>
+                                                    <span class="text-muted" style="font-size:0.7rem;">
+                                                        <?php if (!empty($t['deadline'])): ?>
+                                                            <i class="bi bi-calendar-event me-1"></i>Deadline: <?= date('d M, H:i', strtotime($t['deadline'])) ?>
+                                                            <span class="badge <?= $isExpired ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' ?> rounded-pill ms-1" style="font-size:0.62rem;"><?= $isExpired ? 'Lewat' : 'Aktif' ?></span>
+                                                        <?php endif; ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                                                <?php if ($sdDikumpul): ?>
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                                        <i class="bi bi-check-circle-fill me-1"></i>Dikumpul
+                                                    </span>
+                                                    <?php if ($nilaiT !== null): ?>
+                                                        <span class="badge bg-primary text-white rounded-pill px-2 py-0.5" style="font-size:0.7rem;">Nilai: <?= $nilaiT ?></span>
+                                                    <?php endif; ?>
+                                                    <a href="<?= BASE_URL ?>index.php?url=siswa/tugas&id=<?= $t['id'] ?>" class="btn btn-xs btn-outline-success rounded-pill px-2.5 py-1" style="font-size:0.72rem;">
+                                                        <i class="bi bi-eye me-1"></i>Lihat
+                                                    </a>
+                                                <?php elseif ($isExpired): ?>
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                                        <i class="bi bi-x-circle-fill me-1"></i>Terlambat
+                                                    </span>
+                                                    <a href="<?= BASE_URL ?>index.php?url=siswa/tugas&id=<?= $t['id'] ?>" class="btn btn-xs btn-outline-danger rounded-pill px-2.5 py-1 fw-semibold" style="font-size:0.72rem;">
+                                                        <i class="bi bi-upload me-1"></i>Susulan
+                                                    </a>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                                        <i class="bi bi-clock-fill me-1"></i>Belum
+                                                    </span>
+                                                    <a href="<?= BASE_URL ?>index.php?url=siswa/tugas&id=<?= $t['id'] ?>" class="btn btn-xs btn-danger rounded-pill px-3 py-1 fw-bold text-white shadow-xs" style="font-size:0.72rem;">
+                                                        <i class="bi bi-upload me-1"></i>Kumpulkan
+                                                    </a>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div><!-- /.materi-unit-card -->
                 <?php endforeach; // foreach materiItems ?>
 
                 <?php if (empty($materiItems)): ?>
@@ -565,81 +731,121 @@ if (!function_exists('getFileIcon')) {
     if (!empty($unlinkQuiz) || !empty($unlinkTugas)): ?>
     <div class="bab-card mb-4 is-open" id="bab-card-extra">
         <div class="bab-header" onclick="toggleBabExtra()" role="button" tabindex="0">
-            <div class="bab-number" style="background:#6b7280;">
-                <i class="bi bi-collection-fill" style="font-size:.9rem;"></i>
+            <div class="bab-number" style="background:#475569;">
+                <i class="bi bi-collection-fill" style="font-size:1rem;"></i>
             </div>
-            <div class="flex-grow-1">
-                <p class="bab-title">Kuis &amp; Tugas Umum Mapel</p>
-                <p class="bab-meta">Tidak terkait dengan materi spesifik</p>
+            <div class="flex-grow-1 min-width-0">
+                <p class="bab-title">Evaluasi Umum Mapel</p>
+                <p class="bab-meta">Kuis &amp; Tugas umum yang tidak terikat dengan bab tertentu</p>
             </div>
             <i class="bi bi-chevron-down bab-chevron"></i>
         </div>
-        <div class="bab-body">
-            <?php if (!empty($unlinkQuiz)): ?>
-            <div class="qanda-divider"><span>Quiz</span></div>
-            <?php foreach ($unlinkQuiz as $q):
-                $sdDikerjakan = isset($hasilQuizMap[(int)$q['id']]);
-                $nilaiQ       = $hasilQuizMap[(int)$q['id']]['total_nilai'] ?? null;
-                $isExpired    = !empty($q['tanggal_selesai']) && strtotime($q['tanggal_selesai']) < time();
-            ?>
-            <div class="qa-item">
-                <div class="qa-item-icon" style="background:<?= $sdDikerjakan ? '#dcfce7' : '#fef3c7' ?>;">
-                    <i class="bi bi-patch-question-fill" style="color:<?= $sdDikerjakan ? '#16a34a' : '#d97706' ?>;"></i>
+        <div class="bab-body p-3">
+            <div class="row g-2">
+                <?php foreach ($unlinkQuiz as $q):
+                    $sdDikerjakan = isset($hasilQuizMap[(int)$q['id']]);
+                    $nilaiQ       = $hasilQuizMap[(int)$q['id']]['total_nilai'] ?? null;
+                    $isExpired    = !empty($q['tanggal_selesai']) && strtotime($q['tanggal_selesai']) < time();
+                ?>
+                <div class="col-md-6">
+                    <div class="eval-item-card d-flex align-items-center justify-content-between gap-2 h-100">
+                        <div class="d-flex align-items-center gap-2.5 min-width-0">
+                            <div class="qa-item-icon" style="background:<?= $sdDikerjakan ? '#dcfce7' : '#fef3c7' ?>;">
+                                <i class="bi bi-patch-question-fill" style="color:<?= $sdDikerjakan ? '#16a34a' : '#d97706' ?>;"></i>
+                            </div>
+                            <div class="min-width-0">
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5 mb-1" style="font-size:0.65rem;">Quiz</span>
+                                <h6 class="qa-item-title text-truncate" title="<?= htmlspecialchars($q['judul']) ?>"><?= htmlspecialchars($q['judul']) ?></h6>
+                                <span class="text-muted" style="font-size:0.7rem;">
+                                    <?php if (!empty($q['tanggal_selesai'])): ?>
+                                        <i class="bi bi-clock me-1"></i>Batas: <?= date('d M Y, H:i', strtotime($q['tanggal_selesai'])) ?>
+                                    <?php else: ?>
+                                        <i class="bi bi-infinity me-1"></i>Fleksibel
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                            <?php if ($sdDikerjakan): ?>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Selesai
+                                </span>
+                                <?php if ($nilaiQ !== null): ?>
+                                    <span class="badge bg-primary text-white rounded-pill px-2 py-0.5" style="font-size:0.7rem;">Nilai: <?= $nilaiQ ?></span>
+                                <?php endif; ?>
+                                <a href="<?= BASE_URL ?>index.php?url=siswa/reviewQuiz&quiz_id=<?= $q['id'] ?>" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1" style="font-size:0.72rem;">
+                                    <i class="bi bi-eye me-1"></i>Review
+                                </a>
+                            <?php elseif ($isExpired): ?>
+                                <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                    <i class="bi bi-lock-fill me-1"></i>Ditutup
+                                </span>
+                            <?php else: ?>
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                    <i class="bi bi-clock-fill me-1"></i>Belum
+                                </span>
+                                <a href="<?= BASE_URL ?>index.php?url=siswa/kerjakanQuiz&quiz_id=<?= $q['id'] ?>" class="btn btn-xs btn-warning rounded-pill px-3 py-1 fw-bold text-dark shadow-xs" style="font-size:0.72rem;">
+                                    <i class="bi bi-pencil-fill me-1"></i>Kerjakan
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </div>
-                <div class="qa-item-body">
-                    <p class="qa-item-title"><?= htmlspecialchars($q['judul']) ?></p>
-                    <p class="qa-item-meta">Quiz <?php if (!empty($q['tanggal_selesai'])): ?>&bull; Ditutup: <?= date('d M Y', strtotime($q['tanggal_selesai'])) ?><?php endif; ?></p>
-                </div>
-                <div class="d-flex gap-2 flex-wrap justify-content-end">
-                    <?php if ($sdDikerjakan): ?>
-                        <span class="qa-item-badge badge-done"><i class="bi bi-check-circle-fill me-1"></i>Selesai</span>
-                        <?php if ($nilaiQ !== null): ?><span class="qa-item-badge badge-nilai">Nilai: <?= $nilaiQ ?></span><?php endif; ?>
-                    <?php elseif ($isExpired): ?>
-                        <span class="qa-item-badge" style="background:#f1f5f9;color:#64748b;"><i class="bi bi-lock-fill me-1"></i>Ditutup</span>
-                    <?php else: ?>
-                        <span class="qa-item-badge badge-pending"><i class="bi bi-clock-fill me-1"></i>Belum</span>
-                        <a href="<?= BASE_URL ?>index.php?url=siswa/kerjakanQuiz&quiz_id=<?= $q['id'] ?>"
-                           class="btn-materi-action" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;font-size:.72rem;">
-                            <i class="bi bi-pencil-fill"></i> Kerjakan
-                        </a>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <?php endforeach; ?>
-            <?php endif; ?>
+                <?php endforeach; ?>
 
-            <?php if (!empty($unlinkTugas)): ?>
-            <div class="qanda-divider"><span>Tugas</span></div>
-            <?php foreach ($unlinkTugas as $t):
-                $sdDikumpul = isset($pengumpulanMap[(int)$t['id']]);
-                $nilaiT     = $pengumpulanMap[(int)$t['id']]['nilai'] ?? null;
-                $isExpired  = !empty($t['deadline']) && strtotime($t['deadline']) < time();
-            ?>
-            <div class="qa-item">
-                <div class="qa-item-icon" style="background:<?= $sdDikumpul ? '#dcfce7' : '#fce7f3' ?>;">
-                    <i class="bi bi-clipboard2-check-fill" style="color:<?= $sdDikumpul ? '#16a34a' : '#be185d' ?>;"></i>
+                <?php foreach ($unlinkTugas as $t):
+                    $sdDikumpul = isset($pengumpulanMap[(int)$t['id']]);
+                    $nilaiT     = $pengumpulanMap[(int)$t['id']]['nilai'] ?? null;
+                    $isExpired  = !empty($t['deadline']) && strtotime($t['deadline']) < time();
+                ?>
+                <div class="col-md-6">
+                    <div class="eval-item-card d-flex align-items-center justify-content-between gap-2 h-100">
+                        <div class="d-flex align-items-center gap-2.5 min-width-0">
+                            <div class="qa-item-icon" style="background:<?= $sdDikumpul ? '#dcfce7' : '#fce7f3' ?>;">
+                                <i class="bi bi-clipboard2-check-fill" style="color:<?= $sdDikumpul ? '#16a34a' : '#be185d' ?>;"></i>
+                            </div>
+                            <div class="min-width-0">
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5 mb-1" style="font-size:0.65rem;">Tugas</span>
+                                <h6 class="qa-item-title text-truncate" title="<?= htmlspecialchars($t['judul']) ?>"><?= htmlspecialchars($t['judul']) ?></h6>
+                                <span class="text-muted" style="font-size:0.7rem;">
+                                    <?php if (!empty($t['deadline'])): ?>
+                                        <i class="bi bi-calendar-event me-1"></i>Deadline: <?= date('d M, H:i', strtotime($t['deadline'])) ?>
+                                        <span class="badge <?= $isExpired ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' ?> rounded-pill ms-1" style="font-size:0.62rem;"><?= $isExpired ? 'Lewat' : 'Aktif' ?></span>
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+                            <?php if ($sdDikumpul): ?>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Dikumpul
+                                </span>
+                                <?php if ($nilaiT !== null): ?>
+                                    <span class="badge bg-primary text-white rounded-pill px-2 py-0.5" style="font-size:0.7rem;">Nilai: <?= $nilaiT ?></span>
+                                <?php endif; ?>
+                                <a href="<?= BASE_URL ?>index.php?url=siswa/tugas&id=<?= $t['id'] ?>" class="btn btn-xs btn-outline-success rounded-pill px-2.5 py-1" style="font-size:0.72rem;">
+                                    <i class="bi bi-eye me-1"></i>Lihat
+                                </a>
+                            <?php elseif ($isExpired): ?>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                    <i class="bi bi-x-circle-fill me-1"></i>Terlambat
+                                </span>
+                                <a href="<?= BASE_URL ?>index.php?url=siswa/tugas&id=<?= $t['id'] ?>" class="btn btn-xs btn-outline-danger rounded-pill px-2.5 py-1 fw-semibold" style="font-size:0.72rem;">
+                                    <i class="bi bi-upload me-1"></i>Susulan
+                                </a>
+                            <?php else: ?>
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size:0.7rem;">
+                                    <i class="bi bi-clock-fill me-1"></i>Belum
+                                </span>
+                                <a href="<?= BASE_URL ?>index.php?url=siswa/tugas&id=<?= $t['id'] ?>" class="btn btn-xs btn-danger rounded-pill px-3 py-1 fw-bold text-white shadow-xs" style="font-size:0.72rem;">
+                                    <i class="bi bi-upload me-1"></i>Kumpulkan
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </div>
-                <div class="qa-item-body">
-                    <p class="qa-item-title"><?= htmlspecialchars($t['judul']) ?></p>
-                    <p class="qa-item-meta">Tugas <?php if (!empty($t['deadline'])): ?>&bull; Deadline: <?= date('d M Y', strtotime($t['deadline'])) ?><?php endif; ?></p>
-                </div>
-                <div class="d-flex gap-2 flex-wrap justify-content-end">
-                    <?php if ($sdDikumpul): ?>
-                        <span class="qa-item-badge badge-done"><i class="bi bi-check-circle-fill me-1"></i>Dikumpul</span>
-                        <?php if ($nilaiT !== null): ?><span class="qa-item-badge badge-nilai">Nilai: <?= $nilaiT ?></span><?php endif; ?>
-                    <?php elseif ($isExpired): ?>
-                        <span class="qa-item-badge" style="background:#fef2f2;color:#dc2626;"><i class="bi bi-x-circle-fill me-1"></i>Terlambat</span>
-                    <?php else: ?>
-                        <span class="qa-item-badge badge-pending"><i class="bi bi-clock-fill me-1"></i>Belum</span>
-                        <a href="<?= BASE_URL ?>index.php?url=siswa/tugas&id=<?= $t['id'] ?>"
-                           class="btn-materi-action" style="background:#fce7f3;color:#9d174d;border-color:#fbcfe8;font-size:.72rem;">
-                            <i class="bi bi-upload"></i> Kumpulkan
-                        </a>
-                    <?php endif; ?>
-                </div>
+                <?php endforeach; ?>
             </div>
-            <?php endforeach; ?>
-            <?php endif; ?>
         </div>
     </div>
     <?php endif; ?>
