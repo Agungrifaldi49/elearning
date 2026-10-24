@@ -391,23 +391,183 @@ h1, h2, h3, h4, h5, .bab-title, .materi-unit-title, .qa-item-title {
     border-color: #334155;
 }
 
-/* ── File Materi Card ── */
+/* ── File Materi Card Ultra-Responsif ── */
 .file-materi-card {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
     border-left: 4px solid #0284c7;
-    border-radius: 12px;
-    transition: all 0.2s ease;
+    border-radius: 14px;
+    padding: 16px 18px;
+    transition: all 0.25s ease;
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 .file-materi-card:hover {
     border-color: #cbd5e1;
     border-left-color: #0369a1;
-    box-shadow: 0 4px 14px rgba(15,23,42,0.04);
+    box-shadow: 0 4px 16px rgba(15,23,42,0.05);
 }
 [data-bs-theme="dark"] .file-materi-card {
     background: #0f172a;
     border-color: #334155;
     border-left-color: #38bdf8;
+}
+
+.file-materi-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    min-width: 0;
+}
+
+.file-materi-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.file-materi-icon-box {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.file-materi-text {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.file-materi-name {
+    font-size: 0.94rem;
+    font-weight: 700;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+[data-bs-theme="dark"] .file-materi-name {
+    color: #f8fafc !important;
+}
+
+.file-materi-sub {
+    font-size: 0.74rem;
+    color: #64748b;
+    display: block;
+    margin-top: 2px;
+}
+[data-bs-theme="dark"] .file-materi-sub {
+    color: #94a3b8;
+}
+
+.file-materi-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.file-materi-actions .btn {
+    white-space: nowrap;
+    font-size: 0.82rem;
+    padding: 7px 14px;
+    border-radius: 50rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.pdf-inline-preview .ratio {
+    min-height: 480px;
+}
+
+@media (max-width: 860px) {
+    .file-materi-card {
+        padding: 14px 14px !important;
+    }
+    .file-materi-inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .file-materi-info {
+        width: 100%;
+    }
+    .file-materi-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding-top: 10px;
+        border-top: 1px dashed #e2e8f0;
+    }
+    [data-bs-theme="dark"] .file-materi-actions {
+        border-top-color: #334155;
+    }
+    .file-materi-actions .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 8px 12px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 520px) {
+    .file-materi-card {
+        padding: 12px 10px !important;
+        border-radius: 12px;
+    }
+    .file-materi-icon-box {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        font-size: 1.25rem;
+        border-radius: 10px;
+    }
+    .file-materi-name {
+        font-size: 0.88rem;
+    }
+    .file-materi-sub {
+        font-size: 0.7rem;
+    }
+    .file-materi-actions {
+        grid-template-columns: 1fr;
+        gap: 7px;
+    }
+    .file-materi-actions .btn {
+        min-height: 40px;
+        padding: 8px 12px;
+        font-size: 0.78rem;
+    }
+    .file-materi-preview-bar {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 8px;
+    }
+    .file-materi-preview-bar .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    .pdf-inline-preview .ratio {
+        min-height: 360px !important;
+    }
 }
 
 /* ── Video Materi Card ── */
@@ -685,6 +845,11 @@ h1, h2, h3, h4, h5, .bab-title, .materi-unit-title, .qa-item-title {
                     $isYT   = ($m['jenis_file'] === 'youtube' || !empty($m['youtube_url']));
                     $hasFile = !empty($m['file_path']);
                     $fileUrl = $hasFile ? BASE_URL . 'assets/uploads/materi/' . htmlspecialchars($m['file_path']) : null;
+                    $fileSizeBytes = null;
+                    if ($hasFile && file_exists(ROOT_PATH . 'assets/uploads/materi/' . $m['file_path'])) {
+                        $fileSizeBytes = @filesize(ROOT_PATH . 'assets/uploads/materi/' . $m['file_path']);
+                    }
+                    $fileSizeFormatted = $fileSizeBytes ? round($fileSizeBytes / (1024 * 1024), 2) . ' MB' : null;
 
                     // bg ikon sesuai warna bab (muted)
                     $iconBg = 'rgba(' . implode(',', sscanf(ltrim($color, '#'), "%02x%02x%02x")) . ',.12)';
@@ -768,40 +933,66 @@ h1, h2, h3, h4, h5, .bab-title, .materi-unit-title, .qa-item-title {
                             </div>
                         <?php endif; ?>
 
-                        <!-- 4. FILE MATERI PEMBELAJARAN -->
+                        <!-- 4. FILE MATERI PEMBELAJARAN (ULTRA-RESPONSIF) -->
                         <?php if ($hasFile): ?>
-                            <div class="file-materi-card p-3 rounded-3 mb-3">
-                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-                                    <div class="d-flex align-items-center gap-2.5 min-width-0">
-                                        <div class="materi-row-icon shadow-xs" style="background:<?= $iconBg ?>; min-width:44px; width:44px; height:44px;">
+                            <div class="file-materi-card mb-3 shadow-xs">
+                                <div class="file-materi-inner">
+                                    <div class="file-materi-info">
+                                        <div class="file-materi-icon-box shadow-xs" style="background:<?= $iconBg ?>;">
                                             <i class="bi <?= $fileIconClass ?>"></i>
                                         </div>
-                                        <div class="min-width-0">
-                                            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                        <div class="file-materi-text">
+                                            <div class="d-flex align-items-center gap-1.5 flex-wrap mb-1">
                                                 <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size:0.68rem; font-weight:700;">
-                                                    FILE MATERI
+                                                    <i class="bi bi-file-earmark-text me-1"></i>FILE MATERI
                                                 </span>
                                                 <span class="badge bg-light text-secondary border rounded-pill px-2 py-0.5" style="font-size:0.68rem; font-weight:700;">
                                                     <?= strtoupper($ext ?: $m['jenis_file']) ?>
                                                 </span>
+                                                <?php if ($fileSizeFormatted): ?>
+                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2 py-0.5" style="font-size:0.68rem; font-weight:600;">
+                                                        <i class="bi bi-hdd me-1"></i><?= $fileSizeFormatted ?>
+                                                    </span>
+                                                <?php endif; ?>
                                             </div>
-                                            <h6 class="fw-bold text-dark mb-0 text-truncate" title="<?= htmlspecialchars(basename($m['file_path'])) ?>" style="font-size:0.92rem;">
+                                            <h6 class="file-materi-name text-dark" title="<?= htmlspecialchars(basename($m['file_path'])) ?>">
                                                 <?= htmlspecialchars(basename($m['file_path'])) ?>
                                             </h6>
-                                            <small class="text-muted" style="font-size:0.72rem;">Lampiran berkas modul resmi pembelajaran</small>
+                                            <span class="file-materi-sub">
+                                                <i class="bi bi-info-circle me-1"></i>Lampiran berkas modul resmi pembelajaran
+                                            </span>
                                         </div>
                                     </div>
-                                    <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
-                                        <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5 hover-scale">
+                                    <div class="file-materi-actions">
+                                        <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-sm btn-primary rounded-pill fw-bold shadow-xs d-inline-flex align-items-center justify-content-center gap-1.5 hover-scale">
                                             <i class="bi bi-book-half"></i>
                                             <span>Buka Modul / Baca</span>
                                         </a>
-                                        <a href="<?= $fileUrl ?>" download class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5">
+                                        <a href="<?= $fileUrl ?>" download class="btn btn-sm btn-outline-secondary rounded-pill fw-semibold d-inline-flex align-items-center justify-content-center gap-1.5">
                                             <i class="bi bi-download"></i>
                                             <span>Unduh Berkas</span>
                                         </a>
                                     </div>
                                 </div>
+
+                                <?php if ($ext === 'pdf'): ?>
+                                    <!-- Toggle Preview Dokumen PDF Langsung di Halaman -->
+                                    <div class="file-materi-preview-bar mt-2.5 pt-2 border-top d-flex justify-content-between align-items-center flex-wrap gap-2" style="border-top: 1px dashed rgba(203,213,225,0.7) !important;">
+                                        <small class="text-muted d-inline-flex align-items-center gap-1" style="font-size:0.75rem;">
+                                            <i class="bi bi-file-earmark-pdf text-danger"></i>
+                                            <span>Dokumen PDF interaktif dapat dilihat langsung di sini</span>
+                                        </small>
+                                        <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1" onclick="togglePdfPreview('pdf-box-<?= $m['id'] ?>', this)">
+                                            <i class="bi bi-eye"></i>
+                                            <span>Lihat Dokumen PDF di Sini</span>
+                                        </button>
+                                    </div>
+                                    <div id="pdf-box-<?= $m['id'] ?>" class="pdf-inline-preview mt-2" style="display: none;">
+                                        <div class="ratio ratio-16x9 rounded-3 overflow-hidden border shadow-xs" style="min-height: 480px; background: #334155;">
+                                            <iframe src="<?= $fileUrl ?>#toolbar=1" class="w-100 h-100 border-0" title="PDF Preview" loading="lazy"></iframe>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
 
@@ -1126,6 +1317,20 @@ function toggleBab(idx) {
 function toggleBabExtra() {
     const card = document.getElementById('bab-card-extra');
     if (card) card.classList.toggle('is-open');
+}
+
+function togglePdfPreview(id, btn) {
+    const box = document.getElementById(id);
+    if (!box) return;
+    if (box.style.display === 'none' || box.style.display === '') {
+        box.style.display = 'block';
+        btn.classList.replace('btn-outline-primary', 'btn-primary');
+        btn.innerHTML = '<i class="bi bi-eye-slash"></i> <span>Tutup Dokumen PDF</span>';
+    } else {
+        box.style.display = 'none';
+        btn.classList.replace('btn-primary', 'btn-outline-primary');
+        btn.innerHTML = '<i class="bi bi-eye"></i> <span>Lihat Dokumen PDF di Sini</span>';
+    }
 }
 
 // Keyboard accessibility
