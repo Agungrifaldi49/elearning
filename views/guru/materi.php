@@ -137,6 +137,31 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
 </main>
 
 <!-- ALL MODALS PLACED OUTSIDE TABLE -->
+<?php
+// Struktur data bab per mapel untuk autocomplete & rekomendasi dinamis
+// mapelBabData[mapel_id] = [ ['nama' => '...', 'count' => N, 'max_urutan' => N, 'next_urutan' => N+1], ... ]
+$mapelBabData = [];
+foreach ($materiList ?? [] as $mItem) {
+    $mid = (int)$mItem['mapel_id'];
+    $bName = trim($mItem['judul_bab'] ?? '');
+    if (!empty($bName)) {
+        if (!isset($mapelBabData[$mid][$bName])) {
+            $mapelBabData[$mid][$bName] = [
+                'nama'        => $bName,
+                'count'       => 0,
+                'max_urutan'  => 0,
+                'next_urutan' => 1
+            ];
+        }
+        $mapelBabData[$mid][$bName]['count']++;
+        $curUrutan = (int)($mItem['urutan'] ?? 1);
+        if ($curUrutan > $mapelBabData[$mid][$bName]['max_urutan']) {
+            $mapelBabData[$mid][$bName]['max_urutan']  = $curUrutan;
+            $mapelBabData[$mid][$bName]['next_urutan'] = $curUrutan + 1;
+        }
+    }
+}
+?>
 
 <!-- Modal Add Materi -->
 <div class="modal fade" id="modalAddMateri" tabindex="-1">
@@ -158,7 +183,7 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-bold">Mata Pelajaran <span class="text-danger">*</span></label>
-                            <select name="mapel_id" class="form-select" required>
+                            <select name="mapel_id" id="selectMapel_add" class="form-select" required>
                                 <?php foreach ($mapelList as $mp): ?>
                                     <option value="<?= $mp['id'] ?>"><?= htmlspecialchars($mp['nama_mapel']) ?></option>
                                 <?php endforeach; ?>
@@ -216,23 +241,72 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                         <!-- Pengaturan E-Book & Hubungan Quiz/Tugas -->
                         <div class="col-12">
                             <hr class="my-2 border-slate-200">
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
-                                    <i class="bi bi-book-half me-1"></i>Format E-Book & Evaluasi
-                                </span>
-                                <small class="text-muted">Kelompokkan materi ke Bab dan hubungkan kuis/tugas agar siswa dapat langsung mengerjakannya setelah membaca.</small>
+                            <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                        <i class="bi bi-book-half me-1"></i>Format E-Book & Evaluasi
+                                    </span>
+                                    <small class="text-muted">Kelompokkan materi ke Bab dan hubungkan evaluasi kuis/tugas.</small>
+                                </div>
+                                <div id="badgeBabMapel_add"></div>
                             </div>
                         </div>
 
-                        <div class="col-md-8">
-                            <label class="form-label small fw-bold">Judul Bab / Modul (Opsional)</label>
-                            <input type="text" name="judul_bab" class="form-control" placeholder="Contoh: Bab 1: Pengenalan Dasar HTML">
-                            <small class="text-muted" style="font-size:0.75rem;">Materi dengan Bab yang sama akan dikelompokkan bersama di e-book siswa.</small>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">Urutan Tampil</label>
-                            <input type="number" name="urutan" class="form-control" value="1" min="1" max="999">
-                            <small class="text-muted" style="font-size:0.75rem;">Urutan materi dalam bab (1 = paling awal).</small>
+                        <!-- Card Komponen Pintar Rekomendasi Bab -->
+                        <div class="col-12">
+                            <div class="card border rounded-3 p-3 bg-light shadow-xs">
+                                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                    <label class="form-label small fw-bold mb-0 text-dark">
+                                        <i class="bi bi-bookmarks-fill text-primary me-1"></i>Pilih atau Tambah Bab / Modul
+                                    </label>
+                                    <!-- Toggle Button Group -->
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-primary active btn-sm" id="btnModeExisting_add">
+                                            <i class="bi bi-collection me-1"></i>Gunakan Bab yang Ada
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnModeNew_add">
+                                            <i class="bi bi-plus-circle me-1"></i>+ Buat Bab Baru
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="row g-2 align-items-start">
+                                    <!-- Container 1: Pilih Bab yang Sudah Ada -->
+                                    <div class="col-md-8" id="containerBabExisting_add">
+                                        <select id="selectBabExisting_add" class="form-select">
+                                            <!-- Diisi otomatis oleh JavaScript -->
+                                        </select>
+                                        <small class="text-muted d-block mt-1" style="font-size:0.75rem;">
+                                            <i class="bi bi-check2-circle text-success me-1"></i>Pilih Bab yang sudah pernah dibuat. Urutan berikutnya otomatis terisi!
+                                        </small>
+                                    </div>
+
+                                    <!-- Container 2: Buat Bab Baru -->
+                                    <div class="col-md-8 d-none" id="containerBabNew_add">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white text-primary"><i class="bi bi-pencil-square"></i></span>
+                                            <input type="text" id="inputBabNew_add" class="form-control" placeholder="Ketik nama Bab baru (Contoh: Bab 2: Desain Web CSS)">
+                                        </div>
+                                        <small class="text-muted d-block mt-1" style="font-size:0.75rem;">
+                                            <i class="bi bi-magic text-primary me-1"></i>Bab baru ini akan otomatis tercatat dan dapat dipilih kembali di masa mendatang.
+                                        </small>
+                                    </div>
+
+                                    <!-- Input Urutan Tampil (Auto-Increment / Rekomendasi) -->
+                                    <div class="col-md-4">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-white small fw-bold">Urutan ke-</span>
+                                            <input type="number" name="urutan" id="inputUrutan_add" class="form-control text-center fw-bold" value="1" min="1" max="999">
+                                        </div>
+                                        <small class="text-muted d-block mt-1 text-center" style="font-size:0.75rem;">
+                                            <span class="badge bg-secondary-subtle text-dark border">Urutan otomatis</span>
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Input hidden judul_bab yang dikirimkan ke controller -->
+                                <input type="hidden" name="judul_bab" id="realJudulBab_add" value="">
+                            </div>
                         </div>
 
                         <!-- Link Quiz Terkait -->
@@ -345,7 +419,7 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Mata Pelajaran <span class="text-danger">*</span></label>
-                                <select name="mapel_id" class="form-select" required>
+                                <select name="mapel_id" id="selectMapel_edit_<?= $m['id'] ?>" class="form-select" required>
                                     <?php foreach ($mapelList as $mp): ?>
                                         <option value="<?= $mp['id'] ?>" <?= $m['mapel_id'] == $mp['id'] ? 'selected' : '' ?>><?= htmlspecialchars($mp['nama_mapel']) ?></option>
                                     <?php endforeach; ?>
@@ -413,23 +487,66 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                             <!-- Pengaturan E-Book & Hubungan Quiz/Tugas -->
                             <div class="col-12">
                                 <hr class="my-2 border-slate-200">
-                                <div class="d-flex align-items-center gap-2 mb-2">
-                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
-                                        <i class="bi bi-book-half me-1"></i>Format E-Book & Evaluasi
-                                    </span>
-                                    <small class="text-muted">Kelompokkan materi ke Bab dan hubungkan kuis/tugas agar siswa dapat langsung mengerjakannya setelah membaca.</small>
+                                <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                            <i class="bi bi-book-half me-1"></i>Format E-Book & Evaluasi
+                                        </span>
+                                        <small class="text-muted">Kelompokkan materi ke Bab dan hubungkan evaluasi kuis/tugas.</small>
+                                    </div>
+                                    <div id="badgeBabMapel_edit_<?= $m['id'] ?>"></div>
                                 </div>
                             </div>
 
-                            <div class="col-md-8">
-                                <label class="form-label small fw-bold">Judul Bab / Modul (Opsional)</label>
-                                <input type="text" name="judul_bab" class="form-control" value="<?= htmlspecialchars($m['judul_bab'] ?? '') ?>" placeholder="Contoh: Bab 1: Pengenalan Dasar HTML">
-                                <small class="text-muted" style="font-size:0.75rem;">Materi dengan Bab yang sama akan dikelompokkan bersama di e-book siswa.</small>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold">Urutan Tampil</label>
-                                <input type="number" name="urutan" class="form-control" value="<?= htmlspecialchars($m['urutan'] ?? 999) ?>" min="1" max="999">
-                                <small class="text-muted" style="font-size:0.75rem;">Urutan materi dalam bab (1 = paling awal).</small>
+                            <!-- Card Komponen Pintar Rekomendasi Bab Edit -->
+                            <div class="col-12">
+                                <div class="card border rounded-3 p-3 bg-light shadow-xs">
+                                    <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                                        <label class="form-label small fw-bold mb-0 text-dark">
+                                            <i class="bi bi-bookmarks-fill text-warning me-1"></i>Pilih atau Ubah Bab / Modul
+                                        </label>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-warning text-dark active btn-sm" id="btnModeExisting_edit_<?= $m['id'] ?>">
+                                                <i class="bi bi-collection me-1"></i>Pilih Bab yang Ada
+                                            </button>
+                                            <button type="button" class="btn btn-outline-warning text-dark btn-sm" id="btnModeNew_edit_<?= $m['id'] ?>">
+                                                <i class="bi bi-plus-circle me-1"></i>+ Buat Bab Baru
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-2 align-items-start">
+                                        <div class="col-md-8" id="containerBabExisting_edit_<?= $m['id'] ?>">
+                                            <select id="selectBabExisting_edit_<?= $m['id'] ?>" class="form-select">
+                                            </select>
+                                            <small class="text-muted d-block mt-1" style="font-size:0.75rem;">
+                                                <i class="bi bi-arrow-left-right text-primary me-1"></i>Pindahkan materi ini ke Bab lain dalam mapel ini.
+                                            </small>
+                                        </div>
+
+                                        <div class="col-md-8 d-none" id="containerBabNew_edit_<?= $m['id'] ?>">
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-white text-warning"><i class="bi bi-pencil-square"></i></span>
+                                                <input type="text" id="inputBabNew_edit_<?= $m['id'] ?>" class="form-control" value="<?= htmlspecialchars($m['judul_bab'] ?? '') ?>" placeholder="Ketik nama Bab baru">
+                                            </div>
+                                            <small class="text-muted d-block mt-1" style="font-size:0.75rem;">
+                                                <i class="bi bi-magic text-warning me-1"></i>Ketik nama Bab baru jika ingin membuat kelompok bab tersendiri.
+                                            </small>
+                                        </div>
+
+                                        <div class="col-md-4">
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-white small fw-bold">Urutan ke-</span>
+                                                <input type="number" name="urutan" id="inputUrutan_edit_<?= $m['id'] ?>" class="form-control text-center fw-bold" value="<?= (int)($m['urutan'] ?? 1) ?>" min="1" max="999">
+                                            </div>
+                                            <small class="text-muted d-block mt-1 text-center" style="font-size:0.75rem;">
+                                                <span class="badge bg-secondary-subtle text-dark border">Urutan bab</span>
+                                            </small>
+                                        </div>
+                                    </div>
+
+                                    <input type="hidden" name="judul_bab" id="realJudulBab_edit_<?= $m['id'] ?>" value="<?= htmlspecialchars($m['judul_bab'] ?? '') ?>">
+                                </div>
                             </div>
 
                             <!-- Link Quiz Terkait -->
@@ -491,7 +608,185 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
 <?php endforeach; ?>
 
 <script>
+// --- DATA BAB PER MAPEL DARI DATABASE (AUTOCOMPLETE & SMART SUGGESTION) ---
+const materiBabData = <?= json_encode($mapelBabData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+function initBabSelector(prefix, defaultMapelId, initialBab, initialUrutan) {
+    const selectMapel       = document.getElementById('selectMapel_' + prefix);
+    const containerExisting = document.getElementById('containerBabExisting_' + prefix);
+    const containerNew      = document.getElementById('containerBabNew_' + prefix);
+    const selectExisting    = document.getElementById('selectBabExisting_' + prefix);
+    const inputNew          = document.getElementById('inputBabNew_' + prefix);
+    const inputUrutan       = document.getElementById('inputUrutan_' + prefix);
+    const realInput         = document.getElementById('realJudulBab_' + prefix);
+    const btnExisting       = document.getElementById('btnModeExisting_' + prefix);
+    const btnNew            = document.getElementById('btnModeNew_' + prefix);
+    const badgeMapel        = document.getElementById('badgeBabMapel_' + prefix);
+
+    if (!selectExisting || !inputNew || !realInput) return;
+
+    let activeMode = 'existing';
+    let currentBabVal = (initialBab || '').trim();
+
+    function updateOptions(mapelId) {
+        const rawBabObj = materiBabData[mapelId] || {};
+        const babList = Object.values(rawBabObj);
+        selectExisting.innerHTML = '';
+
+        if (babList.length === 0) {
+            // Belum ada bab terdaftar untuk mapel ini
+            if (badgeMapel) badgeMapel.innerHTML = '<span class="badge bg-secondary-subtle text-secondary border"><i class="bi bi-info-circle me-1"></i>Belum ada bab terdaftar</span>';
+            if (btnExisting) {
+                btnExisting.classList.add('disabled');
+                btnExisting.setAttribute('disabled', 'disabled');
+            }
+            setMode('new', true);
+            realInput.value = inputNew.value.trim();
+        } else {
+            // Ada bab terdaftar
+            if (badgeMapel) badgeMapel.innerHTML = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle"><i class="bi bi-folder-check me-1"></i>${babList.length} Bab Terdaftar</span>`;
+            if (btnExisting) {
+                btnExisting.classList.remove('disabled');
+                btnExisting.removeAttribute('disabled');
+            }
+
+            // Opsi opsional tanpa bab
+            const optNone = document.createElement('option');
+            optNone.value = '';
+            optNone.textContent = '-- Materi Umum (Tanpa Bab) --';
+            optNone.dataset.next = '999';
+            selectExisting.appendChild(optNone);
+
+            let matched = false;
+            babList.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.nama;
+                opt.textContent = `${b.nama} (${b.count} materi) — Urutan selanjutnya: #${b.next_urutan}`;
+                opt.dataset.next = b.next_urutan;
+                if (currentBabVal && b.nama.toLowerCase() === currentBabVal.toLowerCase()) {
+                    opt.selected = true;
+                    matched = true;
+                }
+                selectExisting.appendChild(opt);
+            });
+
+            if (currentBabVal && !matched) {
+                // Bab materi ini adalah bab custom / baru
+                setMode('new', false);
+                inputNew.value = currentBabVal;
+                realInput.value = currentBabVal;
+            } else if (!currentBabVal && activeMode === 'new') {
+                setMode('new', false);
+                realInput.value = inputNew.value.trim();
+            } else {
+                setMode('existing', false);
+                syncExisting();
+            }
+        }
+    }
+
+    function setMode(mode, lockExisting) {
+        activeMode = mode;
+        const isEdit = prefix.startsWith('edit_');
+        const primaryClass = isEdit ? 'btn-warning' : 'btn-primary';
+        const outlineClass = isEdit ? 'btn-outline-warning' : 'btn-outline-primary';
+
+        if (mode === 'existing' && !lockExisting) {
+            containerExisting.classList.remove('d-none');
+            containerNew.classList.add('d-none');
+            if (btnExisting) {
+                btnExisting.classList.add('active', primaryClass);
+                btnExisting.classList.remove(outlineClass);
+            }
+            if (btnNew) {
+                btnNew.classList.remove('active', primaryClass);
+                btnNew.classList.add(outlineClass);
+            }
+            syncExisting();
+        } else {
+            containerExisting.classList.add('d-none');
+            containerNew.classList.remove('d-none');
+            if (btnNew) {
+                btnNew.classList.add('active', primaryClass);
+                btnNew.classList.remove(outlineClass);
+            }
+            if (btnExisting) {
+                btnExisting.classList.remove('active', primaryClass);
+                btnExisting.classList.add(outlineClass);
+                if (lockExisting) {
+                    btnExisting.classList.add('disabled');
+                    btnExisting.setAttribute('disabled', 'disabled');
+                }
+            }
+            realInput.value = inputNew.value.trim();
+            if (prefix === 'add' && inputUrutan) {
+                inputUrutan.value = '1';
+            }
+        }
+    }
+
+    function syncExisting() {
+        const selectedOpt = selectExisting.options[selectExisting.selectedIndex];
+        if (selectedOpt) {
+            realInput.value = selectedOpt.value;
+            // Jika mode Add, langsung sarankan nomor urutan berikutnya
+            if (prefix === 'add' && inputUrutan && selectedOpt.dataset.next) {
+                inputUrutan.value = selectedOpt.dataset.next;
+            }
+        } else {
+            realInput.value = '';
+        }
+    }
+
+    if (selectMapel) {
+        selectMapel.addEventListener('change', function() {
+            currentBabVal = '';
+            updateOptions(this.value);
+        });
+    }
+
+    if (btnExisting) {
+        btnExisting.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!this.classList.contains('disabled')) setMode('existing', false);
+        });
+    }
+
+    if (btnNew) {
+        btnNew.addEventListener('click', function(e) {
+            e.preventDefault();
+            setMode('new', false);
+            inputNew.focus();
+        });
+    }
+
+    selectExisting.addEventListener('change', syncExisting);
+
+    inputNew.addEventListener('input', function() {
+        realInput.value = this.value.trim();
+    });
+
+    const initialMapel = selectMapel ? selectMapel.value : defaultMapelId;
+    updateOptions(initialMapel);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Inisialisasi Selector Bab Pintar pada Modal Add
+    const selectMapelAdd = document.getElementById('selectMapel_add');
+    if (selectMapelAdd) {
+        initBabSelector('add', selectMapelAdd.value || 0, '', 1);
+    }
+
+    // Inisialisasi Selector Bab Pintar pada setiap Modal Edit
+    <?php foreach ($materiList as $mItem): ?>
+        initBabSelector(
+            'edit_<?= $mItem['id'] ?>',
+            <?= (int)$mItem['mapel_id'] ?>,
+            <?= json_encode($mItem['judul_bab'] ?? '') ?>,
+            <?= (int)($mItem['urutan'] ?? 1) ?>
+        );
+    <?php endforeach; ?>
+
     // --- ADD MATERI SELECT ALL & VALIDATION ---
     const selectAllCheckbox = document.getElementById('selectAllKelasAdd');
     const kelasCheckboxes = document.querySelectorAll('.kelas-add-checkbox');
