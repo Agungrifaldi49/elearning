@@ -391,6 +391,39 @@ h1, h2, h3, h4, h5, .bab-title, .materi-unit-title, .qa-item-title {
     border-color: #334155;
 }
 
+/* ── File Materi Card ── */
+.file-materi-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #0284c7;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+}
+.file-materi-card:hover {
+    border-color: #cbd5e1;
+    border-left-color: #0369a1;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.04);
+}
+[data-bs-theme="dark"] .file-materi-card {
+    background: #0f172a;
+    border-color: #334155;
+    border-left-color: #38bdf8;
+}
+
+/* ── Video Materi Card ── */
+.video-materi-card {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-left: 4px solid #ef4444;
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+[data-bs-theme="dark"] .video-materi-card {
+    background: #020617;
+    border-color: #334155;
+    border-left-color: #f87171;
+}
+
 /* Scrollbar halus untuk rendered-materi-content */
 .rendered-materi-content::-webkit-scrollbar {
     width: 5px;
@@ -717,47 +750,99 @@ h1, h2, h3, h4, h5, .bab-title, .materi-unit-title, .qa-item-title {
                             </div>
                         </div>
 
-                        <!-- 3. Materi Singkat & Rangkuman Pembelajaran -->
+                        <!-- 3. TUJUAN PEMBELAJARAN DAN MATERI SINGKAT -->
                         <?php if (!empty($m['deskripsi'])): ?>
                             <div class="materi-singkat-preview-box">
                                 <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom flex-wrap gap-2">
-                                    <span class="fw-bold text-primary d-flex align-items-center gap-1.5" style="font-size: 0.88rem;">
-                                        <i class="bi bi-file-earmark-richtext-fill fs-6"></i>
-                                        <span>3. Materi Singkat &amp; Rangkuman Pembelajaran</span>
+                                    <span class="fw-bold text-primary d-flex align-items-center gap-1.5" style="font-size: 0.9rem;">
+                                        <i class="bi bi-bullseye fs-6"></i>
+                                        <span>Tujuan Pembelajaran dan Materi Singkat</span>
                                     </span>
                                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1" style="font-size: 0.7rem; font-weight: 600;">
                                         <i class="bi bi-text-paragraph me-1"></i>Format Rapi &amp; Justify
                                     </span>
                                 </div>
-                                <div class="rendered-materi-content px-1" style="max-height: 320px; overflow-y: auto;">
+                                <div class="rendered-materi-content px-1" style="max-height: 340px; overflow-y: auto;">
                                     <?= renderRichContent($m['deskripsi']) ?>
                                 </div>
                             </div>
                         <?php endif; ?>
 
-                        <!-- 4. Media & Berkas Pembelajaran -->
-                        <div class="berkas-media-strip d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-                            <div class="d-flex align-items-center gap-2 text-secondary" style="font-size: 0.82rem;">
-                                <i class="bi bi-folder-check text-primary fs-6"></i>
-                                <span class="fw-semibold text-dark">Media/Berkas:</span>
-                                <?php if ($hasFile): ?>
-                                    <span class="text-dark fw-bold"><?= htmlspecialchars(basename($m['file_path'])) ?></span>
-                                    <span class="badge bg-light text-secondary border rounded-pill px-2 py-0.5" style="font-size: 0.7rem;"><?= strtoupper($ext ?: $m['jenis_file']) ?></span>
-                                <?php elseif ($isYT): ?>
-                                    <span class="text-danger fw-bold"><i class="bi bi-youtube me-1"></i>Video Streaming YouTube</span>
-                                <?php else: ?>
-                                    <span class="text-muted">Materi Teks Digital</span>
+                        <!-- 4. FILE MATERI PEMBELAJARAN -->
+                        <?php if ($hasFile): ?>
+                            <div class="file-materi-card p-3 rounded-3 mb-3">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                                    <div class="d-flex align-items-center gap-2.5 min-width-0">
+                                        <div class="materi-row-icon shadow-xs" style="background:<?= $iconBg ?>; min-width:44px; width:44px; height:44px;">
+                                            <i class="bi <?= $fileIconClass ?>"></i>
+                                        </div>
+                                        <div class="min-width-0">
+                                            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size:0.68rem; font-weight:700;">
+                                                    FILE MATERI
+                                                </span>
+                                                <span class="badge bg-light text-secondary border rounded-pill px-2 py-0.5" style="font-size:0.68rem; font-weight:700;">
+                                                    <?= strtoupper($ext ?: $m['jenis_file']) ?>
+                                                </span>
+                                            </div>
+                                            <h6 class="fw-bold text-dark mb-0 text-truncate" title="<?= htmlspecialchars(basename($m['file_path'])) ?>" style="font-size:0.92rem;">
+                                                <?= htmlspecialchars(basename($m['file_path'])) ?>
+                                            </h6>
+                                            <small class="text-muted" style="font-size:0.72rem;">Lampiran berkas modul resmi pembelajaran</small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                                        <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5 hover-scale">
+                                            <i class="bi bi-book-half"></i>
+                                            <span>Buka Modul / Baca</span>
+                                        </a>
+                                        <a href="<?= $fileUrl ?>" download class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5">
+                                            <i class="bi bi-download"></i>
+                                            <span>Unduh Berkas</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- 5. VIDEO PEMBELAJARAN (BISA DI-RUNNING LANGSUNG & LANGSUNG KE YOUTUBE) -->
+                        <?php if ($isYT || $m['jenis_file'] === 'video' || in_array($ext, ['mp4','webm'])): ?>
+                            <div class="video-materi-card p-3 rounded-3 mb-3">
+                                <div class="d-flex align-items-center justify-content-between pb-2 mb-2.5 border-bottom border-secondary border-opacity-25 flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="d-inline-flex align-items-center justify-content-center bg-danger text-white rounded-circle shadow-xs" style="width:30px; height:30px; font-size:0.9rem;">
+                                            <i class="bi bi-play-fill"></i>
+                                        </span>
+                                        <div>
+                                            <h6 class="text-white fw-bold mb-0" style="font-size:0.92rem;">Video Pembelajaran</h6>
+                                            <span class="text-white-50" style="font-size:0.72rem;">Putar langsung video materi di bawah ini atau tonton di YouTube</span>
+                                        </div>
+                                    </div>
+                                    <?php if ($isYT && !empty($m['youtube_url'])): ?>
+                                        <a href="<?= htmlspecialchars($m['youtube_url']) ?>" target="_blank" class="btn btn-xs btn-danger rounded-pill px-3 py-1.5 fw-bold text-white shadow-xs d-inline-flex align-items-center gap-1.5 hover-scale">
+                                            <i class="bi bi-youtube"></i> Tonton Langsung ke YouTube <i class="bi bi-box-arrow-up-right ms-0.5" style="font-size:0.65rem;"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+
+                                <?php if ($isYT && !empty($m['youtube_url'])):
+                                    $embedUrl = ytEmbedUrl($m['youtube_url']);
+                                ?>
+                                    <div class="ratio ratio-16x9 rounded-3 overflow-hidden shadow-sm" style="background:#000;">
+                                        <iframe src="<?= htmlspecialchars($embedUrl) ?>" title="Video Pembelajaran" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                                    </div>
+                                <?php elseif ($hasFile && ($m['jenis_file'] === 'video' || in_array($ext, ['mp4','webm']))): ?>
+                                    <div class="rounded-3 overflow-hidden shadow-sm" style="background:#000;">
+                                        <video controls class="w-100" style="max-height:440px; display:block; border-radius:8px;">
+                                            <source src="<?= $fileUrl ?>" type="video/<?= $ext === 'webm' ? 'webm' : 'mp4' ?>">
+                                            Browser Anda tidak mendukung pemutar video HTML5.
+                                        </video>
+                                    </div>
                                 <?php endif; ?>
                             </div>
-                            <div>
-                                <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="text-primary text-decoration-none fw-bold d-inline-flex align-items-center gap-1" style="font-size: 0.8rem;">
-                                    <span>Baca Versi Lengkap E-Book</span>
-                                    <i class="bi bi-arrow-right"></i>
-                                </a>
-                            </div>
-                        </div>
+                        <?php endif; ?>
 
-                        <!-- 5. Evaluasi Terkait (Kuis & Tugas di bawah materi) -->
+                        <!-- 6. TUGAS DAN QUIZ TERKAIT MATERI INI -->
                         <?php if (!empty($mQuiz) || !empty($mTugas)): ?>
                             <div class="eval-section-box">
                                 <div class="d-flex align-items-center justify-content-between mb-2.5 pb-2 border-bottom flex-wrap gap-2">
@@ -765,12 +850,12 @@ h1, h2, h3, h4, h5, .bab-title, .materi-unit-title, .qa-item-title {
                                         <span class="d-inline-flex align-items-center justify-content-center bg-warning-subtle text-warning-emphasis rounded-circle" style="width:26px; height:26px; font-size:0.8rem;">
                                             <i class="bi bi-award-fill"></i>
                                         </span>
-                                        <span class="fw-bold text-dark" style="font-size: 0.85rem;">
-                                            5. Evaluasi &amp; Penugasan Terkait Materi Ini
+                                        <span class="fw-bold text-dark" style="font-size: 0.86rem;">
+                                            Tugas dan Quiz Terkait Materi Ini
                                         </span>
                                     </div>
                                     <span class="text-muted" style="font-size: 0.72rem;">
-                                        <i class="bi bi-info-circle me-1"></i>Selesai membaca? Kerjakan kuis &amp; tugas berikut
+                                        <i class="bi bi-info-circle me-1"></i>Selesaikan tugas dan quiz setelah menyimak materi di atas
                                     </span>
                                 </div>
 

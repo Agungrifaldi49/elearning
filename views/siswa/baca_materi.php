@@ -559,13 +559,13 @@ h1, h2, h3, h4, h5, .materi-main-title {
                             </div>
                             <div>
                                 <h5 class="fw-bold text-dark mb-0" style="font-size: 1.05rem;">
-                                    3. Materi Singkat & Rangkuman Pembelajaran
+                                    3. Tujuan Pembelajaran dan Materi Singkat
                                 </h5>
-                                <small class="text-muted" style="font-size: 0.76rem;">Rangkuman materi, intisari, dan instruksi penting dari guru pengampu.</small>
+                                <small class="text-muted" style="font-size: 0.76rem;">Tujuan pembelajaran, intisari konsep, dan instruksi penting dari guru pengampu.</small>
                             </div>
                         </div>
-                        <span class="badge bg-light text-primary border rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;">
-                            <i class="bi bi-book-half me-1"></i>Modul Baca Terstruktur
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1 fw-bold" style="font-size:0.75rem;">
+                            <i class="bi bi-bullseye me-1"></i>Format Rapi &amp; Justify
                         </span>
                     </div>
 
