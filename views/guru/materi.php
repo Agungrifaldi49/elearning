@@ -174,6 +174,7 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                                             <button type="button" class="btn btn-sm btn-info text-white px-2" style="font-size:0.75rem;" onclick="openPreviewModal(<?= htmlspecialchars(json_encode([
                                                 'id' => $m['id'],
                                                 'judul' => $m['judul'],
+                                                'judul_bab' => $m['judul_bab'] ?? '',
                                                 'nama_mapel' => $m['nama_mapel'],
                                                 'nama_kelas' => $m['nama_kelas'] ?? '',
                                                 'jenis_file' => $m['jenis_file'],
@@ -1309,7 +1310,8 @@ function escapeHtml(text) {
 
 function openPreviewModal(item) {
     document.getElementById('previewModalTitle').innerHTML = '<i class="bi bi-eye text-info me-2"></i>Pratinjau Materi: ' + escapeHtml(item.judul);
-    document.getElementById('previewModalSubtitle').textContent = 'Mapel: ' + (item.nama_mapel || '-') + (item.nama_kelas ? ' | Kelas: ' + item.nama_kelas : '');
+    const babText = item.judul_bab ? 'Bab: ' + item.judul_bab + ' | ' : '';
+    document.getElementById('previewModalSubtitle').textContent = babText + 'Mapel: ' + (item.nama_mapel || '-') + (item.nama_kelas ? ' | Kelas: ' + item.nama_kelas : '');
 
     const descBox = document.getElementById('previewModalDescBox');
     const descEl = document.getElementById('previewModalDesc');

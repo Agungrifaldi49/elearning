@@ -281,6 +281,63 @@ class SiswaController {
             }
         }
 
+        // Ambil evaluasi terkait (Quiz & Tugas) yang terhubung ke materi ini
+        $examModel     = new ExamModel();
+        $allQuiz       = $examModel->getQuizList($kelasId);
+        $allTugas      = $learningModel->getTugas($kelasId);
+
+        $quizLookup  = [];
+        foreach ($allQuiz as $q) { $quizLookup[(int)$q['id']] = $q; }
+        $tugasLookup = [];
+        foreach ($allTugas as $t) { $tugasLookup[(int)$t['id']] = $t; }
+
+        require_once ROOT_PATH . 'config/database.php';
+        $db = Database::getConnection();
+
+        // Riwayat hasil kuis siswa
+        $hasilQuizMap = [];
+        try {
+            $stmtHQ = $db->prepare("SELECT quiz_id, total_nilai FROM hasil_quiz WHERE siswa_id = ?");
+            $stmtHQ->execute([$siswaId]);
+            foreach ($stmtHQ->fetchAll() as $hq) {
+                $hasilQuizMap[(int)$hq['quiz_id']] = $hq;
+            }
+        } catch (Exception $e) {}
+
+        // Riwayat pengumpulan tugas siswa
+        $pengumpulanMap = [];
+        try {
+            $stmtPT = $db->prepare("SELECT tugas_id, nilai, submitted_at FROM pengumpulan_tugas WHERE siswa_id = ?");
+            $stmtPT->execute([$siswaId]);
+            foreach ($stmtPT->fetchAll() as $pt) {
+                $pengumpulanMap[(int)$pt['tugas_id']] = $pt;
+            }
+        } catch (Exception $e) {}
+
+        $linkedQuiz = [];
+        if (!empty($materi['quiz_ids'])) {
+            foreach (array_map('intval', explode(',', $materi['quiz_ids'])) as $qid) {
+                if (isset($quizLookup[$qid])) {
+                    $q = $quizLookup[$qid];
+                    $q['sudah_dikerjakan'] = isset($hasilQuizMap[$qid]);
+                    $q['nilai_siswa']      = $hasilQuizMap[$qid]['total_nilai'] ?? null;
+                    $linkedQuiz[] = $q;
+                }
+            }
+        }
+
+        $linkedTugas = [];
+        if (!empty($materi['tugas_ids'])) {
+            foreach (array_map('intval', explode(',', $materi['tugas_ids'])) as $tid) {
+                if (isset($tugasLookup[$tid])) {
+                    $t = $tugasLookup[$tid];
+                    $t['sudah_dikumpul'] = isset($pengumpulanMap[$tid]);
+                    $t['nilai_siswa']    = $pengumpulanMap[$tid]['nilai'] ?? null;
+                    $linkedTugas[] = $t;
+                }
+            }
+        }
+
         require_once ROOT_PATH . 'views/siswa/baca_materi.php';
     }
 
