@@ -58,7 +58,15 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                             <?php foreach ($materiList as $i => $m): ?>
                                 <tr>
                                     <td><?= $i + 1 ?></td>
-                                    <td class="fw-bold text-dark"><?= htmlspecialchars($m['judul']) ?></td>
+                                    <td class="fw-bold text-dark">
+                                        <?= htmlspecialchars($m['judul']) ?>
+                                        <?php if (!empty($m['judul_bab'])): ?>
+                                            <div class="small text-muted fw-normal mt-1">
+                                                <i class="bi bi-bookmark-fill text-primary me-1"></i><?= htmlspecialchars($m['judul_bab']) ?>
+                                                <span class="badge bg-light text-dark border ms-1">Urutan: <?= (int)($m['urutan'] ?? 1) ?></span>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><?= htmlspecialchars($m['nama_mapel']) ?></td>
                                     <td>
                                         <?php
@@ -204,6 +212,74 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                             <label class="form-label small fw-bold">Atau Link Youtube URL</label>
                             <input type="url" name="youtube_url" class="form-control" placeholder="https://www.youtube.com/watch?v=...">
                         </div>
+
+                        <!-- Pengaturan E-Book & Hubungan Quiz/Tugas -->
+                        <div class="col-12">
+                            <hr class="my-2 border-slate-200">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                    <i class="bi bi-book-half me-1"></i>Format E-Book & Evaluasi
+                                </span>
+                                <small class="text-muted">Kelompokkan materi ke Bab dan hubungkan kuis/tugas agar siswa dapat langsung mengerjakannya setelah membaca.</small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-8">
+                            <label class="form-label small fw-bold">Judul Bab / Modul (Opsional)</label>
+                            <input type="text" name="judul_bab" class="form-control" placeholder="Contoh: Bab 1: Pengenalan Dasar HTML">
+                            <small class="text-muted" style="font-size:0.75rem;">Materi dengan Bab yang sama akan dikelompokkan bersama di e-book siswa.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Urutan Tampil</label>
+                            <input type="number" name="urutan" class="form-control" value="1" min="1" max="999">
+                            <small class="text-muted" style="font-size:0.75rem;">Urutan materi dalam bab (1 = paling awal).</small>
+                        </div>
+
+                        <!-- Link Quiz Terkait -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold"><i class="bi bi-question-circle text-primary me-1"></i>Kuis Terkait (Opsional)</label>
+                            <div class="border rounded-3 p-2 bg-light" style="max-height: 140px; overflow-y: auto;">
+                                <?php if (empty($quizListForForm)): ?>
+                                    <small class="text-muted d-block p-1">Belum ada data kuis aktif.</small>
+                                <?php else: ?>
+                                    <?php foreach ($quizListForForm as $qf): ?>
+                                        <div class="form-check mb-1">
+                                            <input class="form-check-input" type="checkbox" name="linked_quiz_ids[]" value="<?= $qf['id'] ?>" id="add_quiz_<?= $qf['id'] ?>">
+                                            <label class="form-check-label small text-dark" for="add_quiz_<?= $qf['id'] ?>" style="cursor:pointer;">
+                                                <?= htmlspecialchars($qf['judul']) ?>
+                                                <?php if (!empty($qf['nama_mapel'])): ?>
+                                                    <span class="text-muted">(<?= htmlspecialchars($qf['nama_mapel']) ?>)</span>
+                                                <?php endif; ?>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                            <small class="text-muted" style="font-size:0.75rem;">Kuis ini akan terlampir langsung di bawah materi di e-book siswa.</small>
+                        </div>
+
+                        <!-- Link Tugas Terkait -->
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold"><i class="bi bi-file-earmark-check text-success me-1"></i>Tugas Terkait (Opsional)</label>
+                            <div class="border rounded-3 p-2 bg-light" style="max-height: 140px; overflow-y: auto;">
+                                <?php if (empty($tugasListForForm)): ?>
+                                    <small class="text-muted d-block p-1">Belum ada data tugas.</small>
+                                <?php else: ?>
+                                    <?php foreach ($tugasListForForm as $tf): ?>
+                                        <div class="form-check mb-1">
+                                            <input class="form-check-input" type="checkbox" name="linked_tugas_ids[]" value="<?= $tf['id'] ?>" id="add_tugas_<?= $tf['id'] ?>">
+                                            <label class="form-check-label small text-dark" for="add_tugas_<?= $tf['id'] ?>" style="cursor:pointer;">
+                                                <?= htmlspecialchars($tf['judul']) ?>
+                                                <?php if (!empty($tf['nama_mapel'])): ?>
+                                                    <span class="text-muted">(<?= htmlspecialchars($tf['nama_mapel']) ?>)</span>
+                                                <?php endif; ?>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </div>
+                            <small class="text-muted" style="font-size:0.75rem;">Tugas ini akan terlampir langsung di bawah materi di e-book siswa.</small>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 justify-content-between">
@@ -328,6 +404,78 @@ $isAdminMonitoring = (strtolower(AuthHelper::user()['role_name'] ?? '') === 'adm
                             <div class="col-md-6">
                                 <label class="form-label small fw-bold">Atau Link Youtube URL</label>
                                 <input type="url" name="youtube_url" class="form-control" value="<?= htmlspecialchars($m['youtube_url'] ?? '') ?>">
+                            </div>
+
+                            <?php 
+                            $existingQuizIds = !empty($m['quiz_ids']) ? array_map('intval', explode(',', $m['quiz_ids'])) : [];
+                            $existingTugasIds = !empty($m['tugas_ids']) ? array_map('intval', explode(',', $m['tugas_ids'])) : [];
+                            ?>
+                            <!-- Pengaturan E-Book & Hubungan Quiz/Tugas -->
+                            <div class="col-12">
+                                <hr class="my-2 border-slate-200">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                        <i class="bi bi-book-half me-1"></i>Format E-Book & Evaluasi
+                                    </span>
+                                    <small class="text-muted">Kelompokkan materi ke Bab dan hubungkan kuis/tugas agar siswa dapat langsung mengerjakannya setelah membaca.</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-8">
+                                <label class="form-label small fw-bold">Judul Bab / Modul (Opsional)</label>
+                                <input type="text" name="judul_bab" class="form-control" value="<?= htmlspecialchars($m['judul_bab'] ?? '') ?>" placeholder="Contoh: Bab 1: Pengenalan Dasar HTML">
+                                <small class="text-muted" style="font-size:0.75rem;">Materi dengan Bab yang sama akan dikelompokkan bersama di e-book siswa.</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Urutan Tampil</label>
+                                <input type="number" name="urutan" class="form-control" value="<?= htmlspecialchars($m['urutan'] ?? 999) ?>" min="1" max="999">
+                                <small class="text-muted" style="font-size:0.75rem;">Urutan materi dalam bab (1 = paling awal).</small>
+                            </div>
+
+                            <!-- Link Quiz Terkait -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold"><i class="bi bi-question-circle text-primary me-1"></i>Kuis Terkait (Opsional)</label>
+                                <div class="border rounded-3 p-2 bg-light" style="max-height: 140px; overflow-y: auto;">
+                                    <?php if (empty($quizListForForm)): ?>
+                                        <small class="text-muted d-block p-1">Belum ada data kuis aktif.</small>
+                                    <?php else: ?>
+                                        <?php foreach ($quizListForForm as $qf): ?>
+                                            <div class="form-check mb-1">
+                                                <input class="form-check-input" type="checkbox" name="linked_quiz_ids[]" value="<?= $qf['id'] ?>" id="edit_quiz_<?= $m['id'] ?>_<?= $qf['id'] ?>" <?= in_array((int)$qf['id'], $existingQuizIds) ? 'checked' : '' ?>>
+                                                <label class="form-check-label small text-dark" for="edit_quiz_<?= $m['id'] ?>_<?= $qf['id'] ?>" style="cursor:pointer;">
+                                                    <?= htmlspecialchars($qf['judul']) ?>
+                                                    <?php if (!empty($qf['nama_mapel'])): ?>
+                                                        <span class="text-muted">(<?= htmlspecialchars($qf['nama_mapel']) ?>)</span>
+                                                    <?php endif; ?>
+                                                </label>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
+                                <small class="text-muted" style="font-size:0.75rem;">Kuis ini akan terlampir langsung di bawah materi di e-book siswa.</small>
+                            </div>
+
+                            <!-- Link Tugas Terkait -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold"><i class="bi bi-file-earmark-check text-success me-1"></i>Tugas Terkait (Opsional)</label>
+                                <div class="border rounded-3 p-2 bg-light" style="max-height: 140px; overflow-y: auto;">
+                                    <?php if (empty($tugasListForForm)): ?>
+                                        <small class="text-muted d-block p-1">Belum ada data tugas.</small>
+                                    <?php else: ?>
+                                        <?php foreach ($tugasListForForm as $tf): ?>
+                                            <div class="form-check mb-1">
+                                                <input class="form-check-input" type="checkbox" name="linked_tugas_ids[]" value="<?= $tf['id'] ?>" id="edit_tugas_<?= $m['id'] ?>_<?= $tf['id'] ?>" <?= in_array((int)$tf['id'], $existingTugasIds) ? 'checked' : '' ?>>
+                                                <label class="form-check-label small text-dark" for="edit_tugas_<?= $m['id'] ?>_<?= $tf['id'] ?>" style="cursor:pointer;">
+                                                    <?= htmlspecialchars($tf['judul']) ?>
+                                                    <?php if (!empty($tf['nama_mapel'])): ?>
+                                                        <span class="text-muted">(<?= htmlspecialchars($tf['nama_mapel']) ?>)</span>
+                                                    <?php endif; ?>
+                                                </label>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
+                                <small class="text-muted" style="font-size:0.75rem;">Tugas ini akan terlampir langsung di bawah materi di e-book siswa.</small>
                             </div>
                         </div>
                     </div>

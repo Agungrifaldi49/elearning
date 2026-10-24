@@ -284,6 +284,145 @@ class SiswaController {
         require_once ROOT_PATH . 'views/siswa/baca_materi.php';
     }
 
+    /**
+     * Halaman E-Book per Mata Pelajaran — menampilkan materi terkelompok per Bab
+     * URL: siswa/materiMapel?mapel_id=X
+     */
+    public function materiMapel() {
+        $siswa    = $this->getSiswaInfo();
+        $siswaId  = (int)($siswa['id'] ?? 0);
+        $kelasId  = (int)($siswa['kelas_id'] ?? 0);
+        $mapelId  = (int)($_GET['mapel_id'] ?? 0);
+
+        if ($mapelId <= 0) {
+            FlashHelper::setError('Mata pelajaran tidak ditemukan.');
+            header('Location: ' . BASE_URL . 'index.php?url=siswa/materi');
+            exit();
+        }
+
+        $learningModel = new LearningModel();
+        $academicModel = new AcademicModel();
+        $examModel     = new ExamModel();
+
+        // Verifikasi enrollment
+        $enrolledList  = $academicModel->getSiswaEnrolledMapels($siswaId);
+        $enrolledMapels = [];
+        foreach ($enrolledList as $em) {
+            $enrolledMapels[$em['mapel_id']] = $em;
+        }
+
+        if (!empty($enrolledMapels) && !isset($enrolledMapels[$mapelId])) {
+            FlashHelper::setError('Anda belum terdaftar pada mata pelajaran ini.');
+            header('Location: ' . BASE_URL . 'index.php?url=siswa/gabungKelas');
+            exit();
+        }
+
+        // Ambil info mapel
+        $enrolledInfo = $enrolledMapels[$mapelId] ?? null;
+        $namaMapel    = $enrolledInfo['nama_mapel'] ?? '';
+        $namaGuru     = $enrolledInfo['nama_guru']  ?? '';
+
+        // Fallback: ambil dari materi jika nama tidak ada di enrollment
+        if (empty($namaMapel)) {
+            $allM = $learningModel->getMateri($kelasId);
+            foreach ($allM as $m) {
+                if ((int)$m['mapel_id'] === $mapelId) {
+                    $namaMapel = $m['nama_mapel'];
+                    $namaGuru  = $m['nama_guru'];
+                    break;
+                }
+            }
+        }
+
+        // Ambil materi terkelompok per bab
+        $materiGrouped = $learningModel->getMateriByMapelGrouped($mapelId, $kelasId);
+
+        // Kumpulkan semua quiz & tugas untuk mapel ini
+        $allQuiz  = $examModel->getQuizList($kelasId);
+        $allTugas = $learningModel->getTugas($kelasId);
+
+        $quizForMapel  = array_values(array_filter($allQuiz,  fn($q) => (int)$q['mapel_id'] === $mapelId));
+        $tugasForMapel = array_values(array_filter($allTugas, fn($t) => (int)$t['mapel_id'] === $mapelId));
+
+        // Buat lookup: quiz_id -> quiz, tugas_id -> tugas
+        $quizLookup  = [];
+        foreach ($quizForMapel  as $q) { $quizLookup[(int)$q['id']]  = $q; }
+        $tugasLookup = [];
+        foreach ($tugasForMapel as $t) { $tugasLookup[(int)$t['id']] = $t; }
+
+        // Cek status siswa untuk setiap quiz & tugas
+        require_once ROOT_PATH . 'config/database.php';
+        $db = Database::getConnection();
+
+        // hasil_quiz per siswa
+        $hasilQuizMap = [];
+        try {
+            $stmtHQ = $db->prepare("SELECT quiz_id, total_nilai FROM hasil_quiz WHERE siswa_id = ?");
+            $stmtHQ->execute([$siswaId]);
+            foreach ($stmtHQ->fetchAll() as $hq) {
+                $hasilQuizMap[(int)$hq['quiz_id']] = $hq;
+            }
+        } catch (Exception $e) {}
+
+        // pengumpulan_tugas per siswa
+        $pengumpulanMap = [];
+        try {
+            $stmtPT = $db->prepare("SELECT tugas_id, nilai, submitted_at FROM pengumpulan_tugas WHERE siswa_id = ?");
+            $stmtPT->execute([$siswaId]);
+            foreach ($stmtPT->fetchAll() as $pt) {
+                $pengumpulanMap[(int)$pt['tugas_id']] = $pt;
+            }
+        } catch (Exception $e) {}
+
+        // Inject quiz & tugas terkait ke tiap item materi dalam bab
+        $materiGroupedWithLinks = [];
+        foreach ($materiGrouped as $bab => $items) {
+            $enrichedItems = [];
+            foreach ($items as $item) {
+                $linkedQuiz  = [];
+                $linkedTugas = [];
+
+                // quiz_ids terhubung
+                if (!empty($item['quiz_ids'])) {
+                    foreach (array_map('intval', explode(',', $item['quiz_ids'])) as $qid) {
+                        if (isset($quizLookup[$qid])) {
+                            $q = $quizLookup[$qid];
+                            $q['sudah_dikerjakan'] = isset($hasilQuizMap[$qid]);
+                            $q['nilai_siswa']      = $hasilQuizMap[$qid]['total_nilai'] ?? null;
+                            $linkedQuiz[] = $q;
+                        }
+                    }
+                }
+
+                // tugas_ids terhubung
+                if (!empty($item['tugas_ids'])) {
+                    foreach (array_map('intval', explode(',', $item['tugas_ids'])) as $tid) {
+                        if (isset($tugasLookup[$tid])) {
+                            $t = $tugasLookup[$tid];
+                            $t['sudah_dikumpul'] = isset($pengumpulanMap[$tid]);
+                            $t['nilai_siswa']    = $pengumpulanMap[$tid]['nilai'] ?? null;
+                            $linkedTugas[] = $t;
+                        }
+                    }
+                }
+
+                $item['linked_quiz']  = $linkedQuiz;
+                $item['linked_tugas'] = $linkedTugas;
+                $enrichedItems[] = $item;
+            }
+            $materiGroupedWithLinks[$bab] = $enrichedItems;
+        }
+
+        // Statistik ringkasan
+        $totalMateri  = array_sum(array_map('count', $materiGroupedWithLinks));
+        $totalQuiz    = count($quizForMapel);
+        $totalTugas   = count($tugasForMapel);
+        $doneQuiz     = count(array_filter($quizForMapel,  fn($q) => isset($hasilQuizMap[(int)$q['id']])));
+        $doneTugas    = count(array_filter($tugasForMapel, fn($t) => isset($pengumpulanMap[(int)$t['id']])));
+
+        require_once ROOT_PATH . 'views/siswa/materi_mapel.php';
+    }
+
     public function tugas() {
         $siswa = $this->getSiswaInfo();
         $siswaId = $siswa['id'];

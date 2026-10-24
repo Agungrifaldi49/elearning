@@ -304,464 +304,346 @@ foreach ($mapelList as $mp) {
             </form>
         </div>
 
-        <!-- 📑 TABBED NAVIGATION -->
-        <ul class="nav nav-pills materi-nav-tabs gap-2 mb-4 p-1.5 bg-white rounded-4 border shadow-xs" id="materiSiswaTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active d-flex align-items-center gap-2" id="tab-modul-tab" data-bs-toggle="tab" data-bs-target="#tab-modul" type="button" role="tab">
-                    <i class="bi bi-file-earmark-text-fill"></i> Modul & Berkas Materi (<span id="badgeTabModul"><?= count($materiList) ?></span>)
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link d-flex align-items-center gap-2" id="tab-video-tab" data-bs-toggle="tab" data-bs-target="#tab-video" type="button" role="tab">
-                    <i class="bi bi-youtube text-danger"></i> Video Streaming YouTube (<span id="badgeTabVideo"><?= count($videoList ?? []) ?></span>)
-                </button>
-            </li>
-        </ul>
+        <!-- 📚 DAFTAR MATA PELAJARAN YANG TERDAFTAR -->
+        <div class="row g-4" id="mapelCardGrid">
+            <?php
+            // Kelompokkan materi per mapel untuk statistik
+            $mapelStats = [];
+            foreach ($materiList as $m) {
+                $mid = (int)$m['mapel_id'];
+                if (!isset($mapelStats[$mid])) {
+                    $mapelStats[$mid] = [
+                        'mapel_id'   => $mid,
+                        'nama_mapel' => $m['nama_mapel'],
+                        'nama_guru'  => $m['nama_guru'],
+                        'jumlah_materi' => 0,
+                    ];
+                }
+                $mapelStats[$mid]['jumlah_materi']++;
+            }
 
-        <!-- TAB CONTENT -->
-        <div class="tab-content" id="materiSiswaTabContent">
+            // Tambahkan mapel enrolled yang mungkin belum punya materi
+            foreach ($enrolledList ?? [] as $em) {
+                $mid = (int)$em['mapel_id'];
+                if (!isset($mapelStats[$mid])) {
+                    $mapelStats[$mid] = [
+                        'mapel_id'      => $mid,
+                        'nama_mapel'    => $em['nama_mapel'] ?? 'Mata Pelajaran',
+                        'nama_guru'     => $em['nama_guru']  ?? '',
+                        'jumlah_materi' => 0,
+                    ];
+                }
+            }
 
-            <!-- TAB 1: MODUL & BERKAS MATERI (PRATINJAU LANGSUNG) -->
-            <div class="tab-pane fade show active" id="tab-modul" role="tabpanel">
-                <div class="row g-4">
-                    <?php if (empty($materiList)): ?>
-                        <div class="col-12 text-center py-5 bg-white rounded-4 border shadow-sm">
-                            <i class="bi bi-folder-x fs-1 text-slate-300 d-block mb-2"></i>
-                            <h5 class="fw-bold text-dark mb-1">Belum Ada Modul Materi</h5>
-                            <p class="text-muted small mb-0">Belum ada modul materi pembelajaran yang terdaftar untuk kelas dan mapel Anda saat ini.</p>
-                        </div>
-                    <?php else: ?>
-                        <?php foreach ($materiList as $m): 
-                            $isEnrolled = isset($enrolledMapels[$m['mapel_id'] . '_' . $m['guru_id']]) || isset($enrolledMapels[$m['mapel_id']]);
-                            $ext = strtolower(pathinfo($m['file_path'] ?? '', PATHINFO_EXTENSION));
-                            $isPdf = ($ext === 'pdf');
-                            $isImage = in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp']);
-                            $isVideoFile = in_array($ext, ['mp4', 'webm', 'ogg']);
-                            $filePath = !empty($m['file_path']) ? BASE_URL . 'assets/uploads/materi/' . htmlspecialchars($m['file_path']) : null;
-                        ?>
-                            <div class="col-12 col-md-6 col-lg-4 materi-item-col" data-mapel-id="<?= $m['mapel_id'] ?>" data-search="<?= htmlspecialchars(mb_strtolower($m['judul'] . ' ' . $m['nama_mapel'] . ' ' . $m['nama_guru'] . ' ' . $m['deskripsi'])) ?>">
-                                <div class="materi-card-item p-4 border-top border-4 <?= $isEnrolled ? 'border-primary' : 'border-danger' ?>">
-                                    <div class="d-flex align-items-center justify-content-between mb-3">
-                                        <span class="badge bg-primary text-uppercase px-3 py-1.5 rounded-pill"><i class="bi bi-file-earmark me-1"></i><?= htmlspecialchars($m['jenis_file'] ?: 'MODUL') ?></span>
-                                        <?php if ($isEnrolled): ?>
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-bold"><i class="bi bi-check-circle-fill me-1"></i>Terdaftar</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1 fw-bold"><i class="bi bi-lock-fill me-1"></i>Terkunci</span>
-                                        <?php endif; ?>
-                                    </div>
+            // Hitung quiz & tugas per mapel
+            require_once ROOT_PATH . 'models/ExamModel.php';
+            $examModelForStats = new ExamModel();
+            $siswaKelasId = $siswa['kelas_id'] ?? null;
+            $allQuizStats  = $examModelForStats->getQuizList($siswaKelasId);
+            $allTugasStats = $learningModel->getTugas($siswaKelasId);
 
-                                    <h5 class="fw-bold mb-1 text-dark lh-base" style="letter-spacing: -0.2px;"><?= htmlspecialchars($m['judul']) ?></h5>
-                                    <p class="mb-2">
-                                        <span class="badge-mapel-tag"><i class="bi bi-journal-bookmark-fill me-1"></i><?= htmlspecialchars($m['nama_mapel']) ?></span>
-                                    </p>
-                                    <p class="small text-muted mb-4 lh-lg" style="color: #475569;"><?= htmlspecialchars($m['deskripsi']) ?></p>
+            $quizPerMapel  = [];
+            foreach ($allQuizStats as $q) {
+                $qmid = (int)$q['mapel_id'];
+                if (isset($mapelStats[$qmid])) {
+                    $quizPerMapel[$qmid][] = $q;
+                }
+            }
+            $tugasPerMapel = [];
+            foreach ($allTugasStats as $t) {
+                $tmid = (int)$t['mapel_id'];
+                if (isset($mapelStats[$tmid])) {
+                    $tugasPerMapel[$tmid][] = $t;
+                }
+            }
 
-                                    <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                        <small class="fw-semibold text-muted"><i class="bi bi-person-circle text-primary me-1"></i><?= htmlspecialchars($m['nama_guru']) ?></small>
-                                        
-                                        <?php if ($isEnrolled): ?>
-                                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                                <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5">
-                                                    <i class="bi bi-book-half"></i> Baca Materi
-                                                </a>
-                                                <?php if (!empty($m['youtube_url'])): ?>
-                                                    <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalPlayVideo<?= $m['id'] ?>">
-                                                        <i class="bi bi-play-circle-fill"></i> Video
-                                                    </button>
-                                                <?php endif; ?>
-                                            </div>
-                                        <?php else: ?>
-                                            <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-sm btn-warning text-dark rounded-pill px-3 fw-bold">
-                                                <i class="bi bi-key-fill me-1"></i> Input Key Mapel
-                                            </a>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+            // Palet warna kartu (rotasi)
+            $cardPalette = [
+                ['from'=>'#2563eb','to'=>'#1d4ed8','light'=>'#eff6ff'],
+                ['from'=>'#7c3aed','to'=>'#6d28d9','light'=>'#ede9fe'],
+                ['from'=>'#0891b2','to'=>'#0e7490','light'=>'#ecfeff'],
+                ['from'=>'#059669','to'=>'#047857','light'=>'#d1fae5'],
+                ['from'=>'#d97706','to'=>'#b45309','light'=>'#fef3c7'],
+                ['from'=>'#dc2626','to'=>'#b91c1c','light'=>'#fee2e2'],
+                ['from'=>'#db2777','to'=>'#be185d','light'=>'#fce7f3'],
+                ['from'=>'#65a30d','to'=>'#4d7c0f','light'=>'#ecfccb'],
+            ];
 
-                    <!-- Empty State Hasil Pencarian Modul -->
-                    <div class="col-12 text-center py-5 bg-white rounded-4 border shadow-sm d-none" id="emptySearchModul">
-                        <div class="bg-primary-subtle text-primary p-3 rounded-circle d-inline-flex mb-3 shadow-xs" style="width:60px; height:60px; align-items:center; justify-content:center;">
-                            <i class="bi bi-search fs-3"></i>
-                        </div>
-                        <h5 class="fw-bold text-dark mb-1">Modul Materi Tidak Ditemukan</h5>
-                        <p class="text-muted small mb-3">Tidak ada modul materi yang cocok dengan filter atau kata kunci pencarian Anda.</p>
-                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3.5 py-1.5 fw-bold" onclick="resetAllMateriFilters()">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Pencarian & Filter
-                        </button>
+            // Ikon mapel berdasarkan kata kunci nama (fallback bi-book)
+            if (!function_exists('mapelIcon')) {
+                function mapelIcon($nama) {
+                    $n = mb_strtolower($nama);
+                    if (str_contains($n,'mat'))  return 'bi-calculator-fill';
+                    if (str_contains($n,'fis'))  return 'bi-lightning-charge-fill';
+                    if (str_contains($n,'kim'))  return 'bi-eyedropper';
+                    if (str_contains($n,'bio'))  return 'bi-flower1';
+                    if (str_contains($n,'ing'))  return 'bi-translate';
+                    if (str_contains($n,'indo') || str_contains($n,'bhs')) return 'bi-chat-quote-fill';
+                    if (str_contains($n,'sej') || str_contains($n,'his')) return 'bi-bank2';
+                    if (str_contains($n,'geo'))  return 'bi-globe-americas';
+                    if (str_contains($n,'agam') || str_contains($n,'pai')) return 'bi-moon-stars-fill';
+                    if (str_contains($n,'pkn') || str_contains($n,'ppkn')) return 'bi-flag-fill';
+                    if (str_contains($n,'pjok') || str_contains($n,'olk')) return 'bi-bicycle';
+                    if (str_contains($n,'seni')) return 'bi-palette-fill';
+                    if (str_contains($n,'prog') || str_contains($n,'rpg') || str_contains($n,'web') || str_contains($n,'php')) return 'bi-code-slash';
+                    if (str_contains($n,'data') || str_contains($n,'basis')) return 'bi-database-fill';
+                    if (str_contains($n,'jar') || str_contains($n,'net')) return 'bi-hdd-network-fill';
+                    if (str_contains($n,'prod') || str_contains($n,'kreat')) return 'bi-stars';
+                    if (str_contains($n,'ekon') || str_contains($n,'eko')) return 'bi-graph-up-arrow';
+                    return 'bi-book-half';
+                }
+            }
+
+            if (empty($mapelStats)):
+            ?>
+                <div class="col-12">
+                    <div class="text-center py-5 bg-white rounded-4 border shadow-sm">
+                        <i class="bi bi-journal-x fs-1 text-muted d-block mb-3"></i>
+                        <h5 class="fw-bold text-dark mb-2">Belum Ada Mata Pelajaran</h5>
+                        <p class="text-muted small mb-3">Anda belum terdaftar di mata pelajaran manapun. Masukkan kode kunci untuk bergabung.</p>
+                        <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-warning text-dark rounded-pill px-4 fw-bold">
+                            <i class="bi bi-key-fill me-1"></i> Daftar Mapel Baru
+                        </a>
                     </div>
                 </div>
-            </div>
+            <?php else:
+                $ci = 0;
+                foreach ($mapelStats as $mid => $ms):
+                    $pal = $cardPalette[$ci % count($cardPalette)];
+                    $ci++;
+                    $totalQ = count($quizPerMapel[$mid] ?? []);
+                    $totalT = count($tugasPerMapel[$mid] ?? []);
+                    $icon   = mapelIcon($ms['nama_mapel']);
 
-            <!-- TAB 2: VIDEO STREAMING YOUTUBE (PEMUTARAN LANGSUNG) -->
-            <div class="tab-pane fade" id="tab-video">
-                <div class="row g-4">
-                    <?php if (empty($videoList)): ?>
-                        <div class="col-12 text-center py-5 bg-white rounded-4 border shadow-sm">
-                            <i class="bi bi-youtube fs-1 text-danger d-block mb-2"></i>
-                            <h5 class="fw-bold text-dark mb-1">Belum Ada Video Pembelajaran</h5>
-                            <p class="text-muted small mb-0">Belum ada video streaming YouTube yang diunggah untuk kelas Anda saat ini.</p>
+                    // Hitung tugas aktif (deadline belum lewat)
+                    $aktifTugas = 0;
+                    foreach ($tugasPerMapel[$mid] ?? [] as $t) {
+                        if (empty($t['deadline']) || strtotime($t['deadline']) > time()) $aktifTugas++;
+                    }
+                    // Quiz aktif
+                    $aktifQuiz = 0;
+                    foreach ($quizPerMapel[$mid] ?? [] as $q) {
+                        if (empty($q['tanggal_selesai']) || strtotime($q['tanggal_selesai']) > time()) $aktifQuiz++;
+                    }
+            ?>
+                <div class="col-12 col-sm-6 col-lg-4 mapel-card-col"
+                     data-nama="<?= htmlspecialchars(mb_strtolower($ms['nama_mapel'] . ' ' . $ms['nama_guru'])) ?>">
+                    <div class="mapel-subject-card h-100" style="--card-from:<?= $pal['from'] ?>;--card-to:<?= $pal['to'] ?>;--card-light:<?= $pal['light'] ?>;">
+
+                        <!-- Card Top Gradient -->
+                        <div class="mapel-card-top" style="background:linear-gradient(135deg,<?= $pal['from'] ?> 0%,<?= $pal['to'] ?> 100%);">
+                            <div class="mapel-card-icon-wrap">
+                                <i class="bi <?= $icon ?>"></i>
+                            </div>
+                            <!-- Mapel Name -->
+                            <h5 class="mapel-card-name"><?= htmlspecialchars($ms['nama_mapel']) ?></h5>
+                            <?php if (!empty($ms['nama_guru'])): ?>
+                            <p class="mapel-card-guru">
+                                <i class="bi bi-person-fill"></i>
+                                <?= htmlspecialchars($ms['nama_guru']) ?>
+                            </p>
+                            <?php endif; ?>
                         </div>
-                    <?php else: ?>
-                        <?php foreach ($videoList as $v): 
-                            $isEnrolled = isset($enrolledMapels[$v['mapel_id'] . '_' . $v['guru_id']]) || isset($enrolledMapels[$v['mapel_id']]);
-                            $embedUrl = getYouTubeEmbedUrl($v['youtube_url'] ?? '');
-                        ?>
-                            <div class="col-12 col-md-6 col-lg-4 video-item-col" data-mapel-id="<?= $v['mapel_id'] ?>" data-search="<?= htmlspecialchars(mb_strtolower($v['judul'] . ' ' . $v['nama_mapel'] . ' ' . $v['nama_guru'] . ' ' . $v['deskripsi'])) ?>">
-                                <div class="materi-card-item p-4 border-top border-4 <?= $isEnrolled ? 'border-danger' : 'border-secondary' ?>">
-                                    <div class="d-flex align-items-center justify-content-between mb-3">
-                                        <span class="badge bg-danger px-3 py-1.5 rounded-pill"><i class="bi bi-play-btn-fill me-1"></i>STREAMING</span>
-                                        <?php if ($isEnrolled): ?>
-                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-bold"><i class="bi bi-check-circle-fill me-1"></i>Terdaftar</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1 fw-bold"><i class="bi bi-lock-fill me-1"></i>Terkunci</span>
-                                        <?php endif; ?>
-                                    </div>
 
-                                    <h5 class="fw-bold mb-1 text-dark lh-base"><?= htmlspecialchars($v['judul']) ?></h5>
-                                    <p class="mb-2">
-                                        <span class="badge-mapel-tag"><i class="bi bi-journal-bookmark-fill me-1"></i><?= htmlspecialchars($v['nama_mapel']) ?></span>
-                                    </p>
-                                    <p class="small text-muted mb-4 lh-lg"><?= htmlspecialchars($v['deskripsi']) ?></p>
-
-                                    <!-- Inline Embedded Video Player if Enrolled -->
-                                    <?php if ($isEnrolled && !empty($embedUrl)): ?>
-                                        <div class="video-responsive-ratio mb-3 shadow-sm border">
-                                            <iframe src="<?= htmlspecialchars($embedUrl) ?>" title="<?= htmlspecialchars($v['judul']) ?>" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                                        </div>
-                                    <?php endif; ?>
-
-                                    <div class="mt-auto pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                        <small class="fw-semibold text-muted"><i class="bi bi-person-circle text-primary me-1"></i><?= htmlspecialchars($v['nama_guru']) ?></small>
-                                        
-                                        <?php if ($isEnrolled): ?>
-                                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                                <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $v['id'] ?>" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5">
-                                                    <i class="bi bi-book-half"></i> Detail & Catatan
-                                                </a>
-                                                <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" data-bs-toggle="modal" data-bs-target="#modalPlayVideo<?= $v['id'] ?>">
-                                                    <i class="bi bi-fullscreen"></i> Layar Penuh
-                                                </button>
-                                            </div>
-                                        <?php else: ?>
-                                            <a href="<?= BASE_URL ?>index.php?url=siswa/gabungKelas" class="btn btn-sm btn-warning text-dark rounded-pill px-3 fw-bold">
-                                                <i class="bi bi-key-fill me-1"></i> Input Key Mapel
-                                            </a>
-                                        <?php endif; ?>
-                                    </div>
+                        <!-- Card Bottom Stats -->
+                        <div class="mapel-card-bottom">
+                            <div class="mapel-card-stats">
+                                <div class="mapel-stat-item">
+                                    <span class="mapel-stat-num"><?= $ms['jumlah_materi'] ?></span>
+                                    <span class="mapel-stat-label">Materi</span>
+                                </div>
+                                <div class="mapel-stat-divider"></div>
+                                <div class="mapel-stat-item">
+                                    <span class="mapel-stat-num"><?= $totalQ ?></span>
+                                    <span class="mapel-stat-label">Quiz</span>
+                                </div>
+                                <div class="mapel-stat-divider"></div>
+                                <div class="mapel-stat-item">
+                                    <span class="mapel-stat-num"><?= $totalT ?></span>
+                                    <span class="mapel-stat-label">Tugas</span>
                                 </div>
                             </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
 
-                    <!-- Empty State Hasil Pencarian Video -->
-                    <div class="col-12 text-center py-5 bg-white rounded-4 border shadow-sm d-none" id="emptySearchVideo">
-                        <div class="bg-danger-subtle text-danger p-3 rounded-circle d-inline-flex mb-3 shadow-xs" style="width:60px; height:60px; align-items:center; justify-content:center;">
-                            <i class="bi bi-youtube fs-3"></i>
+                            <!-- Badges aktif -->
+                            <?php if ($aktifQuiz > 0 || $aktifTugas > 0): ?>
+                            <div class="mapel-card-badges">
+                                <?php if ($aktifQuiz > 0): ?>
+                                <span class="mapel-badge-active mapel-badge-quiz">
+                                    <i class="bi bi-patch-question-fill"></i> <?= $aktifQuiz ?> Quiz Aktif
+                                </span>
+                                <?php endif; ?>
+                                <?php if ($aktifTugas > 0): ?>
+                                <span class="mapel-badge-active mapel-badge-tugas">
+                                    <i class="bi bi-clipboard2-check-fill"></i> <?= $aktifTugas ?> Tugas Aktif
+                                </span>
+                                <?php endif; ?>
+                            </div>
+                            <?php endif; ?>
+
+                            <!-- Open Button -->
+                            <a href="<?= BASE_URL ?>index.php?url=siswa/materiMapel&mapel_id=<?= $mid ?>"
+                               class="mapel-card-btn" style="background:linear-gradient(135deg,<?= $pal['from'] ?> 0%,<?= $pal['to'] ?> 100%);">
+                                <i class="bi bi-book-open-fill"></i>
+                                <span>Buka Materi</span>
+                                <i class="bi bi-arrow-right ms-auto"></i>
+                            </a>
                         </div>
-                        <h5 class="fw-bold text-dark mb-1">Video Pembelajaran Tidak Ditemukan</h5>
-                        <p class="text-muted small mb-3">Tidak ada video streaming yang cocok dengan filter atau kata kunci pencarian Anda.</p>
-                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3.5 py-1.5 fw-bold" onclick="resetAllMateriFilters()">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Pencarian & Filter
-                        </button>
                     </div>
                 </div>
-            </div>
+            <?php endforeach; ?>
+            <?php endif; ?>
 
-        </div>
+            <!-- Empty search state -->
+            <div class="col-12 d-none" id="emptyMapelSearch">
+                <div class="text-center py-5 bg-white rounded-4 border shadow-sm">
+                    <i class="bi bi-search fs-1 text-muted d-block mb-2"></i>
+                    <h5 class="fw-bold text-dark mb-1">Mapel Tidak Ditemukan</h5>
+                    <p class="text-muted small">Tidak ada mata pelajaran yang cocok dengan pencarian Anda.</p>
+                </div>
+            </div>
+        </div><!-- /.row #mapelCardGrid -->
+
     </div>
 </main>
 
-<!-- ════════════════════════════════════════════════════════════════ -->
-<!-- 📝 MODALS SECTION PREVIEW MATERI & VIDEO STREAMING -->
-<!-- ════════════════════════════════════════════════════════════════ -->
 
-<?php foreach ($materiList as $m): 
-    $ext = strtolower(pathinfo($m['file_path'] ?? '', PATHINFO_EXTENSION));
-    $isPdf = ($ext === 'pdf');
-    $isImage = in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp']);
-    $isVideoFile = in_array($ext, ['mp4', 'webm', 'ogg']);
-    $filePath = !empty($m['file_path']) ? BASE_URL . 'assets/uploads/materi/' . htmlspecialchars($m['file_path']) : null;
-    $embedUrl = getYouTubeEmbedUrl($m['youtube_url'] ?? '');
-?>
-    <!-- Modal Preview Modul Materi (Bisa Dilihat Dulu) -->
-    <?php if ($filePath): ?>
-        <div class="modal fade" id="modalPreviewMateri<?= $m['id'] ?>" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered modal-xl">
-                <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
-                    <div class="modal-header border-0 bg-dark text-white p-3.5" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
-                        <div class="d-flex align-items-center gap-2.5">
-                            <div class="bg-primary rounded-3 p-2 text-white shadow-xs">
-                                <i class="bi bi-eye-fill fs-5"></i>
-                            </div>
-                            <div>
-                                <h6 class="modal-title fw-bold text-white mb-0">Pratinjau Modul Materi: <?= htmlspecialchars($m['judul']) ?></h6>
-                                <small class="text-info fw-medium" style="font-size:0.75rem;">Mapel: <?= htmlspecialchars($m['nama_mapel']) ?> &bull; Guru: <?= htmlspecialchars($m['nama_guru']) ?></small>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body p-4 bg-light">
-                        <div class="p-3 bg-white rounded-3 border mb-3 shadow-xs">
-                            <h6 class="fw-bold text-dark mb-1"><i class="bi bi-info-circle text-primary me-1"></i>Deskripsi & Petunjuk:</h6>
-                            <p class="text-slate-700 small mb-0 lh-lg"><?= htmlspecialchars($m['deskripsi']) ?></p>
-                        </div>
+<style>
+/* ── Mapel Subject Cards ── */
+.mapel-subject-card {
+    border-radius: 20px;
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 6px 24px rgba(0,0,0,.07);
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+.mapel-subject-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 14px 36px rgba(0,0,0,.12);
+}
+.mapel-card-top {
+    padding: 28px 22px 22px;
+    position: relative;
+    overflow: hidden;
+}
+.mapel-card-top::after {
+    content: '';
+    position: absolute;
+    width: 120px; height: 120px;
+    background: rgba(255,255,255,.12);
+    border-radius: 50%;
+    bottom: -30px; right: -30px;
+    pointer-events: none;
+}
+.mapel-card-icon-wrap {
+    width: 52px; height: 52px;
+    background: rgba(255,255,255,.2);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+    color: #fff;
+    margin-bottom: 14px;
+}
+.mapel-card-name {
+    font-size: 1.05rem; font-weight: 800;
+    color: #fff; margin: 0 0 6px;
+    line-height: 1.3;
+}
+.mapel-card-guru {
+    font-size: .8rem; color: rgba(255,255,255,.82);
+    margin: 0; font-weight: 500;
+    display: flex; align-items: center; gap: 5px;
+}
+.mapel-card-bottom {
+    background: #fff;
+    padding: 18px 20px 20px;
+    display: flex; flex-direction: column; gap: 12px;
+}
+[data-bs-theme="dark"] .mapel-card-bottom { background: #1e293b; }
 
-                        <!-- Document & Media Viewer Frame -->
-                        <div class="border rounded-4 bg-white p-2 shadow-sm overflow-hidden text-center">
-                            <?php if ($isPdf): ?>
-                                <iframe data-src="<?= $filePath ?>#toolbar=0" style="width:100%; height:580px; border:none;" class="rounded-3 lazy-preview-frame"></iframe>
-                            <?php elseif ($isImage): ?>
-                                <img src="<?= $filePath ?>" alt="Preview" class="img-fluid rounded-3 mx-auto d-block shadow-sm" style="max-height:550px; object-fit:contain;">
-                            <?php elseif ($isVideoFile): ?>
-                                <video controls class="w-100 rounded-3 shadow-sm" style="max-height:550px;">
-                                    <source src="<?= $filePath ?>" type="video/<?= $ext ?>">
-                                    Browser Anda tidak mendukung pemutaran video langsung.
-                                </video>
-                            <?php else: ?>
-                                <!-- Office documents / fallback Google Viewer -->
-                                <iframe data-src="https://docs.google.com/gview?url=<?= urlencode($filePath) ?>&embedded=true" style="width:100%; height:580px; border:none;" class="rounded-3 lazy-preview-frame"></iframe>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0 pt-0 p-4 justify-content-between bg-white border-top flex-wrap gap-2">
-                        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Tutup</button>
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-primary rounded-pill px-4 fw-bold shadow-xs">
-                                <i class="bi bi-phone-fill me-1.5"></i> Mode Pembaca Layar Penuh
-                            </a>
-                            <a href="<?= $filePath ?>" download class="btn btn-outline-secondary rounded-pill px-4 fw-bold shadow-xs">
-                                <i class="bi bi-download me-1.5"></i> Unduh File
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
+.mapel-card-stats {
+    display: flex; align-items: center; gap: 0;
+    background: #f8fafc; border-radius: 12px; padding: 10px 0;
+}
+[data-bs-theme="dark"] .mapel-card-stats { background: #0f172a; }
+.mapel-stat-item {
+    flex: 1; text-align: center;
+    display: flex; flex-direction: column; gap: 1px;
+}
+.mapel-stat-num {
+    font-size: 1.25rem; font-weight: 800; color: #0f172a; line-height: 1;
+}
+[data-bs-theme="dark"] .mapel-stat-num { color: #f1f5f9; }
+.mapel-stat-label {
+    font-size: .68rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .04em;
+}
+.mapel-stat-divider {
+    width: 1px; height: 36px; background: #e2e8f0; flex-shrink: 0;
+}
+[data-bs-theme="dark"] .mapel-stat-divider { background: #334155; }
 
-    <!-- Modal Play Video YouTube (Pemutaran Langsung) -->
-    <?php if (!empty($embedUrl)): ?>
-        <div class="modal fade" id="modalPlayVideo<?= $m['id'] ?>" tabindex="-1">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-                <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
-                    <div class="modal-header border-0 bg-dark text-white p-3.5" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
-                        <div class="d-flex align-items-center gap-2.5">
-                            <div class="bg-danger rounded-3 p-2 text-white shadow-xs">
-                                <i class="bi bi-youtube fs-5"></i>
-                            </div>
-                            <div>
-                                <h6 class="modal-title fw-bold text-white mb-0">Video Streaming: <?= htmlspecialchars($m['judul']) ?></h6>
-                                <small class="text-info fw-medium" style="font-size:0.75rem;">Mapel: <?= htmlspecialchars($m['nama_mapel']) ?> &bull; Guru: <?= htmlspecialchars($m['nama_guru']) ?></small>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body p-4 bg-black">
-                        <div class="video-responsive-ratio shadow-lg rounded-4 overflow-hidden">
-                            <iframe src="<?= htmlspecialchars($embedUrl) ?>" title="<?= htmlspecialchars($m['judul']) ?>" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                        </div>
-                    </div>
-                    <div class="modal-footer border-0 pt-0 p-4 justify-content-between bg-dark text-white">
-                        <small class="text-white text-opacity-75"><i class="bi bi-info-circle me-1"></i>Video diputar langsung dari server YouTube secara resmi.</small>
-                        <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Tutup Pemutar</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
-<?php endforeach; ?>
+.mapel-card-badges {
+    display: flex; flex-wrap: wrap; gap: 6px;
+}
+.mapel-badge-active {
+    font-size: .72rem; font-weight: 700;
+    border-radius: 50rem; padding: 4px 10px;
+    display: inline-flex; align-items: center; gap: 4px;
+}
+.mapel-badge-quiz  { background: #fef3c7; color: #92400e; }
+.mapel-badge-tugas { background: #fce7f3; color: #9d174d; }
 
-<?php if (!empty($videoList)): ?>
-    <?php foreach ($videoList as $v): 
-        $embedUrl = getYouTubeEmbedUrl($v['youtube_url'] ?? '');
-    ?>
-        <?php if (!empty($embedUrl)): ?>
-            <div class="modal fade" id="modalPlayVideo<?= $v['id'] ?>" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
-                        <div class="modal-header border-0 bg-dark text-white p-3.5" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
-                            <div class="d-flex align-items-center gap-2.5">
-                                <div class="bg-danger rounded-3 p-2 text-white shadow-xs">
-                                    <i class="bi bi-youtube fs-5"></i>
-                                </div>
-                                <div>
-                                    <h6 class="modal-title fw-bold text-white mb-0">Video Streaming: <?= htmlspecialchars($v['judul']) ?></h6>
-                                    <small class="text-info fw-medium" style="font-size:0.75rem;">Mapel: <?= htmlspecialchars($v['nama_mapel']) ?> &bull; Guru: <?= htmlspecialchars($v['nama_guru']) ?></small>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body p-4 bg-black">
-                            <div class="video-responsive-ratio shadow-lg rounded-4 overflow-hidden">
-                                <iframe src="<?= htmlspecialchars($embedUrl) ?>" title="<?= htmlspecialchars($v['judul']) ?>" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                            </div>
-                        </div>
-                        <div class="modal-footer border-0 pt-0 p-4 justify-content-between bg-dark text-white">
-                            <small class="text-white text-opacity-75"><i class="bi bi-info-circle me-1"></i>Video diputar langsung dari server YouTube secara resmi.</small>
-                            <button type="button" class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Tutup Pemutar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
-    <?php endforeach; ?>
-<?php endif; ?>
+.mapel-card-btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    color: #fff; font-weight: 700; font-size: .88rem;
+    text-decoration: none;
+    transition: opacity .2s ease, transform .2s ease;
+}
+.mapel-card-btn:hover { color: #fff; opacity: .9; transform: scale(1.01); }
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. Lazy loading modal frames
-    document.querySelectorAll('.modal[id^="modalPreviewMateri"]').forEach(function(modal) {
-        modal.addEventListener('show.bs.modal', function() {
-            modal.querySelectorAll('iframe.lazy-preview-frame[data-src]').forEach(function(ifr) {
-                ifr.src = ifr.getAttribute('data-src');
-            });
+    const inputSearch  = document.getElementById('inputSearchMateri');
+    const btnClear     = document.getElementById('btnClearSearch');
+    const chipKeyword  = document.getElementById('chipSearchKeyword');
+    const chipStatus   = document.getElementById('chipSearchStatus');
+    const emptyEl      = document.getElementById('emptyMapelSearch');
+    let debounce;
+
+    function filterCards() {
+        const q = inputSearch ? inputSearch.value.trim().toLowerCase() : '';
+        if (btnClear) btnClear.classList.toggle('d-none', q.length === 0);
+        if (chipStatus && chipKeyword) {
+            chipKeyword.textContent = q;
+            chipStatus.classList.toggle('d-none', q.length === 0);
+        }
+        let visible = 0;
+        document.querySelectorAll('.mapel-card-col').forEach(function(col) {
+            const match = !q || (col.dataset.nama || '').indexOf(q) !== -1;
+            col.classList.toggle('d-none', !match);
+            if (match) visible++;
         });
-        modal.addEventListener('hidden.bs.modal', function() {
-            modal.querySelectorAll('iframe.lazy-preview-frame[data-src]').forEach(function(ifr) {
-                ifr.src = 'about:blank';
-            });
-        });
-    });
-
-    // 2. Realtime Search & Filter Engine
-    const inputSearch = document.getElementById('inputSearchMateri');
-    const selectMapel = document.getElementById('selectFilterMapel');
-    const btnClearSearch = document.getElementById('btnClearSearch');
-    const chipMapelName = document.getElementById('chipMapelName');
-    const chipSearchStatus = document.getElementById('chipSearchStatus');
-    const chipSearchKeyword = document.getElementById('chipSearchKeyword');
-    const badgeTabModul = document.getElementById('badgeTabModul');
-    const badgeTabVideo = document.getElementById('badgeTabVideo');
-    const countSummaryModul = document.getElementById('countSummaryModul');
-    const countSummaryVideo = document.getElementById('countSummaryVideo');
-
-    const emptySearchModul = document.getElementById('emptySearchModul');
-    const emptySearchVideo = document.getElementById('emptySearchVideo');
-
-    let searchDebounceTimer = null;
-
-    function executeFilterRealtime() {
-        const query = (inputSearch ? inputSearch.value.trim().toLowerCase() : '');
-        const mapelId = (selectMapel ? selectMapel.value : '0');
-
-        // Toggle tombol clear search [x]
-        if (btnClearSearch) {
-            if (query.length > 0) {
-                btnClearSearch.classList.remove('d-none');
-            } else {
-                btnClearSearch.classList.add('d-none');
-            }
-        }
-
-        // Update Chip Status
-        if (chipMapelName && selectMapel) {
-            chipMapelName.textContent = selectMapel.options[selectMapel.selectedIndex].text;
-        }
-        if (chipSearchStatus && chipSearchKeyword) {
-            if (query.length > 0) {
-                chipSearchKeyword.textContent = inputSearch.value.trim();
-                chipSearchStatus.classList.remove('d-none');
-            } else {
-                chipSearchStatus.classList.add('d-none');
-            }
-        }
-
-        // Filter Modul Cards
-        let visibleModulCount = 0;
-        const modulCols = document.querySelectorAll('.materi-item-col');
-        modulCols.forEach(function(col) {
-            const cardMapelId = col.getAttribute('data-mapel-id') || '';
-            const cardSearchText = col.getAttribute('data-search') || '';
-
-            const matchMapel = (mapelId === '0' || cardMapelId === mapelId);
-            const matchSearch = (query === '' || cardSearchText.indexOf(query) !== -1);
-
-            if (matchMapel && matchSearch) {
-                col.classList.remove('d-none');
-                visibleModulCount++;
-            } else {
-                col.classList.add('d-none');
-            }
-        });
-
-        // Filter Video Cards
-        let visibleVideoCount = 0;
-        const videoCols = document.querySelectorAll('.video-item-col');
-        videoCols.forEach(function(col) {
-            const cardMapelId = col.getAttribute('data-mapel-id') || '';
-            const cardSearchText = col.getAttribute('data-search') || '';
-
-            const matchMapel = (mapelId === '0' || cardMapelId === mapelId);
-            const matchSearch = (query === '' || cardSearchText.indexOf(query) !== -1);
-
-            if (matchMapel && matchSearch) {
-                col.classList.remove('d-none');
-                visibleVideoCount++;
-            } else {
-                col.classList.add('d-none');
-            }
-        });
-
-        // Update Counter Badges
-        if (badgeTabModul) badgeTabModul.textContent = visibleModulCount;
-        if (badgeTabVideo) badgeTabVideo.textContent = visibleVideoCount;
-        if (countSummaryModul) countSummaryModul.textContent = visibleModulCount;
-        if (countSummaryVideo) countSummaryVideo.textContent = visibleVideoCount;
-
-        // Toggle Empty Search Alert
-        if (emptySearchModul) {
-            if (visibleModulCount === 0 && (modulCols.length > 0 || query.length > 0 || mapelId !== '0')) {
-                emptySearchModul.classList.remove('d-none');
-            } else {
-                emptySearchModul.classList.add('d-none');
-            }
-        }
-
-        if (emptySearchVideo) {
-            if (visibleVideoCount === 0 && (videoCols.length > 0 || query.length > 0 || mapelId !== '0')) {
-                emptySearchVideo.classList.remove('d-none');
-            } else {
-                emptySearchVideo.classList.add('d-none');
-            }
-        }
+        if (emptyEl) emptyEl.classList.toggle('d-none', visible > 0);
     }
 
-    // Event Listener Input Pencarian dengan Debounce
     if (inputSearch) {
+        inputSearch.setAttribute('placeholder', 'Cari nama mata pelajaran atau guru...');
         inputSearch.addEventListener('input', function() {
-            clearTimeout(searchDebounceTimer);
-            searchDebounceTimer = setTimeout(executeFilterRealtime, 120);
+            clearTimeout(debounce);
+            debounce = setTimeout(filterCards, 150);
         });
     }
-
-    // Event Listener Dropdown Mapel
-    if (selectMapel) {
-        selectMapel.addEventListener('change', executeFilterRealtime);
-    }
-
-    // Event Listener Clear Search Button [x]
-    if (btnClearSearch) {
-        btnClearSearch.addEventListener('click', function() {
-            if (inputSearch) inputSearch.value = '';
-            executeFilterRealtime();
-            if (inputSearch) inputSearch.focus();
+    if (btnClear) {
+        btnClear.addEventListener('click', function() {
+            if (inputSearch) { inputSearch.value = ''; inputSearch.focus(); }
+            filterCards();
         });
     }
-
-    // Global Reset Function
-    window.resetAllMateriFilters = function() {
-        if (inputSearch) inputSearch.value = '';
-        if (selectMapel) selectMapel.value = '0';
-        executeFilterRealtime();
-    };
-
-    // Jalankan filter awal jika ada parameter pencarian
-    if ((inputSearch && inputSearch.value.trim().length > 0) || (selectMapel && selectMapel.value !== '0')) {
-        executeFilterRealtime();
-    }
+    // Hide dropdown mapel filter (tidak relevan lagi)
+    const mapelSelect = document.getElementById('selectFilterMapel');
+    if (mapelSelect) { mapelSelect.closest('.col-12, .col-sm-8, .col-md-4, .col-lg-3')?.classList.add('d-none'); }
 });
 </script>
 

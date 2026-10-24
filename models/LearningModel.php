@@ -11,6 +11,18 @@ class LearningModel extends BaseModel {
         $this->ensureTugasSusulanTable();
         $this->ensureMateriKelasIdsColumn();
         $this->ensureTugasKelasIdsColumn();
+        $this->ensureMateriEbookColumns();
+    }
+
+    private function ensureMateriEbookColumns() {
+        // judul_bab: nama bab e.g. "Bab 1 - Pengenalan HTML"
+        try { $this->db->exec("ALTER TABLE materi ADD COLUMN judul_bab VARCHAR(255) NULL DEFAULT NULL AFTER mapel_id"); } catch (Exception $e) {}
+        // urutan: urutan tampil di dalam mapel (1, 2, 3, ...)
+        try { $this->db->exec("ALTER TABLE materi ADD COLUMN urutan INT NOT NULL DEFAULT 999 AFTER judul_bab"); } catch (Exception $e) {}
+        // quiz_ids: comma-separated quiz id yang terkait, e.g. "1,3"
+        try { $this->db->exec("ALTER TABLE materi ADD COLUMN quiz_ids VARCHAR(255) NULL DEFAULT NULL AFTER urutan"); } catch (Exception $e) {}
+        // tugas_ids: comma-separated tugas id yang terkait, e.g. "2"
+        try { $this->db->exec("ALTER TABLE materi ADD COLUMN tugas_ids VARCHAR(255) NULL DEFAULT NULL AFTER quiz_ids"); } catch (Exception $e) {}
     }
 
     private function ensureTugasSusulanTable() {
@@ -65,8 +77,38 @@ class LearningModel extends BaseModel {
         if ($guru_id) {
             $sql .= " AND m.guru_id = " . (int)$guru_id;
         }
-        $sql .= " ORDER BY m.id DESC";
+        $sql .= " ORDER BY m.urutan ASC, m.id ASC";
         return $this->db->query($sql)->fetchAll();
+    }
+
+    /**
+     * Ambil materi suatu mapel, dikelompokkan per judul_bab untuk tampilan e-book.
+     * Mengembalikan array asosiatif: ['Bab 1 - ...' => [array of materi], ...]
+     */
+    public function getMateriByMapelGrouped($mapel_id, $kelasId = null) {
+        $mid = (int)$mapel_id;
+        $sql = "
+            SELECT m.*, map.nama_mapel, COALESCE(k.nama_kelas, 'Semua Kelas') as nama_kelas,
+                   g.nama_lengkap as nama_guru, g.id as guru_id_rel
+            FROM materi m
+            JOIN mata_pelajaran map ON m.mapel_id = map.id
+            LEFT JOIN kelas k ON m.kelas_id = k.id
+            JOIN guru g ON m.guru_id = g.id
+            WHERE m.mapel_id = {$mid}
+        ";
+        if ($kelasId) {
+            $kid = (int)$kelasId;
+            $sql .= " AND (FIND_IN_SET({$kid}, m.kelas_ids) OR m.kelas_id = {$kid} OR m.kelas_id = 0 OR m.kelas_id IS NULL OR m.kelas_ids IS NULL OR TRIM(m.kelas_ids) = '')";
+        }
+        $sql .= " ORDER BY m.urutan ASC, m.id ASC";
+        $rows = $this->db->query($sql)->fetchAll();
+
+        $grouped = [];
+        foreach ($rows as $row) {
+            $bab = !empty(trim($row['judul_bab'] ?? '')) ? trim($row['judul_bab']) : 'Materi Umum';
+            $grouped[$bab][] = $row;
+        }
+        return $grouped;
     }
 
     public function getMateriById($id) {
@@ -90,7 +132,7 @@ class LearningModel extends BaseModel {
         return $stmt->fetch() ?: null;
     }
 
-    public function addMateri($guru_id, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url) {
+    public function addMateri($guru_id, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url, $judul_bab = null, $urutan = 999, $quiz_ids = null, $tugas_ids = null) {
         $kelasIdArray = is_array($kelas_ids) ? array_map('intval', $kelas_ids) : [(int)$kelas_ids];
         $kelasIdArray = array_values(array_filter($kelasIdArray, function($id) { return $id > 0; }));
         
@@ -98,13 +140,13 @@ class LearningModel extends BaseModel {
         $kelasIdsStr = !empty($kelasIdArray) ? implode(',', $kelasIdArray) : (string)$primaryKelasId;
 
         $stmt = $this->db->prepare("
-            INSERT INTO materi (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, jenis_file, file_path, youtube_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO materi (guru_id, mapel_id, kelas_id, kelas_ids, judul, deskripsi, jenis_file, file_path, youtube_url, judul_bab, urutan, quiz_ids, tugas_ids)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([$guru_id, $mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url]);
+        return $stmt->execute([$guru_id, $mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url, $judul_bab ?: null, (int)$urutan, $quiz_ids ?: null, $tugas_ids ?: null]);
     }
 
-    public function updateMateri($id, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $file_path = null, $youtube_url = null) {
+    public function updateMateri($id, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $file_path = null, $youtube_url = null, $judul_bab = null, $urutan = 999, $quiz_ids = null, $tugas_ids = null) {
         $kelasIdArray = is_array($kelas_ids) ? array_map('intval', $kelas_ids) : [(int)$kelas_ids];
         $kelasIdArray = array_values(array_filter($kelasIdArray, function($kId) { return $kId > 0; }));
         
@@ -113,16 +155,18 @@ class LearningModel extends BaseModel {
 
         if ($file_path) {
             $stmt = $this->db->prepare("
-                UPDATE materi SET mapel_id = ?, kelas_id = ?, kelas_ids = ?, judul = ?, deskripsi = ?, jenis_file = ?, file_path = ?, youtube_url = ?
+                UPDATE materi SET mapel_id = ?, kelas_id = ?, kelas_ids = ?, judul = ?, deskripsi = ?, jenis_file = ?, file_path = ?, youtube_url = ?,
+                                  judul_bab = ?, urutan = ?, quiz_ids = ?, tugas_ids = ?
                 WHERE id = ?
             ");
-            return $stmt->execute([$mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url, $id]);
+            return $stmt->execute([$mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $jenis_file, $file_path, $youtube_url, $judul_bab ?: null, (int)$urutan, $quiz_ids ?: null, $tugas_ids ?: null, $id]);
         } else {
             $stmt = $this->db->prepare("
-                UPDATE materi SET mapel_id = ?, kelas_id = ?, kelas_ids = ?, judul = ?, deskripsi = ?, jenis_file = ?, youtube_url = ?
+                UPDATE materi SET mapel_id = ?, kelas_id = ?, kelas_ids = ?, judul = ?, deskripsi = ?, jenis_file = ?, youtube_url = ?,
+                                  judul_bab = ?, urutan = ?, quiz_ids = ?, tugas_ids = ?
                 WHERE id = ?
             ");
-            return $stmt->execute([$mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $jenis_file, $youtube_url, $id]);
+            return $stmt->execute([$mapel_id, $primaryKelasId, $kelasIdsStr, $judul, $deskripsi, $jenis_file, $youtube_url, $judul_bab ?: null, (int)$urutan, $quiz_ids ?: null, $tugas_ids ?: null, $id]);
         }
     }
 

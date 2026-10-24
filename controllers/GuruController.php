@@ -131,13 +131,20 @@ class GuruController {
                 $jenis_file = $_POST['jenis_file'];
                 $youtube_url = Security::sanitize($_POST['youtube_url'] ?? '');
                 $filePath = null;
+                $judul_bab = Security::sanitize($_POST['judul_bab'] ?? '');
+                $urutan    = max(1, (int)($_POST['urutan'] ?? 999));
+                // quiz_ids & tugas_ids: array of int from checkboxes
+                $quiz_ids_arr  = isset($_POST['linked_quiz_ids'])  && is_array($_POST['linked_quiz_ids'])  ? array_map('intval', $_POST['linked_quiz_ids'])  : [];
+                $tugas_ids_arr = isset($_POST['linked_tugas_ids']) && is_array($_POST['linked_tugas_ids']) ? array_map('intval', $_POST['linked_tugas_ids']) : [];
+                $quiz_ids_str  = !empty($quiz_ids_arr)  ? implode(',', $quiz_ids_arr)  : null;
+                $tugas_ids_str = !empty($tugas_ids_arr) ? implode(',', $tugas_ids_arr) : null;
 
                 if ($jenis_file !== 'youtube' && isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
                     $filePath = UploadHelper::upload($_FILES['file'], 'materi');
                 }
 
                 // Simpan 1 baris materi dengan seluruh kelas_ids yang dicentang
-                $learningModel->addMateri($guruId, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url);
+                $learningModel->addMateri($guruId, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url, $judul_bab ?: null, $urutan, $quiz_ids_str, $tugas_ids_str);
 
                 require_once ROOT_PATH . 'helpers/FcmHelper.php';
                 foreach ($kelas_ids as $kId) {
@@ -168,13 +175,19 @@ class GuruController {
                 $jenis_file = $_POST['jenis_file'];
                 $youtube_url = Security::sanitize($_POST['youtube_url'] ?? '');
                 $filePath = null;
+                $judul_bab = Security::sanitize($_POST['judul_bab'] ?? '');
+                $urutan    = max(1, (int)($_POST['urutan'] ?? 999));
+                $quiz_ids_arr  = isset($_POST['linked_quiz_ids'])  && is_array($_POST['linked_quiz_ids'])  ? array_map('intval', $_POST['linked_quiz_ids'])  : [];
+                $tugas_ids_arr = isset($_POST['linked_tugas_ids']) && is_array($_POST['linked_tugas_ids']) ? array_map('intval', $_POST['linked_tugas_ids']) : [];
+                $quiz_ids_str  = !empty($quiz_ids_arr)  ? implode(',', $quiz_ids_arr)  : null;
+                $tugas_ids_str = !empty($tugas_ids_arr) ? implode(',', $tugas_ids_arr) : null;
 
                 if ($jenis_file !== 'youtube' && isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
                     $filePath = UploadHelper::upload($_FILES['file'], 'materi');
                 }
 
                 // Update 1 baris materi tersebut dengan kelas_ids baru tanpa duplikasi
-                $learningModel->updateMateri($id, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url);
+                $learningModel->updateMateri($id, $mapel_id, $kelas_ids, $judul, $deskripsi, $jenis_file, $filePath, $youtube_url, $judul_bab ?: null, $urutan, $quiz_ids_str, $tugas_ids_str);
                 FlashHelper::setSuccess('Data Materi Pembelajaran berhasil diperbarui.');
 
             } elseif ($action === 'delete' && $id > 0) {
@@ -205,6 +218,11 @@ class GuruController {
                 $kelasList = $academicModel->getKelas();
             }
         }
+
+        // Pass quiz & tugas list for linking in the form
+        $examModel = new ExamModel();
+        $quizListForForm  = $examModel->getQuizList(null, $isAdmin ? null : $guruId);
+        $tugasListForForm = $learningModel->getTugas(null, $isAdmin ? null : $guruId);
 
         require_once ROOT_PATH . 'views/guru/materi.php';
     }
