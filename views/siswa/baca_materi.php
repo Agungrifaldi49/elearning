@@ -38,10 +38,12 @@ $fileSizeFormatted = $fileSizeBytes ? round($fileSizeBytes / (1024 * 1024), 1) .
 if (!function_exists('renderRichContent')) {
     function renderRichContent($content) {
         if (empty($content)) return '';
+        // Normalisasi non-breaking space & whitespace agar justify teks bekerja sempurna
+        $content = str_replace('&nbsp;', ' ', $content);
         if (preg_match('/<[a-z][\s\S]*>/i', $content)) {
             return Security::safeHtml($content);
         }
-        return nl2br(htmlspecialchars($content));
+        return '<p class="mb-0 text-justify">' . nl2br(htmlspecialchars($content)) . '</p>';
     }
 }
 ?>
@@ -50,9 +52,20 @@ if (!function_exists('renderRichContent')) {
 /* ══════════════════════════════════════════════════════════════════
    🎨 MODERN E-READER DESIGN SYSTEM (RESPONSIVE & MOBILE-FIRST)
    ══════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap');
+
 .reader-page-wrapper {
     max-width: 1540px;
     margin: 0 auto;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, .materi-main-title {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+    letter-spacing: -0.02em;
 }
 
 /* 1. Header Desktop */
@@ -109,25 +122,57 @@ if (!function_exists('renderRichContent')) {
 
 /* 4. Rich Text Content & List Formatting */
 .rendered-materi-content {
-    line-height: 1.8;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.85;
     font-size: 0.95rem;
     color: #1e293b;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+    word-break: break-word;
+    hyphens: auto;
 }
 [data-bs-theme="dark"] .rendered-materi-content {
     color: #cbd5e1;
 }
+
+.rendered-materi-content p {
+    margin-bottom: 14px;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+    line-height: 1.85;
+}
+.rendered-materi-content div {
+    text-align: justify !important;
+    text-justify: inter-word !important;
+}
 .rendered-materi-content ol {
     padding-left: 28px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    text-align: justify !important;
+    text-justify: inter-word !important;
 }
 .rendered-materi-content ul {
     padding-left: 28px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     list-style-type: disc !important;
+    text-align: justify !important;
+    text-justify: inter-word !important;
 }
 .rendered-materi-content li {
-    margin-bottom: 6px;
+    margin-bottom: 8px;
+    line-height: 1.8;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+    padding-left: 4px;
 }
+.rendered-materi-content li::marker {
+    font-weight: 700;
+    color: #2563eb;
+}
+[data-bs-theme="dark"] .rendered-materi-content li::marker {
+    color: #60a5fa;
+}
+
 .rendered-materi-content ol[type="A"], .rendered-materi-content ol.list-alpha-upper {
     list-style-type: upper-alpha !important;
 }
@@ -144,6 +189,7 @@ if (!function_exists('renderRichContent')) {
     list-style-type: lower-roman !important;
 }
 .rendered-materi-content h5 {
+    font-family: 'Outfit', sans-serif !important;
     font-size: 1.05rem;
     font-weight: 700;
     color: #0f172a;
@@ -163,6 +209,9 @@ if (!function_exists('renderRichContent')) {
     margin: 12px 0;
     color: #166534;
     font-size: 0.92rem;
+    line-height: 1.75;
+    text-align: justify !important;
+    text-justify: inter-word !important;
 }
 [data-bs-theme="dark"] .rich-callout-box, 
 [data-bs-theme="dark"] .rendered-materi-content .rich-callout-box {

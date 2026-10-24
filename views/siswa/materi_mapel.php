@@ -22,10 +22,12 @@ if (!function_exists('ytEmbedUrl')) {
 if (!function_exists('renderRichContent')) {
     function renderRichContent($content) {
         if (empty($content)) return '';
+        // Normalisasi non-breaking space & whitespace agar justify teks bekerja sempurna
+        $content = str_replace('&nbsp;', ' ', $content);
         if (preg_match('/<[a-z][\s\S]*>/i', $content)) {
             return Security::safeHtml($content);
         }
-        return nl2br(htmlspecialchars($content));
+        return '<p class="mb-0 text-justify">' . nl2br(htmlspecialchars($content)) . '</p>';
     }
 }
 
@@ -48,11 +50,21 @@ if (!function_exists('getFileIcon')) {
 
 <style>
 /* ══════════════════════════════════════════════════════════
-   E-BOOK MATERI MAPEL — MODERN EBOOK READER STYLE
+   E-BOOK MATERI MAPEL — MODERN, RESPONSIVE & JUSTIFIED
    ══════════════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap');
 
-.ebook-wrapper { font-family: 'Inter', sans-serif; }
+.ebook-wrapper {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, .bab-title, .materi-unit-title, .qa-item-title {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+    letter-spacing: -0.02em;
+}
 
 /* ── Hero Banner ── */
 .ebook-hero {
@@ -129,7 +141,7 @@ if (!function_exists('getFileIcon')) {
     color: #fff;
     flex-shrink: 0;
 }
-.bab-title { font-size: 1rem; font-weight: 700; color: #0f172a; margin: 0; line-height: 1.3; }
+.bab-title { font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0; line-height: 1.35; }
 [data-bs-theme="dark"] .bab-title { color: #f1f5f9; }
 .bab-meta { font-size: .78rem; color: #64748b; margin: 0; }
 .bab-chevron { margin-left: auto; color: #94a3b8; transition: transform .25s ease; font-size: 1.1rem; }
@@ -137,7 +149,7 @@ if (!function_exists('getFileIcon')) {
 
 .bab-body {
     border-top: 1px solid #f1f5f9;
-    padding: 0;
+    padding: 6px 0 16px;
     display: none;
 }
 [data-bs-theme="dark"] .bab-body { border-color: #334155; }
@@ -148,14 +160,14 @@ if (!function_exists('getFileIcon')) {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 14px;
-    padding: 18px 20px;
+    padding: 20px 22px;
     margin: 14px 18px;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.02);
 }
 .materi-unit-card:hover {
     border-color: #cbd5e1;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+    box-shadow: 0 8px 24px rgba(15,23,42,0.06);
 }
 [data-bs-theme="dark"] .materi-unit-card {
     background: #1e293b;
@@ -163,48 +175,90 @@ if (!function_exists('getFileIcon')) {
 }
 
 .materi-row-icon {
-    width: 44px; height: 44px;
+    width: 46px; height: 46px;
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1.35rem;
     flex-shrink: 0;
 }
 
-/* ── Box Materi Singkat & Rangkuman ── */
+/* ── Box Materi Singkat & Rangkuman (E-Book Reading Sheet) ── */
 .materi-singkat-preview-box {
-    background: #f8fafc;
+    background: #fbfcfe;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 14px 16px;
+    border-left: 4px solid #2563eb;
+    border-radius: 14px;
+    padding: 16px 20px;
     margin-top: 14px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.02);
+    transition: all 0.2s ease;
+}
+.materi-singkat-preview-box:hover {
+    border-color: #cbd5e1;
+    border-left-color: #1d4ed8;
+    box-shadow: 0 4px 14px rgba(15,23,42,0.04);
 }
 [data-bs-theme="dark"] .materi-singkat-preview-box {
     background: #0f172a;
     border-color: #334155;
+    border-left-color: #60a5fa;
+    box-shadow: none;
 }
 
-/* ── Dukungan Format List Lengkap (A, a, 1, I, i, Bullet) ── */
+/* ── Typografi Rich Content: Justify, Rapi, & List A, a, 1, I ── */
 .rendered-materi-content {
-    line-height: 1.75;
-    font-size: 0.92rem;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.85;
+    font-size: 0.94rem;
     color: #1e293b;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+    word-break: break-word;
+    hyphens: auto;
 }
 [data-bs-theme="dark"] .rendered-materi-content {
     color: #cbd5e1;
 }
+
+.rendered-materi-content p {
+    margin-bottom: 12px;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+    line-height: 1.85;
+}
+.rendered-materi-content div {
+    text-align: justify !important;
+    text-justify: inter-word !important;
+}
 .rendered-materi-content ol {
-    padding-left: 26px;
-    margin-bottom: 10px;
+    padding-left: 28px;
+    margin-bottom: 14px;
+    text-align: justify !important;
+    text-justify: inter-word !important;
 }
 .rendered-materi-content ul {
-    padding-left: 26px;
-    margin-bottom: 10px;
+    padding-left: 28px;
+    margin-bottom: 14px;
     list-style-type: disc !important;
+    text-align: justify !important;
+    text-justify: inter-word !important;
 }
 .rendered-materi-content li {
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+    line-height: 1.8;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+    padding-left: 4px;
 }
+.rendered-materi-content li::marker {
+    font-weight: 700;
+    color: #2563eb;
+}
+[data-bs-theme="dark"] .rendered-materi-content li::marker {
+    color: #60a5fa;
+}
+
 .rendered-materi-content ol[type="A"], .rendered-materi-content ol.list-alpha-upper {
     list-style-type: upper-alpha !important;
 }
@@ -221,15 +275,31 @@ if (!function_exists('getFileIcon')) {
     list-style-type: lower-roman !important;
 }
 
-/* Callout Box Catatan */
+/* Sub-judul dalam materi */
+.rendered-materi-content h5 {
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+[data-bs-theme="dark"] .rendered-materi-content h5 {
+    color: #f1f5f9;
+}
+
+/* Callout Box Catatan KBM Guru */
 .rich-callout-box, .rendered-materi-content .rich-callout-box {
     background-color: #f0fdf4;
     border-left: 4px solid #16a34a;
-    padding: 10px 14px;
-    border-radius: 6px;
-    margin: 10px 0;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 12px 0;
     color: #166534;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
+    line-height: 1.75;
+    text-align: justify !important;
+    text-justify: inter-word !important;
 }
 [data-bs-theme="dark"] .rich-callout-box,
 [data-bs-theme="dark"] .rendered-materi-content .rich-callout-box {
@@ -243,7 +313,7 @@ if (!function_exists('getFileIcon')) {
     background: #fdfefe;
     border: 1px dashed #cbd5e1;
     border-radius: 12px;
-    padding: 12px 14px;
+    padding: 14px 16px;
     margin-top: 14px;
 }
 [data-bs-theme="dark"] .eval-section-box {
@@ -254,13 +324,13 @@ if (!function_exists('getFileIcon')) {
 .eval-item-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 10px 14px;
+    border-radius: 12px;
+    padding: 12px 14px;
     transition: all 0.2s ease;
 }
 .eval-item-card:hover {
     border-color: #93c5fd;
-    box-shadow: 0 3px 10px rgba(59,130,246,0.06);
+    box-shadow: 0 4px 12px rgba(59,130,246,0.08);
 }
 [data-bs-theme="dark"] .eval-item-card {
     background: #1e293b;
@@ -268,17 +338,15 @@ if (!function_exists('getFileIcon')) {
 }
 
 .qa-item-icon {
-    width: 36px; height: 36px; border-radius: 10px;
+    width: 38px; height: 38px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 1rem; flex-shrink: 0;
+    font-size: 1.05rem; flex-shrink: 0;
 }
 .qa-item-title { font-size: .88rem; font-weight: 700; margin: 0; color: #0f172a; }
 [data-bs-theme="dark"] .qa-item-title { color: #f1f5f9; }
 
-/* ── Empty bab ── */
+/* ── Empty State ── */
 .bab-empty { padding: 28px 22px; text-align: center; color: #94a3b8; font-size: .88rem; }
-
-/* ── Empty total ── */
 .ebook-empty-state {
     background: #fff; border-radius: 18px; border: 1px solid #e2e8f0;
     padding: 60px 24px; text-align: center;
@@ -297,14 +365,6 @@ if (!function_exists('getFileIcon')) {
     text-decoration: none; transition: all .2s ease;
 }
 .btn-ebook-back:hover { background: rgba(255,255,255,.22); color: #fff; }
-
-/* ── Responsive ── */
-@media (max-width: 576px) {
-    .materi-row { flex-direction: column; gap: 10px; }
-    .materi-row-actions { width: 100%; }
-    .bab-title { font-size: .9rem; }
-    .materi-unit-card { margin: 10px 8px; padding: 14px 12px; }
-}
 
 /* ── Hover Effects & Utility ── */
 .hover-scale {
@@ -330,6 +390,7 @@ if (!function_exists('getFileIcon')) {
     background: #0f172a;
     border-color: #334155;
 }
+
 /* Scrollbar halus untuk rendered-materi-content */
 .rendered-materi-content::-webkit-scrollbar {
     width: 5px;
@@ -344,6 +405,125 @@ if (!function_exists('getFileIcon')) {
 }
 [data-bs-theme="dark"] .rendered-materi-content::-webkit-scrollbar-thumb {
     background: #475569;
+}
+
+/* ══════════════════════════════════════════════════════════
+   DETAIL RESPONSIVE (MOBILE & TABLET OPTIMIZED)
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+    .ebook-hero {
+        padding: 24px 20px !important;
+        border-radius: 16px;
+    }
+    .materi-actions-wrap {
+        justify-content: flex-start !important;
+        width: 100%;
+        margin-top: 10px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .bab-header {
+        padding: 14px 16px;
+        gap: 12px;
+    }
+    .bab-number {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+        border-radius: 10px;
+    }
+    .bab-title {
+        font-size: 0.96rem;
+    }
+    .materi-unit-card {
+        margin: 12px 10px;
+        padding: 14px 14px;
+        border-radius: 12px;
+    }
+    .materi-row-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.15rem;
+        border-radius: 10px;
+    }
+    .materi-singkat-preview-box {
+        padding: 12px 14px;
+        border-radius: 10px;
+    }
+    .rendered-materi-content {
+        font-size: 0.91rem;
+        line-height: 1.8;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .ebook-wrapper {
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+    }
+    .ebook-hero {
+        padding: 18px 14px !important;
+        border-radius: 14px;
+        margin-bottom: 14px !important;
+    }
+    .btn-ebook-back {
+        font-size: 0.74rem;
+        padding: 4px 12px;
+    }
+    .ebook-stat-pill {
+        font-size: 0.72rem;
+        padding: 4px 10px;
+    }
+    .bab-card {
+        border-radius: 14px;
+        margin-bottom: 12px !important;
+    }
+    .materi-unit-card {
+        margin: 8px 4px;
+        padding: 12px 10px;
+        border-radius: 10px;
+    }
+    .materi-actions-wrap {
+        display: flex !important;
+        width: 100%;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .materi-actions-wrap .btn {
+        flex: 1 1 auto;
+        justify-content: center;
+        padding: 6px 10px;
+        font-size: 0.76rem;
+    }
+    .berkas-media-strip {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 6px;
+        padding: 8px 10px;
+    }
+    .berkas-media-strip > div:last-child {
+        width: 100%;
+        text-align: right;
+    }
+    .eval-item-card {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 10px !important;
+        padding: 10px 12px;
+    }
+    .eval-item-card > div:last-child {
+        width: 100%;
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        border-top: 1px dashed #e2e8f0;
+        padding-top: 8px;
+    }
+    [data-bs-theme="dark"] .eval-item-card > div:last-child {
+        border-top-color: #334155;
+    }
 }
 </style>
 
@@ -515,7 +695,7 @@ if (!function_exists('getFileIcon')) {
                                 </div>
                             </div>
                             <div class="col-lg-4 text-lg-end">
-                                <div class="d-flex align-items-center gap-2 justify-content-lg-end flex-wrap">
+                                <div class="d-flex align-items-center gap-2 justify-content-lg-end flex-wrap materi-actions-wrap">
                                     <?php if ($hasFile || $m['jenis_file'] !== 'youtube'): ?>
                                         <a href="<?= BASE_URL ?>index.php?url=siswa/bacaMateri&id=<?= $m['id'] ?>" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5 hover-scale">
                                             <i class="bi bi-book-half"></i>
@@ -540,16 +720,16 @@ if (!function_exists('getFileIcon')) {
                         <!-- 3. Materi Singkat & Rangkuman Pembelajaran -->
                         <?php if (!empty($m['deskripsi'])): ?>
                             <div class="materi-singkat-preview-box">
-                                <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom">
-                                    <span class="fw-bold text-primary d-flex align-items-center gap-1.5" style="font-size: 0.86rem;">
-                                        <i class="bi bi-file-earmark-richtext-fill"></i>
+                                <div class="d-flex align-items-center justify-content-between pb-2 mb-2 border-bottom flex-wrap gap-2">
+                                    <span class="fw-bold text-primary d-flex align-items-center gap-1.5" style="font-size: 0.88rem;">
+                                        <i class="bi bi-file-earmark-richtext-fill fs-6"></i>
                                         <span>3. Materi Singkat &amp; Rangkuman Pembelajaran</span>
                                     </span>
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5" style="font-size: 0.68rem; font-weight: 600;">
-                                        Ringkasan KBM Terstruktur
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1" style="font-size: 0.7rem; font-weight: 600;">
+                                        <i class="bi bi-text-paragraph me-1"></i>Format Rapi &amp; Justify
                                     </span>
                                 </div>
-                                <div class="rendered-materi-content text-dark px-1" style="max-height: 280px; overflow-y: auto;">
+                                <div class="rendered-materi-content px-1" style="max-height: 320px; overflow-y: auto;">
                                     <?= renderRichContent($m['deskripsi']) ?>
                                 </div>
                             </div>
